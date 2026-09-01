@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Atualizador Inteligente de ERP - Documento Técnico</title>
+<style>
+@page { size: A4; margin: 22mm 18mm 20mm; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #24323a; font: 11pt/1.55 Arial, sans-serif; }
+h1 { color: #1d4058; font-size: 28pt; line-height: 1.08; margin: 0 0 8mm; }
+h2 { color: #1d4058; font-size: 18pt; border-bottom: 2px solid #3c9bc9; padding-bottom: 3mm; margin: 12mm 0 5mm; page-break-after: avoid; }
+h3 { color: #238f82; font-size: 13pt; margin: 7mm 0 2mm; page-break-after: avoid; }
+p { margin: 0 0 4mm; text-align: justify; }
+ul, ol { margin: 2mm 0 5mm 7mm; }
+li { margin: 2mm 0; }
+.cover { min-height: 245mm; display: flex; flex-direction: column; justify-content: center; page-break-after: always; }
+.subtitle { color: #58707a; font-size: 15pt; max-width: 145mm; }
+.meta { color: #71807a; margin-top: 16mm; }
+.callout { border-left: 4px solid #3c9bc9; background: #f2f6f8; padding: 4mm 5mm; margin: 5mm 0; page-break-inside: avoid; }
+.callout strong { color: #1d4058; }
+table { width: 100%; border-collapse: collapse; margin: 4mm 0 6mm; font-size: 9.5pt; page-break-inside: avoid; }
+th { color: white; background: #1d4058; text-align: left; }
+th, td { border: 1px solid #c9d5da; padding: 2.5mm; vertical-align: top; }
+tr:nth-child(even) td { background: #f5f8f9; }
+code { font: 9.5pt Consolas, monospace; color: #a94d45; background: #f2f3f4; padding: 1px 3px; }
+.flow { display: flex; gap: 3mm; margin: 6mm 0; }
+.flow div { flex: 1; border: 1px solid #b9cbd1; padding: 4mm 3mm; text-align: center; background: #f4f8f8; }
+.flow b { display: block; color: #238f82; margin-bottom: 2mm; }
+.small { color: #71807a; font-size: 9pt; }
+.page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+<section class="cover">
+  <div class="small">GESTOR DE ATUALIZAÇÕES DE CLIENTES</div>
+  <h1>Atualizador Inteligente de ERP</h1>
+  <p class="subtitle">Documento técnico e executivo sobre a automação de versões, agentes locais, integração com Delphi e segurança dos dados.</p>
+  <p class="meta">Versão do documento: 1.0<br>Data: 26 de agosto de 2026</p>
+</section>
+
+<h2>1. Visão geral</h2>
+<p>O Atualizador Inteligente de ERP é um ecossistema para reduzir a intervenção manual no processo de atualização dos clientes. A solução combina um painel web central, um agente local executado no servidor do cliente e a participação do ERP Delphi na decisão do momento da atualização.</p>
+<p>O objetivo não é apenas copiar novos executáveis. Uma atualização pode alterar o banco de dados, executar scripts, substituir componentes e afetar vários terminais. Por isso, o processo precisa ser preparado, autorizado, executado e registrado de forma previsível.</p>
+<div class="callout"><strong>Objetivo principal:</strong> detectar novas versões, baixar pacotes silenciosamente, pedir autorização ao usuário e executar backups, scripts e distribuição com controle sobre o Firebird 2.5.</div>
+
+<h2>2. O problema atual</h2>
+<p>O processo tradicional depende de intervenção da equipe de suporte em cada cliente. Essa dependência consome tempo, dificulta a padronização e aumenta a possibilidade de erro humano.</p>
+<ul>
+<li>O suporte precisa acompanhar cada atualização manualmente.</li>
+<li>Existe o risco de esquecer o backup antes de aplicar alterações de banco.</li>
+<li>O cliente pode ser interrompido durante uma operação comercial.</li>
+<li>Pacotes de formatos diferentes exigem tratamento operacional adicional.</li>
+<li>É difícil saber rapidamente quais clientes foram atualizados, quais falharam e em que etapa.</li>
+</ul>
+
+<h2>3. Arquitetura da solução</h2>
+<p>A solução é dividida em três pilares. Cada componente tem uma responsabilidade específica, evitando que o ERP atual seja sobrecarregado com tarefas de infraestrutura.</p>
+<table><tr><th>Componente</th><th>Tecnologia</th><th>Responsabilidade</th></tr>
+<tr><td><strong>A Mente</strong><br>API central</td><td>Node.js, Express e SQLite</td><td>Gerenciar versões, pacotes, clientes, publicação, autenticação web e logs dos agentes.</td></tr>
+<tr><td><strong>O Músculo</strong><br>Agente local</td><td>C# e .NET 8</td><td>Operar no servidor do cliente, fazer downloads, extrair arquivos, executar GFIX, GBAK, BScript e atualizar o BEXE.</td></tr>
+<tr><td><strong>O Rosto</strong><br>ERP e terminais</td><td>Delphi</td><td>Ler o estado da atualização, avisar o usuário e registrar a autorização no momento adequado.</td></tr></table>
+<div class="flow"><div><b>Nuvem</b>Publica e acompanha</div><div><b>Agente</b>Prepara e executa</div><div><b>ERP</b>Decide e comunica</div></div>
+
+<h2>4. Componentes implementados</h2>
+<h3>4.1 Painel web</h3>
+<p>O painel web é acessado pelo navegador e permite que a equipe trabalhe com uma base compartilhada. Ele possui login multiusuário, resumo operacional, cadastro de clientes, atualizações, agenda, consulta, sistemas, histórico, backups e distribuição de versões.</p>
+<ul><li>Resumo com indicadores de clientes e atualizações.</li><li>Cadastro e consulta de clientes.</li><li>Registro, busca, filtros e importação/exportação de atualizações.</li><li>Agenda de tarefas e lembretes.</li><li>Histórico das ações realizadas pelos usuários.</li><li>Cadastro e publicação de versões.</li><li>Retorno dos agentes por cliente e status.</li></ul>
+<h3>4.2 API central</h3>
+<p>A API organiza as regras de negócio em rotas, controllers, serviços e repositórios. O banco SQLite é acessado por uma camada própria de persistência. Backups automáticos do banco são realizados quando o servidor é iniciado.</p>
+<h3>4.3 Agente local</h3>
+<p>O agente é um serviço Windows baseado em .NET 8. Ele executa em segundo plano, consulta a API em intervalos regulares e realiza o trabalho pesado sem exigir que o usuário permaneça acompanhando cada etapa.</p>
+
+<h2>5. Ciclo completo da atualização</h2>
+<h3>Fase 1 - Preparo invisível</h3>
+<ol><li>O agente consulta a API usando o CNPJ do cliente, a versão atual e o token do agente.</li><li>A API informa se existe versão publicada superior.</li><li>O agente baixa os pacotes correspondentes.</li><li>O SHA-256 do download é conferido antes da utilização.</li><li>O <code>7za.exe</code> extrai pacotes <code>.7z</code>, <code>.rar</code> e <code>.zip</code>.</li><li>Os arquivos executáveis e scripts ficam em uma pasta temporária.</li><li>O agente grava <code>PENDENTE</code> em <code>SYS_ATUALIZACAO</code> no <code>JUNIOR.fdb</code>.</li></ol>
+<h3>Fase 2 - Decisão do usuário</h3>
+<p>Ao abrir o ERP, o Delphi consulta a tabela de controle. Quando encontra o estado <code>PENDENTE</code>, apresenta uma mensagem informando que existe uma nova versão pronta e que o sistema precisará ser reiniciado.</p>
+<ul><li>Se o usuário confirmar, o ERP grava <code>AUTORIZADO</code> e encerra-se.</li><li>Se o usuário não confirmar, a operação continua normalmente e a atualização permanece aguardando.</li></ul>
+<h3>Fase 3 - Execução segura</h3>
+<ol><li>O agente marca o estado como <code>PROCESSANDO</code>.</li><li>Executa <code>gfix -shut force_0</code> para isolar o banco.</li><li>Executa o primeiro <code>gbak</code>, criando o backup pré-atualização.</li><li>Executa o <code>BScript.exe</code> de forma silenciosa.</li><li>Executa o segundo <code>gbak</code>, registrando o banco após a alteração.</li></ol>
+<h3>Fase 4 - Distribuição limpa</h3>
+<ol><li>O agente localiza os executáveis extraídos.</li><li>Conecta ao <code>BEXE.fdb</code>.</li><li>Converte os executáveis em dados binários e grava os BLOBs de distribuição.</li><li>Executa <code>gfix -online</code> no banco principal.</li><li>Os terminais leem o <code>BEXE.fdb</code> e realizam sua atualização.</li><li>O estado final é gravado como <code>CONCLUIDO</code> e o resultado é enviado à API.</li></ol>
+
+<h2>6. Estados da atualização</h2>
+<table><tr><th>Estado</th><th>Significado</th><th>Responsável pela transição</th></tr>
+<tr><td><code>PENDENTE</code></td><td>Pacote preparado e aguardando decisão.</td><td>Agente</td></tr>
+<tr><td><code>AUTORIZADO</code></td><td>Usuário confirmou a execução.</td><td>ERP Delphi</td></tr>
+<tr><td><code>PROCESSANDO</code></td><td>Execução crítica em andamento.</td><td>Agente</td></tr>
+<tr><td><code>CONCLUIDO</code></td><td>Atualização finalizada.</td><td>Agente</td></tr>
+<tr><td><code>ERRO</code></td><td>Falha registrada; exige análise ou nova tentativa.</td><td>Agente</td></tr></table>
+
+<h2>7. Segurança e recuperação</h2>
+<ul><li>Endpoints do agente usam token próprio no header <code>X-Agent-Token</code>.</li><li>O painel web usa sessão com cookie HttpOnly e limite de tentativas de login.</li><li>Downloads validam o nome do arquivo e o SHA-256.</li><li>Credenciais do Firebird devem ser fornecidas por configuração protegida, nunca gravadas no código.</li><li>Os argumentos dos processos não são registrados nos logs para evitar exposição de senha.</li><li>O banco é isolado antes de alterações estruturais.</li><li>O backup pré-atualização é preservado para tentativa de restauração em caso de falha.</li><li>O agente mantém o banco online mesmo quando uma etapa falha, registrando o estado de erro.</li></ul>
+<div class="callout"><strong>Importante:</strong> a automação não substitui o teste de restauração. O rollback precisa ser validado com uma cópia descartável e com a versão real do Firebird instalada no cliente.</div>
+
+<h2>8. Formatos de pacotes</h2>
+<p>O agente utiliza o motor <code>7za.exe</code> para lidar com pacotes novos e legados. Essa decisão evita criar um extrator diferente para cada extensão e permite que a equipe mantenha um fluxo único para <code>.7z</code>, <code>.rar</code> e <code>.zip</code>.</p>
+<p>Após o download, o pacote é validado por SHA-256, extraído em diretório temporário e só então disponibilizado para a execução. A ausência do extrator interrompe o ciclo para impedir que uma atualização seja marcada como pronta sem seus arquivos.</p>
+
+<h2>9. Estado atual do projeto</h2>
+<table><tr><th>Item</th><th>Situação</th></tr>
+<tr><td>Painel web multiusuário</td><td>Implementado e operacional.</td></tr>
+<tr><td>API de versões, pacotes e logs</td><td>Implementada.</td></tr>
+<tr><td>Agente C# / .NET 8</td><td>Compilável e com fluxo principal implementado.</td></tr>
+<tr><td>Autenticação do agente</td><td>Token configurável implementado.</td></tr>
+<tr><td>Validação SHA-256</td><td>Implementada no download.</td></tr>
+<tr><td>Firebird e BEXE reais</td><td>Dependem de confirmação do schema e ambiente.</td></tr>
+<tr><td>Integração Delphi</td><td>Precisa ser implementada no ERP real.</td></tr></table>
+
+<h2>10. Implantação</h2>
+<ol><li>Definir <code>SESSION_SECRET</code>, <code>AGENT_API_TOKEN</code> e <code>PUBLIC_URL</code> no servidor.</li><li>Configurar no agente a URL da API, token, CNPJ, caminhos dos bancos, credencial Firebird e caminhos do GFIX, GBAK e BScript.</li><li>Colocar o <code>7za.exe</code> ao lado do executável publicado.</li><li>Publicar e instalar o agente como serviço Windows.</li><li>Testar permissões de leitura e escrita nos bancos.</li><li>Executar um ciclo completo em ambiente de testes.</li><li>Realizar piloto controlado antes da distribuição geral.</li></ol>
+<p>Para uso pela internet, recomenda-se proxy reverso com HTTPS e <code>SESSION_SECURE=true</code>. Para uso apenas na rede local, o servidor pode ser acessado pelo IP da máquina que hospeda o backend.</p>
+
+<h2>11. Pendências e critérios de aceite</h2>
+<table><tr><th>Pendência</th><th>Critério de aceite</th></tr>
+<tr><td>Schema do JUNIOR</td><td>Confirmar tabela, chave, tipos e valores permitidos de <code>SYS_ATUALIZACAO</code>.</td></tr>
+<tr><td>Schema do BEXE</td><td>Confirmar tabela, campo do nome e campo BLOB usados pelos terminais.</td></tr>
+<tr><td>BScript</td><td>Executar o comando silencioso real e comprovar código de retorno.</td></tr>
+<tr><td>Rollback</td><td>Restaurar <code>JUNIOR_PRE.fbk</code> em cópia de teste e validar o ERP.</td></tr>
+<tr><td>Delphi</td><td>Comprovar leitura de <code>PENDENTE</code>, confirmação e gravação de <code>AUTORIZADO</code>.</td></tr>
+<tr><td>Operação</td><td>Instalar serviço, reiniciar servidor e comprovar recuperação sem intervenção manual.</td></tr></table>
+
+<h2>12. Conclusão</h2>
+<p>A arquitetura proposta separa claramente o que acontece na nuvem, no servidor do cliente e dentro do ERP. O painel centraliza controle e rastreabilidade; o agente local executa operações técnicas; e o Delphi mantém a experiência e a decisão do usuário.</p>
+<p>O projeto já possui a base necessária para um piloto. A entrada em produção deve acontecer somente depois da validação dos schemas reais, da integração Delphi, do comando do BScript e do procedimento de restauração do Firebird.</p>
+<p class="small">Documento gerado a partir da arquitetura do projeto e da especificação técnica fornecida.</p>
+</body>
+</html>

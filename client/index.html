@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestor de Atualizações</title>
+  <meta name="description" content="Painel interno de gestão de atualizações, clientes e distribuição de versões." />
+  <meta name="color-scheme" content="dark light" />
+  <link rel="icon" type="image/png" href="/assets/favicon.png" />
+
+  <!--
+    As fontes vêm ANTES do CSS e como <link>, não como @import dentro do
+    theme.css. Um @import só começa a baixar depois que o CSS foi lido e
+    interpretado -- ou seja, em série, atrasando o primeiro texto na tela.
+    Com <link> + preconnect, o navegador abre a conexão com o Google Fonts
+    em paralelo ao download do nosso próprio CSS.
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" />
+
+  <link rel="stylesheet" href="/css/theme.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+
+  <!--
+    Aplica o tema salvo antes do primeiro pixel. Se isso esperasse o módulo
+    JS carregar, a página apareceria por um instante no tema errado (o
+    clássico "flash of wrong theme") -- inline no <head> é o único momento
+    cedo o bastante.
+  -->
+  <script>
+    try {
+      var modo = JSON.parse(localStorage.getItem("gestor:tema") || '"sistema"');
+      if (modo === "claro" || modo === "escuro") document.documentElement.setAttribute("data-tema", modo);
+    } catch (e) { /* localStorage bloqueado: segue no tema padrão */ }
+  </script>
+</head>
+<body>
+  <!--
+    A pagina inteira e um "app de pagina unica": este div e o unico ponto
+    de entrada visual, e todo o resto (login, cabecalho, abas, cada tela)
+    e desenhado por JavaScript dentro dele (ver js/main.js e js/core/App.js).
+    Nao ha nenhum framework por tras disso -- so classes de JavaScript puro
+    manipulando o DOM diretamente.
+  -->
+  <div id="app"></div>
+  <div id="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

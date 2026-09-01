@@ -1,0 +1,883 @@
+<title>Auditoria do Atualizador ERP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap');
+
+  :root {
+    --bg: #f3f4f1;
+    --surface: #ffffff;
+    --surface-2: #eceee9;
+    --ink: #1b2320;
+    --muted: #5b655f;
+    --faint: #8a938d;
+    --border: #dbded7;
+    --accent: #0f6e5c;
+    --accent-ink: #ffffff;
+    --accent-soft: #e3f1ec;
+
+    --ok: #2e7d32;
+    --ok-soft: #e6f2e6;
+    --low: #4a5568;
+    --low-soft: #eaecee;
+    --medium: #8a6d00;
+    --medium-soft: #f8f0d8;
+    --high: #b25e00;
+    --high-soft: #fbeadb;
+    --critical: #b3261e;
+    --critical-soft: #fbe4e2;
+
+    --shadow: 0 1px 2px rgba(20, 30, 25, 0.06), 0 8px 24px -12px rgba(20, 30, 25, 0.12);
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12181a;
+      --surface: #1a2225;
+      --surface-2: #212b2e;
+      --ink: #e8ece9;
+      --muted: #9aa8a2;
+      --faint: #6d7975;
+      --border: #2a3438;
+      --accent: #4fd8b8;
+      --accent-ink: #0b1513;
+      --accent-soft: #17332c;
+
+      --ok: #6fcf7e;
+      --ok-soft: #17301b;
+      --low: #9aa8a2;
+      --low-soft: #232d2f;
+      --medium: #e0c34d;
+      --medium-soft: #332b0f;
+      --high: #ffb067;
+      --high-soft: #3a2711;
+      --critical: #ff8f85;
+      --critical-soft: #3a1714;
+
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #12181a;
+    --surface: #1a2225;
+    --surface-2: #212b2e;
+    --ink: #e8ece9;
+    --muted: #9aa8a2;
+    --faint: #6d7975;
+    --border: #2a3438;
+    --accent: #4fd8b8;
+    --accent-ink: #0b1513;
+    --accent-soft: #17332c;
+
+    --ok: #6fcf7e;
+    --ok-soft: #17301b;
+    --low: #9aa8a2;
+    --low-soft: #232d2f;
+    --medium: #e0c34d;
+    --medium-soft: #332b0f;
+    --high: #ffb067;
+    --high-soft: #3a2711;
+    --critical: #ff8f85;
+    --critical-soft: #3a1714;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    line-height: 1.65;
+  }
+  ::selection { background: var(--accent-soft); color: var(--ink); }
+
+  a { color: var(--accent); }
+  code, .mono { font-family: "IBM Plex Mono", ui-monospace, Consolas, monospace; }
+
+  h1, h2, h3, h4 {
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    text-wrap: balance;
+    color: var(--ink);
+    margin: 0;
+  }
+
+  .skip { position: absolute; left: -9999px; }
+  .skip:focus { left: 1rem; top: 1rem; z-index: 100; background: var(--surface); padding: 0.5rem 1rem; border-radius: 4px; }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- shell ---------- */
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 clamp(1.25rem, 4vw, 3rem);
+  }
+
+  header.hero {
+    border-bottom: 1px solid var(--border);
+    padding: clamp(2.5rem, 6vw, 4rem) 0 clamp(2rem, 4vw, 3rem);
+  }
+  .eyebrow {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 22px;
+    height: 2px;
+    background: var(--accent);
+    display: inline-block;
+  }
+  h1.title {
+    font-size: clamp(2rem, 4vw, 2.9rem);
+    font-weight: 700;
+    line-height: 1.08;
+    margin-top: 0.9rem;
+    max-width: 18ch;
+    letter-spacing: -0.01em;
+  }
+  .hero-sub {
+    margin-top: 1rem;
+    max-width: 62ch;
+    color: var(--muted);
+    font-size: 1.14rem;
+  }
+  .hero-meta {
+    margin-top: 1.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.6rem;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .hero-meta strong { color: var(--ink); font-weight: 600; }
+
+  /* scorecard */
+  .scorecard {
+    margin-top: 2.25rem;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .stat {
+    background: var(--surface);
+    padding: 1.15rem 1.3rem;
+  }
+  .stat .n {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 1.9rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .stat .n.critical { color: var(--critical); }
+  .stat .n.high { color: var(--high); }
+  .stat .n.ok { color: var(--ok); }
+  .stat .label {
+    margin-top: 0.4rem;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+
+  /* layout: nav + content */
+  .layout {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: clamp(2rem, 5vw, 4rem);
+    padding: clamp(2rem, 5vw, 3.5rem) 0 5rem;
+    align-items: start;
+  }
+  nav.toc {
+    position: sticky;
+    top: 1.5rem;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.86rem;
+  }
+  nav.toc ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-left: 2px solid var(--border);
+  }
+  nav.toc li a {
+    display: block;
+    padding: 0.4rem 0 0.4rem 0.9rem;
+    margin-left: -2px;
+    border-left: 2px solid transparent;
+    color: var(--muted);
+    text-decoration: none;
+  }
+  nav.toc li a:hover { color: var(--ink); border-left-color: var(--faint); }
+
+  main { min-width: 0; }
+  section { margin-bottom: clamp(3rem, 6vw, 4.5rem); scroll-margin-top: 1.5rem; }
+  section > h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--border);
+  }
+  section > h2 .num { color: var(--faint); font-weight: 500; margin-right: 0.5rem; }
+  .section-intro {
+    margin-top: 1.1rem;
+    color: var(--muted);
+    max-width: 68ch;
+  }
+  p { max-width: 68ch; }
+  .prose > * + * { margin-top: 1rem; }
+
+  h3.sub {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-top: 2.1rem;
+    margin-bottom: 0.9rem;
+  }
+
+  ul.plain, ol.plain { padding-left: 1.3rem; max-width: 68ch; }
+  ul.plain li, ol.plain li { margin-bottom: 0.5rem; }
+
+  .path {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.85em;
+    background: var(--surface-2);
+    padding: 0.05em 0.4em;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  /* strength cards */
+  .grid-cards {
+    margin-top: 1.4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.1rem 1.2rem;
+    box-shadow: var(--shadow);
+  }
+  .card h4 {
+    font-size: 0.98rem;
+    font-weight: 600;
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+  }
+  .card h4::before {
+    content: "✓";
+    color: var(--ok);
+    font-family: "IBM Plex Sans", sans-serif;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .card p {
+    font-size: 0.92rem;
+    color: var(--muted);
+    margin-top: 0.5rem;
+    max-width: none;
+  }
+  .card .ref {
+    display: block;
+    margin-top: 0.7rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--accent);
+  }
+
+  /* findings */
+  .finding {
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--low);
+    border-radius: 6px;
+    background: var(--surface);
+    padding: 1.3rem 1.4rem;
+    margin-top: 1.1rem;
+    box-shadow: var(--shadow);
+  }
+  .finding.critical { border-left-color: var(--critical); }
+  .finding.high { border-left-color: var(--high); }
+  .finding.medium { border-left-color: var(--medium); }
+  .finding.low { border-left-color: var(--low); }
+
+  .finding-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.7rem;
+    font-family: "IBM Plex Sans", sans-serif;
+  }
+  .sev-chip {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+  }
+  .sev-chip.critical { background: var(--critical-soft); color: var(--critical); }
+  .sev-chip.high { background: var(--high-soft); color: var(--high); }
+  .sev-chip.medium { background: var(--medium-soft); color: var(--medium); }
+  .sev-chip.low { background: var(--low-soft); color: var(--low); }
+
+  .finding-head h4 {
+    font-size: 1.03rem;
+    font-weight: 600;
+    flex: 1;
+    min-width: 200px;
+  }
+  .finding .body { margin-top: 0.9rem; }
+  .finding .body p { max-width: none; }
+  .finding .kv {
+    margin-top: 0.9rem;
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.35rem 1rem;
+    font-size: 0.9rem;
+  }
+  .finding .kv dt {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding-top: 0.15rem;
+  }
+  .finding .kv dd { margin: 0; color: var(--muted); }
+  .finding .refs { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .finding .kv dd.status-fixed { color: var(--ok); font-weight: 600; }
+  .finding .kv dd.status-mitigated { color: var(--medium); font-weight: 600; }
+  .finding .kv dd.status-open { color: var(--critical); font-weight: 600; }
+
+  /* comparison table */
+  .table-wrap { overflow-x: auto; margin-top: 1.4rem; border: 1px solid var(--border); border-radius: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 640px; }
+  thead th {
+    text-align: left;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+    padding: 0.7rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td {
+    padding: 0.75rem 0.9rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  .pill {
+    display: inline-block;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.74rem;
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.partial { background: var(--medium-soft); color: var(--medium); }
+  .pill.missing { background: var(--critical-soft); color: var(--critical); }
+  .pill.na { background: var(--low-soft); color: var(--low); }
+
+  /* lifecycle sequence */
+  .sequence {
+    margin-top: 1.4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .phase { background: var(--surface); padding: 1.2rem 1.3rem; position: relative; }
+  .phase .idx {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .phase h4 { margin-top: 0.4rem; font-size: 0.98rem; }
+  .phase p { font-size: 0.86rem; color: var(--muted); margin-top: 0.5rem; max-width: none; }
+  .phase .flag {
+    margin-top: 0.7rem;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+  }
+  .flag.critical { background: var(--critical-soft); color: var(--critical); }
+  .flag.high { background: var(--high-soft); color: var(--high); }
+
+  /* priority list */
+  .priority {
+    margin-top: 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  .priority li {
+    list-style: none;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+  }
+  .priority .rank {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .priority strong { display: block; font-family: "IBM Plex Sans", sans-serif; font-size: 0.96rem; }
+  .priority span { color: var(--muted); font-size: 0.88rem; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 0 3rem;
+    color: var(--faint);
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.toc { position: static; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; margin-bottom: 0.5rem; }
+    nav.toc ol { border-left: none; columns: 2; }
+    .scorecard { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto !important; }
+  }
+  html { scroll-behavior: smooth; }
+</style>
+
+<a class="skip" href="#main">Pular para o conteúdo</a>
+
+<div class="shell">
+  <header class="hero">
+    <div class="eyebrow">Auditoria técnica · código, binários e scripts reais</div>
+    <h1 class="title">Atualizador Inteligente de ERP</h1>
+    <p class="hero-sub">Verificação linha a linha do painel web, do agente C#/.NET e da orquestração Firebird contra os três documentos de arquitetura — e, numa segunda passada, contra os próprios binários e scripts de produção (<code>BScript.exe</code>, <code>BEXE.FDB</code> e 1026 scripts DDL reais) para separar o que já está construído e correto do que ainda é promessa de papel.</p>
+    <div class="hero-meta">
+      <span><strong>Data</strong> 27 de agosto de 2026</span>
+      <span><strong>Escopo</strong> web/server, web/client, Atualizador automatico/, Arquivos para analise/</span>
+      <span><strong>Método</strong> leitura direta do código-fonte e engenharia reversa dos binários/base reais, não apenas dos documentos</span>
+    </div>
+    <div class="scorecard">
+      <div class="stat"><div class="n ok">9<span style="font-size:1rem;color:var(--muted);font-weight:500;"> / 11</span></div><div class="label">achados corrigidos no código nesta rodada — <code>dotnet build</code> validado, 0 erros</div></div>
+      <div class="stat"><div class="n high">1</div><div class="label">achado crítico apenas <em>mitigado</em> — timeout de segurança, mas o modo silencioso do BScript.exe real segue não confirmado</div></div>
+      <div class="stat"><div class="n critical">1</div><div class="label">achado que só uma decisão de processo resolve — quais dos 1026 scripts cada versão exige</div></div>
+      <div class="stat"><div class="n">0</div><div class="label">achados que ainda dependem só de código do painel ou do agente — o resto é confirmação de ambiente real</div></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Sumário">
+      <ol>
+        <li><a href="#resumo">Resumo executivo</a></li>
+        <li><a href="#escopo">O que foi inspecionado</a></li>
+        <li><a href="#confirmado">Confirmado no código</a></li>
+        <li><a href="#achados">Achados novos</a></li>
+        <li><a href="#ciclo">Ciclo de atualização</a></li>
+        <li><a href="#documentos">Documentos comparados</a></li>
+        <li><a href="#pendencias">Pendências conhecidas</a></li>
+        <li><a href="#prioridades">Prioridades</a></li>
+      </ol>
+    </nav>
+
+    <main id="main">
+
+      <section id="resumo">
+        <h2><span class="num">§1</span>Resumo executivo</h2>
+        <div class="section-intro prose">
+          <p>A avaliação anterior comparava três documentos entre si. Esta comparou os documentos com o código de verdade — o painel em <span class="path">web/</span> e o serviço Windows em <span class="path">Atualizador automatico/</span> — e a notícia principal é boa: <strong>o projeto é mais real do que qualquer um dos documentos deixa transparecer.</strong> O agente C#/.NET existe, compila, e implementa a sequência GFIX → GBAK → BScript → GBAK → injeção de BLOB → GFIX exatamente como descrita no <span class="path">Documento_Tecnico_Atualizador_ERP.pdf</span>.</p>
+          <p>Mas ler o código também trocou o risco principal do projeto. A revisão anterior temia que uma heurística de "erro não estrutural" do BScript mascarasse uma atualização quebrada como sucesso. Essa heurística <em>não existe</em> no código — qualquer código de saída diferente de zero já aborta e tenta reverter. Um problema real e silencioso é outro: quando uma atualização falha, o campo que registra a versão-alvo nunca é desfeito, então a próxima consulta do agente já enxerga o cliente como "em dia" e para de tentar — sem jamais ter aplicado a versão. Ver <a href="#achado-1">achado crítico</a>.</p>
+          <p>Uma segunda passada foi além do código: abriu o <code>BScript.exe</code> e o <code>BEXE.FDB</code> de produção reais (pasta <span class="path">Arquivos para analise/</span>) por engenharia reversa de strings, e leu uma amostra dos 1026 scripts DDL históricos que o BScript aplica. O resultado mudou a prioridade da auditoria: há fortes indícios de que <strong>o BScript.exe real é uma aplicação gráfica interativa, sem nenhum modo de linha de comando</strong> — o que tornaria o passo mais crítico da Fase 3 (chamá-lo "de forma silenciosa" via <code>Process.Start</code>) capaz de travar o servidor inteiro do cliente, não apenas de falhar silenciosamente. Ver <a href="#achado-bscript">achado crítico</a>.</p>
+          <p><strong>Nove dos onze achados já foram corrigidos diretamente no código do agente</strong> (<span class="path">Atualizador automatico/</span>), com <code>dotnet build</code> validado sem erros: a reversão de versão em falha, o schema real do <code>BEXE.fdb</code>, a transação única na injeção de binários, o backoff após erro, o uso do campo <code>script_url</code>, a porta configurável do Firebird, a gravação de <code>MENSAGEM_LOG</code>, os argumentos de processo via <code>ArgumentList</code>, e a extração por lista explícita de arquivos. Os dois que restam não são corrigíveis só com código: o risco do <code>BScript.exe</code> ganhou uma rede de segurança (timeout que mata o processo) mas continua exigindo confirmação com quem mantém o binário real, e a estratégia de quais dos 1026 scripts cada versão exige é uma decisão de processo, não uma linha de código.</p>
+        </div>
+      </section>
+
+      <section id="escopo">
+        <h2><span class="num">§2</span>O que foi inspecionado</h2>
+        <p class="section-intro">Três documentos foram cruzados com dois códigos-fonte reais e um documento de organização interna que cobre apenas o painel:</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Artefato</th><th>Natureza</th><th>Cobertura</th></tr></thead>
+            <tbody>
+              <tr><td class="path">Planejamento_Tecnico_Atualizador_ERP_v4.pdf</td><td>Especificação técnica (ago/2026)</td><td>Arquitetura completa proposta — MD5, sem estado PROCESSANDO</td></tr>
+              <tr><td class="path">Projeto_Arquitetura_Atualizador_ERP.pdf</td><td>Apresentação executiva</td><td>Mesma arquitetura da V4, em linguagem de negócio</td></tr>
+              <tr><td class="path">web/docs/Documento_Tecnico_Atualizador_ERP.pdf</td><td>Documento técnico v1.0 (26/ago/2026)</td><td>Versão revisada — SHA-256, estado PROCESSANDO, lista as próprias pendências</td></tr>
+              <tr><td class="path">web/docs/ARCHITECTURE.md</td><td>Nota de organização de código</td><td>Só o painel web (rotas → services → repositórios). Não menciona o agente nem o Firebird — por isso fica fora da tabela comparativa da §6</td></tr>
+              <tr><td class="path">web/server/, web/client/</td><td>Código real — Node.js + Express + SQLite</td><td>Painel, API de versões/pacotes, autenticação, distribuição</td></tr>
+              <tr><td class="path">Atualizador automatico/</td><td>Código real — C# / .NET 8 Worker Service</td><td>Agente local: polling, download, extração, GFIX/GBAK/BScript, injeção BEXE</td></tr>
+              <tr><td class="path">Arquivos para analise/</td><td>Binários e dados reais de produção</td><td><code>BScript.exe</code> e <code>b_Atualizador.exe</code> (inspecionados por extração de strings — sem decompilador, sem executar), <code>BEXE.FDB</code> real de 44&nbsp;MB (schema lido diretamente das páginas de metadados), <code>BScript.Ini</code> real, e 1026 scripts DDL de 2011 a 12/08/2026</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="confirmado">
+        <h2><span class="num">§3</span>Confirmado no código</h2>
+        <p class="section-intro">Cada item abaixo é um comportamento que os documentos <em>prometem</em> e que o código realmente <em>faz</em> — verificado lendo a implementação, não a descrição dela.</p>
+        <div class="grid-cards">
+          <div class="card">
+            <h4>Token do agente é exigido e comparado</h4>
+            <p>Toda rota de polling/download/log exige cabeçalho <code>X-Agent-Token</code> idêntico ao configurado no servidor; sem token, 401.</p>
+            <span class="ref path">requireAgent.js:1-9 · Worker.cs → ApiService.cs:27</span>
+          </div>
+          <div class="card">
+            <h4>SHA-256 de ponta a ponta</h4>
+            <p>O painel calcula o hash no upload; o agente recalcula após o download e aborta se não bater — nenhum resquício de MD5.</p>
+            <span class="ref path">VersaoService.js:101-104 · ApiService.cs:58-64</span>
+          </div>
+          <div class="card">
+            <h4>Nome de arquivo não escapa da pasta</h4>
+            <p>Download do painel usa <code>path.basename</code>; o agente rejeita qualquer pacote cujo nome não seja idêntico ao declarado.</p>
+            <span class="ref path">VersaoService.js:30-35 · ApiService.cs:46-48</span>
+          </div>
+          <div class="card">
+            <h4>Sessão de login endurecida</h4>
+            <p>Cookie <code>HttpOnly</code>, <code>SameSite=lax</code>, <code>secure</code> ligado a <code>SESSION_SECURE</code>, mais limitador de tentativas por IP.</p>
+            <span class="ref path">Server.js:102-116 · LoginRateLimiter.js</span>
+          </div>
+          <div class="card">
+            <h4>Senha nunca aparece em log</h4>
+            <p>O executor de processos só registra o nome do binário chamado — nunca os argumentos, mesmo na mensagem de erro.</p>
+            <span class="ref path">ProcessService.cs:16, 36</span>
+          </div>
+          <div class="card">
+            <h4>Sequência crítica na ordem certa</h4>
+            <p><code>gfix -shut</code> → <code>gbak</code> pré → <code>BScript</code> → <code>gbak</code> pós → injeção BEXE → <code>gfix -online</code>, exatamente como o Estado 3 documentado.</p>
+            <span class="ref path">Worker.cs:75-86</span>
+          </div>
+          <div class="card">
+            <h4>Tentativa de rollback existe</h4>
+            <p>Em qualquer exceção do fluxo crítico, tenta restaurar o backup pré-atualização e recolocar o banco online antes de marcar ERRO.</p>
+            <span class="ref path">Worker.cs:90-106</span>
+          </div>
+          <div class="card">
+            <h4>Nada de credencial fixa no código</h4>
+            <p>Caminhos de GFIX/GBAK/BScript, credenciais Firebird, CNPJ, URL da API e token vêm todos de variável de ambiente.</p>
+            <span class="ref path">Worker.cs:13-21 · ApiService.cs:16-17</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="achados">
+        <h2><span class="num">§4</span>Achados novos, visíveis só no código</h2>
+        <p class="section-intro">Nenhum dos três documentos tem como revelar estes pontos — eles vivem em decisões de implementação que só aparecem lendo o C# e o Node.js linha a linha, ou, nos quatro primeiros casos abaixo, abrindo os próprios binários e a base de produção.</p>
+
+        <h3 class="sub">Contra os binários e a base reais (<span class="path">Arquivos para analise/</span>)</h3>
+
+        <div class="finding critical" id="achado-bscript">
+          <div class="finding-head">
+            <span class="sev-chip critical">Crítico</span>
+            <h4>O BScript.exe real parece ser um programa gráfico interativo — sem evidência de nenhum modo silencioso</h4>
+          </div>
+          <div class="body">
+            <p>Extraindo as strings do binário real (5&nbsp;MB, compilado em 2019) aparece um formulário Delphi/FireDAC completo: campos de texto para Servidor, Banco e pasta de Scripts; um seletor de arquivos <code>.sql</code>/<code>.fdb</code> com multisseleção manual (<code>TFileOpenDialog</code>); um <code>RadioGroup</code> para filtrar resultados ("Critical Erro", "Erro - Ok", "Ok", "Todos"); e dois botões — <strong>"Selecionar Scripts Pasta"</strong> e <strong>"Inserir No Banco Como Executado"</strong> — este último claramente uma confirmação manual, feita depois de olhar o resultado na tela.</p>
+            <p>Em nenhum lugar dos 5&nbsp;MB do binário aparece uma string reconhecível de parsing de linha de comando: nenhuma ocorrência de <code>/silent</code>, <code>-silent</code>, <code>FindCmdLineSwitch</code>, <code>-db=</code> ou equivalente. A única ocorrência de "ParamCount" encontrada pertence à RTTI interna do compilador Delphi (<code>TVmtMethodEntryTail.ParamCount</code>), não a leitura de argumentos do programa.</p>
+          </div>
+          <dl class="kv">
+            <dt>Onde</dt><dd class="refs"><span class="path">Arquivos para analise/BScript.exe</span> (strings nos offsets ~5.08M e ~2.55M) · assumido em <span class="path">Worker.cs:79</span></dd>
+            <dt>Cenário</dt><dd><code>Worker.cs</code> chama <code>BScript.exe /silent /db="..."</code> como se fosse um executável de linha de comando. Rodando dentro de um Windows Service (sessão 0, sem desktop interativo), o mais provável é uma janela que ninguém consegue ver nem clicar — e <code>Process.WaitForExitAsync()</code> no C# fica esperando indefinidamente, com o banco ainda em <code>gfix -shut force_0</code> (bloqueado para todo mundo) até alguém notar e matar o processo manualmente no servidor do cliente.</dd>
+            <dt>Correção</dt><dd>Confirmar com quem mantém o <code>BScript.exe</code> se existe uma versão/branch com modo linha de comando de verdade. Se não existir, ele precisa ganhar um modo headless (ou ser substituído por um executor de scripts escrito para isso) antes de qualquer piloto — não há como automatizar com segurança em cima da versão atual.</dd>
+            <dt>Status</dt><dd class="status-mitigated">Mitigado, não resolvido — <code>ProcessService.RunProcessAsync</code> agora exige timeout e mata o processo se estourar (<span class="path">ProcessService.cs</span>), então uma trava não bloqueia o servidor para sempre. Mas isso é uma rede de segurança, não uma confirmação de que a automação funciona — a decisão sobre o BScript real continua pendente.</dd>
+          </dl>
+        </div>
+
+        <div class="finding high">
+          <div class="finding-head">
+            <span class="sev-chip high">Alto</span>
+            <h4>O schema real do BEXE.fdb usa nomes diferentes dos que o agente assume</h4>
+          </div>
+          <div class="body">
+            <p>Abrindo o <code>BEXE.FDB</code> real de produção (44&nbsp;MB) e extraindo os identificadores gravados nas páginas de metadados do Firebird, a única tabela de aplicação encontrada é <code>EXECUTAVEIS</code>, com os campos <code>NOMEPRODUTO</code>, <code>NOMEARQUIVO</code>, <code>VERSAO</code>, <code>VERSAOATUALIZADA</code>, <code>EXECUTAVEL</code>, <code>HASHEXE</code> e <code>DATA_ATUALIZACAO</code>. O código do agente assume uma tabela <code>VERSOES_EXE</code> com colunas <code>NOME_EXE</code> e <code>ARQUIVO_BLOB</code> — nomes que não existem neste banco. Contra o arquivo real, <code>InjetarNovosBinarios</code> falharia já na primeira execução.</p>
+            <p>De bônus: o schema real já reserva um campo <code>HASHEXE</code> — provavelmente usado pelos terminais para validar o executável antes de rodar. O código atual não escreve nada nele; mesmo depois de corrigir o nome da tabela, esse campo ficaria nulo.</p>
+          </div>
+          <dl class="kv">
+            <dt>Onde</dt><dd class="refs"><span class="path">DatabaseService.cs:62-64</span> (nomes assumidos, com comentário admitindo o chute) vs. <span class="path">Arquivos para analise/BEXE.FDB</span> (schema real, confirmado por engenharia reversa)</dd>
+            <dt>Correção</dt><dd>Reescrever <code>InjetarNovosBinarios</code> contra o schema real (<code>EXECUTAVEIS</code> / <code>NOMEARQUIVO</code> / <code>EXECUTAVEL</code> / <code>HASHEXE</code>) e decidir o que gravar em <code>HASHEXE</code> — o SHA-256 já calculado no download é o candidato natural.</dd>
+            <dt>Status</dt><dd class="status-fixed">Corrigido — <span class="path">DatabaseService.cs</span> agora grava em <code>EXECUTAVEIS</code> com os nomes reais de coluna e popula <code>HASHEXE</code> com o SHA-256 do arquivo. <code>NOMEPRODUTO</code> usa o nome do arquivo sem extensão como padrão; confirmar se é essa a convenção esperada pelos terminais.</dd>
+          </dl>
+        </div>
+
+        <div class="finding medium">
+          <div class="finding-head">
+            <span class="sev-chip medium">Médio</span>
+            <h4>Porta do Firebird divergente entre a configuração real e o agente</h4>
+          </div>
+          <div class="body">
+            <p>O <code>BScript.Ini</code> real, em uso hoje, aponta <code>Server=localhost/3051</code> — uma porta não padrão. O agente C# grava <code>Port=3050</code> fixo na connection string, sem variável de ambiente para ajustar. Num cliente cujo Firebird escute em 3051 (como este próprio arquivo de configuração real evidencia que acontece), o agente simplesmente não conseguiria abrir conexão nenhuma com o <span class="path">JUNIOR.fdb</span>.</p>
+          </div>
+          <dl class="kv">
+            <dt>Onde</dt><dd class="refs"><span class="path">DatabaseService.cs:12</span> vs. <span class="path">Arquivos para analise/BScript.Ini:2</span></dd>
+            <dt>Correção</dt><dd>Expor a porta como variável de ambiente (ex.: <code>ATUALIZADOR_DB_PORT</code>), com 3050 como padrão.</dd>
+            <dt>Status</dt><dd class="status-fixed">Corrigido — <span class="path">DatabaseService.cs</span> lê <code>ATUALIZADOR_DB_PORT</code>, com <code>3050</code> como padrão.</dd>
+          </dl>
+        </div>
+
+        <div class="finding low">
+          <div class="finding-head">
+            <span class="sev-chip low">Baixo</span>
+            <h4>1026 scripts DDL reais, nenhum protegido contra reexecução — e "já aplicado" hoje é um clique manual</h4>
+          </div>
+          <div class="body">
+            <p>Amostrando os scripts em <span class="path">Scripts-BVendas/</span> (1026 arquivos, de 2011 até 12/08/2026) — por exemplo <code>ALTER TABLE PRODUTOS ADD LABORATORIO VARCHAR(40);</code> e <code>create table garantia_remessa(...)</code> — nenhum tem checagem de existência prévia (nem <code>IF NOT EXISTS</code>, nem <code>EXECUTE BLOCK</code> consultando <code>RDB$RELATION_FIELDS</code>). No próprio <code>BScript.exe</code>, o botão "Inserir No Banco Como Executado" é uma ação manual, separada da execução em si — sugerindo que, hoje, marcar um script como "já aplicado" é decisão humana, não efeito automático do sucesso da migração.</p>
+            <p>Isso dá corpo ao risco de idempotência já levantado antes: sem uma marcação automática, rodar os scripts sem saber quais já foram aplicados naquele cliente específico gera erros "objeto já existe" em qualquer cliente que não parta de um banco zerado — exatamente os erros que a política atual do agente (qualquer código de saída ≠ 0 aborta e reverte) trataria como falha crítica do zero ao cem.</p>
+          </div>
+          <dl class="kv">
+            <dt>Onde</dt><dd class="refs"><span class="path">Scripts-BVendas/*.sql</span> (amostra) · fluxo de dois botões do <span class="path">BScript.exe</span> · <span class="path">ProcessService.cs:35-36</span></dd>
+            <dt>Correção</dt><dd>O BScript precisa de uma tabela de controle que ele mesmo consulte antes de tentar cada script (pulando os já aplicados automaticamente), ou o agente precisa receber uma lista explícita "quais scripts esta versão exige" em vez de apontar para a pasta inteira de scripts históricos.</dd>
+            <dt>Status</dt><dd class="status-open">Em aberto — é uma decisão de processo (não só de código): como versionar quais scripts cada release exige. Nenhuma mudança de código resolve isso sozinha.</dd>
+          </dl>
+        </div>
+
+        <h3 class="sub">Do código do painel e do agente</h3>
+
+        <div class="finding critical" id="achado-1">
+          <div class="finding-head">
+            <span class="sev-chip critical">Crítico</span>
+            <h4>Uma atualização que falha some do radar em vez de ficar pendente</h4>
+          </div>
+          <div class="body">
+            <p>Assim que o agente decide baixar uma versão, ele já grava essa versão-alvo no campo <code>VERSAO_NOVA</code> — antes de qualquer autorização ou execução. Se a Fase 3 falhar e o estado virar <code>ERRO</code>, esse campo <strong>não é revertido</strong>. Na próxima vez que o agente perguntar "há algo mais novo que <code>VERSAO_NOVA</code>?", a resposta da API é não, porque o valor enviado já é igual ao publicado. O cliente fica permanentemente na versão antiga, mas tanto o agente quanto o painel param de sinalizar pendência — o único rastro é um log de erro antigo na aba Distribuição, que ninguém é obrigado a olhar de novo.</p>
+            <p>Isso reproduz exatamente o perigo que a revisão anterior atribuía a uma "heurística de erro não estrutural" do BScript — só que essa heurística não existe no código; o mecanismo real é este campo de versão nunca sendo desfeito.</p>
+          </div>
+          <dl class="kv">
+            <dt>Onde</dt><dd class="refs"><span class="path">Worker.cs:50</span> grava o alvo cedo demais · <span class="path">Worker.cs:105</span> não reverte no catch · <span class="path">DatabaseService.cs:24-31</span> lê o mesmo campo como "versão atual" · <span class="path">VersaoService.js:68-72</span> compara os dois</dd>
+            <dt>Cenário</dt><dd>BScript falha por disco cheio → estado <code>ERRO</code>, mas <code>VERSAO_NOVA</code> já é "2026.08.10" → próximo polling não detecta pendência → cliente nunca mais recebe a versão, sem alarme ativo.</dd>
+            <dt>Correção</dt><dd>Separar "versão instalada confirmada" de "versão-alvo em andamento", ou reverter <code>VERSAO_NOVA</code> ao valor anterior dentro do bloco <code>catch</code> de <span class="path">Worker.cs</span>.</dd>
+            <dt>Status</dt><dd class="status-fixed">Corrigido — a versão anterior é salva num arquivo local antes da Fase 1 sobrescrever o campo, e restaurada no <code>catch</code> de <code>ProcessarAtualizacao</code> junto com a mensagem de erro em <code>MENSAGEM_LOG</code>.</dd>
+          </dl>
+        </div>
+
+        <div class="finding high">
+          <div class="finding-head">
+            <span class="sev-chip high">Alto</span>
+            <h4>Injeção de BLOB no BEXE não é transacional nem revertida em falha</h4>
+          </div>
+          <div class="body">
+            <p>Cada executável é gravado no <span class="path">BEXE.fdb</span> num <code>UPDATE</code>/<code>INSERT</code> isolado, sem transação explícita envolvendo o lote inteiro. Se o terceiro de cinco arquivos falhar, os dois primeiros já foram commitados. Pior: o bloco de rollback do Worker só sabe restaurar o <span class="path">JUNIOR.fdb</span> a partir do backup — ele nunca toca o <span class="path">BEXE.fdb</span>. Uma falha no meio da Fase 4 deixa terminais lendo uma mistura permanente de binários antigos e novos, exatamente o Risco 3 já identificado — agora localizado e confirmado.</p>
+          </div>
+          <dl class="kv">
+            <dt>Onde</dt><dd class="path">DatabaseService.cs:49-82 (InjetarNovosBinarios)</dd>
+            <dt>Cenário</dt><dd>Cinco EXEs, o quarto falha por lock do arquivo → três novos e dois antigos ficam em produção até a próxima tentativa bem-sucedida — se ela vier.</dd>
+            <dt>Correção</dt><dd>Envolver o laço numa única <code>FbTransaction</code> com commit ao final; incluir o BEXE no plano de rollback ou, no mínimo, alertar quando a Fase 4 falha parcialmente.</dd>
+            <dt>Status</dt><dd class="status-fixed">Corrigido — todos os arquivos agora entram numa única <code>FbTransaction</code>, com commit só ao final e rollback automático se qualquer arquivo falhar.</dd>
+          </dl>
+        </div>
+
+        <div class="finding high">
+          <div class="finding-head">
+            <span class="sev-chip high">Alto</span>
+            <h4>O campo <code>script_url</code> existe na API e no formulário, mas o agente nunca o lê</h4>
+          </div>
+          <div class="body">
+            <p>O painel aceita e devolve <code>scriptUrl</code> no contrato de versão, e o documento técnico descreve o <span class="path">BScript.exe</span> como algo distribuído pela nuvem. Só que a classe de resposta do agente (<code>UpdateResponse</code>) não tem propriedade para esse campo, e o Worker sempre chama um caminho fixo (<code>ATUALIZADOR_BSCRIPT_PATH</code>) já presente no servidor do cliente. Ou seja: atualizar a lógica do próprio BScript ainda exige cópia manual em cada servidor — a promessa de "zero toque" não cobre o script mais crítico de todos.</p>
+          </div>
+          <dl class="kv">
+            <dt>Onde</dt><dd class="refs"><span class="path">ApiService.cs:82-88</span> (sem <code>ScriptUrl</code>) · <span class="path">Worker.cs:19</span> (caminho fixo) · <span class="path">VersaoService.js:93</span> (campo existe do lado do painel)</dd>
+            <dt>Correção</dt><dd>Adicionar <code>ScriptUrl</code> a <code>UpdateResponse</code> e baixar/validar o script como qualquer outro pacote antes da Fase 3, ou remover o campo da API para não prometer o que o agente não faz.</dd>
+            <dt>Status</dt><dd class="status-fixed">Corrigido — <code>UpdateResponse</code> agora tem <code>ScriptUrl</code>; se presente, o agente baixa o arquivo na Fase 1 (<code>ApiService.DownloadFileAsync</code>) e usa esse caminho na Fase 3 em vez do fixo.</dd>
+          </dl>
+        </div>
+
+        <div class="finding medium">
+          <div class="finding-head">
+            <span class="sev-chip medium">Médio</span>
+            <h4><code>MENSAGEM_LOG</code> está na tabela de controle mas nunca é escrito</h4>
+          </div>
+          <div class="body">
+            <p>O DDL de <code>SYS_ATUALIZACAO</code> reserva um campo exatamente para isto, mas <code>SetStatusAtualizacao</code> só grava <code>STATUS</code> e <code>VERSAO_NOVA</code>. O detalhe do erro só sai pela chamada HTTP <code>SendLog</code> — que engole qualquer exceção de rede silenciosamente. Se o servidor do cliente perder acesso à internet no momento da falha, não sobra nenhum rastro local do que aconteceu, nem para o Delphi exibir nem para um técnico consultar via <code>isql</code>.</p>
+          </div>
+          <dl class="kv">
+            <dt>Onde</dt><dd class="refs"><span class="path">DatabaseService.cs:33-47</span> · <span class="path">ApiService.cs:68-79</span> (catch vazio)</dd>
+            <dt>Correção</dt><dd>Gravar a mensagem de erro em <code>MENSAGEM_LOG</code> antes de tentar o envio HTTP, não depois/em vez dele.</dd>
+            <dt>Status</dt><dd class="status-fixed">Corrigido — <code>SetStatusAtualizacao</code> aceita uma mensagem opcional e grava em <code>MENSAGEM_LOG</code> sempre que a atualização cai em <code>ERRO</code>.</dd>
+          </dl>
+        </div>
+
+        <div class="finding medium">
+          <div class="finding-head">
+            <span class="sev-chip medium">Médio</span>
+            <h4>Sem contenção após ERRO — nem que o problema de versão (achado crítico) fosse corrigido</h4>
+          </div>
+          <div class="body">
+            <p>O laço principal roda a cada 10 segundos indefinidamente. Se o achado crítico acima for corrigido e o agente voltar a tentar a mesma versão a cada ciclo, uma falha persistente (disco cheio, permissão negada) dispara download, extração e tentativa de <code>BScript</code> a cada 10 segundos, sem limite de tentativas nem espera crescente.</p>
+          </div>
+          <dl class="kv">
+            <dt>Onde</dt><dd class="path">Worker.cs:32-65</dd>
+            <dt>Correção</dt><dd>Backoff exponencial ou número máximo de tentativas antes de exigir intervenção manual.</dd>
+            <dt>Status</dt><dd class="status-fixed">Corrigido — o intervalo entre ciclos cresce (1, 2, 4... até 30 min) a cada falha consecutiva e volta a 10s assim que um ciclo termina sem erro.</dd>
+          </dl>
+        </div>
+
+        <div class="finding low">
+          <div class="finding-head">
+            <span class="sev-chip low">Baixo</span>
+            <h4>7-Zip só é chamado para extensões conhecidas — a "extração universal" tem um filtro antes dela</h4>
+          </div>
+          <div class="body">
+            <p>O documento V4 vende o 7-Zip como algo que "ignora extensões e lê o cabeçalho binário". Isso é verdade sobre a ferramenta <code>7za.exe</code>, mas o wrapper em C# só a invoca para arquivos que já terminam em <code>.7z</code>, <code>.rar</code> ou <code>.zip</code>. Um pacote com extensão inesperada seria ignorado silenciosamente, não extraído "com 100% de precisão".</p>
+          </div>
+          <dl class="kv">
+            <dt>Onde</dt><dd class="path">ExtractionService.cs:26-28</dd>
+            <dt>Impacto</dt><dd>Baixo hoje, porque a API sempre envia extensões conhecidas — mas vale corrigir a redação do documento ou remover o filtro.</dd>
+            <dt>Status</dt><dd class="status-fixed">Corrigido — a extração agora recebe a lista exata dos arquivos baixados (<span class="path">ApiService.DownloadPackages</span> devolve os caminhos), não uma varredura por extensão.</dd>
+          </dl>
+        </div>
+
+        <div class="finding low">
+          <div class="finding-head">
+            <span class="sev-chip low">Baixo</span>
+            <h4>Usuário e senha do Firebird viram uma única string de argumentos</h4>
+          </div>
+          <div class="body">
+            <p><code>-user {'{'}user{'}'} -password {'{'}password{'}'}</code> é montado por interpolação e passado como uma <code>string</code> de argumentos para <code>gfix</code>/<code>gbak</code>. Uma senha com espaço ou aspas quebra o parsing do processo em vez de falhar com uma mensagem clara. Como o valor vem de configuração do operador (não de entrada de usuário final), o risco é de robustez, não de injeção explorável por terceiros.</p>
+          </div>
+          <dl class="kv">
+            <dt>Onde</dt><dd class="path">Worker.cs:72 (usado em 76, 78, 82, 84, 97, 99)</dd>
+            <dt>Correção</dt><dd>Usar <code>ProcessStartInfo.ArgumentList</code> em vez de uma string formatada.</dd>
+            <dt>Status</dt><dd class="status-fixed">Corrigido — todas as chamadas a <code>gfix</code>/<code>gbak</code> agora montam a lista de argumentos como array, e <code>ProcessService</code> usa <code>ArgumentList</code>.</dd>
+          </dl>
+        </div>
+      </section>
+
+      <section id="ciclo">
+        <h2><span class="num">§5</span>Ciclo de atualização — onde cada risco mora</h2>
+        <p class="section-intro">As quatro fases descritas no documento técnico realmente existem no <span class="path">Worker.cs</span>. Marcado abaixo, em qual fase cada achado novo se materializa.</p>
+        <div class="sequence">
+          <div class="phase">
+            <span class="idx">Fase 1</span>
+            <h4>Preparo invisível</h4>
+            <p>Polling, download, SHA-256, extração, grava PENDENTE — e já grava a versão-alvo, cedo demais.</p>
+            <span class="flag critical">Origem do achado crítico</span>
+          </div>
+          <div class="phase">
+            <span class="idx">Fase 2</span>
+            <h4>Decisão do usuário</h4>
+            <p>Delphi lê PENDENTE, confirma, grava AUTORIZADO. Não existe no repositório — ver §7.</p>
+          </div>
+          <div class="phase">
+            <span class="idx">Fase 3</span>
+            <h4>Execução crítica</h4>
+            <p>GFIX → GBAK → BScript (caminho fixo, nunca atualizado) → GBAK → GFIX online.</p>
+            <span class="flag high">BScript nunca é distribuído</span>
+          </div>
+          <div class="phase">
+            <span class="idx">Fase 4</span>
+            <h4>Distribuição BEXE</h4>
+            <p>Injeta cada EXE em commits separados; rollback da Fase 3 não cobre esta fase.</p>
+            <span class="flag high">Injeção não atômica</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="documentos">
+        <h2><span class="num">§6</span>Documentos comparados ao código</h2>
+        <p class="section-intro">A V4 e a apresentação executiva descrevem a mesma arquitetura mais antiga (MD5, sem estado PROCESSANDO). O documento técnico v1.0 é o único que já reflete decisões visíveis no código atual.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Afirmação</th><th>V4 / Executivo</th><th>Doc. técnico v1.0</th><th>Código real</th></tr></thead>
+            <tbody>
+              <tr><td>Verificação de integridade do pacote</td><td>MD5</td><td>SHA-256</td><td><span class="pill ok">SHA-256 confirmado</span></td></tr>
+              <tr><td>Estados de <code>SYS_ATUALIZACAO</code></td><td>4 estados, sem PROCESSANDO</td><td>5 estados incl. PROCESSANDO</td><td><span class="pill ok">5 estados no código</span></td></tr>
+              <tr><td>Distribuição do BScript.exe via nuvem</td><td>Sim, <code>script_url</code></td><td>Não detalha</td><td><span class="pill missing">Campo ignorado pelo agente</span></td></tr>
+              <tr><td>Tratamento de erro "não estrutural" do BScript</td><td>—</td><td>—</td><td><span class="pill na">Não existe — qualquer erro aborta</span></td></tr>
+              <tr><td>Token de autenticação do agente</td><td>Não especifica</td><td><code>X-Agent-Token</code></td><td><span class="pill ok">Implementado, compartilhado entre todos os clientes</span></td></tr>
+              <tr><td>Atomicidade da injeção BEXE</td><td>Não trata</td><td>Não trata</td><td><span class="pill missing">Confirmado: não é atômica</span></td></tr>
+              <tr><td>Cadência de polling</td><td>"Diariamente"</td><td>"Intervalos regulares"</td><td><span class="pill partial">10s no código; ambiente de produção não confirmado</span></td></tr>
+              <tr><td>Schema real do BEXE.fdb</td><td>Assume <code>UPDATE ... BLOB</code></td><td>Lista como pendência</td><td><span class="pill ok">Resolvido por engenharia reversa (tabela real é <code>EXECUTAVEIS</code>) e já corrigido no código</span></td></tr>
+              <tr><td>BScript.exe suporta modo silencioso/CLI</td><td>Assume que sim</td><td>Assume que sim</td><td><span class="pill missing">Nenhuma string de parsing de linha de comando no binário real — código só ganhou timeout de segurança, não confirmação</span></td></tr>
+              <tr><td>Integração Delphi (Fase 2)</td><td>Descrita</td><td>Lista como pendência</td><td><span class="pill missing">Nenhum arquivo .pas no repositório</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="pendencias">
+        <h2><span class="num">§7</span>Pendências que os próprios documentos já assumem — e continuam abertas</h2>
+        <p class="section-intro">O documento técnico v1.0 lista quatro pontos em sua própria seção 11. A segunda passada desta auditoria, contra os arquivos reais em <span class="path">Arquivos para analise/</span>, resolveu e corrigiu um deles no código, e piorou a leitura de outro (que agora tem uma mitigação de segurança, mas não uma confirmação) — os dois primeiros itens abaixo foram atualizados; os dois últimos seguem exatamente como o documento técnico já assumia, fora do alcance de uma correção de código.</p>
+        <ul class="plain">
+          <li><strong>Schema do BEXE.fdb — resolvido e corrigido.</strong> A tabela real é <code>EXECUTAVEIS</code> (colunas <code>NOMEPRODUTO</code>, <code>NOMEARQUIVO</code>, <code>VERSAO</code>, <code>VERSAOATUALIZADA</code>, <code>EXECUTAVEL</code>, <code>HASHEXE</code>, <code>DATA_ATUALIZACAO</code>), confirmada abrindo o <span class="path">BEXE.FDB</span> real, e <span class="path">DatabaseService.cs</span> já foi reescrito para usá-la. O schema do <span class="path">JUNIOR.fdb</span> (a tabela <code>SYS_ATUALIZACAO</code> em si) continua não confirmado; nenhuma cópia desse banco estava disponível para inspeção.</li>
+          <li><strong>Comando silencioso real do BScript — mitigado, não resolvido.</strong> A engenharia reversa do binário real não encontrou nenhuma evidência de que ele aceite argumentos de linha de comando, e encontrou fortes evidências de que é puramente interativo (formulário, seletor de arquivo, botão de confirmação manual). O código ganhou um timeout de segurança que mata o processo se ele travar (ver achado crítico em §4) — isso evita o pior cenário (servidor bloqueado para sempre), mas não substitui confirmar com quem mantém o binário se existe mesmo um modo automatizável.</li>
+          <li><strong>Procedimento de restauração</strong> — o comando <code>gbak -c -replace_database</code> existe no código de rollback, mas nunca foi exercitado contra uma cópia real do Firebird 2.5 do cliente.</li>
+          <li><strong>Integração Delphi</strong> — não há qualquer arquivo <span class="path">.pas</span>/<span class="path">.dpr</span> no repositório; a Fase 2 inteira (ler PENDENTE, perguntar, gravar AUTORIZADO) ainda precisa ser escrita no ERP real.</li>
+        </ul>
+      </section>
+
+      <section id="prioridades">
+        <h2><span class="num">§8</span>Prioridades antes de um piloto</h2>
+        <p class="section-intro">Nove dos itens que estavam nesta lista já foram corrigidos no código nesta rodada (marcados abaixo). Restam dois — e nenhum dos dois se resolve só com mais código.</p>
+        <ol class="priority">
+          <li>
+            <span class="rank">1</span>
+            <div><strong>Confirmar com quem mantém o <code>BScript.exe</code> se existe um modo de linha de comando real</strong><span>O código já tem uma rede de segurança (timeout de 10 min que mata o processo, ver §4), então uma trava não bloqueia mais o servidor para sempre — mas isso não confirma que a automação funciona. Se não houver modo headless, o binário precisa ganhar um ou ser substituído antes de qualquer piloto.</span></div>
+          </li>
+          <li>
+            <span class="rank">2</span>
+            <div><strong>Decidir como os 1026 scripts de <span class="path">Scripts-BVendas/</span> serão aplicados por cliente</strong><span>Sem uma lista de "quais scripts esta versão exige" ou uma tabela de controle consultada automaticamente, rodar a pasta inteira em qualquer cliente que não parta de um banco zerado vai gerar erros de "objeto já existe" a cada tentativa. É decisão de processo, não de código.</span></div>
+          </li>
+          <li>
+            <span class="rank">✓</span>
+            <div><strong>Corrigido — campo de versão-alvo revertido em falha</strong><span><code>Worker.cs</code> agora salva a versão anterior antes da Fase 1 e a restaura no <code>catch</code> de <code>ProcessarAtualizacao</code>.</span></div>
+          </li>
+          <li>
+            <span class="rank">✓</span>
+            <div><strong>Corrigido — injeção do BEXE contra o schema real, numa única transação</strong><span><span class="path">DatabaseService.cs</span> agora usa <code>EXECUTAVEIS</code>/<code>NOMEARQUIVO</code>/<code>EXECUTAVEL</code>/<code>HASHEXE</code> dentro de uma <code>FbTransaction</code>.</span></div>
+          </li>
+          <li>
+            <span class="rank">✓</span>
+            <div><strong>Corrigido — campo <code>script_url</code> agora é baixado e usado</strong><span>O agente baixa o script publicado na Fase 1 e o usa na Fase 3 em vez do caminho fixo, quando presente.</span></div>
+          </li>
+          <li>
+            <span class="rank">✓</span>
+            <div><strong>Corrigido — backoff após falhas consecutivas</strong><span>O laço de 10 segundos agora cresce até 30 minutos em falhas seguidas e volta ao normal assim que um ciclo é saudável.</span></div>
+          </li>
+        </ol>
+        <p class="section-intro">Continuam exigindo confirmação em ambiente real (nenhuma delas é corrigível só com código, ver §7): schema real do <span class="path">JUNIOR.fdb</span>, teste de restauração do backup, e a implementação da Fase 2 em Delphi.</p>
+      </section>
+
+    </main>
+  </div>
+
+  <footer>
+    Auditoria baseada em leitura direta de <span class="path">web/server</span>, <span class="path">web/client</span>, <span class="path">Atualizador automatico/</span> e engenharia reversa dos arquivos reais em <span class="path">Arquivos para analise/</span> — não apenas nos documentos de arquitetura.
+  </footer>
+</div>

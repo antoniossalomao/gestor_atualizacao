@@ -1,0 +1,2419 @@
+/*
+ * Estilos de componentes reutilizáveis: casca da página, cards, botões,
+ * campos de formulário, tabelas, badges, toasts, modais, estados vazios.
+ * Cada classe aqui é usada por mais de uma tela (ver client/js/views/*.js
+ * e client/js/core/*.js) -- equivalente, em espírito, ao "estilista
+ * central" que gestor/theme.py era para o app Tkinter.
+ *
+ * ORGANIZAÇÃO: o arquivo tinha duas seções ("shell atualizado" e "acabamento
+ * visual") escritas depois, que SOBRESCREVIAM regras definidas duzentas
+ * linhas acima -- `.app-header` aparecia duas vezes, `.app-main` também, e
+ * qualquer ajuste exigia descobrir qual das duas vencia. Agora cada
+ * componente é definido uma vez só, na sua seção, na ordem em que aparece na
+ * tela. Nenhuma cor literal: tudo sai dos tokens de theme.css.
+ *
+ * ÍNDICE
+ *   1. Casca (sidebar, cabeçalho, main, view)
+ *   2. Cards e indicadores
+ *   3. Botões e spinner
+ *   4. Formulários
+ *   5. Barra de ferramentas
+ *   6. Tabelas e paginação
+ *   7. Badges e chips
+ *   8. Avisos (banner, toasts)
+ *   9. Modais, paleta de comandos, atalhos
+ *  10. Estados vazio / carregando
+ *  11. Autocomplete
+ *  12. Telas específicas (Consulta, Distribuição, Versões)
+ *  13. Gráficos
+ *  14. Login
+ *  15. Utilidades e responsivo
+ */
+
+/* ==========================================================================
+   1. CASCA
+   ========================================================================== */
+
+#app {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 5;
+  width: var(--largura-sidebar);
+  display: flex;
+  flex-direction: column;
+  padding: 26px 16px 18px;
+  background: var(--sidebar-fundo);
+  backdrop-filter: blur(8px);
+  border-right: 1px solid var(--cor-borda);
+  transition: width var(--dur-media) var(--curva-padrao);
+}
+
+.app-shell {
+  min-height: 100vh;
+  margin-left: var(--largura-sidebar);
+  transition: margin-left var(--dur-media) var(--curva-padrao);
+}
+
+/* Sidebar recolhida: só os ícones. Ganha ~174px de largura útil para as
+   tabelas, que é justamente onde o app precisa de espaço. */
+#app.is-sidebar-collapsed .app-sidebar {
+  width: var(--largura-sidebar-recolhida);
+  padding-left: 10px;
+  padding-right: 10px;
+}
+#app.is-sidebar-collapsed .app-shell {
+  margin-left: var(--largura-sidebar-recolhida);
+}
+#app.is-sidebar-collapsed .app-brand__text,
+#app.is-sidebar-collapsed .app-sidebar__label,
+#app.is-sidebar-collapsed .tab-button span,
+#app.is-sidebar-collapsed .btn--sidebar span {
+  display: none;
+}
+#app.is-sidebar-collapsed .tab-button,
+#app.is-sidebar-collapsed .btn--sidebar {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+#app.is-sidebar-collapsed .app-brand {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 10px 18px;
+}
+
+.app-brand__mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: var(--cor-accent);
+}
+
+.app-brand__mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.app-brand strong {
+  display: block;
+  font: var(--peso-extra) 18px/1.1 var(--fonte-display);
+  letter-spacing: -0.04em;
+  white-space: nowrap;
+}
+
+.app-brand span {
+  display: block;
+  margin-top: 2px;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.app-sidebar__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: var(--sp-4);
+  padding: 7px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  background: transparent;
+  color: var(--cor-texto-fraco);
+  cursor: pointer;
+  transition: background var(--transicao), color var(--transicao);
+}
+.app-sidebar__toggle:hover {
+  background: var(--cor-superficie-hover);
+  color: var(--cor-texto);
+}
+.app-sidebar__toggle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.app-sidebar__label {
+  padding: 0 12px 9px;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-extra);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tab-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: none;
+  border-left: 2px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--cor-texto-sub);
+  font: inherit;
+  font-size: var(--txt-base);
+  font-weight: var(--peso-medio);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--transicao), color var(--transicao);
+}
+
+.tab-button svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.tab-button:hover {
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+}
+
+.tab-button.is-active {
+  background: var(--cor-accent-fraco);
+  border-left-color: var(--cor-accent);
+  color: var(--cor-accent);
+}
+.tab-button.is-active svg {
+  opacity: 1;
+}
+
+.app-sidebar__footer {
+  display: grid;
+  gap: 3px;
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--cor-borda);
+}
+
+/* -- cabeçalho -- */
+
+.app-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: 30px var(--pad-tela) 22px;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.app-header__eyebrow {
+  color: var(--cor-accent);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.app-header__titles h1 {
+  margin: 6px 0 0;
+  font: var(--peso-forte) var(--txt-2xl) / 1.15 var(--fonte-display);
+  letter-spacing: -0.045em;
+}
+
+.app-header__titles p {
+  margin: 4px 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-base);
+}
+
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding-top: 4px;
+}
+
+/* Atalho visual para a paleta de comandos: parece um campo de busca, mas é
+   um botão -- deixa o Ctrl+K descobrível para quem não lê documentação. */
+.app-header__search {
+  gap: 8px;
+  min-width: 190px;
+  justify-content: flex-start;
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-fraco);
+}
+.app-header__search span {
+  flex: 1;
+  text-align: left;
+}
+.app-header__search kbd {
+  margin-left: 2px;
+}
+
+.app-header__user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+
+.app-header__user strong {
+  font-size: var(--txt-sm);
+  font-weight: var(--peso-forte);
+}
+
+.app-header__user span {
+  font-size: var(--txt-xs);
+  color: var(--cor-texto-fraco);
+}
+
+kbd {
+  display: inline-block;
+  min-width: 18px;
+  padding: 2px 5px;
+  border: 1px solid var(--cor-borda-forte);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-sub);
+  font: var(--peso-forte) var(--txt-2xs) / 1.4 var(--fonte);
+  text-align: center;
+}
+
+/* -- área de conteúdo -- */
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  max-width: 1600px;
+  padding: 28px var(--pad-tela) 44px;
+}
+.app-main:focus {
+  outline: none;
+}
+
+.view {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  animation: view-enter var(--dur-lenta) var(--curva-padrao) both;
+}
+
+/*
+ * Barra fina de progresso enquanto a view revalida os dados em segundo plano
+ * (ver View.swr). O ponto é justamente NÃO apagar o que está na tela: o dado
+ * do cache continua legível e utilizável, e isto aqui só avisa que uma
+ * conferência está rolando.
+ */
+.view.is-revalidating::before {
+  content: "";
+  position: absolute;
+  top: -14px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--cor-accent), transparent);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: progresso-indeterminado 1.1s var(--curva-padrao) infinite;
+}
+
+@keyframes progresso-indeterminado {
+  from { background-position: -40% 0; }
+  to { background-position: 140% 0; }
+}
+
+@keyframes view-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   2. CARDS E INDICADORES
+   ========================================================================== */
+
+.card {
+  padding: var(--sp-5);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--card-gradiente);
+  box-shadow: var(--sombra-card);
+  transition: border-color var(--transicao), box-shadow var(--transicao);
+}
+
+.card:hover {
+  border-color: var(--card-borda-hover);
+  box-shadow: var(--sombra-card-hover);
+}
+
+.card__title {
+  margin: 0 0 var(--sp-4);
+  color: var(--cor-texto-sub);
+  font-family: var(--fonte-display);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.card-row {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: stretch;
+}
+
+.card-row > .card {
+  flex: 1;
+  min-width: 0;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+/* Num card estreito, o título de 19px quebrava em duas linhas e brigava com o
+   botão ao lado. Assim o botão desce inteiro para a linha de baixo em vez de
+   ser espremido, e o `min-width: 0` permite o título encolher antes. */
+.section-heading > :first-child {
+  min-width: 0;
+}
+.section-heading > .btn {
+  flex: 0 0 auto;
+}
+.section-heading h2 {
+  margin: 3px 0 0;
+  font: var(--peso-forte) var(--txt-lg) / 1.2 var(--fonte-display);
+  letter-spacing: -0.03em;
+}
+
+.dashboard-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+.dashboard-intro__eyebrow {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.dashboard-intro h2 {
+  margin: 4px 0 2px;
+  font: var(--peso-forte) 22px/1.2 var(--fonte-display);
+  letter-spacing: -0.04em;
+}
+.dashboard-intro p {
+  margin: 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-base);
+}
+/* -- indicadores do topo do Resumo --
+   Colunas fixas (2 ou 4) em vez de "auto-fit": com auto-fit, a largura
+   disponível comportava 3 cards por linha e o quarto -- justamente o de
+   clientes parados, o número mais importante do painel -- caía sozinho na
+   linha de baixo, parecendo rodapé. São sempre 4 cards, então 2x2 no estreito
+   e 1x4 no largo nunca deixam nenhum órfão. */
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+
+@media (min-width: 900px) {
+  .stat-tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.stat-tile {
+  position: relative;
+  overflow: hidden;
+  min-height: 116px;
+  text-align: left;
+  transition: border-color var(--transicao), box-shadow var(--transicao);
+}
+
+/* Fita colorida no topo de cada indicador, uma cor por natureza do número. */
+.stat-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  width: 100%;
+  background: var(--cor-accent);
+}
+.stat-tile:nth-child(2)::after { background: var(--cor-verde); }
+.stat-tile:nth-child(3)::after { background: var(--cor-accent-forte); }
+.stat-tile:nth-child(4)::after { background: var(--cor-vermelho); }
+
+.stat-tile__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stat-tile__value {
+  margin-top: var(--sp-2);
+  font: var(--peso-forte) 34px/1 var(--fonte-display);
+  letter-spacing: -0.05em;
+}
+
+.stat-tile.is-alert .stat-tile__value {
+  color: var(--cor-vermelho);
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+}
+.metric-card span {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.metric-card strong {
+  font: var(--peso-forte) 26px/1.1 var(--fonte-display);
+  color: var(--cor-accent);
+}
+.metric-card--danger strong {
+  color: var(--cor-vermelho);
+}
+
+/* ==========================================================================
+   3. BOTÕES E SPINNER
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: 6px;
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto);
+  font-family: var(--fonte-display);
+  font-size: var(--txt-base);
+  font-weight: var(--peso-forte);
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: background var(--transicao), border-color var(--transicao), color var(--transicao),
+    transform 80ms var(--curva-padrao);
+}
+
+/* Sem isto, um <svg> sem width/height renderiza no tamanho padrão do
+   navegador (300x150px) -- vale para qualquer ícone inline dentro de botão. */
+.btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--cor-superficie-hover);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--accent {
+  background: var(--cor-accent);
+  border-color: var(--cor-accent);
+  color: var(--cor-sobre-accent);
+}
+.btn--accent:hover:not(:disabled) {
+  background: var(--cor-accent-forte);
+  border-color: var(--cor-accent-forte);
+}
+
+.btn--danger {
+  background: transparent;
+  border-color: var(--cor-borda-forte);
+  color: var(--cor-vermelho);
+}
+.btn--danger:hover:not(:disabled) {
+  background: var(--cor-vermelho);
+  border-color: var(--cor-vermelho);
+  color: var(--cor-sobre-perigo);
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+.btn--ghost:hover:not(:disabled) {
+  background: var(--cor-superficie-alta);
+}
+
+.btn--small {
+  padding: 6px 10px;
+  font-size: var(--txt-sm);
+}
+
+.btn--sidebar {
+  justify-content: flex-start;
+  border-color: transparent;
+  background: transparent;
+  color: var(--cor-texto-sub);
+}
+.btn--sidebar:hover:not(:disabled) {
+  background: var(--cor-superficie-hover);
+  color: var(--cor-texto);
+}
+
+/* Spinner do botão ocupado (ver core/guard.js). `currentColor` faz ele herdar
+   a cor do botão, então funciona igual no accent, no danger e no ghost. */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0.85;
+  animation: girar 620ms linear infinite;
+}
+
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   4. FORMULÁRIOS
+   ========================================================================== */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field__label {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* `min-height` reservado: sem ele, a mensagem de erro aparecendo empurra o
+   resto do formulário para baixo e a tela "pula" enquanto a pessoa digita. */
+.field__hint {
+  min-height: 14px;
+  color: var(--cor-vermelho);
+  font-size: var(--txt-xs);
+}
+
+.field__help {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
+
+input[type="text"],
+input[type="search"],
+input[type="password"],
+input[type="date"],
+input[type="number"],
+select,
+textarea,
+.input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--cor-borda-campo);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto);
+  font: inherit;
+  font-size: var(--txt-md);
+  transition: border-color var(--transicao), background var(--transicao), box-shadow var(--transicao);
+}
+
+textarea.input {
+  min-height: 88px;
+  resize: vertical;
+}
+
+input[type="file"] {
+  cursor: pointer;
+}
+input[type="file"]::file-selector-button {
+  font-family: var(--fonte-display);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--cor-texto-fraco);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--cor-accent);
+  background: var(--cor-superficie);
+  box-shadow: 0 0 0 3px var(--cor-accent-fraco);
+  outline: none;
+}
+
+input[aria-invalid="true"],
+input:invalid.touched {
+  border-color: var(--cor-vermelho);
+}
+
+select {
+  appearance: none;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23808ea6'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+/*
+ * Grid de campos. Por padrão (telas estreitas) é uma coluna; os modificadores
+ * --2/--3/--4/--5 fixam o número de colunas em telas largas o bastante --
+ * números escolhidos para bater com o agrupamento de campos de cada
+ * formulário (3 em Clientes, 4 em Atualizações, 5 em Agendamentos), em vez de
+ * um `auto-fit` genérico, que podia deixar a última linha com um número de
+ * colunas diferente da primeira e parecer "torta".
+ */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-4);
+}
+
+@media (min-width: 560px) {
+  .form-grid,
+  .form-grid--2 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 860px) {
+  .form-grid--3 { grid-template-columns: repeat(3, 1fr); }
+  .form-grid--4 { grid-template-columns: repeat(4, 1fr); }
+}
+@media (min-width: 1040px) {
+  .form-grid--5 { grid-template-columns: repeat(5, 1fr); }
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-1);
+}
+
+/* "Editando o registro #12" ao lado dos botões: sem isso, a única pista de
+   que o formulário está em modo edição (e não criando algo novo) era a linha
+   estar destacada lá embaixo na tabela. */
+.form-actions__hint {
+  margin-left: var(--sp-2);
+  font-size: var(--txt-sm);
+}
+
+.clientes-sistemas-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: var(--sp-4) 0 var(--sp-2);
+}
+
+.users-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: var(--sp-4) 0;
+}
+
+.users-list__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+}
+
+.users-list__info {
+  min-width: 0;
+}
+
+.users-list__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--txt-base);
+  font-weight: var(--peso-forte);
+}
+
+.users-list__tag {
+  padding: 2px 7px;
+  font-size: var(--txt-2xs);
+}
+
+.users-list__handle {
+  font-size: var(--txt-sm);
+}
+
+.users-new {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  margin-top: var(--sp-4);
+}
+
+.checkbox-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-5);
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--cor-texto);
+  font-size: var(--txt-base);
+  cursor: pointer;
+}
+
+.checkbox-item input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--cor-accent);
+}
+
+/* Envolve o checkbox e o botão de excluir do catálogo (aba Clientes) como
+   irmãos, não aninhados -- ver o comentário em ClientesView._reloadSistemas. */
+.checkbox-item-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Some por padrão, aparece no hover/foco da linha -- um "✕" ao lado de cada
+   um dos ~18 sistemas o tempo todo pesaria visualmente mais que o catálogo
+   merece no dia a dia (excluir um sistema é raro; marcar/desmarcar é o que
+   se faz o tempo todo). `:focus-within` garante que continue alcançável
+   navegando só por teclado, sem depender do mouse pairar em cima. */
+.checkbox-item__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--cor-texto-fraco);
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity var(--transicao), background var(--transicao), color var(--transicao);
+}
+.checkbox-item-row:hover .checkbox-item__remove,
+.checkbox-item-row:focus-within .checkbox-item__remove {
+  opacity: 1;
+}
+.checkbox-item__remove:hover {
+  background: var(--cor-vermelho-fraco);
+  color: var(--cor-vermelho);
+}
+
+/* Barra de progresso do upload de pacote (aba Distribuição). */
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--txt-xs);
+  color: var(--cor-texto-sub);
+}
+.upload-progress__track {
+  flex: 1;
+  height: 6px;
+  border-radius: var(--raio-pilula);
+  background: var(--cor-borda);
+  overflow: hidden;
+}
+.upload-progress__fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: var(--raio-pilula);
+  background: var(--cor-accent);
+  transition: width var(--dur-media) var(--curva-padrao);
+}
+/* Sem tamanho total conhecido, a barra vira indeterminada em vez de mentir
+   uma porcentagem. */
+.upload-progress.is-indeterminate .upload-progress__fill {
+  width: 35%;
+  animation: progresso-indeterminado 1.1s var(--curva-padrao) infinite;
+}
+
+/* ==========================================================================
+   5. BARRA DE FERRAMENTAS
+   ========================================================================== */
+
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+  padding-bottom: 2px;
+}
+
+.toolbar .field {
+  min-width: 200px;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.result-count {
+  /* Alinha a linha de base com a borda inferior dos campos ao lado (que têm
+     padding de 9px) -- sem isto, o texto solto fica alguns pixels mais alto,
+     um desalinhamento sutil mas perceptível numa mesma linha. */
+  padding-bottom: 9px;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+
+/* Botão de limpar filtros: só aparece quando há filtro aplicado. */
+.toolbar__clear {
+  padding-bottom: 5px;
+}
+
+/* ==========================================================================
+   6. TABELAS E PAGINAÇÃO
+   ========================================================================== */
+
+.table-wrap {
+  position: relative;
+  overflow-x: auto;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--veu-tabela);
+  transition: opacity var(--dur-media) var(--curva-padrao);
+}
+
+/* Enquanto revalida, o conteúdo antigo continua visível e legível, só um
+   pouco apagado -- o oposto de apagar a tabela e mostrar esqueleto de novo. */
+.table-wrap.is-refreshing {
+  opacity: 0.62;
+}
+
+.table-scroll {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--txt-base);
+}
+
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0;
+  border-bottom: 1px solid var(--cor-borda);
+  background: var(--cor-fundo-alt);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table thead th:first-child { border-top-left-radius: 5px; }
+.data-table thead th:last-child { border-top-right-radius: 5px; }
+
+/*
+ * O cabeçalho ordenável (SortableTable) é um <button> DENTRO do <th> --
+ * alcançável por Tab, acionável por Enter. É só esse <button> que vira flex;
+ * o <th> continua `display: table-cell` (herdado), porque é isso que faz um
+ * <th> participar do layout de tabela.
+ *
+ * As tabelas que NÃO passam pelo SortableTable (Distribuição, Versões --
+ * `<th>Sistema</th>` escrito direto no HTML, sem nenhum <button> dentro)
+ * caem na segunda regra abaixo. Ela tinha `display: flex` também, achando
+ * que deixaria os dois tipos de cabeçalho visualmente idênticos -- só que
+ * aplicado DIRETO no <th>, `display: flex` retira o elemento do layout de
+ * tabela (deixa de ser `table-cell`), e cada cabeçalho passa a empilhar
+ * verticalmente em vez de ficar lado a lado. É o bug por trás das tabelas
+ * de Distribuição/Versões aparecendo com os nomes das colunas empilhados
+ * em vez de formar uma linha -- reproduzido e confirmado.
+ */
+.data-table__sort {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  /* Cinza, não azul: o cabeçalho inteiro em cor de destaque competia com os
+     dados. O azul agora marca só a coluna que está de fato ordenando. */
+  color: var(--cor-texto-sub);
+  font-family: var(--fonte-display);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--transicao);
+}
+
+.data-table__sort:hover {
+  color: var(--cor-texto);
+}
+
+/* Cabeçalho estático (sem ordenação, sem <button>) -- mesma tipografia do
+   botão acima, mas SEM display/cursor, para o <th> continuar em table-cell. */
+.data-table thead th:not(:has(.data-table__sort)) {
+  padding: 10px 12px;
+  color: var(--cor-texto-sub);
+  font-family: var(--fonte-display);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.data-table th.is-sorted .data-table__sort {
+  color: var(--cor-accent);
+}
+
+.data-table .sort-arrow {
+  font-size: var(--txt-2xs);
+  opacity: 0.8;
+}
+
+.data-table td {
+  max-width: 320px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--cor-borda);
+  color: var(--cor-texto);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr {
+  cursor: pointer;
+  transition: background var(--transicao);
+}
+
+.data-table tbody tr:nth-child(odd) {
+  background: var(--veu-linha);
+}
+
+/* Tabelas sem seleção (os quadros do Resumo) não recebem o destaque de hover
+   nem o cursor de "clicável", já que clicar nelas não faz nada. */
+.data-table tbody tr:not(.is-readonly):hover {
+  background: var(--cor-superficie-hover);
+}
+.data-table tbody tr.is-readonly {
+  cursor: default;
+}
+.data-table tbody tr.is-readonly:hover {
+  background: inherit;
+}
+.data-table tbody tr.is-skeleton {
+  cursor: default;
+}
+
+.data-table tbody tr.is-selected {
+  background: var(--cor-accent-fraco) !important;
+  box-shadow: inset 2px 0 0 var(--cor-accent);
+}
+
+.data-table tbody tr.is-muted {
+  color: var(--cor-texto-fraco);
+}
+
+/* Foco do "cursor" de teclado da tabela: para dentro, para não ser cortado
+   pelo `overflow: hidden` das células. */
+.data-table tbody tr:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: -2px;
+}
+
+.table-empty {
+  padding: var(--sp-6) var(--sp-4);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-base);
+  text-align: center;
+  white-space: normal;
+  max-width: none;
+}
+
+.table-subtext {
+  display: block;
+  margin-top: 2px;
+  color: var(--cor-texto-fraco);
+  font: var(--txt-2xs) var(--fonte);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+
+.pagination[hidden] {
+  display: none;
+}
+
+.pagination__buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.pagination__page {
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   7. BADGES E CHIPS
+   ========================================================================== */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-pilula);
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto);
+  font-size: var(--txt-sm);
+  font-weight: var(--peso-forte);
+}
+
+.badge--accent {
+  border-color: var(--cor-accent);
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+.badge--success {
+  border-color: transparent;
+  background: var(--cor-verde-fraco);
+  color: var(--cor-verde);
+}
+.badge--danger {
+  border-color: transparent;
+  background: var(--cor-vermelho-fraco);
+  color: var(--cor-vermelho);
+}
+.badge--warning {
+  border-color: transparent;
+  background: var(--cor-amarelo-fraco);
+  color: var(--cor-amarelo);
+}
+.badge--muted {
+  border-color: var(--cor-borda);
+  background: transparent;
+  color: var(--cor-texto-fraco);
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.version-chip {
+  display: inline-block;
+  padding: 5px 8px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 5px;
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+  font: var(--peso-forte) var(--txt-sm) var(--fonte-display);
+}
+
+/* ==========================================================================
+   8. AVISOS
+   ========================================================================== */
+
+.reminder-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: 0 var(--pad-tela);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--cor-amarelo);
+  border-left-width: 3px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-amarelo-fraco);
+  color: var(--cor-texto);
+  font-size: var(--txt-base);
+  animation: view-enter var(--dur-media) var(--curva-padrao) both;
+}
+
+/* Antes o banner era uma faixa amarela sólida de ponta a ponta, com texto
+   escuro -- destoava do resto do app e gritava mais que a informação merecia.
+   Agora é um aviso contido, no mesmo vocabulário visual dos cards. */
+.reminder-banner__icon {
+  display: grid;
+  place-items: center;
+  color: var(--cor-amarelo);
+}
+.reminder-banner__icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.reminder-banner__text {
+  flex: 1;
+}
+
+#toast-stack {
+  position: fixed;
+  right: var(--sp-5);
+  bottom: var(--sp-5);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 260px;
+  max-width: 420px;
+  padding: 11px 12px 11px 14px;
+  border: 1px solid var(--cor-borda-forte);
+  border-left: 3px solid var(--cor-accent);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  box-shadow: var(--sombra-flutuante);
+  font-size: var(--txt-base);
+  pointer-events: auto;
+  animation: toast-in var(--dur-media) var(--curva-padrao);
+}
+
+.toast--success { border-left-color: var(--cor-verde); }
+.toast--error { border-left-color: var(--cor-vermelho); }
+.toast--info { border-left-color: var(--cor-accent); }
+
+.toast__text {
+  flex: 1;
+}
+
+.toast__count {
+  padding: 1px 6px;
+  border-radius: var(--raio-pilula);
+  background: var(--cor-superficie-hover);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-extra);
+}
+
+.toast__action {
+  padding: 4px 9px;
+  border: 1px solid var(--cor-accent);
+  border-radius: 5px;
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+  font: var(--peso-forte) var(--txt-sm) var(--fonte-display);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.toast__action:hover {
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
+}
+
+.toast__close {
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+  line-height: 1;
+  cursor: pointer;
+}
+.toast__close:hover {
+  color: var(--cor-texto);
+}
+
+/* Sair com animação, não sumir de uma vez: um elemento que desaparece
+   instantaneamente é lido como falha, deslizar para fora é lido como fim. */
+.toast.is-leaving {
+  animation: toast-out 180ms var(--curva-saida) forwards;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toast-out {
+  to { opacity: 0; transform: translateX(24px); }
+}
+
+/* ==========================================================================
+   9. MODAIS, PALETA DE COMANDOS, ATALHOS
+   ========================================================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+  background: var(--veu-overlay);
+  backdrop-filter: blur(3px);
+  animation: fade-in var(--dur-rapida) var(--curva-padrao);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-box {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  padding: var(--sp-6);
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-grande);
+  background: var(--cor-superficie);
+  box-shadow: var(--sombra-flutuante);
+  animation: modal-in var(--dur-media) var(--curva-padrao);
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-box__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-bottom: var(--sp-4);
+  border-radius: 10px;
+  font-weight: var(--peso-extra);
+}
+
+.modal-box__icon--info,
+.modal-box__icon--question {
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+.modal-box__icon--warning {
+  background: var(--cor-amarelo-fraco);
+  color: var(--cor-amarelo);
+}
+.modal-box__icon--error {
+  background: var(--cor-vermelho-fraco);
+  color: var(--cor-vermelho);
+}
+
+.modal-box__title {
+  margin: 0 0 6px;
+  font-family: var(--fonte-display);
+  font-size: 15px;
+  font-weight: var(--peso-extra);
+}
+
+.modal-box__message {
+  margin: 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-base);
+  white-space: pre-line;
+}
+
+.modal-box__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+  margin-top: var(--sp-5);
+}
+
+/* -- paleta de comandos (Ctrl+K) -- */
+
+.cmdk-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh var(--sp-4) var(--sp-4);
+  background: var(--veu-overlay);
+  backdrop-filter: blur(3px);
+  animation: fade-in var(--dur-rapida) var(--curva-padrao);
+}
+
+.cmdk {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: 62vh;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-grande);
+  background: var(--cor-superficie);
+  box-shadow: var(--sombra-flutuante);
+  overflow: hidden;
+  animation: modal-in var(--dur-media) var(--curva-padrao);
+}
+
+.cmdk__field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--cor-borda);
+  color: var(--cor-texto-fraco);
+}
+.cmdk__field svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.cmdk__input {
+  flex: 1;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cor-texto);
+  font-size: 15px;
+}
+.cmdk__input:focus {
+  outline: none;
+  box-shadow: none;
+  background: none;
+}
+
+.cmdk__esc {
+  flex-shrink: 0;
+}
+
+.cmdk__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.cmdk__group {
+  padding: 10px 10px 5px;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.cmdk__item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 10px;
+  border-radius: var(--raio-pequeno);
+  cursor: pointer;
+}
+
+.cmdk__item.is-active {
+  background: var(--cor-accent-fraco);
+}
+
+.cmdk__icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-sub);
+}
+.cmdk__item.is-active .cmdk__icon {
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
+}
+.cmdk__icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cmdk__labels {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cmdk__labels strong {
+  font-family: var(--fonte);
+  font-size: var(--txt-base);
+  font-weight: var(--peso-forte);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmdk__labels span {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cmdk__empty {
+  padding: var(--sp-6);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-base);
+  text-align: center;
+}
+
+.cmdk__footer {
+  display: flex;
+  gap: var(--sp-4);
+  padding: 9px 16px;
+  border-top: 1px solid var(--cor-borda);
+  background: var(--cor-fundo-alt);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
+.cmdk__footer span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* -- lista de atalhos -- */
+
+.shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  margin-top: var(--sp-5);
+}
+.shortcuts__group h4 {
+  margin: 0 0 var(--sp-2);
+  color: var(--cor-texto-fraco);
+  font-family: var(--fonte-display);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.shortcuts__row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--cor-borda);
+  font-size: var(--txt-base);
+}
+.shortcuts__row:last-child {
+  border-bottom: 0;
+}
+.shortcuts__keys {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 0 0 132px;
+}
+.shortcuts__keys span {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
+.shortcuts__desc {
+  color: var(--cor-texto-sub);
+}
+
+/* ==========================================================================
+   10. ESTADOS VAZIO / CARREGANDO
+   ========================================================================== */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-8) var(--sp-4);
+  color: var(--cor-texto-sub);
+  text-align: center;
+}
+
+.empty-state__icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: var(--sp-1);
+  border-radius: 12px;
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-fraco);
+}
+.empty-state__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.empty-state__title {
+  margin: 0;
+  color: var(--cor-texto);
+  font-family: var(--fonte-display);
+  font-size: 15px;
+  font-weight: var(--peso-forte);
+}
+
+.empty-state__desc {
+  max-width: 46ch;
+  margin: 0;
+  font-size: var(--txt-base);
+}
+
+.empty-state__action {
+  margin-top: var(--sp-3);
+}
+
+.skeleton {
+  border-radius: var(--raio-pequeno);
+  background: linear-gradient(90deg, var(--cor-superficie-alta) 25%, var(--cor-superficie-hover) 37%, var(--cor-superficie-alta) 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* ==========================================================================
+   11. AUTOCOMPLETE
+   ========================================================================== */
+
+.autocomplete {
+  position: relative;
+}
+
+.autocomplete__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: none;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  box-shadow: var(--sombra-flutuante);
+}
+
+.autocomplete__list.is-open {
+  display: block;
+}
+
+.autocomplete__item {
+  padding: 8px 12px;
+  font-size: var(--txt-base);
+  cursor: pointer;
+}
+
+.autocomplete__item:hover,
+.autocomplete__item.is-active {
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+
+/* Destaque do trecho que casou com o que foi digitado: deixa claro POR QUE
+   cada sugestão está na lista. */
+.autocomplete__item mark {
+  background: none;
+  color: var(--cor-accent);
+  font-weight: var(--peso-extra);
+}
+
+/* ==========================================================================
+   12. TELAS ESPECÍFICAS
+   ========================================================================== */
+
+/* -- Consultar Cliente -- */
+
+.consulta-layout {
+  display: flex;
+  gap: var(--sp-5);
+  align-items: flex-start;
+}
+
+.consulta-search {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: var(--sp-3);
+  width: 300px;
+}
+
+.consulta-matches {
+  display: flex;
+  flex-direction: column;
+  max-height: 420px;
+  overflow: hidden auto;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+}
+
+.consulta-matches__item {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--cor-borda);
+  font-size: var(--txt-base);
+  text-align: left;
+  cursor: pointer;
+}
+.consulta-matches__item:last-child {
+  border-bottom: none;
+}
+.consulta-matches__item:hover {
+  background: var(--cor-superficie-hover);
+}
+.consulta-matches__item.is-active {
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+  font-weight: var(--peso-forte);
+}
+/* Quando o item é um <button> (para funcionar por teclado), zera o visual
+   nativo sem perder o comportamento. */
+button.consulta-matches__item {
+  width: 100%;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  background: none;
+  color: inherit;
+  font-family: inherit;
+}
+
+.consulta-detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.consulta-detail__name {
+  font: var(--peso-forte) var(--txt-xl) / 1.2 var(--fonte-display);
+  letter-spacing: -0.03em;
+}
+
+.consulta-detail__subtitle {
+  margin-top: 4px;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-base);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-4) var(--sp-6);
+}
+
+.info-grid__item--wide {
+  grid-column: 1 / -1;
+}
+
+.info-grid__label {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.info-grid__value {
+  margin-top: 3px;
+  font-size: var(--txt-md);
+  overflow-wrap: anywhere;
+}
+
+hr.separator {
+  margin: var(--sp-5) 0;
+  border: none;
+  border-top: 1px solid var(--cor-borda);
+}
+
+/* -- Distribuição -- */
+
+.distribution-hero,
+.versions-hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.distribution-hero::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 92px;
+  height: 2px;
+  background: var(--cor-accent);
+}
+
+.distribution-hero h2,
+.versions-hero h2 {
+  margin: 4px 0 2px;
+  font: var(--peso-forte) var(--txt-xl) / 1.2 var(--fonte-display);
+  letter-spacing: -0.04em;
+}
+.distribution-hero p,
+.versions-hero p {
+  margin: 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-base);
+}
+
+.distribution-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+  gap: var(--sp-5);
+}
+
+.distribution-form {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  overflow: hidden;
+}
+.distribution-form::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--cor-accent);
+}
+
+.distribution-file {
+  padding: 8px;
+}
+.distribution-file::file-selector-button {
+  margin-right: 10px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
+  font: var(--peso-forte) var(--txt-sm) var(--fonte);
+  cursor: pointer;
+}
+
+.distribution-notes {
+  min-height: 64px;
+  resize: vertical;
+}
+
+.distribution-note {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-accent);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-accent-fraco);
+}
+.distribution-note__icon {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 6px;
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
+  font: var(--peso-extra) var(--txt-sm) var(--fonte-display);
+}
+.distribution-note strong {
+  display: block;
+  color: var(--cor-accent);
+  font: var(--peso-forte) var(--txt-sm) var(--fonte-display);
+}
+.distribution-note p {
+  margin: 2px 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+}
+
+/* `auto-fit` com mínimo de 150px: são seis indicadores, e um número fixo de
+   colunas deixaria órfãos em quase toda largura de tela. Aqui a grade
+   acomoda 6, 3 ou 2 por linha conforme couber, sempre completas. */
+.distribution-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--sp-4);
+}
+
+.distribution-hero__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+/* -- "no ar agora": uma linha por sistema com a versão publicada -- */
+
+.active-versions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.active-version {
+  padding: 10px 12px;
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-verde);
+  border-radius: var(--raio-pequeno);
+  background: var(--veu-tabela);
+}
+
+.active-version__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.active-version__head strong {
+  font-family: var(--fonte);
+  font-size: var(--txt-base);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-version__meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
+
+/* Contexto técnico de um retorno de agente (sistema · 2026.07 → 2026.08 · 40 s):
+   monoespaçado para os números de versão alinharem e não se confundirem com
+   a mensagem de detalhe logo abaixo. */
+.agent-log__ctx {
+  margin: 3px 0 0 !important;
+  color: var(--cor-texto-fraco) !important;
+  font-family: var(--fonte-mono);
+  font-size: var(--txt-xs) !important;
+}
+
+.distribution-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.agent-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.agent-log {
+  display: flex;
+  gap: 10px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--cor-borda);
+}
+.agent-log:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.agent-log__dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--cor-verde);
+}
+.agent-log__dot.is-error {
+  background: var(--cor-vermelho);
+}
+.agent-log strong,
+.agent-log span {
+  display: block;
+  font-size: var(--txt-sm);
+}
+.agent-log span {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.agent-log p {
+  margin: 3px 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+}
+
+/* -- Versões -- */
+
+.version-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-4);
+}
+
+.version-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 100px;
+}
+.version-stat span {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.version-stat strong {
+  color: var(--cor-accent);
+  font: var(--peso-forte) 25px/1.1 var(--fonte-display);
+}
+
+.published-list {
+  display: grid;
+  gap: 10px;
+}
+
+.published-release {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 7px;
+  background: var(--veu-tabela);
+}
+.published-release__version {
+  min-width: 108px;
+  color: var(--cor-accent);
+  font: var(--peso-forte) var(--txt-lg) var(--fonte-display);
+}
+.published-release__body {
+  flex: 1;
+  min-width: 0;
+}
+.published-release__body strong,
+.published-release__body span {
+  display: block;
+}
+.published-release__body strong {
+  font-size: var(--txt-base);
+}
+.published-release__body span {
+  margin-top: 2px;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+}
+.published-release__body p {
+  margin: 6px 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+.published-release__state {
+  color: var(--cor-verde);
+  font: var(--peso-extra) var(--txt-2xs) var(--fonte-display);
+  letter-spacing: 0.08em;
+}
+
+/* Carimbo de "atualizado há X" -- presente em toda tela que busca dados ao
+   vivo, para nunca haver dúvida se o número na tela é de agora ou de meia
+   hora atrás. */
+.data-freshness {
+  display: none !important;
+}
+.data-freshness i {
+  display: none !important;
+}
+.data-freshness.is-stale i {
+  display: none !important;
+}
+
+.table-actions {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.table-actions > * {
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   13. GRÁFICOS
+   ========================================================================== */
+
+.pie-chart {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  flex-wrap: wrap;
+}
+
+.pie-chart svg {
+  flex-shrink: 0;
+}
+
+.pie-chart__legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.pie-chart__legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--txt-base);
+}
+
+.pie-chart__dot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.bar-chart__row {
+  display: grid;
+  grid-template-columns: 132px 1fr 32px;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: var(--txt-sm);
+}
+
+.bar-chart__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cor-texto-sub);
+}
+
+.bar-chart__track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: var(--raio-pilula);
+  background: var(--cor-borda);
+}
+
+.bar-chart__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--raio-pilula);
+  transition: width var(--dur-lenta) var(--curva-padrao);
+}
+
+.bar-chart__value {
+  text-align: right;
+  font-weight: var(--peso-extra);
+}
+
+/* ==========================================================================
+   14. LOGIN
+   ========================================================================== */
+
+.auth-screen {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--sp-4);
+  background: radial-gradient(circle at 15% 20%, var(--halo-topo), transparent 32%), var(--cor-fundo);
+}
+
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: min(380px, 100%);
+  padding: var(--sp-8) var(--sp-6);
+  border: 1px solid var(--cor-borda);
+  border-top: 3px solid var(--cor-accent);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  box-shadow: var(--sombra-flutuante);
+}
+
+.auth-card__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: var(--sp-4);
+  border-radius: 9px;
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
+  font-family: var(--fonte-display);
+  font-size: 18px;
+  font-weight: var(--peso-extra);
+}
+
+.auth-card h2 {
+  margin: 0 0 4px;
+  font-family: var(--fonte-display);
+  font-size: var(--txt-xl);
+  letter-spacing: -0.04em;
+}
+
+.auth-card p.auth-card__subtitle {
+  margin: 0 0 var(--sp-5);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-base);
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.auth-card .btn {
+  justify-content: center;
+  padding: 11px 14px;
+}
+
+.auth-card__error {
+  display: none;
+  padding: 9px 12px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-vermelho-fraco);
+  color: var(--cor-vermelho);
+  font-size: var(--txt-sm);
+}
+
+.auth-card__error.is-visible {
+  display: block;
+}
+
+/* ==========================================================================
+   15. UTILIDADES E RESPONSIVO
+   ========================================================================== */
+
+.text-muted {
+  color: var(--cor-texto-sub);
+}
+
+h1, h2, h3, strong {
+  font-family: var(--fonte-display);
+}
+
+/*
+ * Dois pontos de quebra, não seis.
+ * O arquivo tinha media queries em 560, 760, 780, 860, 900 e 1040px, escritas
+ * em momentos diferentes -- 760 e 780 faziam quase a mesma coisa em regras
+ * separadas. Os breakpoints de grade de formulário (560/860/1040) ficam junto
+ * do componente; aqui embaixo estão só os dois estruturais.
+ */
+
+/* Tablet: a barra lateral vira uma fita horizontal no topo. */
+@media (max-width: 900px) {
+  .app-sidebar {
+    position: static;
+    width: 100%;
+    padding: 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--cor-borda);
+  }
+  #app.is-sidebar-collapsed .app-sidebar {
+    width: 100%;
+    padding: 16px;
+  }
+  .app-brand {
+    padding: 0 4px 16px;
+  }
+  #app.is-sidebar-collapsed .app-brand__text,
+  #app.is-sidebar-collapsed .tab-button span {
+    display: block;
+  }
+  .app-sidebar__toggle,
+  .app-sidebar__label,
+  .app-sidebar__footer {
+    display: none;
+  }
+  .app-sidebar .tabs {
+    flex-direction: row;
+    margin: 0 -4px;
+    overflow-x: auto;
+  }
+  .app-sidebar .tab-button {
+    width: auto;
+    flex: 0 0 auto;
+    border-left: 0;
+    border-bottom: 2px solid transparent;
+  }
+  .app-sidebar .tab-button.is-active {
+    border-bottom-color: var(--cor-accent);
+  }
+  .app-shell,
+  #app.is-sidebar-collapsed .app-shell {
+    margin-left: 0;
+    min-height: auto;
+  }
+  .app-header__search span,
+  .app-header__search kbd {
+    display: none;
+  }
+  .app-header__search {
+    min-width: 0;
+  }
+}
+
+/* Celular: tudo em uma coluna. */
+@media (max-width: 780px) {
+  :root {
+    --pad-tela: 16px;
+  }
+  .app-header {
+    flex-wrap: wrap;
+    padding: 22px var(--pad-tela) 18px;
+  }
+  .app-header__titles h1 {
+    font-size: 23px;
+  }
+  .app-header__actions {
+    gap: 8px;
+  }
+  .app-header__user {
+    display: none;
+  }
+  .app-main {
+    padding: 20px var(--pad-tela) 32px;
+  }
+  .consulta-layout,
+  .card-row {
+    flex-direction: column;
+  }
+  .consulta-search {
+    width: 100%;
+  }
+  .dashboard-intro,
+  .distribution-hero,
+  .versions-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .distribution-hero__meta {
+    align-self: flex-start;
+  }
+  .distribution-layout,
+  .distribution-metrics,
+  .version-stats,
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  .published-release {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px 12px;
+  }
+  .published-release__body {
+    flex-basis: calc(100% - 124px);
+  }
+  .published-release__state {
+    margin-left: 124px;
+  }
+  .cmdk-overlay {
+    padding-top: 6vh;
+  }
+  #toast-stack {
+    right: var(--sp-3);
+    left: var(--sp-3);
+    bottom: var(--sp-3);
+  }
+  .toast {
+    min-width: 0;
+    max-width: none;
+  }
+}
