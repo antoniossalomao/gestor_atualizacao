@@ -2115,7 +2115,7 @@ hr.separator {
   display: flex !important;
   align-items: center;
   gap: 6px;
-  min-height: 32px;
+  min-height: 50px;
   vertical-align: middle;
   white-space: nowrap;
 }

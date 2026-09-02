@@ -3,6 +3,7 @@ node_modules/
 
 # Configuração local (segredos, caminho do banco) -- cada ambiente tem o seu.
 .env
+*.sql
 
 # Banco de dados, backups automáticos e sessões de login: são DADOS reais
 # de clientes, não código -- nunca devem ir para o controle de versão
