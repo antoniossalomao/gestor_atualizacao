@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const Sqlite3 = require("better-sqlite3");
 
-const { SISTEMAS_CONHECIDOS, BACKUP_KEEP } = require("../config/constants");
+const { SISTEMAS_CONHECIDOS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS, BACKUP_KEEP } = require("../config/constants");
 const { BaseRepository } = require("./BaseRepository");
 const { AtualizacaoRepository } = require("./AtualizacaoRepository");
 const { ClienteRepository } = require("./ClienteRepository");
@@ -125,6 +125,11 @@ class Database {
       const insertMany = conn.transaction((nomes) => nomes.forEach((n) => insert.run(n)));
       insertMany(SISTEMAS_CONHECIDOS);
     }
+    // "Suporte Bredas" foi adicionado ao catalogo depois que bancos ja
+    // existentes tinham sido semeados (o bloco acima so roda na tabela
+    // vazia) -- garante ele aqui tambem, fora do "semSistemas", pra
+    // aparecer como checkbox na aba Clientes mesmo em instalacoes antigas.
+    conn.prepare("INSERT OR IGNORE INTO sistemas (nome) VALUES (?)").run(SISTEMA_SUPORTE_BREDAS);
 
     // Tabela nova (nao existia no app Python): contas de login.
     conn.exec(`
@@ -235,6 +240,42 @@ class Database {
     conn.exec(`CREATE INDEX IF NOT EXISTS idx_atualizador_logs_cnpj ON atualizador_logs (cnpj, id DESC)`);
 
     this._backfillSistemaDasVersoes();
+    this._backfillSuporteBredas();
+  }
+
+  /**
+   * Marca "Suporte Bredas" em todo cliente que ja tem uma atualizacao com
+   * essa observacao registrada no historico, mas que ainda nao tinha o
+   * sistema marcado -- cobre os registros lancados ANTES desta migracao
+   * existir (ver AtualizacaoService._marcarSuporteBredasSeNecessario, que
+   * cobre os registros DAQUI PRA FRENTE). Roda toda vez que o servidor
+   * sobe, mas so grava quando falta marcar algo -- depois da primeira vez
+   * que cada cliente for coberto, vira no-op pra ele (ver
+   * ClienteRepository.adicionarSistema).
+   */
+  _backfillSuporteBredas() {
+    const conn = this.conn;
+    const clientes = conn
+      .prepare(`SELECT DISTINCT cliente FROM atualizacoes WHERE lower(obs) LIKE '%' || ? || '%'`)
+      .all(OBS_SUPORTE_BREDAS)
+      .map((r) => r.cliente);
+    if (clientes.length === 0) return;
+
+    const buscar = conn.prepare("SELECT id, sistemas FROM clientes WHERE nome = ?");
+    const atualizar = conn.prepare("UPDATE clientes SET sistemas = ? WHERE id = ?");
+    let afetados = 0;
+    for (const cliente of clientes) {
+      const row = buscar.get(cliente);
+      if (!row) continue;
+      const sistemas = (row.sistemas || "").split(",").map((s) => s.trim()).filter(Boolean);
+      if (sistemas.includes(SISTEMA_SUPORTE_BREDAS)) continue;
+      sistemas.push(SISTEMA_SUPORTE_BREDAS);
+      atualizar.run(sistemas.join(", "), row.id);
+      afetados += 1;
+    }
+    if (afetados > 0) {
+      console.log(`Migracao: "${SISTEMA_SUPORTE_BREDAS}" marcado automaticamente para ${afetados} cliente(s) com essa observacao no historico.`);
+    }
   }
 
   /**

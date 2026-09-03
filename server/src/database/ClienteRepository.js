@@ -119,6 +119,24 @@ class ClienteRepository extends BaseRepository {
    *
    * @returns {number} quantos clientes tinham esse sistema marcado
    */
+  /**
+   * Adiciona um sistema a lista (texto "a, b, c") de UM cliente, pelo nome
+   * -- inverso pontual de removeSistemaDeTodos. Idempotente: se o cliente
+   * ja tiver esse sistema marcado, nao faz nada. Usado para marcar
+   * "Suporte Bredas" sozinho quando uma atualizacao registra essa
+   * observacao (ver AtualizacaoService).
+   * @returns {boolean} true se encontrou o cliente e marcou o sistema (false se o cliente nao existe ou ja tinha)
+   */
+  adicionarSistema(nomeCliente, nomeSistema) {
+    const linha = this.conn.prepare("SELECT id, sistemas FROM clientes WHERE nome = ?").get(nomeCliente);
+    if (!linha) return false;
+    const sistemas = (linha.sistemas || "").split(",").map((s) => s.trim()).filter(Boolean);
+    if (sistemas.includes(nomeSistema)) return false;
+    sistemas.push(nomeSistema);
+    this.conn.prepare("UPDATE clientes SET sistemas = ? WHERE id = ?").run(sistemas.join(", "), linha.id);
+    return true;
+  }
+
   removeSistemaDeTodos(nomeSistema) {
     const linhas = this.conn
       .prepare("SELECT id, sistemas FROM clientes WHERE sistemas IS NOT NULL AND sistemas != ''")

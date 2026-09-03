@@ -43,8 +43,15 @@ const STATUS_OPTIONS = ["A Fazer", "Em Andamento", "Sem resposta", "Concluído"]
 const SISTEMAS_CONHECIDOS = [
   "B_Vendas", "NFCe", "B_NFe", "B_Importa", "B_AreaContador", "B_Atualizador",
   "B_Ordem", "B_NFSe", "Sped", "B_Pre Pedido", "B_Logistica", "B_Loc", "B_Link",
-  "B_Integração", "DFe", "B_Escola", "B_RAT",
+  "B_Integração", "DFe", "B_Escola", "B_RAT", "Suporte Bredas",
 ];
+
+// Nome do sistema marcado automaticamente num cliente quando uma
+// atualizacao registra a observacao correspondente -- ver
+// AtualizacaoService._marcarSuporteBredasSeNecessario e
+// Database._backfillSuporteBredas.
+const SISTEMA_SUPORTE_BREDAS = "Suporte Bredas";
+const OBS_SUPORTE_BREDAS = "adicionado o suporte bredas";
 
 // Cliente sem nenhuma atualizacao registrada por mais que isso vira
 // "desatualizado" na tela de Resumo.
@@ -69,6 +76,8 @@ module.exports = {
   AGENDA_COLUMNS,
   STATUS_OPTIONS,
   SISTEMAS_CONHECIDOS,
+  SISTEMA_SUPORTE_BREDAS,
+  OBS_SUPORTE_BREDAS,
   DESATUALIZADO_DIAS,
   SISTEMA_APELIDOS,
   BACKUP_KEEP,

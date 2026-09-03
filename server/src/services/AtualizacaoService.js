@@ -1,6 +1,6 @@
 const ExcelJS = require("exceljs");
 
-const { COLUMNS, DESATUALIZADO_DIAS } = require("../config/constants");
+const { COLUMNS, DESATUALIZADO_DIAS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
 const { dataValida, parseData } = require("./validation");
 const { ValidationError, NotFoundError } = require("./errors");
 
@@ -39,6 +39,7 @@ class AtualizacaoService {
     const data = this._validate(input);
     this.db.atualizacoes.insert(data);
     this.historico.registrar(usuario, "criar", "atualizacao", `Atualização de "${data.cliente}" (${data.sistema || "sem sistema"})`);
+    this._marcarSuporteBredasSeNecessario(data, usuario);
     // Sem "await" de proposito: uma notificacao (ou uma falha nela) nao
     // pode atrasar nem derrubar a resposta HTTP deste cadastro.
     this.notifications?.notifyAtualizacao(data);
@@ -57,7 +58,31 @@ class AtualizacaoService {
       throw new NotFoundError("Esta atualização não existe mais. Ela pode ter sido excluída por outra pessoa.");
     }
     this.historico.registrar(usuario, "atualizar", "atualizacao", `Atualização #${id} de "${data.cliente}"`);
+    this._marcarSuporteBredasSeNecessario(data, usuario);
     return data;
+  }
+
+  /**
+   * Quando a observacao de uma atualizacao registra "Adicionado o Suporte
+   * Bredas", marca esse sistema automaticamente no cadastro do cliente --
+   * sem isso, quem digita a obs precisaria lembrar de repetir a mesma
+   * informacao manualmente na aba Clientes. Idempotente (ver
+   * ClienteRepository.adicionarSistema): so grava no historico quando de
+   * fato muda algo.
+   * @param {{cliente: string, obs?: string}} data
+   * @param {{id:number, nome:string}|null} usuario
+   */
+  _marcarSuporteBredasSeNecessario(data, usuario) {
+    if (!(data.obs || "").toLowerCase().includes(OBS_SUPORTE_BREDAS)) return;
+    const marcado = this.db.clientes.adicionarSistema(data.cliente, SISTEMA_SUPORTE_BREDAS);
+    if (marcado) {
+      this.historico.registrar(
+        usuario,
+        "atualizar",
+        "cliente",
+        `Cliente "${data.cliente}" marcado com "${SISTEMA_SUPORTE_BREDAS}" (detectado na obs de uma atualização)`
+      );
+    }
   }
 
   delete(id, usuario) {
@@ -255,6 +280,7 @@ class AtualizacaoService {
 
       if (!nomesCadastrados.has(record.cliente)) naoCadastrados.add(record.cliente);
       this.db.atualizacoes.insert(record);
+      this._marcarSuporteBredasSeNecessario(record, usuario);
       inserted += 1;
     }
 
