@@ -172,3 +172,56 @@ projeto foi criado, ela trazia uma cadeia de dependências (`sqlite3` →
 build. Em vez dela, as sessões são guardadas com uma classe própria e
 pequena (`server/src/database/SqliteSessionStore.js`), usando a mesma
 biblioteca (`better-sqlite3`) que o resto do app já usa.
+
+### Atualização de dependências e endurecimento — set/2026
+
+Todas as dependências de produção foram atualizadas para a major mais
+recente de cada uma (nenhuma mudança de código do projeto foi necessária
+além do que está listado abaixo — o código já não usava nenhuma API
+removida entre as majors):
+
+| Pacote | Antes | Depois |
+|---|---|---|
+| `express` | 4.19 | **5.2** |
+| `bcryptjs` | 2.4 | **3.0** |
+| `better-sqlite3` | 11.3 | **13.0** |
+| `dotenv` | 16.4 | **17.4** |
+| `helmet` | 7.1 | **8.3** |
+| `multer` | 2.0 | **2.3** |
+| `express-session` | 1.18 | **1.19** |
+
+**Por que valia a pena, especificamente o `express`:** era a única forma
+de fechar a última vulnerabilidade moderada do `npm audit` (`qs`, via
+`express@4`, que trava a dependência em `qs ~6.15.1` — não existe 4.x
+mais novo que resolva isso). Antes de migrar, cada rota de
+`routes/index.js` foi conferida contra as mudanças do Express 5 (parser
+de query string, sintaxe de rota do `path-to-regexp`, assinatura de
+handler de erro) — nenhuma usava os padrões que mudaram (sem
+wildcard `*`, sem parâmetro opcional `:x?`, sem query aninhada/array,
+sem `res.json(status, obj)` nem `req.param()`), então a migração não
+exigiu nenhuma mudança de rota.
+
+**O que mudou de fato no código, por causa do endurecimento de CSP feito
+junto (não das majors em si):** o script inline de tema no `<head>` de
+`client/index.html` foi extraído para `client/js/theme-init.js`, e
+`Server.js`/`requireAgent.js` ganharam uma CSP sob medida e comparação
+de token em tempo constante — ver histórico do git para o antes/depois.
+
+**Deixado de fora, de propósito:** a vulnerabilidade restante do
+`npm audit` é em `uuid`, puxada pelo `exceljs`. Não há `exceljs` mais
+novo que resolva isso — `npm audit fix --force` "resolveria" voltando
+para `exceljs@3.4.0`, uma downgrade de major, não uma correção. Fica
+para quando alguém revisar se vale a pena travar o `exceljs` numa versão
+mais antiga só por causa dessa dependência transitiva.
+
+**Testado** (rodando o servidor de verdade, não só lido o código): login
+completo (bcrypt hash/compare), CRUD via API autenticada em Clientes,
+Sistemas, Atualizações e Agendamentos, upload de pacote via `multer`
+(criação de versão em rascunho, com o arquivo caindo em
+`server/data/packages/`) e exclusão (arquivo junto), exportação `.xlsx`
+(`exceljs`, inalterado), rotas do agente C# com token certo/errado/
+ausente, trava de "não é possível excluir a versão no ar", acesso
+sem sessão bloqueado (401), e a CSP presente em todas as respostas. Feito
+com uma conta de teste temporária, criada e removida direto no banco (sem
+tocar em conta real de ninguém), e todos os registros de teste
+apagados ao final.

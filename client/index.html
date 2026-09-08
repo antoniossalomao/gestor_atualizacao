@@ -26,15 +26,13 @@
   <!--
     Aplica o tema salvo antes do primeiro pixel. Se isso esperasse o módulo
     JS carregar, a página apareceria por um instante no tema errado (o
-    clássico "flash of wrong theme") -- inline no <head> é o único momento
-    cedo o bastante.
+    clássico "flash of wrong theme") -- rodar no <head>, antes do resto, é o
+    único momento cedo o bastante. Extraído para um arquivo próprio (em vez
+    de inline) para a CSP em Server.js poder recusar script-src inline sem
+    quebrar isso -- um script inline exigiria "unsafe-inline", que anula boa
+    parte da proteção da CSP contra XSS.
   -->
-  <script>
-    try {
-      var modo = JSON.parse(localStorage.getItem("gestor:tema") || '"sistema"');
-      if (modo === "claro" || modo === "escuro") document.documentElement.setAttribute("data-tema", modo);
-    } catch (e) { /* localStorage bloqueado: segue no tema padrão */ }
-  </script>
+  <script src="/js/theme-init.js"></script>
 </head>
 <body>
   <!--

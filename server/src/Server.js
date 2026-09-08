@@ -104,10 +104,34 @@ class Server {
     // Cabeçalhos HTTP de segurança padrão (X-Content-Type-Options,
     // desativa X-Powered-By, política básica de referrer, etc.) --
     // gratuito e amplamente usado, sem sentido reescrever isso na mão.
-    // "contentSecurityPolicy: false" porque a CSP default do helmet
-    // bloquearia o Google Fonts que o tema usa (client/css/theme.css);
-    // uma CSP sob medida fica como possível refinamento futuro.
-    this.app.use(helmet({ contentSecurityPolicy: false }));
+    //
+    // CSP sob medida (refinamento prometido no comentário antigo aqui):
+    // script-src fica só 'self' -- a proteção real contra XSS está em não
+    // liberar 'unsafe-inline' aqui, por isso o script de tema saiu do
+    // <head> para client/js/theme-init.js (ver index.html). style-src
+    // precisa de 'unsafe-inline' porque várias views montam HTML com
+    // atributo style="" direto (ex.: ClientesView, AtualizacoesView,
+    // BarChart/PieChart) -- CSP não bloqueia style.propriedade via JS, só
+    // style="" no HTML e <style> inline, então isso não abre brecha nova
+    // pra script, só pra CSS. fonts.googleapis.com/gstatic.com liberados
+    // porque é de lá que vem a fonte do tema (ver index.html).
+    this.app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            imgSrc: ["'self'", "data:"],
+            connectSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            baseUri: ["'self'"],
+            frameAncestors: ["'self'"],
+          },
+        },
+      })
+    );
 
     this.app.use(express.json());
     this.app.use(

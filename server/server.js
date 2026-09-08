@@ -7,7 +7,11 @@
  * Uso: `npm start` (producao) ou `npm run dev` (reinicia sozinho a cada
  * alteracao de arquivo, via nodemon).
  */
-require("dotenv").config();
+// "quiet": o dotenv 17 passou a imprimir um banner ("injected env (N) from
+// .env") no console a cada início -- puramente cosmético, mas é uma saída
+// nova que não existia antes da atualização de dependências de set/2026;
+// silenciado para manter o log de start igual ao de sempre.
+require("dotenv").config({ quiet: true });
 const path = require("path");
 
 const { Server } = require("./src/Server");
