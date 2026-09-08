@@ -2,7 +2,14 @@
 node_modules/
 
 # Configuração local (segredos, caminho do banco) -- cada ambiente tem o seu.
+# ".env.*" (não só ".env" exato) para cobrir cópias de backup do tipo
+# ".env.bak"/".env.old" que alguém faça na mão -- um ".env.bak" real chegou a
+# ser commitado antes desta regra existir (removido do índice em set/2026;
+# o segredo nele já era só o valor de exemplo, então não precisou rotacionar
+# nada). ".env.example" é o único ".env.*" que DEVE ir pro git, daí o "!".
 .env
+.env.*
+!.env.example
 *.sql
 
 # Banco de dados, backups automáticos e sessões de login: são DADOS reais

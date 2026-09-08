@@ -149,6 +149,45 @@ vai ficar disponível:
   no `.env`. Sem HTTPS, o login trafega sem criptografia — não exponha
   a porta do Node direto na internet sem isso.
 
+## Rodar como serviço do Windows (recomendado)
+
+`Iniciar Gestor.bat` roda o servidor numa janela de console em primeiro
+plano: se a janela fechar sem querer, o processo travar ou a máquina
+reiniciar, a equipe inteira fica sem o painel até alguém notar e abrir a
+janela de novo na mão. Para produção (a máquina que fica ligada
+atendendo a equipe), instale como serviço do Windows via
+[NSSM](https://nssm.cc/) — sobe sozinho com o Windows e **reinicia
+sozinho se cair**.
+
+```powershell
+# Uma vez só, num PowerShell aberto como Administrador
+# (botão direito no ícone do PowerShell > "Executar como administrador"):
+cd web
+.\instalar-servico.ps1
+```
+
+O script é idempotente (rodar de novo reinstala do zero, sem duplicar) e
+faz tudo sozinho: baixa o NSSM se não estiver instalado, para uma
+instância manual que porventura já esteja rodando na mesma porta, cria o
+serviço `GestorAtualizacoes` apontando pro `node.exe`/`server.js`
+corretos, com log em `server/logs/` (`service-out.log`/`service-err.log`,
+com rotação automática pra não crescer sem limite), e liga o serviço.
+
+```powershell
+Get-Service GestorAtualizacoes                              # status
+Restart-Service GestorAtualizacoes                           # reiniciar
+Get-Content server\logs\service-out.log -Tail 50 -Wait        # acompanhar log
+```
+
+Para desinstalar (volta a rodar só pelo `Iniciar Gestor.bat`), também como
+Administrador: `.\desinstalar-servico.ps1`. Nada do projeto é apagado —
+só o registro do serviço no Windows.
+
+Precisa ser rodado elevado porque criar/remover serviço do Windows exige
+privilégio de administrador — o `#Requires -RunAsAdministrator` no topo
+dos dois scripts recusa a execução sem elevação, com uma mensagem clara,
+em vez de falhar pela metade.
+
 ## Limitações conhecidas desta primeira versão
 
 - Só dois níveis de permissão (administrador e usuário comum) — não há
@@ -225,3 +264,21 @@ sem sessão bloqueado (401), e a CSP presente em todas as respostas. Feito
 com uma conta de teste temporária, criada e removida direto no banco (sem
 tocar em conta real de ninguém), e todos os registros de teste
 apagados ao final.
+
+### `.env.bak` estava commitado no git — corrigido em set/2026
+
+O `.gitignore` só tinha a regra `.env` (nome exato); um `.env.bak` real
+chegou a ser commitado (`git log -- server/.env.bak`: "Snapshot antes da
+migração para Turso (rollback point)", 18/08/2026) e passava batido por
+essa regra. O `SESSION_SECRET` dentro dele era só o valor de exemplo
+(`troque-este-valor-em-producao`, o mesmo texto público do
+`.env.example`) — não havia segredo de verdade exposto desta vez, mas o
+próximo `cp .env .env.bak` de alguém, como hábito de backup local, teria
+vazado o `SESSION_SECRET`/`AGENT_API_TOKEN` reais no histórico do git.
+
+**Corrigido:** `.gitignore` agora ignora `.env.*` (com exceção explícita
+de `.env.example`, que precisa continuar versionado), e o `.env.bak`
+antigo foi tirado do índice do git (`git rm --cached`) — o arquivo
+continua no disco de quem já o tinha, só não é mais rastreado. Nenhum
+segredo precisou ser rotacionado, porque não havia nenhum de verdade
+neste arquivo.
