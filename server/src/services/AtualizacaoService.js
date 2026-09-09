@@ -92,6 +92,39 @@ class AtualizacaoService {
     this.historico.registrar(usuario, "excluir", "atualizacao", `Atualização #${id}`);
   }
 
+  /**
+   * Exclui varios registros de uma vez (selecao multipla na aba Atualizacoes).
+   *
+   * Devolve os registros que sairam, porque a tela oferece "Desfazer" e
+   * precisa saber o que recriar -- ver `findByIds`. A leitura acontece ANTES
+   * da exclusao, pelo motivo obvio, e o historico ganha UMA linha para a
+   * operacao inteira: trinta linhas dizendo "excluiu #12", "excluiu #13"
+   * afogariam o historico e esconderiam justamente o que aconteceu (uma
+   * exclusao em massa, que e' o evento que alguem vai querer achar depois).
+   *
+   * @param {number[]} ids
+   * @returns {{excluidos: number, registros: object[]}}
+   */
+  deleteMany(ids, usuario) {
+    const registros = this.db.atualizacoes.findByIds(ids);
+    if (registros.length === 0) {
+      throw new NotFoundError("Nenhum dos registros selecionados existe mais. A lista pode estar desatualizada.");
+    }
+
+    const excluidos = this.db.atualizacoes.deleteMany(registros.map((r) => r.id));
+
+    const clientes = [...new Set(registros.map((r) => r.cliente).filter(Boolean))];
+    const resumoClientes = clientes.slice(0, 3).join(", ") + (clientes.length > 3 ? ` e mais ${clientes.length - 3}` : "");
+    this.historico.registrar(
+      usuario,
+      "excluir",
+      "atualizacao",
+      `${excluidos} atualizações excluídas de uma vez${resumoClientes ? ` (${resumoClientes})` : ""}`
+    );
+
+    return { excluidos, registros };
+  }
+
   /** Registro mais recente de um cliente especifico (aba Consultar Cliente). */
   lastUpdateForClient(nome) {
     return this.db.atualizacoes.lastUpdateForClient(nome);
@@ -303,11 +336,11 @@ class AtualizacaoService {
    * Aceita os mesmos filtros da listagem: exportar precisa devolver o que a
    * pessoa esta vendo na tela, nao o historico inteiro.
    */
-  async exportXlsxBuffer(search = "", responsavel = "Todos") {
+  async exportXlsxBuffer(search = "", responsavel = "Todos", periodo = {}) {
     const workbook = new ExcelJS.Workbook();
     const ws = workbook.addWorksheet("Atualizações");
     ws.addRow(COLUMNS.map((c) => c.label));
-    for (const row of this.db.atualizacoes.exportAll(search, responsavel)) {
+    for (const row of this.db.atualizacoes.exportAll(search, responsavel, periodo)) {
       ws.addRow(COLUMNS.map((c) => row[c.key]));
     }
     return workbook.xlsx.writeBuffer();

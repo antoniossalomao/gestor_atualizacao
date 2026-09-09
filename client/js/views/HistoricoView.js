@@ -6,6 +6,7 @@ import { emptyState } from "../core/EmptyState.js";
 import { plural } from "../core/html.js";
 import { tempoRelativo } from "../core/date.js";
 import { prefs } from "../core/prefs.js";
+import { aparencia } from "../core/appearance.js";
 
 const ACAO_LABEL = {
   criar: "Criou",
@@ -155,6 +156,7 @@ export class HistoricoView extends View {
               search: this.busca,
               entidade: this.entidade === "Todos" ? "" : this.entidade,
               page: this.page,
+              pageSize: aparencia.linhasPorPagina(),
               sortBy: this.sortBy,
               sortDir: this.sortDir,
             },

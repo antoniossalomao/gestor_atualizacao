@@ -41,6 +41,12 @@ const PATHS = {
   painel: '<rect x="2.5" y="3.5" width="15" height="13" rx="1.8"/><path d="M8 3.5v13" stroke-linecap="round"/>',
   seta: '<path d="M7 4l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/>',
   check: '<path d="M4 10.5l4 4 8-9" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  // -- acrescentados junto com o painel de Configurações --
+  config:
+    '<circle cx="10" cy="10" r="2.6"/><path d="M10 2.2v1.9M10 15.9v1.9M17.8 10h-1.9M4.1 10H2.2M15.5 4.5l-1.3 1.3M5.8 14.2l-1.3 1.3M15.5 15.5l-1.3-1.3M5.8 5.8 4.5 4.5" stroke-linecap="round"/>',
+  relogio: '<circle cx="10" cy="10" r="7"/><path d="M10 5.8V10l2.8 1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  calendario: '<rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v4M13 2v4" stroke-linecap="round"/>',
 };
 
 /** @param {keyof typeof PATHS} name @returns {string} markup do `<svg>` pronto pra inserir via innerHTML */

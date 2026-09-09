@@ -153,7 +153,37 @@
 
   --largura-sidebar: 238px;
   --largura-sidebar-recolhida: 64px;
+
+  /* ==========================================================================
+     DENSIDADE DAS TABELAS
+     Escolha do usuário no painel de Configurações (ver js/core/appearance.js),
+     aplicada como `data-densidade` no <html> -- mesmo mecanismo do tema.
+     Só a altura da linha muda; o tamanho do texto fica igual nos três modos,
+     porque encolher a fonte para "caber mais" só troca um problema (rolar) por
+     outro pior (não ler). Estes são os valores do modo "padrão".
+     ========================================================================== */
+  --linha-pad-y: 9px;
+  --linha-pad-x: 12px;
+  --cabecalho-pad-y: 10px;
 }
+
+:root[data-densidade="compacta"] {
+  --linha-pad-y: 5px;
+  --linha-pad-x: 10px;
+  --cabecalho-pad-y: 7px;
+}
+
+:root[data-densidade="confortavel"] {
+  --linha-pad-y: 14px;
+  --linha-pad-x: 14px;
+  --cabecalho-pad-y: 12px;
+}
+
+/* Altura da caixa rolável de uma tabela (também escolhida em Configurações).
+   Em telas grandes, 60vh deixava metade do monitor vazio abaixo da tabela. */
+:root { --altura-tabela: 60vh; }
+:root[data-altura="media"] { --altura-tabela: 45vh; }
+:root[data-altura="cheia"] { --altura-tabela: 82vh; }
 
 /* ==========================================================================
    TEMA CLARO
@@ -276,6 +306,21 @@ body {
   height: 100%;
 }
 
+/*
+ * Reserva o espaço da barra de rolagem SEMPRE, inclusive nas telas que não
+ * rolam. Sem isto, ir de uma aba longa (que tem barra) para uma curta (que
+ * não tem) devolve ~10px de largura útil e a página inteira salta de lado --
+ * o mesmo salto que acontecia ao abrir um modal, que trava a rolagem do
+ * corpo. É um daqueles defeitos que ninguém consegue nomear, só sente.
+ *
+ * Precisa ficar no ELEMENTO RAIZ: `scrollbar-gutter` só alcança o viewport a
+ * partir daqui. Estava no `body.has-modal`, onde não propagava -- ou seja, a
+ * proteção contra o pulo do modal existia no código mas não na tela.
+ */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   background: var(--cor-fundo);
@@ -295,11 +340,10 @@ body {
 }
 
 /* Trava a rolagem do corpo enquanto um modal está aberto (ver Modal.js).
-   `overflow: hidden` sozinho faria a página "pular" pela largura da barra de
-   rolagem que some -- o `scrollbar-gutter` reserva esse espaço. */
+   O espaço da barra que some já está reservado pelo `scrollbar-gutter` lá em
+   cima, no elemento raiz, então a página não pula ao abrir o modal. */
 body.has-modal {
   overflow: hidden;
-  scrollbar-gutter: stable;
 }
 
 /* Números com largura fixa: sem isto, um contador indo de 199 para 200 muda a

@@ -1,6 +1,17 @@
 import { RequestCancelled } from "../api/ApiClient.js";
 
 /**
+ * Quanto uma revalidação precisa demorar para valer a pena avisar.
+ *
+ * Numa rede local a resposta volta em poucas dezenas de milissegundos. A barra
+ * de progresso aparecia e sumia dentro do mesmo piscar de olhos em TODA troca
+ * de aba -- e um lampejo desses não se lê como "conferindo", se lê como a tela
+ * tremendo. Abaixo deste limiar a atualização simplesmente acontece, em
+ * silêncio, que é o que ela merece quando é instantânea.
+ */
+const ATRASO_INDICADOR_MS = 180;
+
+/**
  * Classe base de todas as telas.
  *
  * Existe por dois motivos concretos, os dois vindos de bugs reais:
@@ -32,6 +43,9 @@ export class View {
     /** @type {Array<{alvo: EventTarget, evento: string, fn: Function, opts: any}>} */
     this._listeners = [];
     this._destruido = false;
+    /** Quantas revalidações estão em voo agora (ver _indicarRevalidacao). */
+    this._revalidando = 0;
+    this._timerIndicador = null;
   }
 
   /**
@@ -60,7 +74,14 @@ export class View {
    */
   async swr(chave, buscar, desenhar) {
     const guardado = this.cache?.peek(chave);
-    if (guardado !== undefined) {
+    // Só há o que "revalidar" quando já existe algo na tela. Sem cache, o
+    // esqueleto da tabela já é o aviso de carregamento -- a barra em cima dele
+    // seria um segundo aviso da mesma coisa. Guardado numa variável porque o
+    // `finally` lá embaixo precisa DESFAZER exatamente o que foi feito aqui:
+    // decrementar um contador que nunca foi incrementado zeraria o indicador
+    // de uma outra busca que ainda está rodando na mesma tela.
+    const avisando = guardado !== undefined;
+    if (avisando) {
       desenhar(guardado, { doCache: true });
       this._indicarRevalidacao(true);
     }
@@ -84,7 +105,7 @@ export class View {
       if (guardado !== undefined) return guardado;
       throw erro;
     } finally {
-      this._indicarRevalidacao(false);
+      if (avisando) this._indicarRevalidacao(false);
     }
   }
 
@@ -92,14 +113,41 @@ export class View {
    * Barra fina de progresso no topo da view enquanto uma revalidação roda por
    * trás. É a diferença entre "o app travou" e "estou conferindo se mudou":
    * discreto o bastante para não atrapalhar a leitura do dado antigo.
+   *
+   * Duas correções sobre a versão anterior, que era um `classList.toggle`
+   * direto:
+   *
+   *  - **espera `ATRASO_INDICADOR_MS`** antes de aparecer. Só avisa quem
+   *    realmente vai ter que esperar; quando a resposta é instantânea, a barra
+   *    nunca chega a existir e a troca de aba fica limpa;
+   *  - **conta as revalidações em voo.** Telas como Distribuição fazem três
+   *    buscas seguidas: com um booleano, a primeira a terminar apagava a barra
+   *    e as outras duas continuavam rodando sem nenhum sinal na tela.
    */
   _indicarRevalidacao(ligado) {
-    this.container.classList.toggle("is-revalidating", ligado);
+    if (ligado) {
+      this._revalidando += 1;
+      if (this._timerIndicador == null) {
+        this._timerIndicador = setTimeout(() => {
+          this._timerIndicador = null;
+          if (this._revalidando > 0 && !this._destruido) this.container.classList.add("is-revalidating");
+        }, ATRASO_INDICADOR_MS);
+      }
+      return;
+    }
+
+    this._revalidando = Math.max(0, this._revalidando - 1);
+    if (this._revalidando > 0) return;
+    clearTimeout(this._timerIndicador);
+    this._timerIndicador = null;
+    this.container.classList.remove("is-revalidating");
   }
 
   /** Sobrescrito pelas views que precisam soltar recursos próprios. */
   destroy() {
     this._destruido = true;
+    clearTimeout(this._timerIndicador);
+    this._timerIndicador = null;
     for (const { alvo, evento, fn, opts } of this._listeners) {
       alvo.removeEventListener(evento, fn, opts);
     }

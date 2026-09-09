@@ -6,9 +6,8 @@ import { emptyState } from "../core/EmptyState.js";
 import { escapeHtml, plural } from "../core/html.js";
 import { formatarDataHora, tempoRelativo, formatarBytes, formatarDuracao } from "../core/date.js";
 import { ApiError } from "../api/ApiClient.js";
-
-/** De quanto em quanto tempo o painel se atualiza sozinho. */
-const INTERVALO_POLLING_MS = 30000;
+import { notificacoes } from "../core/notify.js";
+import { aparencia } from "../core/appearance.js";
 
 /** Como cada situação de agente aparece na tela. */
 const SITUACOES = {
@@ -57,16 +56,9 @@ export class DistribuicaoView extends View {
 
   _buildDom() {
     this.container.innerHTML = `
-      <div class="distribution-hero">
-        <div>
-          <span class="dashboard-intro__eyebrow">Atualizador inteligente</span>
-          <h2>Distribuição de versões</h2>
-          <p>Publique pacotes por sistema e acompanhe o que cada cliente já instalou.</p>
-        </div>
-        <div class="distribution-hero__meta">
-          <span class="data-freshness" data-role="freshness" hidden aria-hidden="true"><i></i><span>—</span></span>
-          <button type="button" class="btn btn--small btn--ghost" data-action="refresh">${icon("atualizar")} Atualizar</button>
-        </div>
+      <div class="toolbar">
+        <div class="toolbar-spacer"></div>
+        <button type="button" class="btn btn--small btn--ghost" data-action="refresh">${icon("atualizar")} Atualizar</button>
       </div>
 
       <div class="distribution-metrics" data-role="indicadores"></div>
@@ -241,7 +233,6 @@ export class DistribuicaoView extends View {
         this._renderIndicadores(dados.indicadores);
         this._renderAtivas(dados.ativas);
         this._renderAgentes();
-        this._renderFrescor(dados.geradoEm);
         this._atualizarAvisoSubstituicao();
       }
     );
@@ -255,7 +246,14 @@ export class DistribuicaoView extends View {
     await this.swr(
       "distribuicao:logs",
       () => this.api.get("/versoes/logs", { limit: 12 }, { key: "dist:logs" }),
-      (logs) => this._renderLogs(logs)
+      (logs) => {
+        this._renderLogs(logs);
+        // Avisa fora do navegador sobre falhas novas (ver core/notify.js).
+        // Fica aqui, no desenho, e não no polling: assim vale também para a
+        // primeira carga e para o "Atualizar" manual, e a lista consultada é
+        // exatamente a que a tela está mostrando.
+        notificacoes.sincronizar(logs);
+      }
     );
 
     this._ligarPolling();
@@ -264,6 +262,10 @@ export class DistribuicaoView extends View {
 
   _ligarPolling() {
     this._desligarPolling();
+    // Ritmo escolhido em Configurações; 0 significa "não atualizar sozinho"
+    // (útil para quem deixa a aba aberta o dia todo numa rede lenta).
+    const intervalo = aparencia.ritmoPainel();
+    if (!intervalo) return;
     this._timer = setInterval(() => {
       if (!this.visivel || document.visibilityState !== "visible") return;
       // Invalida só o painel: as versões e os sistemas não mudam sozinhos,
@@ -273,7 +275,7 @@ export class DistribuicaoView extends View {
       this.refresh().catch(() => {
         /* falha de rede num refresh de fundo não merece alarme na tela */
       });
-    }, INTERVALO_POLLING_MS);
+    }, intervalo);
   }
 
   _desligarPolling() {
@@ -374,18 +376,6 @@ export class DistribuicaoView extends View {
 
   _invalidarTudo() {
     this.cache?.invalidar("distribuicao:");
-  }
-
-  _renderFrescor(geradoEm) {
-    const el = this.container.querySelector('[data-role="freshness"]');
-    if (!el) return;
-    el.hidden = true;
-    el.setAttribute("aria-hidden", "true");
-    el.title = "";
-    const span = el.querySelector("span");
-    if (span) span.textContent = "";
-    el.classList.remove("is-stale");
-    el.querySelector("i")?.remove();
   }
 
   _renderIndicadores(ind) {

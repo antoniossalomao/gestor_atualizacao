@@ -8,6 +8,17 @@ const { SISTEMA_APELIDOS } = require("../config/constants");
 // o que estaria errado).
 const DATE_SORT_EXPR = "(substr(data,7,4) || substr(data,4,2) || substr(data,1,2))";
 
+/**
+ * "15/01/2026" -> "20260115", a mesma forma que DATE_SORT_EXPR produz no SQL.
+ * Devolve null para qualquer coisa que nao seja uma data dd/mm/aaaa completa:
+ * um filtro meio digitado ("15/01/") nao deve virar um recorte silencioso que
+ * some com registros sem a pessoa entender por que.
+ */
+function paraOrdenavel(texto) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(texto || "").trim());
+  return m ? `${m[3]}${m[2]}${m[1]}` : null;
+}
+
 /** Colunas de verdade da tabela (sem contar o "id", que e automatico). */
 const COLUMNS = ["cliente", "sistema", "versao", "responsavel", "data", "motivo", "maquinas", "obs"];
 
@@ -42,13 +53,13 @@ class AtualizacaoRepository extends BaseRepository {
    * @param {string} responsavel "Todos" ou um nome exato
    * @param {{page?: number, pageSize?: number, sortBy?: string, sortDir?: "asc"|"desc"}} paginacao
    */
-  list(search = "", responsavel = "Todos", { page = 1, pageSize = 50, sortBy, sortDir } = {}) {
+  list(search = "", responsavel = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, desde, ate } = {}) {
     // As clausulas vivem em `_filtros` porque a exportacao precisa exatamente
     // das mesmas -- ver o comentario em `exportAll`. A comparacao de
     // responsavel ignora maiusculas/minusculas e espacos nas pontas: o filtro
     // mostra nomes ja normalizados (ver distinctResponsaveis), entao "Camila"
     // escolhido ali precisa achar tambem os salvos como "CAMILA" ou " camila ".
-    const { where, params } = this._filtros(search, responsavel);
+    const { where, params } = this._filtros(search, responsavel, { desde, ate });
 
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table} ${where}`).get(params).total;
 
@@ -106,14 +117,32 @@ class AtualizacaoRepository extends BaseRepository {
    * filtrar. As clausulas sao montadas pelo mesmo helper de `list`, para as
    * duas nunca divergirem.
    */
-  exportAll(search = "", responsavel = "Todos") {
-    const { where, params } = this._filtros(search, responsavel);
+  /**
+   * Os registros completos de uma lista de ids.
+   *
+   * Existe por causa do "Desfazer" da exclusao em lote: para poder recriar o
+   * que foi apagado, a tela precisa dos dados ANTES de eles sumirem, e ela so
+   * tem em maos as linhas da pagina atual (que podem nem estar todas visiveis
+   * depois de um "selecionar tudo"). Ler aqui, no mesmo instante da exclusao,
+   * e' o unico jeito de o que volta ser exatamente o que saiu.
+   */
+  findByIds(ids) {
+    const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
+    if (limpos.length === 0) return [];
+    const marcadores = limpos.map(() => "?").join(", ");
+    return this.conn
+      .prepare(`SELECT id, ${COLUMNS.join(", ")} FROM ${this.table} WHERE id IN (${marcadores})`)
+      .all(...limpos);
+  }
+
+  exportAll(search = "", responsavel = "Todos", periodo = {}) {
+    const { where, params } = this._filtros(search, responsavel, periodo);
     const sql = `SELECT ${COLUMNS.join(", ")} FROM ${this.table} ${where} ORDER BY ${DATE_SORT_EXPR} DESC`;
     return this.conn.prepare(sql).all(params);
   }
 
   /** Clausula WHERE + parametros compartilhados por `list` e `exportAll`. */
-  _filtros(search, responsavel) {
+  _filtros(search, responsavel, { desde = "", ate = "" } = {}) {
     const clauses = [];
     const params = {};
     if (search) {
@@ -124,6 +153,22 @@ class AtualizacaoRepository extends BaseRepository {
       clauses.push("lower(trim(responsavel)) = lower(trim(@responsavel))");
       params.responsavel = responsavel;
     }
+
+    // Intervalo de datas. Comparar "dd/mm/aaaa" como texto daria errado
+    // ("01/12/2025" < "15/01/2026" e' falso nessa forma), entao os dois lados
+    // passam pela MESMA normalizacao para "aaaammdd" que a ordenacao ja usa --
+    // e' o unico jeito de o >= e o <= significarem o que aparentam.
+    const inicio = paraOrdenavel(desde);
+    if (inicio) {
+      clauses.push(`${DATE_SORT_EXPR} >= @desde`);
+      params.desde = inicio;
+    }
+    const fim = paraOrdenavel(ate);
+    if (fim) {
+      clauses.push(`${DATE_SORT_EXPR} <= @ate`);
+      params.ate = fim;
+    }
+
     return { where: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "", params };
   }
 

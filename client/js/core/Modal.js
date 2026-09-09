@@ -1,5 +1,8 @@
 const ICONS = { info: "i", warning: "!", error: "×", question: "?" };
 
+/** Precisa acompanhar `--dur-rapida` (120ms), com uma folga para o quadro final. */
+const SAIDA_MS = 140;
+
 /**
  * Diálogos modais no tema do app (aviso / confirmação), em vez do
  * `alert()`/`confirm()` feio e não estilizável do navegador -- mesma ideia
@@ -106,7 +109,11 @@ export class Modal {
       if (fechado) return;
       fechado = true;
       document.removeEventListener("keydown", onKeydown, true);
-      overlay.remove();
+      // Só o DESENHO espera a animação de saída: a promessa de quem chamou
+      // `Modal.confirm` resolve agora, o foco volta agora, a rolagem destrava
+      // agora. Se o fade atrasasse a resposta, todo "Confirmar" ficaria 140ms
+      // mais lento -- consertar a saída brusca não pode custar isso.
+      Modal._fecharComAnimacao(overlay);
       Modal._travarRolagem(false);
       // Devolve o foco a quem abriu -- quem navega por teclado continua de
       // onde parou, em vez de recomeçar do topo da página.
@@ -135,6 +142,26 @@ export class Modal {
     }
 
     return { overlay, box, close };
+  }
+
+  /**
+   * Tira o overlay da tela com o fade de saída (ver `.is-closing` em
+   * components.css) em vez de sumir com ele num quadro só.
+   *
+   * É o mesmo argumento que já valia para os toasts, e que o modal não tinha:
+   * o que desaparece instantaneamente é lido como falha, o que se retrai é
+   * lido como fim. O `.is-closing` também corta os cliques da caixa que está
+   * saindo, para ela não interceptar nada durante os milissegundos que ainda
+   * passa na tela.
+   *
+   * `animationend` faria a remoção depender de a animação realmente rodar --
+   * e ela NÃO roda para quem pediu movimento reduzido no sistema (o bloco
+   * `prefers-reduced-motion` zera as durações). Aí o overlay ficaria preso
+   * para sempre. O `setTimeout` remove de qualquer jeito.
+   */
+  static _fecharComAnimacao(overlay) {
+    overlay.classList.add("is-closing");
+    setTimeout(() => overlay.remove(), SAIDA_MS);
   }
 
   /** Faz o `Tab` circular dentro da caixa em vez de escapar para a página de trás. */

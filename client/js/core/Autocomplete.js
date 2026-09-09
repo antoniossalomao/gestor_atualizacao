@@ -129,12 +129,7 @@ export class Autocomplete {
     });
     this.list.classList.add("is-open");
     this.input.setAttribute("aria-expanded", "true");
-    if (this.activeIndex >= 0) {
-      this.input.setAttribute("aria-activedescendant", `${this.list.id}-${this.activeIndex}`);
-      this.list.children[this.activeIndex]?.scrollIntoView({ block: "nearest" });
-    } else {
-      this.input.removeAttribute("aria-activedescendant");
-    }
+    this._marcarAtivo();
   }
 
   _select(value) {
@@ -155,17 +150,39 @@ export class Autocomplete {
     return this.list.classList.contains("is-open");
   }
 
+  /**
+   * Move o destaque entre dois itens sem redesenhar a lista.
+   *
+   * Antes as setas chamavam `_render(termo)`, que joga fora e recria até trinta
+   * `<div>` (cada um com o `<mark>` do trecho destacado e um listener próprio)
+   * só para trocar uma classe de lugar. Percorrer as sugestões de cliente com o
+   * teclado -- o caminho mais rápido de preencher o campo -- era exatamente o
+   * que fazia a lista cintilar.
+   */
+  _marcarAtivo() {
+    [...this.list.children].forEach((el, i) => {
+      const ativo = i === this.activeIndex;
+      el.classList.toggle("is-active", ativo);
+      el.setAttribute("aria-selected", String(ativo));
+    });
+    if (this.activeIndex >= 0) {
+      this.input.setAttribute("aria-activedescendant", `${this.list.id}-${this.activeIndex}`);
+      this.list.children[this.activeIndex]?.scrollIntoView({ block: "nearest" });
+    } else {
+      this.input.removeAttribute("aria-activedescendant");
+    }
+  }
+
   _onKeydown(e) {
     if (!this.aberta) return;
-    const termo = this.input.value.trim().toLowerCase();
     if (e.key === "ArrowDown") {
       e.preventDefault();
       this.activeIndex = (this.activeIndex + 1) % this.filtered.length;
-      this._render(termo);
+      this._marcarAtivo();
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       this.activeIndex = (this.activeIndex - 1 + this.filtered.length) % this.filtered.length;
-      this._render(termo);
+      this._marcarAtivo();
     } else if (e.key === "Enter" && this.activeIndex >= 0) {
       e.preventDefault();
       e.stopPropagation();

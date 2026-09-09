@@ -103,6 +103,9 @@ class ApiRouter {
     api.get("/atualizacoes/por-sistema", atualizacoes.porSistema);
     api.get("/atualizacoes/export", atualizacoes.exportXlsx);
     api.post("/atualizacoes/import", upload.single("arquivo"), atualizacoes.importXlsx);
+    // Antes do POST generico logo abaixo, como o /import: caminho especifico
+    // primeiro, senao "/atualizacoes" casaria antes e criaria um registro.
+    api.post("/atualizacoes/excluir-lote", atualizacoes.removeMany);
     api.post("/atualizacoes", atualizacoes.create);
     api.put("/atualizacoes/:id", atualizacoes.update);
     api.delete("/atualizacoes/:id", atualizacoes.remove);

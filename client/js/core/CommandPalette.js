@@ -3,6 +3,9 @@ import { escapeHtml } from "./html.js";
 
 const MAX_RESULTADOS = 12;
 
+/** Igual ao SAIDA_MS do Modal: acompanha `--dur-rapida`, com folga de um quadro. */
+const SAIDA_MS = 140;
+
 /**
  * Paleta de comandos (Ctrl+K / Cmd+K): um campo único que encontra qualquer
  * aba, qualquer ação global e qualquer CLIENTE cadastrado, sem tirar a mão do
@@ -102,7 +105,15 @@ export class CommandPalette {
   _fechar() {
     if (!this.aberta) return;
     this.aberta = false;
-    this.overlay?.remove();
+    // Sai com o mesmo fade dos modais (ver Modal._fecharComAnimacao). A paleta
+    // é o que mais se abre e fecha no dia a dia, e era justamente ela que
+    // desaparecia num quadro só. O `is-closing` também desliga os cliques da
+    // caixa que está saindo, e a referência é solta aqui para um `abrir()`
+    // logo em seguida não mexer no overlay antigo.
+    const saindo = this.overlay;
+    saindo?.classList.add("is-closing");
+    setTimeout(() => saindo?.remove(), SAIDA_MS);
+    this.overlay = null;
     document.body.classList.remove("has-modal");
     if (this._focoAnterior instanceof HTMLElement) this._focoAnterior.focus();
   }
@@ -157,7 +168,7 @@ export class CommandPalette {
       item.addEventListener("mousemove", () => {
         if (this.indiceAtivo === idx) return;
         this.indiceAtivo = idx;
-        this._render();
+        this._marcarAtivo();
       });
       this.lista.appendChild(item);
     });
@@ -171,18 +182,41 @@ export class CommandPalette {
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       this.indiceAtivo = (this.indiceAtivo + 1) % Math.max(1, this.filtrados.length);
-      this._render();
-      this._rolarAteAtivo();
+      this._marcarAtivo();
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       this.indiceAtivo = (this.indiceAtivo - 1 + this.filtrados.length) % Math.max(1, this.filtrados.length);
-      this._render();
-      this._rolarAteAtivo();
+      this._marcarAtivo();
     } else if (e.key === "Enter") {
       e.preventDefault();
       const cmd = this.filtrados[this.indiceAtivo];
       if (cmd) this._executar(cmd);
     }
+  }
+
+  /**
+   * Move o destaque entre dois itens, em vez de reconstruir a lista inteira.
+   *
+   * `_render()` descarta e recria até doze itens -- com os listeners de cada
+   * um -- a cada seta apertada e a cada movimento do mouse por cima da lista.
+   * Segurar a seta para baixo virava uma sequência de reconstruções, e o
+   * cintilar disso aparece justamente na tela que se usa com mais pressa.
+   * É o mesmo tratamento que `SortableTable._marcarSelecionada` já dá às
+   * linhas de tabela: mexer só no que mudou.
+   */
+  _marcarAtivo() {
+    const itens = this.lista.querySelectorAll(".cmdk__item");
+    itens.forEach((el, i) => {
+      const ativo = i === this.indiceAtivo;
+      el.classList.toggle("is-active", ativo);
+      el.setAttribute("aria-selected", String(ativo));
+    });
+    // Com a busca sem resultado não há item nenhum: apontar o
+    // `aria-activedescendant` para um id que não existe faz o leitor de tela
+    // anunciar um item fantasma.
+    if (itens.length > 0) this.input.setAttribute("aria-activedescendant", `cmdk-item-${this.indiceAtivo}`);
+    else this.input.removeAttribute("aria-activedescendant");
+    this._rolarAteAtivo();
   }
 
   _rolarAteAtivo() {

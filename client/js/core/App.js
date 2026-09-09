@@ -8,6 +8,8 @@ import { CommandPalette } from "./CommandPalette.js";
 import { ligarAtalhoAjuda, mostrarAtalhos } from "./Shortcuts.js";
 import { theme } from "./theme.js";
 import { settings } from "./prefs.js";
+import { abrirConfiguracoes } from "./ConfiguracoesPanel.js";
+import { aparencia } from "./appearance.js";
 import { RequestCancelled } from "../api/ApiClient.js";
 import { LoginView } from "../views/LoginView.js";
 import { ResumoView } from "../views/ResumoView.js";
@@ -83,6 +85,10 @@ export class App {
     this.cache = new SwrCache();
     /** @type {Array<() => void>} coisas a desligar quando o shell é desmontado */
     this._cleanups = [];
+    /** Abas que já foram abertas ao menos uma vez -- ver a animação em _mostrarAba. */
+    this._jaMostradas = new Set();
+    /** @type {Map<string, number>} onde cada aba estava rolada quando foi deixada. */
+    this._rolagemPorAba = new Map();
 
     // Um 401 em QUALQUER chamada -- não só no carregamento de aba -- leva de
     // volta ao login. Antes, a sessão expirar durante um "Adicionar" só
@@ -138,7 +144,11 @@ export class App {
       (rota) => this._mostrarAba(rota)
     );
     this._cleanups.push(() => this.router.destroy());
-    this.router.iniciar(TABS[0].key);
+    // A tela inicial é escolha do usuário (Configurações). Quem passa o dia em
+    // Distribuição não quer o Resumo toda manhã. Só vale quando a URL não traz
+    // rota: um link para `#/clientes` continua mandando mais que a preferência.
+    const inicial = TABS.some((t) => t.key === aparencia.abaInicial()) ? aparencia.abaInicial() : TABS[0].key;
+    this.router.iniciar(inicial);
     this._checkLembretes();
   }
 
@@ -167,6 +177,11 @@ export class App {
     for (const desligar of this._cleanups) desligar();
     this._cleanups = [];
     this.cache.invalidar();
+    // As views serão recriadas do zero no próximo login: a rolagem guardada
+    // aponta para um conteúdo que não existe mais, e cada aba volta a merecer
+    // a animação de estreia.
+    this._jaMostradas.clear();
+    this._rolagemPorAba.clear();
   }
 
   _buildShell() {
@@ -181,15 +196,21 @@ export class App {
           </div>
           <div class="app-brand__text"><strong>ATUALIZADOR</strong><span>Gestor de clientes</span></div>
         </div>
-        <button type="button" class="app-sidebar__toggle" data-action="toggle-sidebar"
-                aria-label="Recolher menu" title="Recolher menu (deixa mais espaço para as tabelas)">
-          ${icon("painel")}
-        </button>
+        <!-- O botão de recolher também saiu: era um ícone sem rótulo cujo
+             efeito só se descobre clicando, e "Menu lateral: Aberto /
+             Recolhido" em Configurações diz a mesma coisa por extenso. -->
         <div class="app-sidebar__label">Workspace</div>
         <nav class="tabs" role="tablist" aria-label="Telas do sistema"></nav>
+        <!--
+          Backups e Usuários moraram aqui por um tempo, soltos ao lado de
+          Configurações. Eram três entradas para o mesmo tipo de coisa ("os
+          ajustes do sistema", não "uma tela de trabalho"), competindo com as
+          nove abas logo acima. Agora existe UMA porta, e as três coisas estão
+          atrás dela -- é o que faz o rodapé parar de ser uma segunda lista de
+          navegação disputando atenção com a primeira.
+        -->
         <div class="app-sidebar__footer">
-          <button type="button" class="btn btn--small btn--sidebar" data-action="backups">${icon("backups")} <span>Backups</span></button>
-          <button type="button" class="btn btn--small btn--sidebar" data-action="users">${icon("users")} <span>Usuários</span></button>
+          <button type="button" class="btn btn--small btn--sidebar" data-action="config">${icon("config")} <span>Configurações</span></button>
         </div>
       </aside>
       <section class="app-shell">
@@ -200,7 +221,16 @@ export class App {
             <p data-role="descricao"></p>
           </div>
           <div class="app-header__actions">
-            <button type="button" class="btn btn--small btn--ghost" data-action="tema" title=""></button>
+            <!--
+              O botão de tema saiu daqui. Ele CICLAVA entre sistema/claro/escuro
+              num ícone só: para saber o que fazia era preciso clicar, e para
+              descobrir que havia um terceiro estado era preciso clicar três
+              vezes. As mesmas três opções agora estão em Configurações, lado a
+              lado e escritas por extenso -- o que era um gesto a decorar virou
+              uma escolha a ler. Quem quiser o atalho rápido tem o Ctrl+K.
+            -->
+            <button type="button" class="btn btn--small btn--ghost" data-action="config"
+                    title="Configurações" aria-label="Configurações">${icon("config")}</button>
             <div class="app-header__user">
               <strong>${escapeHtml(this.user.nome)}</strong>
               <span>@${escapeHtml(this.user.usuario)}</span>
@@ -220,17 +250,13 @@ export class App {
       this.switchTab("agendamentos")
     );
 
-    this.root.querySelector('[data-action="backups"]').addEventListener("click", () => new BackupsPanel(this.api).open());
-    this.root.querySelector('[data-action="users"]').addEventListener("click", () => new UsersPanel(this.api, this.user).open());
     this.root.querySelector('[data-action="logout"]').addEventListener("click", () => this._logout());
-    this.root.querySelector('[data-action="toggle-sidebar"]').addEventListener("click", () => this._alternarSidebar());
-
-    this.botaoTema = this.root.querySelector('[data-action="tema"]');
-    this.botaoTema.addEventListener("click", () => {
-      theme.alternar();
-      this._pintarBotaoTema();
-    });
-    this._pintarBotaoTema();
+    // Dois botões chegam ao mesmo painel: o do cabeçalho (à mão, sempre
+    // visível) e o do rodapé da barra lateral (onde se procura "as coisas do
+    // sistema", que é onde Backups e Usuários também passaram a morar).
+    for (const botao of this.root.querySelectorAll('[data-action="config"]')) {
+      botao.addEventListener("click", () => this._abrirConfiguracoes());
+    }
 
     this._montarAbas();
     this._montarPaleta();
@@ -339,8 +365,23 @@ export class App {
         executar: () => new BackupsPanel(this.api).open() },
       { id: "acao:usuarios", titulo: "Abrir Usuários", grupo: "Ações", icone: "users",
         executar: () => new UsersPanel(this.api, this.user).open() },
+      { id: "acao:config", titulo: "Abrir Configurações", subtitulo: "Tema, densidade, backups, usuários",
+        grupo: "Ações", icone: "config", executar: () => this._abrirConfiguracoes() },
+      /*
+       * Exportar/imprimir a tela aberta.
+       *
+       * Era um botão fixo no Resumo, e um botão que só serve para gerar um PDF
+       * de vez em quando não merece ocupar o topo de um painel que se olha
+       * dezenas de vezes por dia. Como comando, some da tela e continua a um
+       * Ctrl+K de distância -- e o Ctrl+P do navegador também funciona, porque
+       * quem faz o trabalho é a folha de estilo de impressão (components.css),
+       * não este item.
+       */
+      { id: "acao:imprimir", titulo: "Exportar / Imprimir esta tela",
+        subtitulo: "Escolha \"Salvar como PDF\" no diálogo do navegador",
+        grupo: "Ações", icone: "download", executar: () => window.print() },
       { id: "acao:tema", titulo: "Alternar tema (claro / escuro / sistema)", grupo: "Ações", icone: "temaClaro",
-        executar: () => { theme.alternar(); this._pintarBotaoTema(); } },
+        executar: () => theme.alternar() },
       { id: "acao:atalhos", titulo: "Ver atalhos de teclado", grupo: "Ações", icone: "teclado",
         executar: () => mostrarAtalhos() },
       { id: "acao:sair", titulo: "Sair da conta", grupo: "Ações", icone: "logout",
@@ -371,19 +412,30 @@ export class App {
     this._cleanups.push(this.palette.ligarAtalho());
   }
 
-  _pintarBotaoTema() {
-    const modo = theme.atual();
-    const icones = { sistema: "temaSistema", escuro: "temaEscuro", claro: "temaClaro" };
-    this.botaoTema.innerHTML = icon(icones[modo]);
-    this.botaoTema.title = `${theme.rotulo(modo)} — clique para alternar`;
-    this.botaoTema.setAttribute("aria-label", this.botaoTema.title);
+  _abrirConfiguracoes() {
+    abrirConfiguracoes({
+      // Mudar o tamanho de página torna errado tudo que está guardado: as
+      // chaves do cache descrevem os filtros, não quantas linhas cabem. Jogar
+      // fora e redesenhar é o caminho curto e seguro.
+      aoMudarLinhas: () => {
+        this.cache.invalidar();
+        if (this.activeTab) this._mostrarAba(this.activeTab);
+      },
+      aoMudarSidebar: (recolhida) => this._definirSidebar(recolhida),
+      abas: TABS.map((t) => ({ key: t.key, label: t.label })),
+      // Backups e Usuários abrem painéis próprios que precisam da API (e o de
+      // usuários, de quem está logado, para não deixar ninguém se rebaixar ou
+      // se excluir). O painel de Configurações não os constrói: recebe prontas
+      // as duas funções que os abrem, e continua sem saber o que eles fazem.
+      abrirBackups: () => new BackupsPanel(this.api).open(),
+      abrirUsuarios: () => new UsersPanel(this.api, this.user).open(),
+    });
   }
 
-  _alternarSidebar() {
-    const recolhida = this.root.classList.toggle("is-sidebar-collapsed");
+  /** Recolhe ou abre o menu. Único caminho, hoje vindo só de Configurações. */
+  _definirSidebar(recolhida) {
+    this.root.classList.toggle("is-sidebar-collapsed", recolhida);
     settings.set("sidebarRecolhida", recolhida);
-    const botao = this.root.querySelector('[data-action="toggle-sidebar"]');
-    botao.setAttribute("aria-label", recolhida ? "Expandir menu" : "Recolher menu");
   }
 
   /**
@@ -407,11 +459,47 @@ export class App {
   _mostrarAba(key) {
     const params = this._paramsPendentes;
     this._paramsPendentes = null;
+
+    // `_mostrarAba` também é chamado para a aba que JÁ está aberta -- ao trocar
+    // de tema (que redesenha a tela atual) e ao clicar na aba ativa. Aí não há
+    // troca nenhuma, e mexer na rolagem seria arrastar a página debaixo de
+    // quem está lendo.
+    const mesmaAba = this.activeTab === key;
+
+    // Onde a aba que está saindo tinha sido deixada. Sem isto, passar por uma
+    // aba curta (o Resumo) fazia o navegador grampear a rolagem em zero, e
+    // voltar para a tabela longa que se estava lendo devolvia o topo dela --
+    // o lugar exato onde a pessoa estava se perdia sem nenhum aviso.
+    if (this.activeTab && !mesmaAba) {
+      this._rolagemPorAba.set(this.activeTab, window.scrollY);
+    }
     this.activeTab = key;
+
+    const entrada = this.views.get(key);
+    // A classe entra ANTES do `display`: com o elemento ainda escondido, trocar
+    // qual animação vale não dispara nada -- quem dispara é o `display`
+    // voltando a existir. O deslize de apresentação fica, assim, só na estreia
+    // de cada aba; daí em diante a troca é o fade curto do `.view` (ver o
+    // comentário em components.css).
+    if (entrada) {
+      entrada.container.classList.toggle("is-first-show", !this._jaMostradas.has(key));
+      this._jaMostradas.add(key);
+    }
 
     for (const [tabKey, { container }] of this.views) {
       container.style.display = tabKey === key ? "flex" : "none";
     }
+
+    // Depois do `display`, com a altura da página já correta. As views não são
+    // destruídas ao sair de cena (só escondidas), então o conteúdo -- e a
+    // altura dele -- continua lá: dá para devolver a rolagem no mesmo quadro,
+    // sem esperar nenhuma resposta da API.
+    //
+    // Com `params`, sobe ao topo: aí a pessoa não está "voltando" para a aba,
+    // está sendo levada a algo específico (a ficha de um cliente escolhido na
+    // paleta de comandos), e o começo da tela é onde essa coisa está.
+    if (!mesmaAba) window.scrollTo(0, params ? 0 : this._rolagemPorAba.get(key) || 0);
+
     for (const button of this.root.querySelectorAll(".tab-button")) {
       const ativa = button.dataset.tab === key;
       button.classList.toggle("is-active", ativa);
@@ -420,7 +508,6 @@ export class App {
       button.tabIndex = ativa ? 0 : -1;
     }
 
-    const entrada = this.views.get(key);
     if (!entrada) return;
 
     this.tituloEl.textContent = entrada.tab.label;

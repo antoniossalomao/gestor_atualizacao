@@ -26,12 +26,8 @@ export class VersoesView extends View {
 
   _buildDom() {
     this.container.innerHTML = `
-      <div class="versions-hero">
-        <div>
-          <span class="dashboard-intro__eyebrow">Inventário do ambiente</span>
-          <h2>Versões dos sistemas</h2>
-          <p>O que está registrado nos clientes e o que está publicado para distribuição.</p>
-        </div>
+      <div class="toolbar">
+        <div class="toolbar-spacer"></div>
         <button class="btn btn--small btn--ghost" data-action="refresh">${icon("atualizar")} Atualizar dados</button>
       </div>
 

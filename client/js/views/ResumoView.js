@@ -3,7 +3,30 @@ import { SortableTable } from "../core/SortableTable.js";
 import { PieChart } from "../core/PieChart.js";
 import { BarChart } from "../core/BarChart.js";
 import { tokenHex } from "../core/color.js";
+import { icon } from "../core/icons.js";
+import { escapeHtml } from "../core/html.js";
 import { DESATUALIZADO_DIAS } from "../config.js";
+
+/**
+ * Um indicador do topo do Resumo. O `data-stat` é como `_setStat` o encontra.
+ *
+ * É um `<button>`, não uma `<div>`: os quatro números eram becos sem saída --
+ * viam-se "37 clientes parados" e a única continuação possível era ir procurar
+ * a tela certa e refazer o filtro na mão. Agora cada um leva à lista que ele
+ * conta. Sendo botão de verdade, isso vale também para teclado e leitor de
+ * tela, que é o que uma `<div onclick>` não daria.
+ */
+function statTile(chave, nomeIcone, rotulo, destino) {
+  return `
+    <button type="button" class="card stat-tile" data-stat="${chave}" data-destino="${escapeHtml(destino)}">
+      <div class="stat-tile__label">
+        <span class="stat-tile__icon">${icon(nomeIcone)}</span>
+        ${escapeHtml(rotulo)}
+      </div>
+      <div class="stat-tile__value">—</div>
+      <span class="stat-tile__go">${escapeHtml(destino)} ${icon("seta")}</span>
+    </button>`;
+}
 
 /**
  * Aba Resumo: indicadores gerais. Equivalente de gestor/views/resumo.py -- a
@@ -19,22 +42,10 @@ export class ResumoView extends View {
   _buildDom() {
     this.container.innerHTML = `
       <div class="stat-tiles">
-        <div class="card stat-tile" data-stat="clientes">
-          <div class="stat-tile__label">Clientes</div>
-          <div class="stat-tile__value">—</div>
-        </div>
-        <div class="card stat-tile" data-stat="atualizacoes">
-          <div class="stat-tile__label">Atualizações</div>
-          <div class="stat-tile__value">—</div>
-        </div>
-        <div class="card stat-tile" data-stat="mes">
-          <div class="stat-tile__label">Atualizações Este Mês</div>
-          <div class="stat-tile__value">—</div>
-        </div>
-        <div class="card stat-tile" data-stat="desatualizados">
-          <div class="stat-tile__label">Parados Há Mais de ${DESATUALIZADO_DIAS} Dias</div>
-          <div class="stat-tile__value">—</div>
-        </div>
+        ${statTile("clientes", "clientes", "Clientes", "Ver clientes")}
+        ${statTile("atualizacoes", "atualizacoes", "Atualizações", "Ver histórico")}
+        ${statTile("mes", "calendario", "Atualizações Este Mês", "Ver o mês")}
+        ${statTile("desatualizados", "alerta", `Parados Há Mais de ${DESATUALIZADO_DIAS} Dias`, "Ver por sistema")}
       </div>
 
       <div class="card">
@@ -67,6 +78,22 @@ export class ResumoView extends View {
         <div data-role="resolucao"></div>
       </div>
     `;
+
+    // Um listener na grade toda (delegação) em vez de quatro. Cada destino é
+    // "a tela onde aquele número vira uma lista que dá para trabalhar".
+    this.container.querySelector(".stat-tiles").addEventListener("click", (e) => {
+      const tile = e.target.closest(".stat-tile");
+      if (!tile) return;
+      const rotas = {
+        clientes: () => this.navigate("clientes"),
+        atualizacoes: () => this.navigate("atualizacoes", { desde: "", ate: "" }),
+        // O "este mês" do indicador tem que ser o MESMO recorte que o número
+        // contou, senão a lista abre com um total diferente do que se clicou.
+        mes: () => this.navigate("atualizacoes", { desde: primeiroDiaDoMes(), ate: hojeBR() }),
+        desatualizados: () => this.navigate("sistemas"),
+      };
+      rotas[tile.dataset.stat]?.();
+    });
 
     this.pie = new PieChart(this.container.querySelector('[data-role="pie"]'));
 
@@ -128,6 +155,17 @@ export class ResumoView extends View {
   _setStat(key, value) {
     this.container.querySelector(`[data-stat="${key}"] .stat-tile__value`).textContent = String(value);
   }
+}
+
+/** dd/mm/aaaa do primeiro dia do mês corrente e de hoje -- o recorte de "este mês". */
+function primeiroDiaDoMes() {
+  const h = new Date();
+  return `01/${String(h.getMonth() + 1).padStart(2, "0")}/${h.getFullYear()}`;
+}
+
+function hojeBR() {
+  const h = new Date();
+  return `${String(h.getDate()).padStart(2, "0")}/${String(h.getMonth() + 1).padStart(2, "0")}/${h.getFullYear()}`;
 }
 
 const MESES_ABREVIADOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];

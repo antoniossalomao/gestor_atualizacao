@@ -36,7 +36,10 @@ export class LoginView {
     const card = document.createElement("div");
     card.className = "auth-card";
     card.innerHTML = `
-      <div class="auth-card__logo">GA</div>
+      <!-- O mesmo logo da barra lateral. Era um "GA" digitado à mão, então a
+           primeira tela do sistema (a única que quem chega de fora sempre vê)
+           era justamente a que não mostrava a marca que o resto do app usa. -->
+      <div class="auth-card__logo"><img src="/assets/logo.png" alt="" width="44" height="44" /></div>
       <h2>${isSetup ? "Criar conta de administrador" : "Entrar"}</h2>
       <p class="auth-card__subtitle">${
         isSetup

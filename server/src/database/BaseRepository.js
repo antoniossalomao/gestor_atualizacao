@@ -38,6 +38,26 @@ class BaseRepository {
     return this.conn.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id).changes;
   }
 
+  /**
+   * Apaga varios registros de uma vez e devolve quantos sairam de fato.
+   *
+   * Numa transacao: ou todos somem, ou nenhum some. Sem isso, um erro no meio
+   * de uma exclusao de trinta registros deixaria dezessete apagados e treze
+   * no lugar, sem ninguem saber onde parou -- e o "Desfazer" da tela, que
+   * recadastra o que foi excluido, recriaria duplicatas dos que sobreviveram.
+   *
+   * Os ids entram como parametros posicionais (`?`), um por id, e nao
+   * interpolados no texto do SQL: e' o mesmo cuidado do resto dos
+   * repositorios, e aqui a lista vem direto do que o navegador mandou.
+   */
+  deleteMany(ids) {
+    const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
+    if (limpos.length === 0) return 0;
+    const marcadores = limpos.map(() => "?").join(", ");
+    const stmt = this.conn.prepare(`DELETE FROM ${this.table} WHERE id IN (${marcadores})`);
+    return this.conn.transaction(() => stmt.run(...limpos).changes)();
+  }
+
   /** Quantos registros existem na tabela. */
   count() {
     const row = this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table}`).get();

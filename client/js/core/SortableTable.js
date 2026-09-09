@@ -1,3 +1,6 @@
+/** Espera antes de escurecer a tabela numa atualização (ver setRefreshing). */
+const ATRASO_REFRESH_MS = 180;
+
 /**
  * Tabela genérica e ordenável, reaproveitada por todas as telas com lista
  * (Resumo, Atualizações, Agendamentos, Clientes). Equivalente combinado de
@@ -40,6 +43,8 @@ export class SortableTable {
    *   serverSort?: boolean,
    *   onSortChange?: (key: string, dir: "asc"|"desc") => void,
    *   caption?: string,
+   *   multiSelect?: boolean,
+   *   onMultiSelect?: (chaves: string[]) => void,
    * }} options
    */
   constructor(container, options) {
@@ -62,11 +67,32 @@ export class SortableTable {
     this.serverSort = options.serverSort === true;
     this.onSortChange = options.onSortChange || (() => {});
 
+    /*
+     * Selecao multipla: SEM coluna de caixinhas -- Shift+clique (ou
+     * Shift+seta, pelo teclado) marca o intervalo entre a ultima linha
+     * clicada normalmente e a que recebeu o Shift, no mesmo gesto de
+     * Explorer/Gmail/planilha. Fica DESLIGADA por padrao -- a maioria das
+     * tabelas do app e' de leitura ou de "escolher um para editar", e nelas
+     * um Shift+clique nao deveria fazer nada de especial.
+     *
+     * Convive com a selecao simples que ja havia: um clique NORMAL continua
+     * carregando o registro no formulario (e encerra qualquer intervalo
+     * marcado, como clicar fora de uma selecao no Explorer). So o Shift muda
+     * de intencao: em vez de abrir a linha, ele a acrescenta a um lote.
+     */
+    this.multiSelect = options.multiSelect === true;
+    this.onMultiSelect = options.onMultiSelect || (() => {});
+    /** @type {Set<string>} chaves marcadas, como texto (igual ao dataset) */
+    this.marcadas = new Set();
+    /** Índice da linha onde o intervalo de Shift começa. -1 = nenhuma ainda. */
+    this._ancoraIndex = -1;
+
     this.rows = [];
     this.sortState = { key: null, reverse: false };
     this.selectedKey = null;
     this.cursor = -1;
     this.loading = true;
+    this._timerRefresh = null;
 
     this.wrap = document.createElement("div");
     this.wrap.className = "table-wrap";
@@ -95,8 +121,18 @@ export class SortableTable {
       // de 50, e sobrevive à troca das linhas sem precisar reconectar nada.
       this.tbody.addEventListener("click", (e) => {
         const tr = e.target.closest("tr[data-key]");
-        if (tr) this._selecionarPorElemento(tr);
+        if (tr) this._selecionarPorElemento(tr, e.shiftKey);
       });
+      if (this.multiSelect) {
+        // Sem isto, segurar Shift e clicar duas vezes na tabela selecionaria o
+        // TEXTO entre os dois cliques (o comportamento nativo do navegador
+        // para Shift+clique) por cima de marcar as linhas -- os dois gestos
+        // disputam a mesma tecla. `mousedown`, não `click`: é no mousedown que
+        // o navegador decide começar essa seleção de texto.
+        this.tbody.addEventListener("mousedown", (e) => {
+          if (e.shiftKey) e.preventDefault();
+        });
+      }
     }
 
     this._renderHead();
@@ -108,12 +144,35 @@ export class SortableTable {
     this.loading = false;
     this.rows = rows;
     if (this.sortState.key && !this.serverSort) this._applySort();
+    // A âncora do Shift é um ÍNDICE de linha, não a chave de um registro --
+    // depois de uma virada de página (ou de a lista mudar por qualquer outro
+    // motivo), "linha 4" já não é o mesmo registro de antes. As MARCAS
+    // continuam de propósito (é assim que dá para marcar linhas espalhadas em
+    // páginas diferentes), só a âncora precisa esquecer o índice velho.
+    this._ancoraIndex = -1;
     this._renderBody();
   }
 
-  /** Marca a tabela como "atualizando" sem apagar o que já está na tela. */
+  /**
+   * Marca a tabela como "atualizando" sem apagar o que já está na tela.
+   *
+   * O escurecimento só entra depois de `ATRASO_REFRESH_MS`, pelo mesmo motivo
+   * da barra de revalidação em View.js: a cada tecla digitada na busca (e a
+   * cada troca de aba) a tabela apagava para 62% e voltava, quase sempre rápido
+   * demais para ser lido como "carregando" -- só dava a impressão de que a
+   * tabela pisca enquanto se digita. Quando a espera é real, o aviso aparece.
+   */
   setRefreshing(ligado) {
-    this.wrap.classList.toggle("is-refreshing", ligado);
+    clearTimeout(this._timerRefresh);
+    this._timerRefresh = null;
+    if (!ligado) {
+      this.wrap.classList.remove("is-refreshing");
+      return;
+    }
+    this._timerRefresh = setTimeout(() => {
+      this._timerRefresh = null;
+      this.wrap.classList.add("is-refreshing");
+    }, ATRASO_REFRESH_MS);
   }
 
   selectByKey(key) {
@@ -124,8 +183,26 @@ export class SortableTable {
     this._marcarSelecionada(null);
   }
 
+  /** Chaves marcadas, como texto. */
+  get selecionadas() {
+    return [...this.marcadas];
+  }
+
+  /** Desmarca tudo (depois de excluir o lote, ou de o filtro mudar). */
+  limparMarcadas() {
+    this.marcadas.clear();
+    // Também esquece a âncora: ela é um ÍNDICE de linha, não uma chave de
+    // registro, e continuar apontando para "linha 4" depois de a lista ser
+    // filtrada de novo marcaria um intervalo que não tem nada a ver com o que
+    // a pessoa está vendo agora.
+    this._ancoraIndex = -1;
+    this._pintarMarcadas();
+    this.onMultiSelect(this.selecionadas);
+  }
+
   _renderHead() {
     const tr = document.createElement("tr");
+
     for (const col of this.columns) {
       const th = document.createElement("th");
       th.scope = "col";
@@ -170,6 +247,12 @@ export class SortableTable {
       return;
     }
     this._applySort();
+    // Mesmo motivo do reset em `setRows`: a ordem das linhas mudou, e a âncora
+    // é um índice nessa ordem. Nenhuma tabela com `multiSelect` usa ordenação
+    // no cliente hoje (todas são `serverSort: true`, que devolve por aqui bem
+    // antes desta linha) -- isto é só para não deixar uma pegadinha pronta
+    // caso uma futura passe a usar as duas coisas juntas.
+    this._ancoraIndex = -1;
     this._renderBody();
   }
 
@@ -231,7 +314,19 @@ export class SortableTable {
         if (key === this.selectedKey) tr.classList.add("is-selected");
         tr.setAttribute("aria-selected", String(key === this.selectedKey));
       }
+      // Zera antes de aplicar: esta <tr> pode estar sendo reaproveitada de
+      // outro registro (ver o reuso acima), e `Object.assign` só ESCREVE as
+      // propriedades que o rowStyle devolver -- as que ele deixar de devolver
+      // ficariam com o valor da linha anterior grudado. Hoje o único rowStyle
+      // do app (Sistemas) sempre devolve `background`, então o defeito está
+      // latente; qualquer tabela futura com estilo condicional o acordaria.
+      if (tr.style.cssText) tr.style.cssText = "";
       Object.assign(tr.style, this.rowStyle(row, index) || {});
+
+      // A marca de "está no lote" vem do estado, e não do que a <tr>
+      // reciclada tinha antes: sem isto, paginar deixaria a marca da linha
+      // anterior colada num registro que nunca foi escolhido.
+      if (this.multiSelect) tr.classList.toggle("is-marcada", this.marcadas.has(String(key)));
 
       this.columns.forEach((col, c) => {
         const td = tr.children[c];
@@ -246,13 +341,77 @@ export class SortableTable {
     });
   }
 
-  _selecionarPorElemento(tr) {
-    const index = [...this.tbody.querySelectorAll("tr[data-key]")].indexOf(tr);
+  /**
+   * Um clique numa linha. Sem Shift, é a seleção simples de sempre (carrega
+   * no formulário) e ela TAMBÉM encerra qualquer intervalo marcado -- é o
+   * mesmo comportamento do Explorer: clicar um item sozinho larga a seleção
+   * múltipla anterior. Com Shift, vira o oposto: marca o intervalo até a
+   * âncora e não mexe no que está carregado no formulário, porque Shift é
+   * "adicione ao lote", não "abra isto".
+   *
+   * @param {boolean} comShift veio de `e.shiftKey` (clique ou teclado)
+   */
+  _selecionarPorElemento(tr, comShift = false) {
+    const linhas = [...this.tbody.querySelectorAll("tr[data-key]")];
+    const index = linhas.indexOf(tr);
     if (index < 0) return;
+
+    if (this.multiSelect && comShift) {
+      this._selecionarIntervalo(index, linhas);
+      return;
+    }
+
     this.cursor = index;
+    this._ancoraIndex = index;
+    if (this.multiSelect && this.marcadas.size > 0) this._limparIntervalo();
+
     const row = this.rows[index];
     this._marcarSelecionada(this.rowKey(row));
     this.onSelect(row);
+  }
+
+  /**
+   * Marca o intervalo entre a âncora (a última linha clicada sem Shift, ou a
+   * primeira Shift+clique da sessão) e `indexAlvo`, substituindo o que já
+   * estava marcado -- Shift+clique nunca ACRESCENTA a uma seleção antiga, ele
+   * REDESENHA o intervalo inteiro a partir da âncora, que é o que Explorer,
+   * Gmail e qualquer planilha fazem. Sem uma âncora ainda, o intervalo começa
+   * e termina na própria linha clicada.
+   */
+  _selecionarIntervalo(indexAlvo, linhas = [...this.tbody.querySelectorAll("tr[data-key]")]) {
+    if (linhas.length === 0) return;
+    // Sem âncora ainda (primeiro Shift+clique da sessão, sem nenhum clique
+    // normal antes): a própria linha clicada VIRA a âncora, e fica assim até
+    // um clique normal a substituir. Precisa ser GRAVADO aqui, não só usado
+    // localmente -- senão um segundo Shift+clique em seguida (sem um clique
+    // normal entre os dois) recalcularia a âncora do zero a cada vez, e o
+    // intervalo nunca cresceria além da última linha clicada.
+    if (this._ancoraIndex < 0) this._ancoraIndex = indexAlvo;
+    const ancora = this._ancoraIndex;
+    const [inicio, fim] = ancora <= indexAlvo ? [ancora, indexAlvo] : [indexAlvo, ancora];
+
+    this.marcadas.clear();
+    for (let i = inicio; i <= fim; i++) {
+      const key = this.rowKey(this.rows[i]);
+      if (key != null) this.marcadas.add(String(key));
+    }
+    this.cursor = indexAlvo;
+    this._pintarMarcadas();
+    this._moverCursor(linhas);
+    this.onMultiSelect(this.selecionadas);
+  }
+
+  _limparIntervalo() {
+    this.marcadas.clear();
+    this._pintarMarcadas();
+    this.onMultiSelect(this.selecionadas);
+  }
+
+  /** Reflete o conjunto marcado nas linhas visíveis, sem redesenhar o corpo. */
+  _pintarMarcadas() {
+    for (const tr of this.tbody.querySelectorAll("tr[data-key]")) {
+      tr.classList.toggle("is-marcada", this.marcadas.has(tr.dataset.key));
+    }
   }
 
   /** Troca a classe só nas duas linhas envolvidas, sem redesenhar o corpo. */
@@ -272,8 +431,17 @@ export class SortableTable {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       const passo = e.key === "ArrowDown" ? 1 : -1;
-      this.cursor = Math.min(linhas.length - 1, Math.max(0, this.cursor + passo));
-      this._moverCursor(linhas);
+      const novoCursor = Math.min(linhas.length - 1, Math.max(0, this.cursor + passo));
+      // Shift+seta é o equivalente por teclado do Shift+clique. Sem isto, o
+      // lote seria uma funcionalidade exclusiva de quem usa mouse -- e este
+      // app cuida de teclado em toda outra tabela dele.
+      if (this.multiSelect && e.shiftKey) {
+        if (this._ancoraIndex < 0) this._ancoraIndex = this.cursor >= 0 ? this.cursor : novoCursor;
+        this._selecionarIntervalo(novoCursor, linhas);
+      } else {
+        this.cursor = novoCursor;
+        this._moverCursor(linhas);
+      }
     } else if (e.key === "Home") {
       e.preventDefault();
       this.cursor = 0;
@@ -285,7 +453,7 @@ export class SortableTable {
     } else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       const tr = linhas[this.cursor];
-      if (tr) this._selecionarPorElemento(tr);
+      if (tr) this._selecionarPorElemento(tr, e.shiftKey);
     }
   }
 

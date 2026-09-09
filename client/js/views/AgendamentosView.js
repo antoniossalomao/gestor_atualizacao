@@ -12,6 +12,7 @@ import { emptyState } from "../core/EmptyState.js";
 import { plural } from "../core/html.js";
 import { marcarOcupado } from "../core/guard.js";
 import { prefs } from "../core/prefs.js";
+import { aparencia } from "../core/appearance.js";
 
 const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
 
@@ -244,7 +245,7 @@ export class AgendamentosView extends View {
         () =>
           this.api.get(
             "/agendamentos",
-            { search: this.busca, status: this.status, page: this.page, sortBy: this.sortBy, sortDir: this.sortDir },
+            { search: this.busca, status: this.status, page: this.page, pageSize: aparencia.linhasPorPagina(), sortBy: this.sortBy, sortDir: this.sortDir },
             { key: "agendamentos:lista" }
           ),
         (resposta) => {

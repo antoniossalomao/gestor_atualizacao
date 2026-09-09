@@ -13,6 +13,7 @@ import { escapeHtml, plural } from "../core/html.js";
 import { emptyState } from "../core/EmptyState.js";
 import { withBusyButton, marcarOcupado } from "../core/guard.js";
 import { prefs } from "../core/prefs.js";
+import { aparencia } from "../core/appearance.js";
 
 /**
  * Aba Atualizações: histórico de atualizações de sistemas por cliente.
@@ -39,6 +40,8 @@ export class AtualizacoesView extends View {
     this.page = 1;
     this.busca = salvo.busca || "";
     this.responsavel = salvo.responsavel || "Todos";
+    this.desde = salvo.desde || "";
+    this.ate = salvo.ate || "";
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "desc";
     this._buildDom();
@@ -67,12 +70,54 @@ export class AtualizacoesView extends View {
             <label class="field__label" for="atu-resp">Responsável</label>
             <select class="input" id="atu-resp" data-role="responsavel-filter"><option>Todos</option></select>
           </div>
+          <!-- Período. A busca era só texto livre + responsável, então "o que
+               foi feito neste mês" -- provavelmente a pergunta mais comum de
+               quem abre esta tela -- não tinha resposta a não ser rolar a
+               lista inteira conferindo datas com o olho. -->
+          <div class="field field--periodo">
+            <label class="field__label" for="atu-desde">De</label>
+            <input type="text" class="input" id="atu-desde" data-role="desde"
+                   placeholder="dd/mm/aaaa" inputmode="numeric" />
+          </div>
+          <div class="field field--periodo">
+            <label class="field__label" for="atu-ate">Até</label>
+            <input type="text" class="input" id="atu-ate" data-role="ate"
+                   placeholder="dd/mm/aaaa" inputmode="numeric" />
+          </div>
+          <div class="toolbar__clear">
+            <button type="button" class="btn btn--small" data-action="mes-atual"
+                    title="Filtra do dia 1º até hoje">Este mês</button>
+          </div>
           <div class="toolbar__clear">
             <button type="button" class="btn btn--small btn--ghost" data-action="limpar-filtros" hidden>Limpar filtros</button>
           </div>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
         </div>
+        <!--
+          Sem coluna de caixinhas, o Shift+clique não tem NENHUM indício visual
+          na tabela -- é um gesto que ninguém adivinha sozinho. Esta linha é a
+          única pista de que ele existe (a lista de atalhos, aberta com "?",
+          também o documenta -- ver Shortcuts.js). Fica sempre visível, mas
+          discreta: uma frase, não um card chamando atenção.
+        -->
+        <p class="text-muted bulk-hint">
+          Dica: segure <kbd>Shift</kbd> e clique em duas linhas para selecionar tudo entre elas.
+        </p>
+        <!--
+          Barra de lote. Só existe quando há algo marcado -- uma barra
+          permanente dizendo "0 selecionados" com botões desligados ocuparia
+          espaço o tempo todo para não oferecer nada na maior parte dele.
+        -->
+        <div class="bulk-bar" data-role="bulk" hidden>
+          <span class="bulk-bar__count" data-role="bulk-count" aria-live="polite"></span>
+          <button type="button" class="btn btn--small btn--ghost" data-action="bulk-limpar">Desmarcar</button>
+          <div class="toolbar-spacer"></div>
+          <button type="button" class="btn btn--small btn--danger" data-action="bulk-excluir">
+            ${icon("alerta")} Excluir selecionados
+          </button>
+        </div>
+
         <div data-role="table"></div>
         <div data-role="pagination"></div>
         <div class="form-actions" style="margin-top: var(--sp-4)">
@@ -92,6 +137,11 @@ export class AtualizacoesView extends View {
         ...COLUMNS.map((c) => ({ key: c.key, label: c.label, type: c.key === "data" ? "date" : "text" })),
       ],
       onSelect: (row) => this._loadIntoForm(row),
+      // Seleção múltipla: esta é a tabela onde faz sentido: importar uma
+      // planilha errada e precisar remover as sessenta linhas que entraram
+      // significava sessenta ciclos de "clicar na linha, clicar em Excluir".
+      multiSelect: true,
+      onMultiSelect: (chaves) => this._pintarBulk(chaves),
       caption: "Atualizações registradas",
       emptyNode: () =>
         this._temFiltro()
@@ -133,17 +183,54 @@ export class AtualizacoesView extends View {
     }, 200);
     this.searchInput.addEventListener("input", () => {
       this.busca = this.searchInput.value.trim();
-      this._pintarLimparFiltros();
+      this._trocouDeFiltro();
       reload();
     });
     this.responsavelFilter.addEventListener("change", () => {
       this.responsavel = this.responsavelFilter.value;
       this.page = 1;
-      this._pintarLimparFiltros();
+      this._trocouDeFiltro();
       this._salvarFiltros();
       this._reloadList();
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
+
+    // -- período --
+    this.desdeInput = this.container.querySelector('[data-role="desde"]');
+    this.ateInput = this.container.querySelector('[data-role="ate"]');
+    this.desdeInput.value = this.desde;
+    this.ateInput.value = this.ate;
+
+    // Uma data pela metade ("15/01/") não é filtro nenhum: enquanto não estiver
+    // completa, o campo é simplesmente ignorado, em vez de a lista esvaziar e
+    // reaparecer a cada tecla digitada.
+    const aplicarPeriodo = debounce(() => {
+      this.desde = isValidDateBR(this.desdeInput.value) ? this.desdeInput.value.trim() : "";
+      this.ate = isValidDateBR(this.ateInput.value) ? this.ateInput.value.trim() : "";
+      this.page = 1;
+      this._trocouDeFiltro();
+      this._salvarFiltros();
+      this._reloadList();
+    }, 300);
+    for (const campo of [this.desdeInput, this.ateInput]) {
+      campo.addEventListener("input", () => {
+        const vazio = !campo.value.trim();
+        const invalido = !vazio && !isValidDateBR(campo.value);
+        campo.setAttribute("aria-invalid", String(invalido));
+        aplicarPeriodo();
+      });
+    }
+
+    this.container.querySelector('[data-action="mes-atual"]').addEventListener("click", () => {
+      this._aplicarPeriodo(primeiroDiaDoMes(), todayBR());
+    });
+
+    // -- lote --
+    this.bulkBar = this.container.querySelector('[data-role="bulk"]');
+    this.bulkCount = this.container.querySelector('[data-role="bulk-count"]');
+    this.bulkExcluir = this.container.querySelector('[data-action="bulk-excluir"]');
+    this.container.querySelector('[data-action="bulk-limpar"]').addEventListener("click", () => this.table.limparMarcadas());
+    this.bulkExcluir.addEventListener("click", () => this.excluirLote());
 
     this.addBtn = this.container.querySelector('[data-action="add"]');
     this.updateBtn = this.container.querySelector('[data-action="update"]');
@@ -241,7 +328,7 @@ export class AtualizacoesView extends View {
   }
 
   _chaveLista() {
-    return `atualizacoes:lista:${this.busca}|${this.responsavel}|${this.page}|${this.sortBy}|${this.sortDir}`;
+    return `atualizacoes:lista:${this.busca}|${this.responsavel}|${this.desde}|${this.ate}|${this.page}|${this.sortBy}|${this.sortDir}`;
   }
 
   async _reloadList() {
@@ -255,7 +342,13 @@ export class AtualizacoesView extends View {
             {
               search: this.busca,
               responsavel: this.responsavel,
+              desde: this.desde,
+              ate: this.ate,
               page: this.page,
+              // Escolhido em Configurações. O servidor já aceitava `pageSize`
+              // desde sempre (ver server/src/controllers/pagination.js); o que
+              // faltava era alguém oferecer a escolha.
+              pageSize: aparencia.linhasPorPagina(),
               sortBy: this.sortBy,
               sortDir: this.sortDir,
             },
@@ -284,8 +377,39 @@ export class AtualizacoesView extends View {
     this.container.querySelector('[data-role="count"]').textContent = plural(resposta.total, "registro");
   }
 
+  /**
+   * Aplica um intervalo de fora (o botão "Este mês", ou o indicador do Resumo
+   * via `aplicarParams`). Ponto único, para os três caminhos não divergirem.
+   */
+  _aplicarPeriodo(desde, ate) {
+    this.desde = desde || "";
+    this.ate = ate || "";
+    this.desdeInput.value = this.desde;
+    this.ateInput.value = this.ate;
+    for (const campo of [this.desdeInput, this.ateInput]) campo.setAttribute("aria-invalid", "false");
+    this.page = 1;
+    this._trocouDeFiltro();
+    this._salvarFiltros();
+    this._reloadList();
+  }
+
+  /**
+   * Chamado sempre que o CONJUNTO de resultados muda de significado.
+   *
+   * A marcação sobrevive à paginação de propósito -- marcar cinquenta linhas
+   * espalhadas em três páginas e excluir tudo de uma vez é justamente para
+   * isso que a seleção múltipla serve, e a barra mostra o total o tempo todo.
+   * Mas ela NÃO pode sobreviver a uma troca de filtro: as linhas marcadas
+   * saem da lista e continuam contando, e aí a pessoa apagaria registros que
+   * não estão mais na tela e que ela nem lembra ter marcado.
+   */
+  _trocouDeFiltro() {
+    this._pintarLimparFiltros();
+    this.table?.limparMarcadas();
+  }
+
   _temFiltro() {
-    return Boolean(this.busca) || this.responsavel !== "Todos";
+    return Boolean(this.busca) || this.responsavel !== "Todos" || Boolean(this.desde) || Boolean(this.ate);
   }
 
   _pintarLimparFiltros() {
@@ -297,16 +421,15 @@ export class AtualizacoesView extends View {
     this.responsavel = "Todos";
     this.searchInput.value = "";
     this.responsavelFilter.value = "Todos";
-    this.page = 1;
-    this._pintarLimparFiltros();
-    this._salvarFiltros();
-    this._reloadList();
+    this._aplicarPeriodo("", "");
   }
 
   _salvarFiltros() {
     prefs.set("atualizacoes:filtros", {
       busca: this.busca,
       responsavel: this.responsavel,
+      desde: this.desde,
+      ate: this.ate,
       sortBy: this.sortBy,
       sortDir: this.sortDir,
     });
@@ -324,7 +447,13 @@ export class AtualizacoesView extends View {
    * -- pré-preenche um registro NOVO (não edita nada existente) com o que a
    * tarefa já tinha, pra não digitar tudo de novo.
    */
-  aplicarParams({ cliente, responsavel, data, motivo, obs } = {}) {
+  aplicarParams({ cliente, responsavel, data, motivo, obs, desde, ate } = {}) {
+    // Vindo de um indicador do Resumo: não é para preencher formulário
+    // nenhum, é para FILTRAR a lista pelo período que aquele número contava.
+    if (desde || ate) {
+      this._aplicarPeriodo(desde, ate);
+      return;
+    }
     if (!cliente) return;
     this.clearForm();
     if (cliente) this.fields.cliente.value = cliente;
@@ -446,6 +575,72 @@ export class AtualizacoesView extends View {
     }
   }
 
+  _pintarBulk(chaves) {
+    const n = chaves.length;
+    this.bulkBar.hidden = n === 0;
+    this.bulkCount.textContent = n === 0 ? "" : `${plural(n, "registro")} ${n === 1 ? "selecionado" : "selecionados"}`;
+  }
+
+  /**
+   * Exclui todos os marcados de uma vez.
+   *
+   * Aqui a confirmação VOLTA, ao contrário da exclusão de um registro só (ver
+   * o comentário em `deleteRecord` sobre por que "Desfazer" protege melhor que
+   * "Confirmar"). O argumento se inverte quando o número cresce: um clique
+   * errado em "Excluir selecionados" com quarenta linhas marcadas não é o
+   * mesmo engano que apagar uma linha, e a confirmação aqui é rara o bastante
+   * para não virar reflexo. O "Desfazer" continua existindo por cima disso --
+   * são duas redes, não uma substituindo a outra.
+   */
+  async excluirLote() {
+    const ids = this.table.selecionadas.map(Number).filter(Number.isInteger);
+    if (ids.length === 0) return;
+
+    const ok = await Modal.confirm(
+      "Excluir selecionados",
+      `${plural(ids.length, "registro")} ${ids.length === 1 ? "será excluído" : "serão excluídos"}.\n\n` +
+        "Você ainda poderá desfazer nos segundos seguintes.",
+      { confirmLabel: "Excluir", danger: true }
+    );
+    if (!ok) return;
+
+    const liberar = marcarOcupado(this.bulkExcluir);
+    try {
+      // O servidor devolve os registros que apagou -- é com eles que o
+      // "Desfazer" recria tudo. A tela não pode montar essa lista sozinha:
+      // depois de "marcar todos da página" ela tem as chaves, mas não
+      // necessariamente os dados completos de cada uma.
+      const { excluidos, registros } = await this.api.post("/atualizacoes/excluir-lote", { ids });
+      this.table.limparMarcadas();
+      this.clearForm();
+      this._invalidar();
+      await this._reloadList();
+
+      toast.undo(`${plural(excluidos, "registro")} ${excluidos === 1 ? "excluído" : "excluídos"}.`, async () => {
+        try {
+          // Um a um: não existe rota de criação em lote, e recriar é uma
+          // operação rara o bastante para não valer uma. `id` sai fora --
+          // o banco atribui um novo.
+          for (const registro of registros) {
+            const { id, ...dados } = registro;
+            await this.api.post("/atualizacoes", dados);
+          }
+          this._invalidar();
+          await this._reloadList();
+          toast.success("Exclusão desfeita.");
+        } catch {
+          toast.error("Não foi possível desfazer tudo. Confira a lista.");
+          this._invalidar();
+          this._reloadList();
+        }
+      });
+    } catch (err) {
+      Modal.alert("Erro", errorMessage(err), "error");
+    } finally {
+      liberar();
+    }
+  }
+
   /**
    * @param {{comDesfazer?: boolean}} [opts] quando `true`, oferece restaurar
    *   o que estava digitado. `Escape` limpava oito campos sem volta.
@@ -520,6 +715,8 @@ export class AtualizacoesView extends View {
     const blob = await this.api.getFile("/atualizacoes/export", {
       search: this.busca,
       responsavel: this.responsavel,
+      desde: this.desde,
+      ate: this.ate,
     });
     downloadBlob(blob, `atualizacoes${this._temFiltro() ? "-filtrado" : ""}.xlsx`);
     toast.info(this._temFiltro() ? "Exportação concluída (com os filtros atuais)." : "Exportação concluída.");
@@ -545,6 +742,12 @@ export class AtualizacoesView extends View {
     this.responsavelAutocomplete?.destroy();
     super.destroy();
   }
+}
+
+/** Primeiro dia do mês corrente em dd/mm/aaaa -- o "de" do botão "Este mês". */
+function primeiroDiaDoMes() {
+  const hoje = new Date();
+  return `01/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
 }
 
 function isTypingTarget(el) {

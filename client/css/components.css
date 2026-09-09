@@ -51,6 +51,16 @@
   background: var(--sidebar-fundo);
   backdrop-filter: blur(8px);
   border-right: 1px solid var(--cor-borda);
+  /* Corta o que passar da largura, em vez de deixar vazar. Resolve duas
+     coisas com a mesma linha:
+     1. ao EXPANDIR o menu, os rótulos voltam a `display: block` no primeiro
+        quadro, com o texto inteiro, enquanto a largura ainda está animando de
+        64px para 238px -- sem o corte, esse texto some por cima do conteúdo
+        durante os 200ms da transição;
+     2. numa janela baixa, os botões de Backups/Usuários no rodapé ficavam
+        fora da tela e sem como alcançá-los. Com `overflow-x: hidden` o eixo
+        vertical passa a `auto`, e a barra lateral rola sozinha quando precisa. */
+  overflow-x: hidden;
   transition: width var(--dur-media) var(--curva-padrao);
 }
 
@@ -129,28 +139,6 @@
   white-space: nowrap;
 }
 
-.app-sidebar__toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  margin-bottom: var(--sp-4);
-  padding: 7px;
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-pequeno);
-  background: transparent;
-  color: var(--cor-texto-fraco);
-  cursor: pointer;
-  transition: background var(--transicao), color var(--transicao);
-}
-.app-sidebar__toggle:hover {
-  background: var(--cor-superficie-hover);
-  color: var(--cor-texto);
-}
-.app-sidebar__toggle svg {
-  width: 16px;
-  height: 16px;
-}
 
 .app-sidebar__label {
   padding: 0 12px 9px;
@@ -184,7 +172,10 @@
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
-  transition: background var(--transicao), color var(--transicao);
+  /* `border-left-color` entrou na lista: sem ele a barrinha de destaque da aba
+     ativa aparecia num salto enquanto o fundo e o texto mudavam suavemente --
+     três coisas mudando juntas, uma delas fora do compasso. */
+  transition: background var(--transicao), color var(--transicao), border-left-color var(--transicao);
 }
 
 .tab-button svg {
@@ -313,12 +304,31 @@ kbd {
   outline: none;
 }
 
+/*
+ * Cada aba é um `.view` que fica no DOM o tempo todo e só alterna
+ * `display: none/flex` (ver App._mostrarAba). Isso importa para a animação:
+ * voltar de `none` para `flex` REINICIA qualquer animação CSS do elemento.
+ *
+ * Antes havia uma só (`view-enter`, 320ms, subindo 6px) declarada aqui, então
+ * TODA troca de aba -- inclusive voltar para uma aba já carregada, com os
+ * dados em cache e prontos para aparecer no mesmo quadro -- custava 320ms de
+ * deslize. O app era instantâneo por dentro e parecia lento por fora.
+ *
+ * Agora são duas: um fade curto na troca (rápido o bastante para não pesar,
+ * longo o bastante para o conteúdo não trocar num corte seco) e o deslize
+ * original só na PRIMEIRA vez que cada aba aparece, quando ele de fato
+ * apresenta uma tela nova em vez de repetir uma que já se conhece.
+ */
 .view {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--sp-5);
-  animation: view-enter var(--dur-lenta) var(--curva-padrao) both;
+  animation: view-fade var(--dur-rapida) var(--curva-padrao) both;
+}
+
+.view.is-first-show {
+  animation: view-enter var(--dur-media) var(--curva-padrao) both;
 }
 
 /*
@@ -351,6 +361,11 @@ kbd {
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes view-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* ==========================================================================
    2. CARDS E INDICADORES
    ========================================================================== */
@@ -364,7 +379,17 @@ kbd {
   transition: border-color var(--transicao), box-shadow var(--transicao);
 }
 
-.card:hover {
+/*
+ * O realce de hover era `.card:hover` -- ou seja, TODO card acendia ao passar
+ * o mouse, inclusive o card de formulário que ocupa metade da tela e o card
+ * que só embrulha uma tabela. Atravessar a tela com o mouse virava uma
+ * sequência de cards piscando, e um realce que acontece em tudo não distingue
+ * nada: hover é para prometer que algo responde ao clique.
+ *
+ * Ficou só nos indicadores do Resumo, que são de fato os blocos que a pessoa
+ * lê um a um -- e para eles o realce vira leitura assistida, não enfeite.
+ */
+.stat-tile:hover {
   border-color: var(--card-borda-hover);
   box-shadow: var(--sombra-card-hover);
 }
@@ -453,12 +478,50 @@ kbd {
   }
 }
 
+/* Agora é um <button> (ver ResumoView.statTile): zera o visual nativo sem
+   perder o comportamento, do mesmo jeito que .consulta-matches__item faz. */
 .stat-tile {
   position: relative;
+  display: block;
   overflow: hidden;
+  width: 100%;
   min-height: 116px;
+  font: inherit;
+  color: inherit;
   text-align: left;
-  transition: border-color var(--transicao), box-shadow var(--transicao);
+  cursor: pointer;
+  transition: border-color var(--transicao), box-shadow var(--transicao), transform var(--transicao);
+}
+
+.stat-tile:hover {
+  transform: translateY(-1px);
+}
+
+/* "Ver clientes →": só aparece no hover/foco. Presente o tempo todo, quatro
+   linhas dessas competiriam com os próprios números; escondida, o indicador
+   continua sendo um número grande e limpo, e a saída se oferece na hora em
+   que a pessoa demonstra interesse naquele bloco. */
+.stat-tile__go {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--sp-2);
+  color: var(--cor-accent);
+  font-family: var(--fonte-display);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-forte);
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity var(--transicao), transform var(--transicao);
+}
+.stat-tile__go svg {
+  width: 12px;
+  height: 12px;
+}
+.stat-tile:hover .stat-tile__go,
+.stat-tile:focus-visible .stat-tile__go {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 /* Fita colorida no topo de cada indicador, uma cor por natureza do número. */
@@ -477,7 +540,7 @@ kbd {
 .stat-tile__label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   color: var(--cor-texto-sub);
   font-size: var(--txt-xs);
   font-weight: var(--peso-extra);
@@ -485,13 +548,40 @@ kbd {
   text-transform: uppercase;
 }
 
+/* Ícone do indicador. O `.stat-tile__label` já era flex com gap desde o
+   começo -- o espaço para ele estava reservado e nunca tinha sido ocupado.
+   Quatro números grandes e parecidos exigem ler o rótulo inteiro para saber
+   qual é qual; o ícone dá a cada bloco uma silhueta própria, e o olho passa a
+   achar "clientes" sem soletrar. */
+.stat-tile__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-fraco);
+}
+.stat-tile__icon svg {
+  width: 13px;
+  height: 13px;
+}
+
 .stat-tile__value {
-  margin-top: var(--sp-2);
+  margin-top: var(--sp-3);
   font: var(--peso-forte) 34px/1 var(--fonte-display);
   letter-spacing: -0.05em;
 }
 
+/* O indicador de clientes parados é o único que pode virar má notícia. Quando
+   vira, o número inteiro muda de cor e o ícone acompanha -- assim o alerta é
+   visível na varredura rápida, não só para quem parar para ler o valor. */
 .stat-tile.is-alert .stat-tile__value {
+  color: var(--cor-vermelho);
+}
+.stat-tile.is-alert .stat-tile__icon {
+  background: var(--cor-vermelho-fraco);
   color: var(--cor-vermelho);
 }
 
@@ -535,7 +625,7 @@ kbd {
   letter-spacing: 0;
   cursor: pointer;
   transition: background var(--transicao), border-color var(--transicao), color var(--transicao),
-    transform 80ms var(--curva-padrao);
+    box-shadow var(--transicao), transform 80ms var(--curva-padrao);
 }
 
 /* Sem isto, um <svg> sem width/height renderiza no tamanho padrão do
@@ -559,14 +649,24 @@ kbd {
   cursor: not-allowed;
 }
 
+/* O botão principal ganha uma sombra na cor dele. Numa tela com seis ou sete
+   botões (Adicionar, Atualizar, Limpar, Excluir, Importar, Exportar), a cor
+   sozinha já distinguia o principal, mas ele ficava no mesmo plano de todos os
+   outros; a sombra colorida o levanta meio milímetro e a ação que a tela
+   espera passa a se anunciar antes das outras. */
 .btn--accent {
   background: var(--cor-accent);
   border-color: var(--cor-accent);
   color: var(--cor-sobre-accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 4px 12px -6px var(--cor-accent);
 }
 .btn--accent:hover:not(:disabled) {
   background: var(--cor-accent-forte);
   border-color: var(--cor-accent-forte);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 6px 16px -6px var(--cor-accent);
+}
+.btn--accent:disabled {
+  box-shadow: none;
 }
 
 .btn--danger {
@@ -917,6 +1017,14 @@ select {
   min-width: 200px;
 }
 
+/* Os dois campos de data pedem bem menos largura que uma busca livre --
+   com os 200px dos demais, "dd/mm/aaaa" ficava perdido num campo enorme e
+   empurrava o resto da barra para a linha de baixo sem precisar. */
+.toolbar .field--periodo {
+  min-width: 0;
+  width: 132px;
+}
+
 .toolbar-spacer {
   flex: 1;
 }
@@ -933,6 +1041,39 @@ select {
 /* Botão de limpar filtros: só aparece quando há filtro aplicado. */
 .toolbar__clear {
   padding-bottom: 5px;
+}
+
+.bulk-hint {
+  margin: -6px 0 var(--sp-3);
+  font-size: var(--txt-xs);
+}
+.bulk-hint kbd {
+  margin: 0 1px;
+}
+
+/* Barra de ações em lote -- aparece só com algo marcado (ver AtualizacoesView).
+   Tom de destaque, porque ela anuncia um modo em que a tela está ("há coisas
+   selecionadas") e não um controle a mais da barra de filtros. */
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  padding: 8px 12px;
+  border: 1px solid var(--cor-accent);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-accent-fraco);
+  animation: view-fade var(--dur-rapida) var(--curva-padrao) both;
+}
+.bulk-bar[hidden] {
+  display: none;
+}
+
+.bulk-bar__count {
+  color: var(--cor-accent);
+  font-family: var(--fonte-display);
+  font-size: var(--txt-sm);
+  font-weight: var(--peso-forte);
 }
 
 /* ==========================================================================
@@ -955,7 +1096,7 @@ select {
 }
 
 .table-scroll {
-  max-height: 60vh;
+  max-height: var(--altura-tabela);
   overflow-y: auto;
 }
 
@@ -1000,7 +1141,7 @@ table.data-table {
   align-items: center;
   gap: 4px;
   width: 100%;
-  padding: 10px 12px;
+  padding: var(--cabecalho-pad-y) var(--linha-pad-x);
   border: 0;
   background: none;
   /* Cinza, não azul: o cabeçalho inteiro em cor de destaque competia com os
@@ -1023,7 +1164,7 @@ table.data-table {
 /* Cabeçalho estático (sem ordenação, sem <button>) -- mesma tipografia do
    botão acima, mas SEM display/cursor, para o <th> continuar em table-cell. */
 .data-table thead th:not(:has(.data-table__sort)) {
-  padding: 10px 12px;
+  padding: var(--cabecalho-pad-y) var(--linha-pad-x);
   color: var(--cor-texto-sub);
   font-family: var(--fonte-display);
   font-size: var(--txt-xs);
@@ -1043,7 +1184,8 @@ table.data-table {
 
 .data-table td {
   max-width: 320px;
-  padding: 9px 12px;
+  /* Vem da densidade escolhida em Configurações (ver theme.css). */
+  padding: var(--linha-pad-y) var(--linha-pad-x);
   border-bottom: 1px solid var(--cor-borda);
   color: var(--cor-texto);
   white-space: nowrap;
@@ -1077,6 +1219,15 @@ table.data-table {
 }
 .data-table tbody tr.is-skeleton {
   cursor: default;
+}
+
+/* -- seleção múltipla (Shift+clique ou Shift+seta -- ver SortableTable) --
+   Sem coluna de caixinhas: a linha marcada para o lote se distingue só pelo
+   fundo. Tom mais discreto que o `.is-selected` (a linha aberta no
+   formulário) de propósito -- são dois estados diferentes que podem valer ao
+   mesmo tempo na mesma linha, e o de edição é o que deve gritar. */
+.data-table tbody tr.is-marcada {
+  background: color-mix(in srgb, var(--cor-accent) 7%, transparent);
 }
 
 .data-table tbody tr.is-selected {
@@ -1265,6 +1416,25 @@ table.data-table {
 .toast--error { border-left-color: var(--cor-vermelho); }
 .toast--info { border-left-color: var(--cor-accent); }
 
+/* Ícone redondo por natureza do aviso -- ver o comentário em Toast.js sobre
+   por que a cor sozinha não bastava. */
+.toast__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+.toast__icon svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2;
+}
+.toast--success .toast__icon { background: var(--cor-verde-fraco); color: var(--cor-verde); }
+.toast--error .toast__icon { background: var(--cor-vermelho-fraco); color: var(--cor-vermelho); }
+.toast--info .toast__icon { background: var(--cor-accent-fraco); color: var(--cor-accent); }
+
 .toast__text {
   flex: 1;
 }
@@ -1360,6 +1530,36 @@ table.data-table {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/*
+ * Fechar com animação, pelo mesmo motivo já escrito lá em cima para o toast:
+ * o que some de uma vez é lido como falha, o que se retrai é lido como fim.
+ * O modal era a única coisa do app que desaparecia num quadro só -- entrava
+ * com cuidado e saía com um corte seco.
+ *
+ * Só o DESENHO espera: quem chamou `Modal.confirm` recebe a resposta na hora
+ * (ver Modal.abrirCaixa), então a próxima ação não fica presa esperando o
+ * fade. E `pointer-events: none` garante que a caixa que já está saindo não
+ * intercepte o clique seguinte enquanto termina de sumir.
+ */
+.modal-overlay.is-closing,
+.cmdk-overlay.is-closing {
+  pointer-events: none;
+  animation: fade-out var(--dur-rapida) var(--curva-saida) forwards;
+}
+
+.modal-overlay.is-closing .modal-box,
+.cmdk-overlay.is-closing .cmdk {
+  animation: modal-out var(--dur-rapida) var(--curva-saida) forwards;
+}
+
+@keyframes fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes modal-out {
+  to { opacity: 0; transform: translateY(4px) scale(0.985); }
+}
+
 .modal-box__icon {
   display: flex;
   align-items: center;
@@ -1404,6 +1604,250 @@ table.data-table {
   justify-content: flex-end;
   gap: var(--sp-2);
   margin-top: var(--sp-5);
+}
+
+/* -- cabeçalho de painel (Configurações, e disponível para os demais) -- */
+
+.painel__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+
+.painel__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+.painel__icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+/* -- Configurações: uma linha por preferência -- */
+
+.config-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+ * Rótulo à esquerda, opções à direita, com um filete separando as linhas.
+ * A forma é de lista de ajustes (a mesma das preferências de um sistema
+ * operacional) e não de formulário: aqui não existe "preencher e salvar",
+ * cada escolha já é o efeito.
+ */
+.config-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+.config-group:last-child {
+  border-bottom: 0;
+}
+
+.config-group__labels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.config-group__title {
+  font-family: var(--fonte-display);
+  font-size: var(--txt-base);
+  font-weight: var(--peso-forte);
+}
+
+.config-group__help {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
+
+/* Nove telas não cabem num trilho de opções -- ver o comentário no painel. */
+.config-group__select {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 190px;
+  font-size: var(--txt-sm);
+}
+
+.config-actions {
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* -- seção "Sistema": telas que se abrem, não ajustes -- */
+
+.config-section {
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--cor-borda);
+}
+
+.config-section__title {
+  margin-bottom: var(--sp-2);
+  color: var(--cor-texto-fraco);
+  font-family: var(--fonte-display);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.config-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+/* Forma de linha clicável (ícone, rótulo, seta à direita) -- o vocabulário
+   que já se usa na paleta de comandos para "isto leva a outro lugar". */
+.config-link {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: 10px 10px;
+  border: 0;
+  border-radius: var(--raio-pequeno);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transicao);
+}
+.config-link:hover {
+  background: var(--cor-superficie-hover);
+}
+
+.config-link__icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-sub);
+}
+.config-link__icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.config-link__labels {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.config-link__labels strong {
+  font-family: var(--fonte-display);
+  font-size: var(--txt-base);
+  font-weight: var(--peso-forte);
+}
+.config-link__labels span {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
+
+.config-link__seta {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--cor-texto-fraco);
+}
+.config-link__seta svg {
+  width: 14px;
+  height: 14px;
+}
+.config-link:hover .config-link__seta {
+  color: var(--cor-accent);
+}
+
+/* Trilho de opções coladas ("segmented control"). */
+.segmented {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-fundo-alt);
+}
+
+/*
+ * O <input type="radio"> continua existindo e recebendo foco -- só não é
+ * DESENHADO. Escondê-lo com `display: none` o tiraria da ordem de tabulação
+ * junto, e o grupo perderia a navegação por setas que é justamente o motivo
+ * de ter usado radio nativo (ver ConfiguracoesPanel._grupo).
+ */
+.config-group__option {
+  position: relative;
+  display: flex;
+}
+
+.config-group__option input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.config-group__option span {
+  padding: 6px 12px;
+  border-radius: 5px;
+  color: var(--cor-texto-sub);
+  font-family: var(--fonte-display);
+  font-size: var(--txt-sm);
+  font-weight: var(--peso-forte);
+  white-space: nowrap;
+  transition: background var(--transicao), color var(--transicao);
+}
+
+.config-group__option:hover span {
+  color: var(--cor-texto);
+}
+
+.config-group__option:has(input:checked) span {
+  background: var(--cor-superficie-alta);
+  color: var(--cor-accent);
+  box-shadow: var(--sombra-card);
+}
+
+.config-group__option:has(input:focus-visible) span {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: 1px;
+}
+
+@media (max-width: 560px) {
+  /* Numa caixa estreita, rótulo e opções lado a lado espremem os dois. */
+  .config-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-3);
+  }
+  .config-group__option {
+    flex: 1;
+  }
+  .config-group__option span {
+    flex: 1;
+    text-align: center;
+  }
 }
 
 /* -- paleta de comandos (Ctrl+K) -- */
@@ -1812,40 +2256,6 @@ hr.separator {
 
 /* -- Distribuição -- */
 
-.distribution-hero,
-.versions-hero {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 18px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--cor-borda);
-}
-
-.distribution-hero::after {
-  content: "";
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 92px;
-  height: 2px;
-  background: var(--cor-accent);
-}
-
-.distribution-hero h2,
-.versions-hero h2 {
-  margin: 4px 0 2px;
-  font: var(--peso-forte) var(--txt-xl) / 1.2 var(--fonte-display);
-  letter-spacing: -0.04em;
-}
-.distribution-hero p,
-.versions-hero p {
-  margin: 0;
-  color: var(--cor-texto-sub);
-  font-size: var(--txt-base);
-}
-
 .distribution-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
@@ -1924,12 +2334,6 @@ hr.separator {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--sp-4);
-}
-
-.distribution-hero__meta {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
 }
 
 /* -- "no ar agora": uma linha por sistema com a versão publicada -- */
@@ -2102,19 +2506,6 @@ hr.separator {
   letter-spacing: 0.08em;
 }
 
-/* Carimbo de "atualizado há X" -- presente em toda tela que busca dados ao
-   vivo, para nunca haver dúvida se o número na tela é de agora ou de meia
-   hora atrás. */
-.data-freshness {
-  display: none !important;
-}
-.data-freshness i {
-  display: none !important;
-}
-.data-freshness.is-stale i {
-  display: none !important;
-}
-
 .table-actions {
   display: flex !important;
   align-items: center;
@@ -2233,6 +2624,7 @@ hr.separator {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
   width: 44px;
   height: 44px;
   margin-bottom: var(--sp-4);
@@ -2242,6 +2634,12 @@ hr.separator {
   font-family: var(--fonte-display);
   font-size: 18px;
   font-weight: var(--peso-extra);
+}
+
+.auth-card__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .auth-card h2 {
@@ -2321,7 +2719,6 @@ h1, h2, h3, strong {
   #app.is-sidebar-collapsed .tab-button span {
     display: block;
   }
-  .app-sidebar__toggle,
   .app-sidebar__label,
   .app-sidebar__footer {
     display: none;
@@ -2354,6 +2751,88 @@ h1, h2, h3, strong {
   }
 }
 
+/* ==========================================================================
+   IMPRESSÃO  (botão "Exportar / Imprimir" do Resumo -> "Salvar como PDF")
+   Sai só o conteúdo da aba aberta: menu, cabeçalho, avisos e botões não
+   pertencem a um relatório que vai ser lido no papel ou anexado num e-mail.
+   Também força a paleta clara -- imprimir o tema escuro gasta uma página
+   inteira de tinta e sai ilegível em quase toda impressora.
+   ========================================================================== */
+@media print {
+  :root,
+  :root[data-tema="escuro"] {
+    --cor-fundo: #ffffff;
+    --cor-fundo-alt: #ffffff;
+    --cor-superficie: #ffffff;
+    --cor-superficie-alta: #ffffff;
+    --cor-texto: #000000;
+    --cor-texto-sub: #333333;
+    --cor-texto-fraco: #555555;
+    --cor-borda: #bbbbbb;
+    --cor-borda-forte: #888888;
+    --card-gradiente: none;
+    --veu-tabela: transparent;
+    --veu-linha: transparent;
+    --sombra-card: none;
+    --sombra-flutuante: none;
+  }
+
+  body {
+    background: #fff;
+    background-image: none;
+  }
+
+  .app-sidebar,
+  .app-header,
+  .reminder-banner,
+  .skip-link,
+  #toast-stack,
+  .modal-overlay,
+  .cmdk-overlay,
+  .toolbar,
+  .pagination,
+  .form-actions,
+  .stat-tile__go,
+  [data-action="imprimir"] {
+    display: none !important;
+  }
+
+  .app-shell {
+    margin-left: 0;
+  }
+
+  .app-main {
+    max-width: none;
+    padding: 0;
+  }
+
+  .view {
+    /* A animação de entrada é `both`: se a impressão pegar o primeiro quadro,
+       a página sai em branco. Zerar aqui é o que garante conteúdo no papel. */
+    animation: none !important;
+    gap: 14px;
+  }
+
+  .card,
+  .stat-tile {
+    box-shadow: none;
+    border: 1px solid var(--cor-borda);
+    /* Não parte um card no meio entre duas páginas. */
+    break-inside: avoid;
+  }
+
+  /* Na tela a tabela rola dentro de uma caixa; no papel não existe rolar --
+     sem isto sairia só o pedaço que estava visível. */
+  .table-scroll {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .data-table thead th {
+    position: static;
+  }
+}
+
 /* Celular: tudo em uma coluna. */
 @media (max-width: 780px) {
   :root {
@@ -2382,14 +2861,9 @@ h1, h2, h3, strong {
   .consulta-search {
     width: 100%;
   }
-  .dashboard-intro,
-  .distribution-hero,
-  .versions-hero {
+  .dashboard-intro {
     flex-direction: column;
     align-items: flex-start;
-  }
-  .distribution-hero__meta {
-    align-self: flex-start;
   }
   .distribution-layout,
   .distribution-metrics,

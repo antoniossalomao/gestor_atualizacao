@@ -1,6 +1,19 @@
+import { icon } from "./icons.js";
+
 const DURACAO_MS = 4000;
 const DURACAO_ACAO_MS = 7000;
 const SAIDA_MS = 180;
+
+/**
+ * Um ícone por natureza de aviso.
+ *
+ * Antes o tipo do toast era comunicado SÓ pela cor da barrinha lateral --
+ * verde, vermelho, azul. Cor sozinha é o pior jeito de dizer algo importante:
+ * uma parte das pessoas não distingue verde de vermelho, e no canto da tela,
+ * de relance, três barras finas de cores próximas parecem a mesma coisa. Com o
+ * ícone, "deu certo" e "deu errado" têm formas diferentes.
+ */
+const ICONES = { success: "check", error: "alerta", info: "relogio" };
 
 /**
  * Avisos rápidos no canto da tela ("Registro salvo.", etc.), sem travar a
@@ -48,6 +61,11 @@ export class ToastManager {
     el.className = `toast toast--${kind}`;
     el.setAttribute("role", kind === "error" ? "alert" : "status");
 
+    const marca = document.createElement("span");
+    marca.className = "toast__icon";
+    marca.setAttribute("aria-hidden", "true");
+    marca.innerHTML = icon(ICONES[kind] || "relogio");
+
     const texto = document.createElement("span");
     texto.className = "toast__text";
     texto.textContent = message;
@@ -56,7 +74,7 @@ export class ToastManager {
     contador.className = "toast__count";
     contador.hidden = true;
 
-    el.append(texto, contador);
+    el.append(marca, texto, contador);
 
     if (opts.acao) {
       const botaoAcao = document.createElement("button");

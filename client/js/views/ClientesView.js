@@ -10,6 +10,7 @@ import { emptyState } from "../core/EmptyState.js";
 import { escapeAttr, plural } from "../core/html.js";
 import { marcarOcupado } from "../core/guard.js";
 import { prefs } from "../core/prefs.js";
+import { aparencia } from "../core/appearance.js";
 import { Autocomplete } from "../core/Autocomplete.js";
 
 /**
@@ -312,7 +313,7 @@ export class ClientesView extends View {
         () =>
           this.api.get(
             "/clientes",
-            { search: this.busca, page: this.page, sortBy: this.sortBy, sortDir: this.sortDir },
+            { search: this.busca, page: this.page, pageSize: aparencia.linhasPorPagina(), sortBy: this.sortBy, sortDir: this.sortDir },
             { key: "clientes:lista" }
           ),
         (resposta) => {

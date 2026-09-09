@@ -20,6 +20,8 @@ const TABELA = [
   ["↑ ↓", "Percorrer as linhas da tabela", "Tabelas"],
   ["Enter", "Selecionar a linha em foco", "Tabelas"],
   ["Delete", "Excluir o registro selecionado", "Tabelas"],
+  ["Shift + clique", "Selecionar um intervalo de linhas, para excluir em lote (Atualizações)", "Tabelas"],
+  ["Shift + ↑ ↓", "O mesmo intervalo, sem tirar a mão do teclado", "Tabelas"],
 ];
 
 export function mostrarAtalhos() {

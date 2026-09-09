@@ -20,3 +20,9 @@ server/data/
 npm-debug.log*
 *.log
 *.pid
+
+# Backups locais de trabalho (cópias inteiras de client/ e server/src/,
+# tiradas antes de mudanças arriscadas para poder reverter na hora sem
+# depender do histórico do git). Não são parte do código -- são rede de
+# segurança de quem está mexendo, redundantes com o próprio commit.
+_backup/
