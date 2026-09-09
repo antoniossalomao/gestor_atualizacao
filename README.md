@@ -21,8 +21,8 @@ como referência.
 - **Mesmo banco de dados (SQLite), mesmas regras de negócio** — nome de
   cliente único, renomear cliente propaga o novo nome para o histórico,
   backup automático a cada início do servidor, etc. Ver a tabela abaixo
-  e [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) para como o código está
-  organizado.
+  e [docs/DOCUMENTACAO_CONSOLIDADA.md](docs/DOCUMENTACAO_CONSOLIDADA.md#22-arquitetura-do-código)
+  para como o código está organizado.
 
 ### Onde cada parte do app original foi parar
 
