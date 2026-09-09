@@ -74,6 +74,7 @@ export class AgendamentosView extends View {
         <div class="form-actions" style="margin-top: var(--sp-4)">
           <button type="button" class="btn btn--danger" data-action="delete">Excluir Selecionada</button>
           <button type="button" class="btn" data-action="done">Marcar como Concluída</button>
+          <button type="button" class="btn" data-action="converter">Converter em Atualização</button>
         </div>
       </div>
     `;
@@ -145,6 +146,7 @@ export class AgendamentosView extends View {
     this.updateBtn = this.container.querySelector('[data-action="update"]');
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
     this.doneBtn = this.container.querySelector('[data-action="done"]');
+    this.converterBtn = this.container.querySelector('[data-action="converter"]');
 
     this.form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -154,6 +156,7 @@ export class AgendamentosView extends View {
     this.container.querySelector('[data-action="clear"]').addEventListener("click", () => this.clearForm({ comDesfazer: true }));
     this.deleteBtn.addEventListener("click", () => this.deleteTask());
     this.doneBtn.addEventListener("click", () => this.markDone());
+    this.converterBtn.addEventListener("click", () => this.converterEmAtualizacao());
 
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
 
@@ -296,6 +299,27 @@ export class AgendamentosView extends View {
     this.updateBtn.disabled = this.selectedId == null;
     this.deleteBtn.disabled = this.selectedId == null;
     this.doneBtn.disabled = this.selectedId == null;
+    this.converterBtn.disabled = this.selectedId == null;
+  }
+
+  /**
+   * Manda os dados da tarefa selecionada pra aba Atualizações, já num
+   * registro novo pré-preenchido (ver AtualizacoesView.aplicarParams) --
+   * evita digitar cliente/responsável/data de novo pra registrar a
+   * atualização que essa tarefa gerou.
+   */
+  converterEmAtualizacao() {
+    if (this.selectedId == null) {
+      Modal.alert("Seleção", "Selecione uma tarefa na tabela primeiro.", "warning");
+      return;
+    }
+    this.navigate("atualizacoes", {
+      cliente: this.fields.cliente.value,
+      responsavel: this.fields.responsavel.value,
+      data: this.fields.data.value,
+      motivo: this.fields.tarefa.value,
+      obs: `Convertido do agendamento #${this.selectedId}.`,
+    });
   }
 
   _readForm() {

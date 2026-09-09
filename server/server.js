@@ -24,6 +24,7 @@ const config = {
   agentApiToken: process.env.AGENT_API_TOKEN || "",
   publicUrl: process.env.PUBLIC_URL || "",
   discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL || "",
+  alertaAgentesIntervaloMinutos: Number(process.env.ALERTA_AGENTES_INTERVALO_MINUTOS) || 15,
 };
 
 const server = new Server(config);

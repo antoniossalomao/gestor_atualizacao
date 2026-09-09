@@ -225,6 +225,17 @@ class Database {
       ["atualizador_logs", "versao_anterior", "TEXT"],
       ["atualizador_logs", "duracao_ms", "INTEGER"],
       ["atualizador_logs", "maquina", "TEXT"],
+      // "grupo": agrupa clientes com varias unidades sob uma rede/franquia
+      // (ex.: sete lojas "SORVEMIX") -- so um rotulo de texto livre, nao
+      // uma tabela propria, para nao exigir migrar cadastros existentes.
+      ["clientes", "grupo", "TEXT"],
+      // criado_em/concluido_em: sem isso nao havia como medir quanto tempo
+      // uma tarefa fica aberta. criado_em so passa a ser preenchido a
+      // partir de agora (INSERT novo) -- tarefas antigas ficam com
+      // criado_em nulo e sao ignoradas no calculo de tempo medio, em vez de
+      // inventar uma data que nao aconteceu de verdade.
+      ["agendamentos", "criado_em", "TEXT"],
+      ["agendamentos", "concluido_em", "TEXT"],
     ]) {
       try {
         conn.exec(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${tipo}`);
@@ -238,6 +249,18 @@ class Database {
     conn.exec(`CREATE INDEX IF NOT EXISTS idx_versoes_sistema ON versoes_atualizador (sistema, status, id DESC)`);
     conn.exec(`CREATE INDEX IF NOT EXISTS idx_atualizador_logs_criado_em ON atualizador_logs (criado_em DESC)`);
     conn.exec(`CREATE INDEX IF NOT EXISTS idx_atualizador_logs_cnpj ON atualizador_logs (cnpj, id DESC)`);
+
+    // Guarda so os agentes que estao EM ALERTA agora (offline/erro) -- uma
+    // linha aqui significa "ja avisamos o Discord disso, nao avisar de novo
+    // todo ciclo". Sai da tabela assim que o agente normaliza (ver
+    // AlertaAgenteService), entao ela fica pequena de proposito.
+    conn.exec(`
+      CREATE TABLE IF NOT EXISTS agente_alertas (
+        cnpj TEXT PRIMARY KEY,
+        situacao TEXT NOT NULL,
+        atualizado_em TEXT NOT NULL
+      )
+    `);
 
     this._backfillSistemaDasVersoes();
     this._backfillSuporteBredas();

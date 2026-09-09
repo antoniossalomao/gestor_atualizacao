@@ -221,6 +221,32 @@ class VersaoRepository extends BaseRepository {
       )
       .run(data);
   }
+
+  /**
+   * Situação (offline/erro) em que este agente estava na última vez que
+   * alertamos o Discord sobre ele -- null quando não está em alerta agora.
+   * Ver AlertaAgenteService: evita reenviar o mesmo aviso todo ciclo
+   * enquanto o problema continua.
+   */
+  situacaoAlertada(cnpj) {
+    const row = this.conn.prepare("SELECT situacao FROM agente_alertas WHERE cnpj = ?").get(cnpj);
+    return row ? row.situacao : null;
+  }
+
+  /** Marca (ou atualiza) que este agente está em alerta por causa desta situação. */
+  marcarSituacaoAlertada(cnpj, situacao) {
+    this.conn
+      .prepare(
+        `INSERT INTO agente_alertas (cnpj, situacao, atualizado_em) VALUES (@cnpj, @situacao, @agora)
+         ON CONFLICT(cnpj) DO UPDATE SET situacao = excluded.situacao, atualizado_em = excluded.atualizado_em`
+      )
+      .run({ cnpj, situacao, agora: new Date().toISOString() });
+  }
+
+  /** Tira o agente do alerta -- chamado quando ele normaliza. */
+  limparSituacaoAlertada(cnpj) {
+    this.conn.prepare("DELETE FROM agente_alertas WHERE cnpj = ?").run(cnpj);
+  }
 }
 
 module.exports = { VersaoRepository };

@@ -36,7 +36,18 @@ class AgendamentoService {
   // nao aconteceu numa tarefa que outra pessoa ja excluiu.
   update(id, input, usuario) {
     const data = this._validate(input);
-    if (this.db.agendamentos.update(id, data) === 0) {
+    // concluido_em so existe enquanto a tarefa ESTA "Concluído" agora:
+    // acabou de virar -> grava a hora; deixou de ser (reaberta) -> limpa;
+    // continua concluída de uma edição pra outra -> preserva a data
+    // original (senão editar o responsável de uma tarefa já fechada
+    // "resetaria" o tempo de resolução dela).
+    const statusConcluido = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+    const atual = this.db.agendamentos.find(id);
+    let concluidoEm = null;
+    if (data.status === statusConcluido) {
+      concluidoEm = atual && atual.status === statusConcluido ? atual.concluidoEm : new Date().toISOString();
+    }
+    if (this.db.agendamentos.update(id, { ...data, concluidoEm }) === 0) {
       throw new NotFoundError("Esta tarefa não existe mais. Ela pode ter sido excluída por outra pessoa.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${data.tarefa}"`);

@@ -82,6 +82,7 @@ class ApiRouter {
 
     api.get("/clientes", clientes.list);
     api.get("/clientes/names", clientes.names);
+    api.get("/clientes/grupos", clientes.grupos);
     api.get("/clientes/by-nome/:nome", clientes.getByNome);
     api.post("/clientes", clientes.create);
     api.put("/clientes/:id", clientes.update);

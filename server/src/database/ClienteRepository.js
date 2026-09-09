@@ -21,7 +21,7 @@ class ClienteRepository extends BaseRepository {
 
   /** Uma página de clientes. Devolve `{ rows, total, page, pageSize }`. */
   list(search = "", { page = 1, pageSize = 50, sortBy, sortDir } = {}) {
-    const where = search ? "WHERE nome LIKE @like OR cidade LIKE @like OR sistemas LIKE @like" : "";
+    const where = search ? "WHERE nome LIKE @like OR cidade LIKE @like OR sistemas LIKE @like OR grupo LIKE @like" : "";
     const params = search ? { like: `%${search}%` } : {};
 
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM clientes ${where}`).get(params).total;
@@ -29,7 +29,7 @@ class ClienteRepository extends BaseRepository {
     const offset = Math.max(0, (page - 1) * pageSize);
     const orderBy = buildOrderBy(SORT_MAP, sortBy, sortDir, "nome COLLATE NOCASE ASC");
     const rows = this.conn
-      .prepare(`SELECT id, codigo, nome, cidade, sistemas FROM clientes ${where} ORDER BY ${orderBy} LIMIT @limit OFFSET @offset`)
+      .prepare(`SELECT id, codigo, nome, cidade, sistemas, grupo FROM clientes ${where} ORDER BY ${orderBy} LIMIT @limit OFFSET @offset`)
       .all({ ...params, limit: pageSize, offset });
     return { rows, total, page, pageSize };
   }
@@ -37,6 +37,14 @@ class ClienteRepository extends BaseRepository {
   /** Lista simples de nomes, usada para preencher sugestoes de autocompletar. */
   names() {
     return this.conn.prepare("SELECT nome FROM clientes ORDER BY nome").all().map((r) => r.nome);
+  }
+
+  /** Nomes de grupo/rede já usados, para sugestão de autocompletar (mesmo padrão de "names"). */
+  grupos() {
+    return this.conn
+      .prepare("SELECT DISTINCT grupo FROM clientes WHERE grupo IS NOT NULL AND grupo != '' ORDER BY grupo")
+      .all()
+      .map((r) => r.grupo);
   }
 
   /** (codigo, nome, cidade) de todos os clientes -- usado no calculo de desatualizados. */
@@ -51,12 +59,14 @@ class ClienteRepository extends BaseRepository {
 
   getByNome(nome) {
     return (
-      this.conn.prepare("SELECT id, codigo, nome, cidade, sistemas FROM clientes WHERE nome = ?").get(nome) || null
+      this.conn.prepare("SELECT id, codigo, nome, cidade, sistemas, grupo FROM clientes WHERE nome = ?").get(nome) || null
     );
   }
 
   getById(id) {
-    return this.conn.prepare("SELECT id, codigo, nome, cidade, sistemas FROM clientes WHERE id = ?").get(id) || null;
+    return (
+      this.conn.prepare("SELECT id, codigo, nome, cidade, sistemas, grupo FROM clientes WHERE id = ?").get(id) || null
+    );
   }
 
   /**
@@ -78,10 +88,10 @@ class ClienteRepository extends BaseRepository {
     return row.total > 0;
   }
 
-  insert(codigo, nome, cidade, sistemas) {
+  insert(codigo, nome, cidade, sistemas, grupo) {
     this.conn
-      .prepare("INSERT INTO clientes (codigo, nome, cidade, sistemas) VALUES (?, ?, ?, ?)")
-      .run(codigo, nome, cidade, sistemas);
+      .prepare("INSERT INTO clientes (codigo, nome, cidade, sistemas, grupo) VALUES (?, ?, ?, ?, ?)")
+      .run(codigo, nome, cidade, sistemas, grupo);
   }
 
   /**
@@ -91,11 +101,11 @@ class ClienteRepository extends BaseRepository {
    * ligacao" com o cliente renomeado e somem da Consulta e das contagens
    * do Resumo.
    */
-  update(id, codigo, nome, cidade, sistemas) {
+  update(id, codigo, nome, cidade, sistemas, grupo) {
     const antigo = this.conn.prepare("SELECT nome FROM clientes WHERE id = ?").get(id);
     this.conn
-      .prepare("UPDATE clientes SET codigo = ?, nome = ?, cidade = ?, sistemas = ? WHERE id = ?")
-      .run(codigo, nome, cidade, sistemas, id);
+      .prepare("UPDATE clientes SET codigo = ?, nome = ?, cidade = ?, sistemas = ?, grupo = ? WHERE id = ?")
+      .run(codigo, nome, cidade, sistemas, grupo, id);
     if (antigo && antigo.nome !== nome) {
       this.conn.prepare("UPDATE atualizacoes SET cliente = ? WHERE cliente = ?").run(nome, antigo.nome);
       this.conn.prepare("UPDATE agendamentos SET cliente = ? WHERE cliente = ?").run(nome, antigo.nome);

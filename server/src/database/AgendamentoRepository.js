@@ -1,5 +1,5 @@
 const { BaseRepository } = require("./BaseRepository");
-const { DATE_SORT_EXPR } = require("./AtualizacaoRepository");
+const { DATE_SORT_EXPR, titleCase } = require("./AtualizacaoRepository");
 const { buildOrderBy } = require("./sortHelper");
 
 const COLUMNS = ["tarefa", "cliente", "responsavel", "data", "status"];
@@ -61,21 +61,71 @@ class AgendamentoRepository extends BaseRepository {
     return { rows, total, page, pageSize };
   }
 
+  /** Uma tarefa por id, incluindo criado_em/concluido_em (que list() nao devolve). */
+  find(id) {
+    return this.conn
+      .prepare(`SELECT id, ${COLUMNS.join(", ")}, criado_em AS criadoEm, concluido_em AS concluidoEm FROM ${this.table} WHERE id = ?`)
+      .get(id);
+  }
+
   insert(data) {
-    const columns = COLUMNS.join(", ");
-    const placeholders = COLUMNS.map((c) => `@${c}`).join(", ");
-    this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`).run(data);
+    const columns = [...COLUMNS, "criado_em"].join(", ");
+    const placeholders = [...COLUMNS.map((c) => `@${c}`), "@criadoEm"].join(", ");
+    this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`).run({ ...data, criadoEm: new Date().toISOString() });
   }
 
-  /** Devolve quantas linhas mudaram -- 0 quer dizer que o id nao existe (mais). */
+  /**
+   * Devolve quantas linhas mudaram -- 0 quer dizer que o id nao existe
+   * (mais). "concluidoEm" e decidido por AgendamentoService (que sabe o
+   * status anterior) -- este metodo so grava o que recebe: string ISO
+   * quando a tarefa acabou de ser concluida, ou null quando nao esta (mais)
+   * concluida ou nunca esteve.
+   */
   update(id, data) {
-    const assignments = COLUMNS.map((c) => `${c} = @${c}`).join(", ");
-    return this.conn.prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id`).run({ ...data, id }).changes;
+    const assignments = [...COLUMNS.map((c) => `${c} = @${c}`), "concluido_em = @concluidoEm"].join(", ");
+    return this.conn
+      .prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id`)
+      .run({ ...data, id, concluidoEm: data.concluidoEm ?? null }).changes;
   }
 
-  /** Atalho para marcar rapidamente uma tarefa como concluida. */
+  /** Atalho para marcar rapidamente uma tarefa como concluida agora. */
   markDone(id, doneLabel) {
-    return this.conn.prepare(`UPDATE ${this.table} SET status = ? WHERE id = ?`).run(doneLabel, id).changes;
+    return this.conn
+      .prepare(`UPDATE ${this.table} SET status = @status, concluido_em = @concluidoEm WHERE id = @id`)
+      .run({ id, status: doneLabel, concluidoEm: new Date().toISOString() }).changes;
+  }
+
+  /**
+   * Tempo medio (em dias) entre a tarefa ser criada e ser concluida, por
+   * responsavel -- so entra no calculo quem tem as duas datas (tarefas
+   * criadas antes desta coluna existir ficam de fora, em vez de contar com
+   * uma data inventada). Agrupa ignorando maiusculas/espacos, mesma regra
+   * de AtualizacaoRepository.countsByResponsavel, e combina a media das
+   * variações de nome ponderada pela quantidade de cada uma.
+   */
+  tempoMedioResolucaoPorResponsavel() {
+    const raw = this.conn
+      .prepare(
+        `SELECT responsavel,
+                AVG(julianday(concluido_em) - julianday(criado_em)) AS dias,
+                COUNT(*) AS total
+         FROM ${this.table}
+         WHERE concluido_em IS NOT NULL AND criado_em IS NOT NULL AND responsavel != ''
+         GROUP BY responsavel`
+      )
+      .all();
+    const merged = new Map();
+    for (const { responsavel, dias, total } of raw) {
+      const key = responsavel.trim().toLowerCase();
+      const atual = merged.get(key);
+      const label = atual ? atual.label : titleCase(responsavel.trim());
+      const totalNovo = (atual ? atual.total : 0) + total;
+      const diasNovo = ((atual ? atual.dias * atual.total : 0) + dias * total) / totalNovo;
+      merged.set(key, { label, total: totalNovo, dias: diasNovo });
+    }
+    return [...merged.values()]
+      .map((item) => ({ label: item.label, total: item.total, diasMedios: Math.round(item.dias * 10) / 10 }))
+      .sort((a, b) => a.diasMedios - b.diasMedios);
   }
 
   /**

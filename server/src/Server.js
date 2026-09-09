@@ -14,6 +14,7 @@ const { AgendamentoService } = require("./services/AgendamentoService");
 const { BackupService } = require("./services/BackupService");
 const { NotificationService } = require("./services/NotificationService");
 const { VersaoService } = require("./services/VersaoService");
+const { AlertaAgenteService } = require("./services/AlertaAgenteService");
 const { AuthController } = require("./controllers/AuthController");
 const { ClientesController } = require("./controllers/ClientesController");
 const { SistemasController } = require("./controllers/SistemasController");
@@ -58,6 +59,7 @@ class Server {
     // o quê -- ver services/HistoricoService.js.
     const historico = new HistoricoService(this.db);
     const notifications = new NotificationService(this.config);
+    const versoes = new VersaoService(this.db, historico);
     this.services = {
       historico,
       notifications,
@@ -66,7 +68,11 @@ class Server {
       atualizacoes: new AtualizacaoService(this.db, historico, notifications),
       agendamentos: new AgendamentoService(this.db, historico),
       backups: new BackupService(this.db, historico),
-      versoes: new VersaoService(this.db, historico),
+      versoes,
+      // Verifica a situação dos agentes C# periodicamente e avisa o
+      // Discord quando um fica offline/com erro -- ver start()/stop()
+      // abaixo, que ligam e desligam o timer junto com o servidor HTTP.
+      alertaAgentes: new AlertaAgenteService(this.db, versoes, notifications),
     };
   }
 
@@ -128,6 +134,14 @@ class Server {
             objectSrc: ["'none'"],
             baseUri: ["'self'"],
             frameAncestors: ["'self'"],
+            // O helmet inclui isto por padrao, mas ele manda o navegador
+            // recarregar TODO recurso da pagina (CSS, JS, chamadas de API)
+            // via HTTPS -- inexistente aqui, ja que o servidor roda em HTTP
+            // puro na rede local (ver SESSION_SECURE=false no .env). O
+            // Chrome trata "localhost" como confiavel e ignora isso, mas
+            // aplica a regra para qualquer IP (ex.: 192.168.0.85), fazendo
+            // todo recurso falhar em silencio e a pagina ficar em branco.
+            upgradeInsecureRequests: null,
           },
         },
       })
@@ -167,12 +181,18 @@ class Server {
   }
 
   start() {
+    // Intervalo do alerta de agentes é minutos, não ms, pra ficar legível
+    // no .env -- e tem um piso de 1 minuto pra ninguém configurar "0" ou
+    // um número tão pequeno que vira um martelo batendo no banco.
+    const intervaloMinutos = Math.max(1, Number(this.config.alertaAgentesIntervaloMinutos) || 15);
+    this.services.alertaAgentes.start(intervaloMinutos * 60 * 1000);
     return new Promise((resolve) => {
       this.httpServer = this.app.listen(this.config.port, () => resolve(this.httpServer));
     });
   }
 
   stop() {
+    this.services.alertaAgentes.stop();
     return new Promise((resolve, reject) => {
       if (!this.httpServer) return resolve();
       this.httpServer.close((err) => (err ? reject(err) : resolve()));

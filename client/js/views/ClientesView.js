@@ -10,6 +10,7 @@ import { emptyState } from "../core/EmptyState.js";
 import { escapeAttr, plural } from "../core/html.js";
 import { marcarOcupado } from "../core/guard.js";
 import { prefs } from "../core/prefs.js";
+import { Autocomplete } from "../core/Autocomplete.js";
 
 /**
  * Aba Clientes: cadastro, edição e listagem dos clientes e seus sistemas.
@@ -40,10 +41,14 @@ export class ClientesView extends View {
 
       <form class="card" id="clientes-form" data-role="form-card" hidden novalidate>
         <h2 class="card__title" data-role="form-title">Novo Cliente</h2>
-        <div class="form-grid form-grid--3">
+        <div class="form-grid form-grid--4">
           <div class="field"><label class="field__label" for="cli-codigo">Código</label><input type="text" class="input" id="cli-codigo" data-field="codigo" /></div>
           <div class="field"><label class="field__label" for="cli-nome">Cliente</label><input type="text" class="input" id="cli-nome" data-field="nome" required /></div>
           <div class="field"><label class="field__label" for="cli-cidade">Cidade</label><input type="text" class="input" id="cli-cidade" data-field="cidade" /></div>
+          <div class="field">
+            <label class="field__label" for="cli-grupo">Grupo/Rede</label>
+            <input type="text" class="input" id="cli-grupo" data-field="grupo" placeholder="ex.: SORVEMIX" autocomplete="off" />
+          </div>
         </div>
 
         <div class="clientes-sistemas-head">
@@ -66,7 +71,7 @@ export class ClientesView extends View {
       <div class="card">
         <div class="toolbar">
           <div class="field">
-            <label class="field__label" for="cli-busca">Buscar (nome, cidade ou sistema)</label>
+            <label class="field__label" for="cli-busca">Buscar (nome, cidade, sistema ou grupo)</label>
             <input type="search" class="input" id="cli-busca" data-role="search" />
           </div>
           <div class="toolbar__clear">
@@ -90,12 +95,14 @@ export class ClientesView extends View {
       codigo: this.container.querySelector('[data-field="codigo"]'),
       nome: this.container.querySelector('[data-field="nome"]'),
       cidade: this.container.querySelector('[data-field="cidade"]'),
+      grupo: this.container.querySelector('[data-field="grupo"]'),
     };
     for (const input of Object.values(this.fields)) {
       input.addEventListener("keydown", (e) => {
         if (e.key === "Escape") this.clearForm({ comDesfazer: true });
       });
     }
+    this.grupoAutocomplete = new Autocomplete(this.fields.grupo, { values: [] });
 
     this.sistemasGrid = this.container.querySelector('[data-role="sistemas-grid"]');
     this.novoSistemaRow = this.container.querySelector('[data-role="novo-sistema-row"]');
@@ -115,6 +122,7 @@ export class ClientesView extends View {
         { key: "codigo", label: "Código" },
         { key: "nome", label: "Cliente" },
         { key: "cidade", label: "Cidade" },
+        { key: "grupo", label: "Grupo/Rede" },
         { key: "sistemasTexto", label: "Sistemas" },
         { key: "maquinas", label: "Máquinas", type: "numeric" },
       ],
@@ -289,6 +297,11 @@ export class ClientesView extends View {
   async refresh() {
     await this._reloadSistemas();
     await this._reloadList();
+    await this.swr(
+      "clientes:grupos",
+      () => this.api.get("/clientes/grupos", null, { key: "clientes:grupos" }),
+      (grupos) => this.grupoAutocomplete.setValues(grupos)
+    );
   }
 
   async _reloadList() {
@@ -336,6 +349,7 @@ export class ClientesView extends View {
     this.fields.codigo.value = row.codigo;
     this.fields.nome.value = row.nome;
     this.fields.cidade.value = row.cidade;
+    this.fields.grupo.value = row.grupo || "";
     const ativos = new Set(row.sistemas);
     for (const cb of this.sistemasGrid.querySelectorAll("input[type=checkbox]")) {
       cb.checked = ativos.has(cb.value);
@@ -355,7 +369,13 @@ export class ClientesView extends View {
       return null;
     }
     const sistemas = [...this.sistemasGrid.querySelectorAll("input:checked")].map((el) => el.value);
-    return { codigo: this.fields.codigo.value.trim(), nome, cidade: this.fields.cidade.value.trim(), sistemas };
+    return {
+      codigo: this.fields.codigo.value.trim(),
+      nome,
+      cidade: this.fields.cidade.value.trim(),
+      grupo: this.fields.grupo.value.trim(),
+      sistemas,
+    };
   }
 
   _submit() {
@@ -440,6 +460,7 @@ export class ClientesView extends View {
       codigo: this.fields.codigo.value,
       nome: this.fields.nome.value,
       cidade: this.fields.cidade.value,
+      grupo: this.fields.grupo.value,
       sistemas: [...this.sistemasGrid.querySelectorAll("input:checked")].map((el) => el.value),
     };
     const tinhaConteudo = Boolean(antes.nome.trim());
@@ -450,6 +471,7 @@ export class ClientesView extends View {
     this.fields.codigo.value = "";
     this.fields.nome.value = "";
     this.fields.cidade.value = "";
+    this.fields.grupo.value = "";
     for (const cb of this.sistemasGrid.querySelectorAll("input[type=checkbox]")) cb.checked = false;
     this.addBtn.hidden = false;
     this.updateBtn.disabled = true;
@@ -460,11 +482,17 @@ export class ClientesView extends View {
         this.fields.codigo.value = antes.codigo;
         this.fields.nome.value = antes.nome;
         this.fields.cidade.value = antes.cidade;
+        this.fields.grupo.value = antes.grupo;
         const ativos = new Set(antes.sistemas);
         for (const cb of this.sistemasGrid.querySelectorAll("input[type=checkbox]")) cb.checked = ativos.has(cb.value);
         this.fields.nome.focus();
       }, "Restaurar");
     }
+  }
+
+  destroy() {
+    this.grupoAutocomplete?.destroy();
+    super.destroy();
   }
 
   _invalidar() {

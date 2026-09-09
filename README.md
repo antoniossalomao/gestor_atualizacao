@@ -68,6 +68,37 @@ como referência.
 - **Resumo** agora também mostra atualizações por sistema, além de por
   responsável.
 
+## Funcionalidades adicionadas — set/2026
+
+- **Alerta proativo de agente offline/com erro** (`AlertaAgenteService`):
+  com `DISCORD_WEBHOOK_URL` configurada, o app confere sozinho a cada
+  `ALERTA_AGENTES_INTERVALO_MINUTOS` (padrão 15) a situação de cada agente
+  do Atualizador automático (mesmo cálculo do painel da aba Distribuição)
+  e avisa o canal só na *transição* para "offline" (sem contato há 24h+)
+  ou "erro" — não repete o aviso a cada ciclo enquanto o problema
+  continua, e avisa de novo quando o agente volta a se comunicar. Antes,
+  só quem abrisse a tela do painel saberia que um cliente parou de
+  atualizar.
+- **Tendência mensal de atualizações** (Resumo): gráfico com os últimos 12
+  meses, para ver se o volume de atualizações está subindo ou caindo ao
+  longo do tempo — antes só existia o total do mês atual.
+- **Grupo/rede de clientes**: novo campo opcional "Grupo/Rede" no
+  cadastro de Clientes (com autocompletar dos grupos já usados), pra
+  clientes com várias unidades sob a mesma bandeira (ex.: sete lojas de
+  uma mesma rede) poderem ser encontrados/agrupados por busca. Não muda
+  nada em quem não usa o campo.
+- **Converter Agendamento em Atualização**: botão "Converter em
+  Atualização" na tarefa selecionada da aba Agendamentos — leva pra
+  Atualizações com cliente, responsável, data e um registro novo (não
+  edita nada) já pré-preenchidos a partir da tarefa, em vez de digitar
+  tudo de novo.
+- **Tempo médio de resolução por responsável** (Resumo): quantos dias, em
+  média, uma tarefa de Agendamentos leva entre ser criada e ser marcada
+  "Concluído", por responsável. Só entra no cálculo tarefa criada
+  *depois* desta métrica existir — tarefas antigas não têm como saber
+  quando foram criadas de verdade, e contar uma data inventada seria pior
+  que não mostrar nada.
+
 ## Estrutura
 
 ```
@@ -113,7 +144,8 @@ uma. As principais:
 | `DB_PATH` | Caminho do arquivo `gestao.db`. |
 | `SESSION_SECRET` | Texto usado para assinar o cookie de login — troque por um valor aleatório em produção. |
 | `SESSION_SECURE` | `true` quando o servidor roda atrás de HTTPS. |
-| `DISCORD_WEBHOOK_URL` | Opcional. Quando configurada, avisa um canal do Discord a cada atualização nova cadastrada. |
+| `DISCORD_WEBHOOK_URL` | Opcional. Quando configurada, avisa um canal do Discord a cada atualização nova cadastrada, e também quando um agente do Atualizador automático fica offline/com erro. |
+| `ALERTA_AGENTES_INTERVALO_MINUTOS` | De quanto em quanto tempo checar a situação dos agentes (padrão 15). Só tem efeito com `DISCORD_WEBHOOK_URL` configurada. |
 
 ## Contas de usuário
 
@@ -171,7 +203,8 @@ faz tudo sozinho: baixa o NSSM se não estiver instalado, para uma
 instância manual que porventura já esteja rodando na mesma porta, cria o
 serviço `GestorAtualizacoes` apontando pro `node.exe`/`server.js`
 corretos, com log em `server/logs/` (`service-out.log`/`service-err.log`,
-com rotação automática pra não crescer sem limite), e liga o serviço.
+rotacionado por tamanho pra um arquivo não crescer indefinidamente), e
+liga o serviço.
 
 ```powershell
 Get-Service GestorAtualizacoes                              # status
@@ -187,6 +220,32 @@ Precisa ser rodado elevado porque criar/remover serviço do Windows exige
 privilégio de administrador — o `#Requires -RunAsAdministrator` no topo
 dos dois scripts recusa a execução sem elevação, com uma mensagem clara,
 em vez de falhar pela metade.
+
+### Pendências conhecidas do serviço (set/2026)
+
+Duas coisas que `instalar-servico.ps1` ainda não resolve, identificadas
+depois de instalar de verdade — nenhuma delas impede o uso, mas valem
+correção numa próxima passada pelo script:
+
+- **Roda como `LocalSystem`.** O script não define `ObjectName` na
+  instalação, então o NSSM usa o padrão dele — a conta mais privilegiada
+  do Windows (controle total da máquina). O servidor nunca chama
+  processo externo (sem `child_process`/`spawn`, só `.exec()` do SQLite),
+  só precisa ler/escrever a própria pasta e escutar uma porta — não
+  precisa de SYSTEM pra nada disso. Numa app que recebe upload de
+  arquivo pela rede, isso importa: uma vulnerabilidade de execução
+  remota numa dependência, no cenário atual, dá acesso de SYSTEM à
+  máquina inteira. O ideal é uma conta virtual por serviço
+  (`NT SERVICE\GestorAtualizacoes`, recurso nativo do Windows desde o
+  Vista/2008 — sem senha pra gerenciar) com permissão NTFS só na pasta
+  do projeto.
+- **Log rotacionado, mas nunca podado.** `AppRotateBytes` evita um único
+  arquivo crescer sem limite, mas o NSSM não apaga os arquivos já
+  rotacionados (`service-out-<timestamp>.log`) — eles se acumulam pra
+  sempre em `server/logs/`. Na prática o volume de log deste app é
+  pequeno (bytes por dia), então isso não vira problema por muito tempo,
+  mas seria bom ter uma tarefa agendada apagando rotações com mais de
+  ~90 dias.
 
 ## Limitações conhecidas desta primeira versão
 

@@ -135,6 +135,27 @@ class AtualizacaoRepository extends BaseRepository {
     return row.total;
   }
 
+  /**
+   * Quantidade de atualizacoes por mes, do mais antigo para o mais recente
+   * -- usado pelo grafico de tendencia do Resumo. "mes" sai como "aaaa-mm"
+   * (ordenavel como texto) porque "data" e guardada como "dd/mm/aaaa" e
+   * ordenar esse formato direto colocaria "01/2026" antes de "12/2025".
+   * @param {number} quantidadeMeses quantos meses trazer, do mais recente pra tras
+   */
+  porMes(quantidadeMeses = 12) {
+    const rows = this.conn
+      .prepare(
+        `SELECT (substr(data,7,4) || '-' || substr(data,4,2)) AS mes, COUNT(*) AS total
+         FROM ${this.table}
+         WHERE data != ''
+         GROUP BY mes
+         ORDER BY mes DESC
+         LIMIT ?`
+      )
+      .all(quantidadeMeses);
+    return rows.reverse();
+  }
+
   /** Mapa { cliente: data da atualizacao mais recente }, usado para achar quem esta parado. */
   lastDateByClient() {
     const rows = this.conn
@@ -288,4 +309,4 @@ function titleCase(text) {
   return text.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
 }
 
-module.exports = { AtualizacaoRepository, DATE_SORT_EXPR, COLUMNS };
+module.exports = { AtualizacaoRepository, DATE_SORT_EXPR, COLUMNS, titleCase };

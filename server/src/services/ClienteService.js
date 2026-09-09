@@ -31,6 +31,11 @@ class ClienteService {
     return this.db.clientes.names();
   }
 
+  /** Grupos/redes já cadastrados, para autocompletar do campo "Grupo/rede". */
+  grupos() {
+    return this.db.clientes.grupos();
+  }
+
   getById(id) {
     const row = this.db.clientes.getById(id);
     if (!row) throw new NotFoundError("Cliente não encontrado.");
@@ -48,14 +53,14 @@ class ClienteService {
    * @param {{id:number, nome:string}|null} usuario quem está fazendo a ação (para o histórico)
    */
   create(input, usuario) {
-    const { nome, codigo, cidade, sistemasTexto } = this._validate(input);
+    const { nome, codigo, cidade, sistemasTexto, grupo } = this._validate(input);
     // Bloqueia nome duplicado ANTES de inserir: dois clientes com o mesmo
     // nome fariam a Consulta e o Resumo enxergarem so um deles (o
     // historico de atualizacoes/agendamentos liga pelo NOME, nao por id).
     if (this.db.clientes.nameExists(nome)) {
       throw new ValidationError(`Já existe um cliente chamado '${nome}'.`);
     }
-    this.db.clientes.insert(codigo, nome, cidade, sistemasTexto);
+    this.db.clientes.insert(codigo, nome, cidade, sistemasTexto, grupo);
     this.historico.registrar(usuario, "criar", "cliente", `Cliente "${nome}"`);
     return toClienteDTO(this.db.clientes.getByNome(nome), this.db.atualizacoes.lastMaquinasForClient(nome));
   }
@@ -63,13 +68,13 @@ class ClienteService {
   update(id, input, usuario) {
     const existente = this.db.clientes.getById(id);
     if (!existente) throw new NotFoundError("Cliente não encontrado.");
-    const { nome, codigo, cidade, sistemasTexto } = this._validate(input);
+    const { nome, codigo, cidade, sistemasTexto, grupo } = this._validate(input);
     if (this.db.clientes.nameExists(nome, id)) {
       throw new ValidationError(`Já existe um cliente chamado '${nome}'.`);
     }
     // A propagacao do rename para atualizacoes/agendamentos acontece
     // dentro de ClienteRepository.update (regra critica de integridade).
-    this.db.clientes.update(id, codigo, nome, cidade, sistemasTexto);
+    this.db.clientes.update(id, codigo, nome, cidade, sistemasTexto, grupo);
     const descricao =
       existente.nome !== nome ? `Cliente "${existente.nome}" renomeado para "${nome}"` : `Cliente "${nome}"`;
     this.historico.registrar(usuario, "atualizar", "cliente", descricao);
@@ -134,8 +139,9 @@ class ClienteService {
     if (!nome) throw new ValidationError("Campo 'Cliente' é obrigatório.");
     const codigo = (input.codigo || "").trim();
     const cidade = (input.cidade || "").trim();
+    const grupo = (input.grupo || "").trim();
     const sistemasTexto = Array.isArray(input.sistemas) ? input.sistemas.join(", ") : "";
-    return { nome, codigo, cidade, sistemasTexto };
+    return { nome, codigo, cidade, sistemasTexto, grupo };
   }
 }
 
@@ -153,6 +159,7 @@ function toClienteDTO(row, maquinas = 0) {
     nome: row.nome,
     cidade: row.cidade || "",
     sistemas: row.sistemas ? row.sistemas.split(",").map((s) => s.trim()).filter(Boolean) : [],
+    grupo: row.grupo || "",
     maquinas,
   };
 }

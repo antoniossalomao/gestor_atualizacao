@@ -170,6 +170,12 @@ class AtualizacaoService {
     const desatualizados = this._clientesDesatualizados(hoje);
     const porResponsavel = this.db.atualizacoes.countsByResponsavel();
     const atualizadosMesPorSistema = this._atualizadosMesPorSistema(mesStr);
+    // Tendencia mensal (grafico do Resumo) e tempo medio de resolucao das
+    // tarefas de Agendamentos vivem em tabelas diferentes desta classe,
+    // mas moram aqui porque o Resumo ja busca tudo numa chamada so -- mesmo
+    // motivo por tras de "atualizadosMesPorSistema" acima.
+    const atualizacoesPorMes = this.db.atualizacoes.porMes(12);
+    const tempoMedioResolucao = this.db.agendamentos.tempoMedioResolucaoPorResponsavel();
 
     return {
       totalClientes,
@@ -178,6 +184,8 @@ class AtualizacaoService {
       desatualizados,
       porResponsavel,
       atualizadosMesPorSistema,
+      atualizacoesPorMes,
+      tempoMedioResolucao,
       emDia: totalClientes - desatualizados.length,
     };
   }

@@ -52,6 +52,20 @@ export class ResumoView extends View {
           <div data-role="sistemas"></div>
         </div>
       </div>
+
+      <div class="card">
+        <h2 class="card__title">Tendência Mensal de Atualizações</h2>
+        <div data-role="tendencia"></div>
+      </div>
+
+      <div class="card">
+        <h2 class="card__title">Tempo Médio de Resolução de Tarefas Por Responsável</h2>
+        <p class="text-muted">
+          Dias entre uma tarefa de Agendamentos ser criada e marcada como "Concluído".
+          Só conta tarefa criada depois desta métrica existir.
+        </p>
+        <div data-role="resolucao"></div>
+      </div>
     `;
 
     this.pie = new PieChart(this.container.querySelector('[data-role="pie"]'));
@@ -67,6 +81,18 @@ export class ResumoView extends View {
     });
 
     this.sistemaChart = new BarChart(this.container.querySelector('[data-role="sistemas"]'));
+    this.tendenciaChart = new BarChart(this.container.querySelector('[data-role="tendencia"]'));
+
+    this.resolucaoTable = new SortableTable(this.container.querySelector('[data-role="resolucao"]'), {
+      columns: [
+        { key: "label", label: "Responsável" },
+        { key: "diasMedios", label: "Dias (média)", type: "numeric" },
+        { key: "total", label: "Tarefas concluídas", type: "numeric" },
+      ],
+      rowKey: (row) => row.label,
+      emptyMessage: "Nenhuma tarefa concluída com os dados necessários ainda.",
+      selectable: false,
+    });
   }
 
   async refresh() {
@@ -93,9 +119,22 @@ export class ResumoView extends View {
 
     this.respTable.setRows(resumo.porResponsavel);
     this.sistemaChart.render(resumo.atualizadosMesPorSistema);
+    this.tendenciaChart.render(
+      (resumo.atualizacoesPorMes || []).map((item) => ({ label: formatarMes(item.mes), total: item.total }))
+    );
+    this.resolucaoTable.setRows(resumo.tempoMedioResolucao || []);
   }
 
   _setStat(key, value) {
     this.container.querySelector(`[data-stat="${key}"] .stat-tile__value`).textContent = String(value);
   }
+}
+
+const MESES_ABREVIADOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+/** "2026-09" -> "set/2026". */
+function formatarMes(mesStr) {
+  const [ano, mes] = String(mesStr).split("-");
+  const indice = Number(mes) - 1;
+  return `${MESES_ABREVIADOS[indice] || mes}/${ano}`;
 }

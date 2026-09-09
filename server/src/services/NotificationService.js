@@ -26,6 +26,25 @@ class NotificationService {
     await this._post(`📦 ${partes.join(" ")}`);
   }
 
+  /**
+   * Avisa o Discord quando um agente C# entra ou sai de um estado ruim
+   * (offline / erro) -- ver AlertaAgenteService, que decide QUANDO chamar
+   * isso (só na transição, não a cada verificação).
+   * @param {{empresa:string, situacao:"offline"|"erro"|string, detalhe?:string}} info
+   */
+  async notifyAgenteSituacao({ empresa, situacao, detalhe }) {
+    if (!this.webhookUrl) return;
+    let texto;
+    if (situacao === "offline") {
+      texto = `🔴 **${empresa}** — agente sem contato há mais de 24h (offline).`;
+    } else if (situacao === "erro") {
+      texto = `🟠 **${empresa}** — agente reportou erro na última atualização${detalhe ? `: ${detalhe}` : "."}`;
+    } else {
+      texto = `✅ **${empresa}** — agente normalizou (situação atual: ${situacao}).`;
+    }
+    await this._post(texto);
+  }
+
   async _post(content) {
     try {
       const res = await fetch(this.webhookUrl, {

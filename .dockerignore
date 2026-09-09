@@ -1,8 +1,0 @@
-**/node_modules
-server/data
-server/.env
-server/.env.bak
-server/run.err.log
-server/run.out.log
-server/run.pid
-.git
