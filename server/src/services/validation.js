@@ -33,4 +33,15 @@ function parseData(texto) {
   return new Date(ano, mes - 1, dia);
 }
 
-module.exports = { dataValida, parseData };
+const HORA_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+/**
+ * True se `texto` estiver vazio ou for um horario real no formato HH:MM
+ * (24h). Vazio e permitido -- nem toda tarefa tem hora marcada, so data.
+ */
+function horaValida(texto) {
+  if (!texto) return true;
+  return HORA_REGEX.test(texto);
+}
+
+module.exports = { dataValida, parseData, horaValida };

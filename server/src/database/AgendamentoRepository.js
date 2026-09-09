@@ -2,7 +2,12 @@ const { BaseRepository } = require("./BaseRepository");
 const { DATE_SORT_EXPR, titleCase } = require("./AtualizacaoRepository");
 const { buildOrderBy } = require("./sortHelper");
 
-const COLUMNS = ["tarefa", "cliente", "responsavel", "data", "status"];
+const COLUMNS = ["tarefa", "cliente", "responsavel", "data", "horario", "status"];
+
+// "horario" fica vazio em tarefas sem hora marcada -- esse CASE joga essas
+// para o fim de cada dia, em vez de aparecerem antes de "08:00" so porque
+// "" < "08:00" na comparacao de texto.
+const HORARIO_SORT_EXPR = "(CASE WHEN horario = '' OR horario IS NULL THEN 1 ELSE 0 END), horario ASC";
 
 // "CASE...WHEN...THEN...ELSE...END" e um "se/senao" dentro do proprio SQL:
 // transforma cada status num numero (0..3) para poder ordenar as tarefas
@@ -18,6 +23,7 @@ const SORT_MAP = {
   cliente: "cliente COLLATE NOCASE",
   responsavel: "responsavel COLLATE NOCASE",
   data: DATE_SORT_EXPR,
+  horario: "horario",
   status: "status COLLATE NOCASE",
 };
 
@@ -50,7 +56,12 @@ class AgendamentoRepository extends BaseRepository {
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table} ${where}`).get(params).total;
 
     const offset = Math.max(0, (page - 1) * pageSize);
-    const orderBy = buildOrderBy(SORT_MAP, sortBy, sortDir, `${STATUS_ORDER_EXPR}, ${DATE_SORT_EXPR} ASC, id DESC`);
+    const orderBy = buildOrderBy(
+      SORT_MAP,
+      sortBy,
+      sortDir,
+      `${STATUS_ORDER_EXPR}, ${DATE_SORT_EXPR} ASC, ${HORARIO_SORT_EXPR}, id DESC`
+    );
     const sql = `
       SELECT id, ${COLUMNS.join(", ")} FROM ${this.table}
       ${where}
@@ -141,7 +152,7 @@ class AgendamentoRepository extends BaseRepository {
     const sql = `
       SELECT id, ${COLUMNS.join(", ")} FROM ${this.table}
       WHERE status NOT IN ('Concluído', 'Sem resposta') AND data != '' AND ${DATE_SORT_EXPR} <= @cutoff
-      ORDER BY ${DATE_SORT_EXPR} ASC
+      ORDER BY ${DATE_SORT_EXPR} ASC, ${HORARIO_SORT_EXPR}
     `;
     return this.conn.prepare(sql).all({ cutoff });
   }

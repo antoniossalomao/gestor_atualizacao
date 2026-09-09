@@ -657,6 +657,7 @@ input[type="text"],
 input[type="search"],
 input[type="password"],
 input[type="date"],
+input[type="time"],
 input[type="number"],
 select,
 textarea,
@@ -713,9 +714,9 @@ select {
 
 /*
  * Grid de campos. Por padrão (telas estreitas) é uma coluna; os modificadores
- * --2/--3/--4/--5 fixam o número de colunas em telas largas o bastante --
+ * --2/--3/--4/--5/--6 fixam o número de colunas em telas largas o bastante --
  * números escolhidos para bater com o agrupamento de campos de cada
- * formulário (3 em Clientes, 4 em Atualizações, 5 em Agendamentos), em vez de
+ * formulário (3 em Clientes, 4 em Atualizações, 6 em Agendamentos), em vez de
  * um `auto-fit` genérico, que podia deixar a última linha com um número de
  * colunas diferente da primeira e parecer "torta".
  */
@@ -735,6 +736,9 @@ select {
 }
 @media (min-width: 1040px) {
   .form-grid--5 { grid-template-columns: repeat(5, 1fr); }
+}
+@media (min-width: 1180px) {
+  .form-grid--6 { grid-template-columns: repeat(6, 1fr); }
 }
 
 .form-actions {

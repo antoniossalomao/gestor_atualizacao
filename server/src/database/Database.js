@@ -236,6 +236,10 @@ class Database {
       // inventar uma data que nao aconteceu de verdade.
       ["agendamentos", "criado_em", "TEXT"],
       ["agendamentos", "concluido_em", "TEXT"],
+      // "horario": opcional -- nem toda tarefa tem uma hora marcada, so a
+      // data. Texto "HH:MM" (24h), mesmo padrao "guardar como texto e
+      // converter so na hora de ordenar" ja usado por "data".
+      ["agendamentos", "horario", "TEXT"],
     ]) {
       try {
         conn.exec(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${tipo}`);

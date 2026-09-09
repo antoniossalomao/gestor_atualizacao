@@ -1,5 +1,5 @@
 const { STATUS_OPTIONS } = require("../config/constants");
-const { dataValida } = require("./validation");
+const { dataValida, horaValida } = require("./validation");
 const { ValidationError, NotFoundError } = require("./errors");
 
 /**
@@ -74,12 +74,15 @@ class AgendamentoService {
     if (!tarefa) throw new ValidationError("Campo 'Tarefa' é obrigatório.");
     const data = (input.data || "").trim();
     if (!dataValida(data)) throw new ValidationError("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
+    const horario = (input.horario || "").trim();
+    if (!horaValida(horario)) throw new ValidationError("Campo 'Horário' precisa estar no formato hh:mm.");
     const status = STATUS_OPTIONS.includes(input.status) ? input.status : STATUS_OPTIONS[0];
     return {
       tarefa,
       cliente: (input.cliente || "").trim(),
       responsavel: (input.responsavel || "").trim(),
       data,
+      horario,
       status,
     };
   }

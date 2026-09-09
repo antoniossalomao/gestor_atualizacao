@@ -28,6 +28,7 @@ const AGENDA_COLUMNS = [
   { key: "cliente", label: "Cliente" },
   { key: "responsavel", label: "Responsável" },
   { key: "data", label: "Data" },
+  { key: "horario", label: "Horário" },
   { key: "status", label: "Status" },
 ];
 

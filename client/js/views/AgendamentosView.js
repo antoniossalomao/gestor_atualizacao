@@ -41,7 +41,7 @@ export class AgendamentosView extends View {
     this.container.innerHTML = `
       <form class="card" data-role="form" novalidate>
         <h2 class="card__title">Nova Tarefa</h2>
-        <div class="form-grid form-grid--5" data-role="fields"></div>
+        <div class="form-grid form-grid--6" data-role="fields"></div>
         <div class="form-actions">
           <button type="submit" class="btn btn--accent" data-action="add">Adicionar</button>
           <button type="button" class="btn" data-action="update">Atualizar Selecionada</button>
@@ -180,7 +180,11 @@ export class AgendamentosView extends View {
         input.innerHTML = STATUS_OPTIONS.map((s) => `<option>${s}</option>`).join("");
       } else {
         input = document.createElement("input");
-        input.type = "text";
+        // "horario" usa o seletor nativo do navegador (sempre devolve
+        // "HH:MM" ou vazio) -- diferente de "data", que é texto livre com
+        // validação manual porque precisa aceitar o formato dd/mm/aaaa já
+        // usado no resto do app.
+        input.type = col.key === "horario" ? "time" : "text";
         input.className = "input";
         if (col.key === "tarefa") input.required = true;
       }
