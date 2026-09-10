@@ -1,3 +1,4 @@
+const { ValidationError } = require("../services/errors");
 const { parsePaginacao } = require("./pagination");
 
 /** Rotas da agenda de tarefas internas (aba Agendamentos). */
@@ -45,6 +46,26 @@ class AgendamentosController {
     try {
       this.agendamentoService.markDone(Number(req.params.id), req.session.user);
       res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  removeMany = (req, res, next) => {
+    try {
+      const ids = Array.isArray(req.body?.ids) ? req.body.ids : null;
+      if (!ids || ids.length === 0) throw new ValidationError("Selecione ao menos uma tarefa para excluir.");
+      res.json(this.agendamentoService.deleteMany(ids, req.session.user));
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  markDoneMany = (req, res, next) => {
+    try {
+      const ids = Array.isArray(req.body?.ids) ? req.body.ids : null;
+      if (!ids || ids.length === 0) throw new ValidationError("Selecione ao menos uma tarefa para concluir.");
+      res.json(this.agendamentoService.markDoneMany(ids, req.session.user));
     } catch (err) {
       next(err);
     }

@@ -164,14 +164,46 @@ export class VersoesView extends View {
         <div class="published-release__body">
           <strong>${escapeHtml(item.sistema || "Sistema não informado")}</strong>
           <span data-role="meta"></span>
-          ${item.observacoes ? `<p>${escapeHtml(item.observacoes)}</p>` : ""}
+          <div data-role="changelog"></div>
         </div>
         <div class="published-release__state">NO AR</div>
       `;
       const meta = article.querySelector('[data-role="meta"]');
       meta.textContent = `Publicada ${tempoRelativo(item.publicadoEm)} · ${plural(item.pacotes.length, "pacote")} · ${formatarBytes(item.tamanhoBytes)}`;
       meta.title = formatarDataHora(item.publicadoEm);
+      article.querySelector('[data-role="changelog"]').appendChild(renderChangelog(item.observacoes));
       list.appendChild(article);
     }
   }
+}
+
+/**
+ * "observacoes" é um texto livre no banco (sem schema novo), mas o editor da
+ * Distribuição grava cada item do changelog como uma linha "- algo" (ver
+ * DistribuicaoView._syncChangelog) -- quando o texto bate nesse formato,
+ * desenha como lista com marcadores; senão (observação livre antiga, de
+ * antes deste editor existir, ou um texto digitado direto em outra fonte)
+ * mostra como parágrafo, igual sempre mostrou.
+ */
+function renderChangelog(observacoes) {
+  const linhas = String(observacoes || "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const itens = linhas.filter((l) => l.startsWith("- ")).map((l) => l.slice(2).trim());
+
+  if (itens.length > 0 && itens.length === linhas.length) {
+    const ul = document.createElement("ul");
+    ul.className = "published-release__changelog";
+    for (const item of itens) {
+      const li = document.createElement("li");
+      li.textContent = item;
+      ul.appendChild(li);
+    }
+    return ul;
+  }
+  if (linhas.length === 0) return document.createDocumentFragment();
+  const p = document.createElement("p");
+  p.textContent = linhas.join("\n");
+  return p;
 }

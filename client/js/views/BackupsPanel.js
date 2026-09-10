@@ -67,6 +67,18 @@ export class BackupsPanel {
         item.setAttribute("role", "option");
         item.setAttribute("aria-selected", String(idx === 0));
         item.textContent = b.label;
+        // "false" explicito: PRAGMA integrity_check rodou logo depois deste
+        // backup ser criado e achou algo errado -- diferente de "null"
+        // (backup de antes desta verificação existir, nunca checado), que
+        // não é motivo de alarme. Ver Database._verificarIntegridadeBackup.
+        if (b.integro === false) {
+          const aviso = document.createElement("span");
+          aviso.className = "badge badge--danger";
+          aviso.style.marginLeft = "8px";
+          aviso.textContent = "Corrompido";
+          aviso.title = "Falhou na verificação de integridade (PRAGMA integrity_check) logo após ser criado.";
+          item.appendChild(aviso);
+        }
         item.addEventListener("click", () => {
           selected = b;
           for (const el of list.querySelectorAll(".consulta-matches__item")) {

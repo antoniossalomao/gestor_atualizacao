@@ -6,6 +6,7 @@ const { SISTEMAS_CONHECIDOS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS, BACKUP_
 const { BaseRepository } = require("./BaseRepository");
 const { AtualizacaoRepository } = require("./AtualizacaoRepository");
 const { ClienteRepository } = require("./ClienteRepository");
+const { ClienteAcessoRepository } = require("./ClienteAcessoRepository");
 const { AgendamentoRepository } = require("./AgendamentoRepository");
 const { SistemaRepository } = require("./SistemaRepository");
 const { UsuarioRepository } = require("./UsuarioRepository");
@@ -58,6 +59,7 @@ class Database {
     // diretamente, so chama metodos tipo "db.clientes.list()".
     this.atualizacoes = new AtualizacaoRepository(this.conn);
     this.clientes = new ClienteRepository(this.conn);
+    this.clienteAcessos = new ClienteAcessoRepository(this.conn);
     this.agendamentos = new AgendamentoRepository(this.conn);
     this.sistemas = new SistemaRepository(this.conn);
     this.usuarios = new UsuarioRepository(this.conn);
@@ -101,6 +103,23 @@ class Database {
         sistemas TEXT
       )
     `);
+
+    // Tabela nova (nao existia no app Python): acessos remotos (AnyDesk /
+    // Suporte Bredas) de cada maquina de um cliente -- aba Clientes, botao
+    // "Acessos". "ON DELETE CASCADE" (com "foreign_keys = ON" ligado acima)
+    // apaga os acessos junto quando o cliente e excluido, sem precisar de
+    // um passo manual em ClienteRepository.
+    conn.exec(`
+      CREATE TABLE IF NOT EXISTS cliente_acessos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+        maquina TEXT NOT NULL,
+        anydesk TEXT,
+        suporte_bredas TEXT,
+        observacoes TEXT
+      )
+    `);
+    conn.exec(`CREATE INDEX IF NOT EXISTS idx_cliente_acessos_cliente ON cliente_acessos (cliente_id)`);
 
     conn.exec(`
       CREATE TABLE IF NOT EXISTS agendamentos (
@@ -146,6 +165,14 @@ class Database {
     // idempotente usado acima para "maquinas"/"obs".
     try {
       conn.exec(`ALTER TABLE usuarios ADD COLUMN role TEXT NOT NULL DEFAULT 'user'`);
+    } catch (e) {
+      if (!String(e.message).includes("duplicate column")) throw e;
+    }
+    // "ultimo_login" -- mesmo padrao de ALTER TABLE idempotente. Sem isso, a
+    // tela de Usuarios so dizia quem TEM conta, nunca quem de fato a usa;
+    // fica nulo para quem nunca entrou desde que a coluna passou a existir.
+    try {
+      conn.exec(`ALTER TABLE usuarios ADD COLUMN ultimo_login TEXT`);
     } catch (e) {
       if (!String(e.message).includes("duplicate column")) throw e;
     }
@@ -420,7 +447,23 @@ class Database {
       const stamp = timestamp();
       const { name, ext } = path.parse(this.path);
       const destino = path.join(dir, `${name}_${stamp}${ext}`);
+      const arquivoBackup = `${name}_${stamp}${ext}`;
       fs.copyFileSync(this.path, destino);
+
+      // Confere se a cópia recém-feita abre e passa no integrity_check do
+      // próprio SQLite -- ver _verificarIntegridadeBackup. Different do
+      // resto deste método: uma cópia corrompida NÃO fica silenciosa,
+      // porque ela anula o propósito de existir um backup (a corrupção só
+      // seria descoberta no pior momento possível -- tentando restaurar de
+      // verdade, talvez meses depois).
+      const integro = this._verificarIntegridadeBackup(destino);
+      if (!integro) {
+        console.error(
+          `ATENCAO: o backup "${arquivoBackup}" falhou na verificacao de integridade (PRAGMA integrity_check) -- pode estar corrompido.`
+        );
+      }
+      const verificacoes = this._lerVerificacoesBackup(dir);
+      verificacoes[arquivoBackup] = integro;
 
       // Mantem so os BACKUP_KEEP mais recentes.
       const existentes = fs
@@ -428,15 +471,72 @@ class Database {
         .filter((f) => f.startsWith(`${name}_`) && f.endsWith(ext))
         .sort();
       const antigos = existentes.slice(0, Math.max(0, existentes.length - BACKUP_KEEP));
-      for (const arquivo of antigos) fs.rmSync(path.join(dir, arquivo), { force: true });
+      for (const arquivo of antigos) {
+        fs.rmSync(path.join(dir, arquivo), { force: true });
+        delete verificacoes[arquivo];
+      }
+      this._salvarVerificacoesBackup(dir, verificacoes);
     } catch {
-      // silencioso de proposito -- ver comentario acima
+      // silencioso de proposito -- ver comentario acima (a checagem de
+      // integridade em si NAO e silenciosa, so este envelope de fora, que
+      // cobre falha de disco/permissao ao copiar o arquivo)
     }
   }
 
   /**
-   * Backups disponiveis, mais recente primeiro: lista de { arquivo, label }.
-   * Usado pela tela de Backups para o usuario escolher um ponto no tempo.
+   * Abre o arquivo de backup numa conexao PROPRIA, so de leitura (nunca a
+   * `this.conn` principal, que o resto do programa esta usando), e roda o
+   * `PRAGMA integrity_check` nativo do SQLite -- confere a estrutura interna
+   * do arquivo inteiro (paginas, indices, etc.), nao so "o arquivo existe e
+   * abre sem erro imediato".
+   * @returns {boolean} true se o backup passou na verificacao
+   */
+  _verificarIntegridadeBackup(caminho) {
+    let conexaoTeste;
+    try {
+      conexaoTeste = new Sqlite3(caminho, { readonly: true });
+      const resultado = conexaoTeste.pragma("integrity_check");
+      return resultado.length === 1 && resultado[0].integrity_check === "ok";
+    } catch {
+      return false;
+    } finally {
+      conexaoTeste?.close();
+      // O arquivo copiado carrega no proprio cabecalho a flag "journal_mode
+      // = WAL" (e' parte do formato do arquivo, nao da conexao) -- so' de
+      // ABRIR essa copia, mesmo so' de leitura, o SQLite cria os arquivos
+      // "-shm"/"-wal" ao lado dela. Sem limpar isso aqui, cada verificacao
+      // sujaria a pasta de backups com dois arquivos extras por backup,
+      // quebrando a premissa de "um arquivo so, completo" que o
+      // wal_checkpoint(TRUNCATE) la em cima existe pra garantir.
+      fs.rmSync(`${caminho}-shm`, { force: true });
+      fs.rmSync(`${caminho}-wal`, { force: true });
+    }
+  }
+
+  /** Mapa { nome-do-arquivo: true|false }, lido de backups/verificacoes.json (ver listBackups). */
+  _lerVerificacoesBackup(dir) {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(dir, "verificacoes.json"), "utf8"));
+    } catch {
+      return {};
+    }
+  }
+
+  /** Falha ao salvar (disco cheio, permissao) nao pode impedir o backup em si -- so a marcação de status se perde. */
+  _salvarVerificacoesBackup(dir, mapa) {
+    try {
+      fs.writeFileSync(path.join(dir, "verificacoes.json"), JSON.stringify(mapa, null, 2));
+    } catch {
+      /* nao critico -- ver comentario acima */
+    }
+  }
+
+  /**
+   * Backups disponiveis, mais recente primeiro: lista de { arquivo, label,
+   * integro }. Usado pela tela de Backups para o usuario escolher um ponto
+   * no tempo. `integro` e `null` para backups feitos antes desta
+   * verificacao existir (nunca foram checados, nao e o mesmo que "checado e
+   * corrompido").
    */
   listBackups() {
     const dir = path.join(path.dirname(this.path), "backups");
@@ -447,9 +547,10 @@ class Database {
       .filter((f) => f.startsWith(`${name}_`) && f.endsWith(ext))
       .sort()
       .reverse();
+    const verificacoes = this._lerVerificacoesBackup(dir);
     return arquivos.map((arquivo) => {
       const stamp = arquivo.slice(name.length + 1, arquivo.length - ext.length);
-      return { arquivo, label: formatStamp(stamp) || arquivo };
+      return { arquivo, label: formatStamp(stamp) || arquivo, integro: verificacoes[arquivo] ?? null };
     });
   }
 

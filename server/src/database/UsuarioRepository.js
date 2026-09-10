@@ -16,12 +16,14 @@ class UsuarioRepository extends BaseRepository {
   }
 
   findById(id) {
-    return this.conn.prepare("SELECT id, nome, usuario, role, criado_em FROM usuarios WHERE id = ?").get(id) || null;
+    return (
+      this.conn.prepare("SELECT id, nome, usuario, role, criado_em, ultimo_login FROM usuarios WHERE id = ?").get(id) || null
+    );
   }
 
   /** Todas as contas (sem o hash da senha), para a tela de gerenciar usuários. */
   list() {
-    return this.conn.prepare("SELECT id, nome, usuario, role, criado_em FROM usuarios ORDER BY nome").all();
+    return this.conn.prepare("SELECT id, nome, usuario, role, criado_em, ultimo_login FROM usuarios ORDER BY nome").all();
   }
 
   insert(nome, usuario, senhaHash, role = "user") {
@@ -30,6 +32,16 @@ class UsuarioRepository extends BaseRepository {
       .prepare("INSERT INTO usuarios (nome, usuario, senha_hash, role, criado_em) VALUES (?, ?, ?, ?, ?)")
       .run(nome, usuario, senhaHash, role, criadoEm);
     return this.findById(info.lastInsertRowid);
+  }
+
+  /** Troca só o hash da senha -- usado tanto pela troca de senha própria quanto por um reset futuro. */
+  updateSenhaHash(id, senhaHash) {
+    this.conn.prepare("UPDATE usuarios SET senha_hash = ? WHERE id = ?").run(senhaHash, id);
+  }
+
+  /** Registra o instante do login bem-sucedido -- ver findById/list, que agora devolvem "ultimo_login". */
+  registrarLogin(id) {
+    this.conn.prepare("UPDATE usuarios SET ultimo_login = ? WHERE id = ?").run(new Date().toISOString(), id);
   }
 }
 

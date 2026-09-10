@@ -69,6 +69,16 @@ class ClienteRepository extends BaseRepository {
     );
   }
 
+  /** Os registros completos de uma lista de ids -- usado pelas ações em lote (excluir, adicionar sistema). */
+  findByIds(ids) {
+    const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
+    if (limpos.length === 0) return [];
+    const marcadores = limpos.map(() => "?").join(", ");
+    return this.conn
+      .prepare(`SELECT id, codigo, nome, cidade, sistemas, grupo FROM clientes WHERE id IN (${marcadores})`)
+      .all(...limpos);
+  }
+
   /**
    * True se ja existe outro cliente com esse nome (sem diferenciar
    * maiusculas/minusculas). Usado para bloquear cadastro duplicado: como o
@@ -145,6 +155,35 @@ class ClienteRepository extends BaseRepository {
     sistemas.push(nomeSistema);
     this.conn.prepare("UPDATE clientes SET sistemas = ? WHERE id = ?").run(sistemas.join(", "), linha.id);
     return true;
+  }
+
+  /**
+   * Variante em lote de adicionarSistema: acrescenta um sistema à lista de
+   * VÁRIOS clientes de uma vez, pelos ids (a ação em lote da tela de
+   * Clientes) -- diferente de adicionarSistema, que resolve por NOME e é
+   * usado só internamente quando uma atualização registra a observação do
+   * Suporte Bredas. Idempotente por cliente: quem já tiver o sistema
+   * marcado não é tocado (nem entra na contagem devolvida).
+   * @returns {number} quantos clientes foram de fato alterados
+   */
+  addSistemaToMany(ids, nomeSistema) {
+    const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
+    if (limpos.length === 0) return 0;
+    const marcadores = limpos.map(() => "?").join(", ");
+    const linhas = this.conn.prepare(`SELECT id, sistemas FROM clientes WHERE id IN (${marcadores})`).all(...limpos);
+    const update = this.conn.prepare("UPDATE clientes SET sistemas = ? WHERE id = ?");
+    let afetados = 0;
+    const emLote = this.conn.transaction((lista) => {
+      for (const linha of lista) {
+        const sistemas = (linha.sistemas || "").split(",").map((s) => s.trim()).filter(Boolean);
+        if (sistemas.includes(nomeSistema)) continue;
+        sistemas.push(nomeSistema);
+        update.run(sistemas.join(", "), linha.id);
+        afetados += 1;
+      }
+    });
+    emLote(linhas);
+    return afetados;
   }
 
   removeSistemaDeTodos(nomeSistema) {

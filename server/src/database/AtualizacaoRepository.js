@@ -287,6 +287,20 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
+   * As últimas N atualizações de um cliente específico (aba Consultar
+   * Cliente, seção "Histórico recente") -- variante de lastUpdateForClient
+   * que devolve uma lista em vez de um registro só, para dar noção de
+   * frequência/padrão ao longo do tempo, não só o instante mais recente.
+   */
+  recentUpdatesForClient(nome, limit = 5) {
+    const sql = `
+      SELECT id, data, sistema, versao, motivo, responsavel, maquinas, obs FROM ${this.table}
+      WHERE cliente = @nome ORDER BY ${DATE_SORT_EXPR} DESC, id DESC LIMIT @limit
+    `;
+    return this.conn.prepare(sql).all({ nome, limit });
+  }
+
+  /**
    * Retorna a atualização mais recente de cada sistema.
    * O campo sistema pode conter vários nomes separados por vírgula, então
    * cada registro é expandido antes de comparar suas datas.

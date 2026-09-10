@@ -130,6 +130,11 @@ class AtualizacaoService {
     return this.db.atualizacoes.lastUpdateForClient(nome);
   }
 
+  /** As últimas N atualizações de um cliente específico (aba Consultar Cliente, "Histórico recente"). */
+  recentUpdatesForClient(nome, limit = 5) {
+    return this.db.atualizacoes.recentUpdatesForClient(nome, Math.min(Math.max(Number(limit) || 5, 1), 50));
+  }
+
   /** Última versão registrada para cada sistema do histórico operacional. */
   latestVersionBySystem() {
     return this.db.atualizacoes.latestVersionBySystem();

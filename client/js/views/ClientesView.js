@@ -12,6 +12,7 @@ import { marcarOcupado } from "../core/guard.js";
 import { prefs } from "../core/prefs.js";
 import { aparencia } from "../core/appearance.js";
 import { Autocomplete } from "../core/Autocomplete.js";
+import { AcessosModal } from "./AcessosModal.js";
 
 /**
  * Aba Clientes: cadastro, edição e listagem dos clientes e seus sistemas.
@@ -34,10 +35,11 @@ export class ClientesView extends View {
 
   _buildDom() {
     this.container.innerHTML = `
-      <div>
+      <div class="toolbar">
         <button type="button" class="btn" data-action="toggle-form" aria-expanded="false" aria-controls="clientes-form">
           ${icon("plus")} Novo Cliente
         </button>
+        <button type="button" class="btn" data-action="acessos" disabled>${icon("acessos")} Acessos</button>
       </div>
 
       <form class="card" id="clientes-form" data-role="form-card" hidden novalidate>
@@ -80,6 +82,19 @@ export class ClientesView extends View {
           </div>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
+        </div>
+        <p class="text-muted bulk-hint">
+          Dica: segure <kbd>Shift</kbd> e clique em duas linhas para selecionar tudo entre elas.
+        </p>
+        <div class="bulk-bar" data-role="bulk" hidden>
+          <span class="bulk-bar__count" data-role="bulk-count" aria-live="polite"></span>
+          <button type="button" class="btn btn--small btn--ghost" data-action="bulk-limpar">Desmarcar</button>
+          <div class="toolbar-spacer"></div>
+          <select class="input" data-role="bulk-sistema-select" style="max-width:200px"></select>
+          <button type="button" class="btn btn--small" data-action="bulk-add-sistema">Adicionar sistema</button>
+          <button type="button" class="btn btn--small btn--danger" data-action="bulk-excluir">
+            ${icon("alerta")} Excluir selecionados
+          </button>
         </div>
         <div data-role="table"></div>
         <div data-role="pagination"></div>
@@ -128,6 +143,12 @@ export class ClientesView extends View {
         { key: "maquinas", label: "Máquinas", type: "numeric" },
       ],
       onSelect: (row) => this._loadIntoForm(row),
+      // Seleção múltipla: marcar um sistema em vários clientes de uma vez
+      // (ex.: "esses 8 agora têm NFCe") ou excluir vários era um ciclo de
+      // "abrir, editar, salvar" por cliente -- mesma ideia já usada em
+      // Atualizações e Agendamentos.
+      multiSelect: true,
+      onMultiSelect: (chaves) => this._pintarBulk(chaves),
       caption: "Clientes cadastrados",
       emptyNode: () =>
         this.busca
@@ -179,6 +200,18 @@ export class ClientesView extends View {
     this.addBtn = this.container.querySelector('[data-action="add"]');
     this.updateBtn = this.container.querySelector('[data-action="update"]');
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
+    this.acessosBtn = this.container.querySelector('[data-action="acessos"]');
+    this.acessosBtn.addEventListener("click", () => this.abrirAcessos());
+
+    // -- lote --
+    this.bulkBar = this.container.querySelector('[data-role="bulk"]');
+    this.bulkCount = this.container.querySelector('[data-role="bulk-count"]');
+    this.bulkSistemaSelect = this.container.querySelector('[data-role="bulk-sistema-select"]');
+    this.bulkAddSistema = this.container.querySelector('[data-action="bulk-add-sistema"]');
+    this.bulkExcluir = this.container.querySelector('[data-action="bulk-excluir"]');
+    this.container.querySelector('[data-action="bulk-limpar"]').addEventListener("click", () => this.table.limparMarcadas());
+    this.bulkAddSistema.addEventListener("click", () => this.adicionarSistemaLote());
+    this.bulkExcluir.addEventListener("click", () => this.excluirLote());
 
     this.formCard.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -260,6 +293,16 @@ export class ClientesView extends View {
       row.append(label, excluir);
       this.sistemasGrid.appendChild(row);
     }
+
+    const selecionado = this.bulkSistemaSelect.value;
+    // Começa vazio, de propósito: sem isso, o <select> ficava mostrando o
+    // primeiro sistema do catálogo (ordem alfabética) já escolhido, e quem
+    // clicasse "Adicionar sistema" sem prestar atenção aplicaria esse
+    // sistema por engano em todos os clientes marcados.
+    this.bulkSistemaSelect.innerHTML =
+      `<option value="">Escolha um sistema…</option>` +
+      this.sistemasDisponiveis.map((s) => `<option>${escapeAttr(s)}</option>`).join("");
+    if (this.sistemasDisponiveis.includes(selecionado)) this.bulkSistemaSelect.value = selecionado;
   }
 
   /**
@@ -359,7 +402,17 @@ export class ClientesView extends View {
     this.addBtn.hidden = true;
     this.updateBtn.disabled = false;
     this.deleteBtn.disabled = false;
+    this.acessosBtn.disabled = false;
     if (!this.formVisible) this.toggleForm(true);
+  }
+
+  /** Abre a janela de acessos remotos (AnyDesk / Suporte Bredas) do cliente selecionado. */
+  abrirAcessos() {
+    if (this.selectedId == null) {
+      Modal.alert("Seleção", "Selecione um cliente na tabela primeiro.", "warning");
+      return;
+    }
+    new AcessosModal(this.api, { id: this.selectedId, nome: this.fields.nome.value.trim() }).open();
   }
 
   _readForm() {
@@ -456,6 +509,78 @@ export class ClientesView extends View {
     }
   }
 
+  _pintarBulk(chaves) {
+    const n = chaves.length;
+    this.bulkBar.hidden = n === 0;
+    this.bulkCount.textContent = n === 0 ? "" : `${plural(n, "cliente")} ${n === 1 ? "selecionado" : "selecionados"}`;
+    // Ver o comentário equivalente em AtualizacoesView._pintarBulk: evita os
+    // dois botões de excluir (lote + avulso) na tela ao mesmo tempo.
+    this.deleteBtn.hidden = n > 0;
+  }
+
+  /** Marca um sistema em todos os clientes selecionados de uma vez (idempotente: quem já tinha não muda). */
+  async adicionarSistemaLote() {
+    const ids = this.table.selecionadas.map(Number).filter(Number.isInteger);
+    if (ids.length === 0) return;
+    const sistema = this.bulkSistemaSelect.value;
+    if (!sistema) {
+      Modal.alert("Validação", "Cadastre um sistema no catálogo antes de aplicar em lote.", "warning");
+      return;
+    }
+
+    const liberar = marcarOcupado(this.bulkAddSistema);
+    try {
+      const { afetados, total } = await this.api.post("/clientes/adicionar-sistema-lote", { ids, sistema });
+      this.table.limparMarcadas();
+      this._invalidar();
+      await this._reloadList();
+      toast.success(
+        afetados === 0
+          ? `Todos os ${plural(total, "cliente selecionado", "clientes selecionados")} já tinham "${sistema}".`
+          : `"${sistema}" adicionado a ${plural(afetados, "cliente")}${afetados < total ? ` (${total - afetados} já tinha${total - afetados === 1 ? "" : "m"})` : ""}.`
+      );
+    } catch (err) {
+      Modal.alert("Erro", errorMessage(err), "error");
+    } finally {
+      liberar();
+    }
+  }
+
+  /**
+   * Exclui todos os clientes marcados de uma vez. Sem "Desfazer", diferente
+   * de Atualizações/Agendamentos -- ver o comentário em deleteClient() sobre
+   * por que a exclusão de cliente já pedia confirmação: recriar perde o id
+   * antigo e, agora, também os acessos remotos (AnyDesk/Suporte Bredas)
+   * cadastrados, apagados junto por causa da chave estrangeira. Numa
+   * exclusão em lote isso pesa ainda mais do que numa exclusão só.
+   */
+  async excluirLote() {
+    const ids = this.table.selecionadas.map(Number).filter(Number.isInteger);
+    if (ids.length === 0) return;
+
+    const ok = await Modal.confirm(
+      "Excluir clientes selecionados",
+      `${plural(ids.length, "cliente")} ${ids.length === 1 ? "será excluído" : "serão excluídos"}, junto com os acessos remotos (AnyDesk/Suporte Bredas) cadastrados neles.\n\n` +
+        "O histórico de atualizações continua salvo, mas eles deixam de aparecer no Resumo e na Consulta. Esta ação não pode ser desfeita pela tela.",
+      { confirmLabel: "Excluir" }
+    );
+    if (!ok) return;
+
+    const liberar = marcarOcupado(this.bulkExcluir);
+    try {
+      const { excluidos } = await this.api.post("/clientes/excluir-lote", { ids });
+      this.table.limparMarcadas();
+      this.clearForm();
+      this._invalidar();
+      await this._reloadList();
+      toast.success(`${plural(excluidos, "cliente")} ${excluidos === 1 ? "excluído" : "excluídos"}.`);
+    } catch (err) {
+      Modal.alert("Erro", errorMessage(err), "error");
+    } finally {
+      liberar();
+    }
+  }
+
   clearForm({ comDesfazer = false } = {}) {
     const antes = {
       codigo: this.fields.codigo.value,
@@ -477,6 +602,7 @@ export class ClientesView extends View {
     this.addBtn.hidden = false;
     this.updateBtn.disabled = true;
     this.deleteBtn.disabled = true;
+    this.acessosBtn.disabled = true;
 
     if (comDesfazer && tinhaConteudo) {
       toast.undo("Formulário limpo.", () => {

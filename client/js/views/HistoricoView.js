@@ -19,6 +19,7 @@ const ACAO_LABEL = {
 
 const ENTIDADE_LABEL = {
   cliente: "Cliente",
+  acesso: "Acesso",
   atualizacao: "Atualização",
   agendamento: "Agendamento",
   sistema: "Sistema",

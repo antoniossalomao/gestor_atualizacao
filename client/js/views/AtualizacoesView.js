@@ -579,6 +579,13 @@ export class AtualizacoesView extends View {
     const n = chaves.length;
     this.bulkBar.hidden = n === 0;
     this.bulkCount.textContent = n === 0 ? "" : `${plural(n, "registro")} ${n === 1 ? "selecionado" : "selecionados"}`;
+    // Um clique normal (sem Shift) continua carregando a linha no formulário
+    // e habilitando "Excluir Selecionado" mesmo com um lote marcado ao lado
+    // -- sem isto, os dois botões de excluir (o de lote e o avulso) ficavam
+    // visíveis ao mesmo tempo, quase iguais, um risco real de clicar no
+    // errado (visto rodando o app: aconteceu exatamente ao clicar uma linha
+    // e depois Shift+clicar outra). Com o lote ativo, só o de lote aparece.
+    this.deleteBtn.hidden = n > 0;
   }
 
   /**

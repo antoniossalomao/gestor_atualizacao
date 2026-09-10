@@ -88,6 +88,14 @@ class ApiRouter {
     api.put("/clientes/:id", clientes.update);
     api.delete("/clientes/:id", clientes.remove);
 
+    api.get("/clientes/:id/acessos", clientes.listAcessos);
+    api.post("/clientes/:id/acessos", clientes.addAcesso);
+    api.put("/clientes/acessos/:acessoId", clientes.updateAcesso);
+    api.delete("/clientes/acessos/:acessoId", clientes.removeAcesso);
+
+    api.post("/clientes/excluir-lote", clientes.removeMany);
+    api.post("/clientes/adicionar-sistema-lote", clientes.addSistemaMany);
+
     api.get("/sistemas", sistemas.list);
     api.post("/sistemas", sistemas.create);
     // :nome (não :id) -- o catálogo inteiro é tratado por nome em toda parte
@@ -99,6 +107,7 @@ class ApiRouter {
     api.get("/atualizacoes", atualizacoes.list);
     api.get("/atualizacoes/responsaveis", atualizacoes.distinctResponsaveis);
     api.get("/atualizacoes/last-by-client/:nome", atualizacoes.lastForClient);
+    api.get("/atualizacoes/recent-by-client/:nome", atualizacoes.recentForClient);
     api.get("/atualizacoes/versoes-por-sistema", atualizacoes.latestVersionBySystem);
     api.get("/atualizacoes/por-sistema", atualizacoes.porSistema);
     api.get("/atualizacoes/export", atualizacoes.exportXlsx);
@@ -112,6 +121,10 @@ class ApiRouter {
 
     api.get("/agendamentos", agendamentos.list);
     api.get("/agendamentos/lembretes", agendamentos.lembretes);
+    // Caminhos especificos antes do POST generico logo abaixo (mesmo motivo
+    // do /import em atualizacoes): senao "/agendamentos" casaria primeiro.
+    api.post("/agendamentos/excluir-lote", agendamentos.removeMany);
+    api.post("/agendamentos/concluir-lote", agendamentos.markDoneMany);
     api.post("/agendamentos", agendamentos.create);
     api.put("/agendamentos/:id", agendamentos.update);
     api.patch("/agendamentos/:id/done", agendamentos.markDone);
@@ -126,6 +139,7 @@ class ApiRouter {
 
     api.get("/usuarios", usuarios.list);
     api.post("/usuarios", usuarios.create);
+    api.put("/usuarios/me/senha", usuarios.changeOwnPassword);
     api.delete("/usuarios/:id", usuarios.remove);
 
     api.get("/versoes", versoes.list);

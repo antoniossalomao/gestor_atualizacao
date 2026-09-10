@@ -124,15 +124,15 @@ export class ConsultaView extends View {
     this._filterMatches();
 
     try {
-      const [cliente, ultima] = await Promise.all([
+      const [cliente, historico] = await Promise.all([
         this.api.get(`/clientes/by-nome/${encodeURIComponent(nome)}`, null, { key: "consulta:cliente" }),
-        this.api.get(`/atualizacoes/last-by-client/${encodeURIComponent(nome)}`, null, { key: "consulta:ultima" }),
+        this.api.get(`/atualizacoes/recent-by-client/${encodeURIComponent(nome)}`, { limit: 5 }, { key: "consulta:historico" }),
       ]);
       if (!cliente) {
         toast.error("Cliente não encontrado.");
         return;
       }
-      this._renderDetail(cliente, ultima);
+      this._renderDetail(cliente, historico);
     } catch (erro) {
       if (erro?.cancelled) return; // outra seleção, mais nova, tomou o lugar
       toast.error("Não foi possível carregar os dados deste cliente.");
@@ -149,7 +149,7 @@ export class ConsultaView extends View {
     );
   }
 
-  _renderDetail(cliente, ultima) {
+  _renderDetail(cliente, historico) {
     this.detailBox.innerHTML = `
       <div class="consulta-detail__name"></div>
       <div class="consulta-detail__subtitle"></div>
@@ -157,7 +157,7 @@ export class ConsultaView extends View {
       <h2 class="card__title">Sistemas</h2>
       <div class="badge-row" data-role="badges"></div>
       <hr class="separator" />
-      <h2 class="card__title">Última Atualização</h2>
+      <h2 class="card__title">Histórico Recente</h2>
       <div data-role="ultima"></div>
     `;
     this.detailBox.querySelector(".consulta-detail__name").textContent = cliente.nome;
@@ -181,7 +181,7 @@ export class ConsultaView extends View {
     }
 
     const caixa = this.detailBox.querySelector('[data-role="ultima"]');
-    if (!ultima) {
+    if (!historico || historico.length === 0) {
       caixa.appendChild(
         emptyState({
           titulo: "Nenhuma atualização registrada",
@@ -193,15 +193,23 @@ export class ConsultaView extends View {
       return;
     }
 
-    const grid = document.createElement("div");
-    grid.className = "info-grid";
-    grid.appendChild(infoItem("Data", ultima.data));
-    grid.appendChild(infoItem("Versão", ultima.versao));
-    grid.appendChild(infoItem("Atualizado por", ultima.responsavel));
-    grid.appendChild(infoItem("Máquinas", ultima.maquinas));
-    grid.appendChild(infoItem("Motivo", ultima.motivo, true));
-    if (ultima.obs) grid.appendChild(infoItem("Obs", ultima.obs, true));
-    caixa.appendChild(grid);
+    historico.forEach((registro, indice) => {
+      if (indice > 0) {
+        const separador = document.createElement("hr");
+        separador.className = "separator";
+        caixa.appendChild(separador);
+      }
+      const grid = document.createElement("div");
+      grid.className = "info-grid";
+      grid.appendChild(infoItem("Data", registro.data));
+      grid.appendChild(infoItem("Sistema", registro.sistema));
+      grid.appendChild(infoItem("Versão", registro.versao));
+      grid.appendChild(infoItem("Atualizado por", registro.responsavel));
+      grid.appendChild(infoItem("Máquinas", registro.maquinas));
+      grid.appendChild(infoItem("Motivo", registro.motivo, true));
+      if (registro.obs) grid.appendChild(infoItem("Obs", registro.obs, true));
+      caixa.appendChild(grid);
+    });
   }
 }
 

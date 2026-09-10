@@ -4,6 +4,7 @@ import { toast } from "../core/Toast.js";
 import { icon } from "../core/icons.js";
 import { escapeHtml } from "../core/html.js";
 import { marcarOcupado } from "../core/guard.js";
+import { formatarDataHora, tempoRelativo } from "../core/date.js";
 
 /**
  * Painel de gerenciamento de contas, aberto pelo botão "Usuários" na barra
@@ -48,6 +49,22 @@ export class UsersPanel {
           <button type="submit" class="btn btn--accent" data-action="create">Criar Conta</button>
         </div>
       </form>
+
+      <hr class="separator" />
+
+      <button type="button" class="btn btn--small" data-action="toggle-senha" aria-expanded="false" aria-controls="trocar-senha">
+        Trocar minha senha
+      </button>
+      <form class="users-new" id="trocar-senha" data-role="senha-form" hidden>
+        <div class="form-grid">
+          <div class="field"><label class="field__label" for="u-senha-atual">Senha atual</label><input type="password" class="input" id="u-senha-atual" data-field="senhaAtual" required autocomplete="current-password" /></div>
+          <div class="field"><label class="field__label" for="u-senha-nova">Senha nova</label><input type="password" class="input" id="u-senha-nova" data-field="senhaNova" required autocomplete="new-password" /></div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn--accent" data-action="trocar-senha">Salvar Senha Nova</button>
+        </div>
+      </form>
+
       <div class="modal-box__actions">
         <button type="button" class="btn" data-action="close">Fechar</button>
       </div>
@@ -71,6 +88,19 @@ export class UsersPanel {
       this._createUser(newForm);
     });
 
+    const senhaForm = box.querySelector('[data-role="senha-form"]');
+    const toggleSenha = box.querySelector('[data-action="toggle-senha"]');
+    toggleSenha.addEventListener("click", () => {
+      const visible = !senhaForm.hidden;
+      senhaForm.hidden = visible;
+      toggleSenha.setAttribute("aria-expanded", String(!visible));
+      if (!visible) box.querySelector('[data-field="senhaAtual"]').focus();
+    });
+    senhaForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      this._trocarSenha(senhaForm);
+    });
+
     await this._reload();
   }
 
@@ -92,8 +122,16 @@ export class UsersPanel {
             ${isAdmin ? '<span class="badge badge--accent users-list__tag">Admin</span>' : ""}
           </div>
           <div class="text-muted users-list__handle">@${escapeHtml(u.usuario)}</div>
+          <div class="text-muted users-list__handle" data-role="ultimo-login"></div>
         </div>
       `;
+      const ultimoLoginEl = row.querySelector('[data-role="ultimo-login"]');
+      if (u.ultimo_login) {
+        ultimoLoginEl.textContent = `Último acesso: ${tempoRelativo(u.ultimo_login)}`;
+        ultimoLoginEl.title = formatarDataHora(u.ultimo_login);
+      } else {
+        ultimoLoginEl.textContent = "Nunca acessou";
+      }
       if (!isSelf && this.usuarioAtual.role === "admin") {
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
@@ -118,6 +156,25 @@ export class UsersPanel {
       for (const campo of ["nome", "usuario", "senha"]) this.box.querySelector(`[data-field="${campo}"]`).value = "";
       await this._reload();
       toast.success(`Conta de "${nome}" criada.`);
+    } catch (err) {
+      Modal.alert("Validação", errorMessage(err), "warning");
+    } finally {
+      liberar();
+    }
+  }
+
+  async _trocarSenha(form) {
+    const senhaAtual = this.box.querySelector('[data-field="senhaAtual"]').value;
+    const senhaNova = this.box.querySelector('[data-field="senhaNova"]').value;
+    const botao = form.querySelector('[data-action="trocar-senha"]');
+
+    const liberar = marcarOcupado(botao);
+    try {
+      await this.api.put("/usuarios/me/senha", { senhaAtual, senhaNova });
+      for (const campo of ["senhaAtual", "senhaNova"]) this.box.querySelector(`[data-field="${campo}"]`).value = "";
+      form.hidden = true;
+      this.box.querySelector('[data-action="toggle-senha"]').setAttribute("aria-expanded", "false");
+      toast.success("Senha alterada.");
     } catch (err) {
       Modal.alert("Validação", errorMessage(err), "warning");
     } finally {

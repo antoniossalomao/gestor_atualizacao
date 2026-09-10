@@ -69,6 +69,42 @@ class AgendamentoService {
     this.historico.registrar(usuario, "marcar_concluida", "agendamento", `Tarefa #${id} concluída`);
   }
 
+  /**
+   * Exclui várias tarefas de uma vez. Devolve `{ excluidos, registros }` --
+   * `registros` são os dados ANTES de sumirem, com que a tela recria tudo se
+   * a pessoa apertar "Desfazer" (mesmo padrão de AtualizacaoService.deleteMany).
+   */
+  deleteMany(ids, usuario) {
+    const registros = this.db.agendamentos.findByIds(ids);
+    if (registros.length === 0) {
+      throw new NotFoundError("Nenhuma das tarefas selecionadas existe mais. A lista pode estar desatualizada.");
+    }
+    const excluidos = this.db.agendamentos.deleteMany(registros.map((r) => r.id));
+    this.historico.registrar(usuario, "excluir", "agendamento", `${excluidos} tarefas excluídas de uma vez`);
+    return { excluidos, registros };
+  }
+
+  /**
+   * Marca várias tarefas como concluídas de uma vez. Só toca as que AINDA
+   * não estavam concluídas (idempotente, e evita sujar o histórico com
+   * tarefas que já estavam assim) -- `registros` devolve o estado ANTERIOR
+   * só dessas, para o "Desfazer" da tela restaurar o status/data de
+   * conclusão exatos que cada uma tinha, não um "A Fazer" genérico.
+   */
+  markDoneMany(ids, usuario) {
+    const doneLabel = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+    const registros = this.db.agendamentos.findByIds(ids);
+    if (registros.length === 0) {
+      throw new NotFoundError("Nenhuma das tarefas selecionadas existe mais. A lista pode estar desatualizada.");
+    }
+    const pendentes = registros.filter((r) => r.status !== doneLabel);
+    const concluidos = pendentes.length > 0 ? this.db.agendamentos.markDoneMany(pendentes.map((r) => r.id), doneLabel) : 0;
+    if (concluidos > 0) {
+      this.historico.registrar(usuario, "marcar_concluida", "agendamento", `${concluidos} tarefas concluídas de uma vez`);
+    }
+    return { concluidos, registros: pendentes };
+  }
+
   _validate(input) {
     const tarefa = (input.tarefa || "").trim();
     if (!tarefa) throw new ValidationError("Campo 'Tarefa' é obrigatório.");

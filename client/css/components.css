@@ -30,6 +30,28 @@
  *  15. Utilidades e responsivo
  */
 
+/*
+ * Achado numa auditoria visual real (rodando o app de verdade, não só lendo
+ * código): o atributo `hidden` estava perdendo silenciosamente para
+ * qualquer classe que define `display` (flex/grid/inline-flex) sozinha, sem
+ * uma regra `.classe[hidden]` própria -- as duas regras (`[hidden]` do
+ * navegador e `.classe` daqui) têm a MESMA especificidade, e a de cá vence
+ * por vir depois no arquivo. Resultado, confirmado com screenshot: o botão
+ * "Limpar busca"/"Limpar filtros" (`.btn`) aparecia mesmo sem busca nenhuma
+ * digitada, a linha de "Nome do sistema" (`.toolbar`) aparecia sem clicar em
+ * "+ Novo Sistema", a barra de progresso de upload (`.upload-progress`)
+ * aparecia parada em "0%" sem nenhum envio em andamento, e o formulário de
+ * "Convidar Pessoa"/"Trocar minha senha" (`.users-new`) aparecia sempre
+ * aberto. Cada um desses já tinha sido corrigido individualmente noutro
+ * lugar (`.bulk-bar[hidden]`, `.pagination[hidden]`, mais abaixo neste
+ * arquivo) -- mas o problema é geral, então a correção também precisa ser:
+ * `hidden` significa "escondido", sem exceção, e nenhuma classe de
+ * componente deveria conseguir brigar com isso.
+ */
+[hidden] {
+  display: none !important;
+}
+
 /* ==========================================================================
    1. CASCA
    ========================================================================== */
@@ -909,6 +931,25 @@ select {
   margin-top: var(--sp-4);
 }
 
+/* Linha "AnyDesk: 219 871 787" + botão de copiar, na modal de Acessos remotos. */
+.acesso-linha {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.acesso-linha__copiar {
+  padding: 2px 6px;
+  opacity: 0.7;
+}
+.acesso-linha__copiar:hover {
+  opacity: 1;
+}
+.acesso-linha__copiar svg {
+  width: 14px;
+  height: 14px;
+}
+
 .checkbox-grid {
   display: flex;
   flex-wrap: wrap;
@@ -1017,6 +1058,18 @@ select {
   min-width: 200px;
 }
 
+/* O campo de busca some/aumenta junto com o resto da barra, mas o texto do
+   placeholder ("Cliente, sistema, responsável, motivo...") é mais comprido
+   do que os 200px genéricos comportam -- ficava cortado dentro da própria
+   caixa (visto rodando o app de verdade, não só lendo o CSS). `flex-grow`
+   além do mínimo deixa ele ocupar o espaço sobrando (que hoje só o
+   `.toolbar-spacer` absorvia), o que também deixa a barra mais "fluida" em
+   telas largas -- o campo mais importante da barra é o que cresce primeiro. */
+.toolbar .field:has(input[type="search"]) {
+  min-width: 280px;
+  flex: 1 1 260px;
+}
+
 /* Os dois campos de data pedem bem menos largura que uma busca livre --
    com os 200px dos demais, "dd/mm/aaaa" ficava perdido num campo enorme e
    empurrava o resto da barra para a linha de baixo sem precisar. */
@@ -1064,9 +1117,6 @@ select {
   border-radius: var(--raio-pequeno);
   background: var(--cor-accent-fraco);
   animation: view-fade var(--dur-rapida) var(--curva-padrao) both;
-}
-.bulk-bar[hidden] {
-  display: none;
 }
 
 .bulk-bar__count {
@@ -1271,10 +1321,6 @@ table.data-table {
   margin-top: var(--sp-4);
   color: var(--cor-texto-sub);
   font-size: var(--txt-sm);
-}
-
-.pagination[hidden] {
-  display: none;
 }
 
 .pagination__buttons {
@@ -2296,6 +2342,43 @@ hr.separator {
   resize: vertical;
 }
 
+/* Editor de itens do changelog ("O que mudou nesta entrega"), na Distribuição. */
+.changelog-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.changelog-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.changelog-item .input {
+  flex: 1;
+}
+
+.changelog-item__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: var(--raio-pequeno);
+  background: none;
+  color: var(--cor-texto-fraco);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--transicao), color var(--transicao);
+}
+.changelog-item__remove:hover {
+  background: var(--cor-vermelho-fraco);
+  color: var(--cor-vermelho);
+}
+
 .distribution-note {
   display: flex;
   align-items: center;
@@ -2499,6 +2582,15 @@ hr.separator {
   margin: 6px 0 0;
   color: var(--cor-texto-sub);
   font-size: var(--txt-sm);
+}
+.published-release__changelog {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+.published-release__changelog li + li {
+  margin-top: 2px;
 }
 .published-release__state {
   color: var(--cor-verde);

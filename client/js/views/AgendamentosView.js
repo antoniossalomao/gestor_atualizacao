@@ -10,6 +10,7 @@ import { debounce } from "../core/debounce.js";
 import { todayBR, isValidDateBR } from "../core/date.js";
 import { emptyState } from "../core/EmptyState.js";
 import { plural } from "../core/html.js";
+import { icon } from "../core/icons.js";
 import { marcarOcupado } from "../core/guard.js";
 import { prefs } from "../core/prefs.js";
 import { aparencia } from "../core/appearance.js";
@@ -70,6 +71,21 @@ export class AgendamentosView extends View {
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
         </div>
+        <p class="text-muted bulk-hint">
+          Dica: segure <kbd>Shift</kbd> e clique em duas linhas para selecionar tudo entre elas.
+        </p>
+        <div class="bulk-bar" data-role="bulk" hidden>
+          <span class="bulk-bar__count" data-role="bulk-count" aria-live="polite"></span>
+          <button type="button" class="btn btn--small btn--ghost" data-action="bulk-limpar">Desmarcar</button>
+          <div class="toolbar-spacer"></div>
+          <button type="button" class="btn btn--small" data-action="bulk-concluir">
+            ${icon("check")} Concluir selecionadas
+          </button>
+          <button type="button" class="btn btn--small btn--danger" data-action="bulk-excluir">
+            ${icon("alerta")} Excluir selecionadas
+          </button>
+        </div>
+
         <div data-role="table"></div>
         <div data-role="pagination"></div>
         <div class="form-actions" style="margin-top: var(--sp-4)">
@@ -89,6 +105,11 @@ export class AgendamentosView extends View {
       ],
       onSelect: (row) => this._loadIntoForm(row),
       rowClass: (row) => (row.status === STATUS_CONCLUIDO ? "is-muted" : ""),
+      // Seleção múltipla: limpar uma fila de tarefas velhas ou concluir
+      // várias de uma vez era um ciclo de "clicar na linha, clicar no botão"
+      // por tarefa -- mesma ideia já usada em Atualizações.
+      multiSelect: true,
+      onMultiSelect: (chaves) => this._pintarBulk(chaves),
       caption: "Tarefas agendadas",
       emptyNode: () =>
         this._temFiltro()
@@ -148,6 +169,15 @@ export class AgendamentosView extends View {
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
     this.doneBtn = this.container.querySelector('[data-action="done"]');
     this.converterBtn = this.container.querySelector('[data-action="converter"]');
+
+    // -- lote --
+    this.bulkBar = this.container.querySelector('[data-role="bulk"]');
+    this.bulkCount = this.container.querySelector('[data-role="bulk-count"]');
+    this.bulkConcluir = this.container.querySelector('[data-action="bulk-concluir"]');
+    this.bulkExcluir = this.container.querySelector('[data-action="bulk-excluir"]');
+    this.container.querySelector('[data-action="bulk-limpar"]').addEventListener("click", () => this.table.limparMarcadas());
+    this.bulkConcluir.addEventListener("click", () => this.concluirLote());
+    this.bulkExcluir.addEventListener("click", () => this.excluirLote());
 
     this.form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -432,6 +462,104 @@ export class AgendamentosView extends View {
       this._invalidar();
       await this._reloadList();
       toast.success("Tarefa marcada como concluída.");
+    } catch (err) {
+      Modal.alert("Erro", errorMessage(err), "error");
+    } finally {
+      liberar();
+    }
+  }
+
+  _pintarBulk(chaves) {
+    const n = chaves.length;
+    this.bulkBar.hidden = n === 0;
+    this.bulkCount.textContent = n === 0 ? "" : `${plural(n, "tarefa")} ${n === 1 ? "selecionada" : "selecionadas"}`;
+    // Um clique normal continua carregando a tarefa no formulário mesmo com
+    // um lote marcado ao lado -- sem isto, "Excluir Selecionada"/"Marcar
+    // como Concluída" (avulsos) ficavam visíveis junto dos equivalentes de
+    // lote, quase iguais. "Converter em Atualização" não tem par de lote,
+    // continua sempre disponível.
+    this.deleteBtn.hidden = n > 0;
+    this.doneBtn.hidden = n > 0;
+  }
+
+  /**
+   * Marca todas as marcadas como concluídas de uma vez. Sem confirmação
+   * (igual a conclusão de uma tarefa só) -- "Desfazer" cobre o engano, e
+   * concluir não tem o mesmo peso de excluir.
+   */
+  async concluirLote() {
+    const ids = this.table.selecionadas.map(Number).filter(Number.isInteger);
+    if (ids.length === 0) return;
+
+    const liberar = marcarOcupado(this.bulkConcluir);
+    try {
+      const { concluidos, registros } = await this.api.post("/agendamentos/concluir-lote", { ids });
+      this.table.limparMarcadas();
+      this.clearForm();
+      this._invalidar();
+      await this._reloadList();
+
+      if (concluidos === 0) {
+        toast.info("As tarefas selecionadas já estavam concluídas.");
+        return;
+      }
+      toast.undo(`${plural(concluidos, "tarefa")} ${concluidos === 1 ? "concluída" : "concluídas"}.`, async () => {
+        try {
+          // Os ids continuam os mesmos (foi UPDATE, não recriação) -- um PUT
+          // por tarefa, com os dados de ANTES, basta pra restaurar o status
+          // (e a data de conclusão) exatos que cada uma tinha.
+          for (const registro of registros) {
+            const { id, ...dados } = registro;
+            await this.api.put(`/agendamentos/${id}`, dados);
+          }
+          this._invalidar();
+          await this._reloadList();
+          toast.success("Conclusão desfeita.");
+        } catch {
+          toast.error("Não foi possível desfazer tudo. Confira a lista.");
+        }
+      });
+    } catch (err) {
+      Modal.alert("Erro", errorMessage(err), "error");
+    } finally {
+      liberar();
+    }
+  }
+
+  /** Exclui todas as marcadas de uma vez -- ver o comentário equivalente em AtualizacoesView.excluirLote. */
+  async excluirLote() {
+    const ids = this.table.selecionadas.map(Number).filter(Number.isInteger);
+    if (ids.length === 0) return;
+
+    const ok = await Modal.confirm(
+      "Excluir selecionadas",
+      `${plural(ids.length, "tarefa")} ${ids.length === 1 ? "será excluída" : "serão excluídas"}.\n\n` +
+        "Você ainda poderá desfazer nos segundos seguintes.",
+      { confirmLabel: "Excluir", danger: true }
+    );
+    if (!ok) return;
+
+    const liberar = marcarOcupado(this.bulkExcluir);
+    try {
+      const { excluidos, registros } = await this.api.post("/agendamentos/excluir-lote", { ids });
+      this.table.limparMarcadas();
+      this.clearForm();
+      this._invalidar();
+      await this._reloadList();
+
+      toast.undo(`${plural(excluidos, "tarefa")} ${excluidos === 1 ? "excluída" : "excluídas"}.`, async () => {
+        try {
+          for (const registro of registros) {
+            const { id, ...dados } = registro;
+            await this.api.post("/agendamentos", dados);
+          }
+          this._invalidar();
+          await this._reloadList();
+          toast.success("Exclusão desfeita.");
+        } catch {
+          toast.error("Não foi possível desfazer tudo. Confira a lista.");
+        }
+      });
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
     } finally {

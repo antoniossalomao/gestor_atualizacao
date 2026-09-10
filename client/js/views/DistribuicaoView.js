@@ -92,9 +92,15 @@ export class DistribuicaoView extends View {
           </div>
 
           <div class="field">
-            <label class="field__label" for="dist-obs">Observações</label>
-            <textarea class="input distribution-notes" id="dist-obs" name="observacoes"
-                      placeholder="O que mudou nesta entrega..."></textarea>
+            <span class="field__label" id="dist-changelog-label">O que mudou nesta entrega</span>
+            <div class="changelog-editor" data-role="changelog-itens" aria-labelledby="dist-changelog-label"></div>
+            <button type="button" class="btn btn--small btn--ghost" data-action="add-changelog-item">${icon("plus")} Adicionar item</button>
+            <!-- Espelha os itens acima num texto só ("- item\n- item"), que é o que
+                 de fato viaja no FormData -- o backend continua guardando uma string
+                 livre em "observacoes" (ver VersaoService), sem precisar de schema
+                 novo só para isto ser uma lista. VersoesView reconhece o prefixo
+                 "- " na hora de mostrar e desenha como lista com marcadores. -->
+            <textarea id="dist-obs" name="observacoes" hidden></textarea>
           </div>
 
           <!-- Aviso do que vai acontecer ao publicar: aparece assim que um
@@ -184,6 +190,11 @@ export class DistribuicaoView extends View {
     this.buscaInput = this.container.querySelector('[data-role="busca"]');
     this.filtroSituacaoSelect = this.container.querySelector('[data-role="filtro-situacao"]');
     this.filtroSistemaSelect = this.container.querySelector('[data-role="filtro-sistema"]');
+
+    this.changelogItens = this.container.querySelector('[data-role="changelog-itens"]');
+    this.changelogTextarea = this.container.querySelector("#dist-obs");
+    this.container.querySelector('[data-action="add-changelog-item"]').addEventListener("click", () => this._addChangelogItem("", true));
+    this._resetChangelog();
 
     this.form.addEventListener("submit", (e) => this._submit(e));
     this.sistemaSelect.addEventListener("change", () => this._atualizarAvisoSubstituicao());
@@ -327,6 +338,64 @@ export class DistribuicaoView extends View {
       : `Nenhuma versão de ${sistema} está publicada. Esta será a primeira que os agentes vão receber.`;
   }
 
+  /**
+   * Volta o editor de changelog a um único item vazio -- estado inicial da
+   * tela e também o que fica depois de um envio bem-sucedido (junto com
+   * `this.form.reset()`, que não sabe nada sobre estes itens porque eles não
+   * são campos de formulário de verdade).
+   */
+  _resetChangelog() {
+    this.changelogItens.replaceChildren();
+    this._addChangelogItem("", false);
+  }
+
+  /**
+   * Acrescenta uma linha do changelog. `focar` só é true quando vem do botão
+   * "Adicionar item" clicado pela pessoa -- ao popular a primeira linha vazia
+   * (construção da tela, ou reset pós-envio) não faz sentido roubar o foco de
+   * ninguém.
+   */
+  _addChangelogItem(valor = "", focar = false) {
+    const linha = document.createElement("div");
+    linha.className = "changelog-item";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "input";
+    input.placeholder = "ex.: Corrige cálculo de desconto no orçamento";
+    input.value = valor;
+    input.addEventListener("input", () => this._syncChangelog());
+
+    const remover = document.createElement("button");
+    remover.type = "button";
+    remover.className = "changelog-item__remove";
+    remover.setAttribute("aria-label", "Remover este item");
+    remover.title = "Remover este item";
+    remover.textContent = "✕";
+    remover.addEventListener("click", () => {
+      linha.remove();
+      // Nunca deixa a lista com zero linhas -- sem nenhuma, não haveria onde
+      // clicar "Adicionar item" a não ser pelo botão isolado logo abaixo, o
+      // que também funciona, mas uma linha sempre visível deixa claro que
+      // "sem changelog" é uma escolha (campo vazio), não um estado quebrado.
+      if (!this.changelogItens.children.length) this._addChangelogItem("", false);
+      this._syncChangelog();
+    });
+
+    linha.append(input, remover);
+    this.changelogItens.appendChild(linha);
+    if (focar) input.focus();
+    this._syncChangelog();
+  }
+
+  /** Junta os itens não vazios em "- item\n- item", o texto que de fato viaja em "observacoes". */
+  _syncChangelog() {
+    const itens = [...this.changelogItens.querySelectorAll("input")]
+      .map((el) => el.value.trim())
+      .filter(Boolean);
+    this.changelogTextarea.value = itens.map((item) => `- ${item}`).join("\n");
+  }
+
   async _submit(event) {
     event.preventDefault();
     const formData = new FormData(this.form);
@@ -343,6 +412,7 @@ export class DistribuicaoView extends View {
     try {
       await this.api.postForm("/versoes", formData, { onProgress: (pct) => this._mostrarProgresso(pct) });
       this.form.reset();
+      this._resetChangelog();
       this._atualizarAvisoSubstituicao();
       toast.success("Versão enviada. Ela fica como rascunho até você publicar.");
       this._invalidarTudo();

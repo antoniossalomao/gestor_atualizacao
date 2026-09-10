@@ -88,6 +88,47 @@ class ClienteService {
     this.historico.registrar(usuario, "excluir", "cliente", `Cliente "${existente.nome}"`);
   }
 
+  /**
+   * Exclui vários clientes de uma vez. Diferente da exclusão em lote de
+   * Atualizações/Agendamentos, NÃO oferece "Desfazer": recriar um cliente
+   * perde o id antigo e, com o cadastro de Acessos remotos, perde também as
+   * credenciais de AnyDesk/Suporte Bredas daquele cliente (apagadas junto
+   * via ON DELETE CASCADE -- ver Database._migrate) -- um "desfazer" que
+   * finge ter voltado tudo ao normal, mas silenciosamente perdeu senha de
+   * acesso, seria pior que não ter Desfazer nenhum. Por isso a tela usa
+   * confirmação antes, igual já fazia para excluir um cliente só.
+   */
+  deleteMany(ids, usuario) {
+    const registros = this.db.clientes.findByIds(ids);
+    if (registros.length === 0) {
+      throw new NotFoundError("Nenhum dos clientes selecionados existe mais. A lista pode estar desatualizada.");
+    }
+    const excluidos = this.db.clientes.deleteMany(registros.map((r) => r.id));
+    const nomes = registros.slice(0, 3).map((r) => r.nome).join(", ") + (registros.length > 3 ? ` e mais ${registros.length - 3}` : "");
+    this.historico.registrar(usuario, "excluir", "cliente", `${excluidos} clientes excluídos de uma vez (${nomes})`);
+    return { excluidos };
+  }
+
+  /**
+   * Marca um sistema em vários clientes de uma vez (ex.: "esses 8 clientes
+   * agora têm NFCe"), em vez de abrir o cadastro de cada um e marcar o
+   * checkbox individualmente.
+   */
+  addSistemaMany(ids, nomeSistema, usuario) {
+    const limpo = (nomeSistema || "").trim();
+    if (!limpo) throw new ValidationError("Escolha um sistema.");
+    const registros = this.db.clientes.findByIds(ids);
+    if (registros.length === 0) {
+      throw new NotFoundError("Nenhum dos clientes selecionados existe mais. A lista pode estar desatualizada.");
+    }
+    const afetados = this.db.clientes.addSistemaToMany(registros.map((r) => r.id), limpo);
+    if (afetados > 0) {
+      const nomes = registros.slice(0, 3).map((r) => r.nome).join(", ") + (registros.length > 3 ? ` e mais ${registros.length - 3}` : "");
+      this.historico.registrar(usuario, "atualizar", "cliente", `Sistema "${limpo}" adicionado a ${afetados} cliente(s) de uma vez (${nomes})`);
+    }
+    return { afetados, total: registros.length };
+  }
+
   listSistemas() {
     return this.db.sistemas.list();
   }
@@ -142,6 +183,54 @@ class ClienteService {
     const grupo = (input.grupo || "").trim();
     const sistemasTexto = Array.isArray(input.sistemas) ? input.sistemas.join(", ") : "";
     return { nome, codigo, cidade, sistemasTexto, grupo };
+  }
+
+  /** Acessos remotos (AnyDesk / Suporte Bredas) das máquinas de um cliente -- aba Clientes, botão "Acessos". */
+  listAcessos(clienteId) {
+    const cliente = this.db.clientes.getById(clienteId);
+    if (!cliente) throw new NotFoundError("Cliente não encontrado.");
+    return this.db.clienteAcessos.listByCliente(clienteId);
+  }
+
+  addAcesso(clienteId, input, usuario) {
+    const cliente = this.db.clientes.getById(clienteId);
+    if (!cliente) throw new NotFoundError("Cliente não encontrado.");
+    const { maquina, anydesk, suporteBredas, observacoes } = this._validateAcesso(input);
+    const id = this.db.clienteAcessos.insert(clienteId, maquina, anydesk, suporteBredas, observacoes);
+    this.historico.registrar(usuario, "criar", "acesso", `Acesso "${maquina}" de "${cliente.nome}"`);
+    return this.db.clienteAcessos.getById(id);
+  }
+
+  updateAcesso(id, input, usuario) {
+    const existente = this.db.clienteAcessos.getById(id);
+    if (!existente) throw new NotFoundError("Acesso não encontrado.");
+    const { maquina, anydesk, suporteBredas, observacoes } = this._validateAcesso(input);
+    this.db.clienteAcessos.update(id, maquina, anydesk, suporteBredas, observacoes);
+    const cliente = this.db.clientes.getById(existente.clienteId);
+    this.historico.registrar(usuario, "atualizar", "acesso", `Acesso "${maquina}" de "${cliente ? cliente.nome : existente.clienteId}"`);
+    return this.db.clienteAcessos.getById(id);
+  }
+
+  removeAcesso(id, usuario) {
+    const existente = this.db.clienteAcessos.getById(id);
+    if (!existente) throw new NotFoundError("Acesso não encontrado.");
+    this.db.clienteAcessos.delete(id);
+    const cliente = this.db.clientes.getById(existente.clienteId);
+    this.historico.registrar(
+      usuario,
+      "excluir",
+      "acesso",
+      `Acesso "${existente.maquina}" de "${cliente ? cliente.nome : existente.clienteId}"`
+    );
+  }
+
+  _validateAcesso(input) {
+    const maquina = (input.maquina || "").trim();
+    if (!maquina) throw new ValidationError("Campo 'Máquina' é obrigatório.");
+    const anydesk = (input.anydesk || "").trim();
+    const suporteBredas = (input.suporteBredas || "").trim();
+    const observacoes = (input.observacoes || "").trim();
+    return { maquina, anydesk, suporteBredas, observacoes };
   }
 }
 

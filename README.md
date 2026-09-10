@@ -99,6 +99,44 @@ como referência.
   quando foram criadas de verdade, e contar uma data inventada seria pior
   que não mostrar nada.
 
+## Funcionalidades adicionadas — 10/09/2026
+
+- **Acessos remotos por cliente** (aba Clientes, botão **Acessos** no
+  topo, ao lado de "Novo Cliente"): cadastro de AnyDesk/Suporte Bredas de
+  cada máquina de um cliente (servidor, estações, etc.), com botão de
+  copiar ao lado de cada ID. Tabela nova (`cliente_acessos`), apagada
+  automaticamente junto com o cliente se ele for excluído.
+- **Ações em lote em Agendamentos e Clientes** (mesmo padrão que já
+  existia em Atualizações — segurar `Shift` e clicar em duas linhas
+  seleciona tudo entre elas): em Agendamentos dá para concluir ou excluir
+  várias tarefas de uma vez (com "Desfazer"); em Clientes dá para marcar
+  um sistema em vários de uma vez ou excluir vários (sem "Desfazer" aqui
+  — ver comentário em `ClienteService.deleteMany`, a exclusão em lote de
+  cliente também apaga os acessos remotos cadastrados neles).
+- **Changelog em itens na Distribuição**: o campo "Observações" ao
+  preparar uma versão virou uma lista de itens (adicionar/remover linha),
+  em vez de um texto livre só — a aba Versões mostra como lista com
+  marcadores.
+- **Histórico recente na Consulta**: a ficha de um cliente mostra as
+  últimas 5 atualizações dele, não só a mais recente.
+- **Verificação de integridade dos backups**: cada backup automático
+  roda um `PRAGMA integrity_check` do SQLite assim que é criado; se
+  falhar, aparece um aviso "Corrompido" na tela de Backups e um erro no
+  log do serviço — antes, um backup corrompido só seria descoberto na
+  hora de precisar restaurar de verdade.
+- **Trocar a própria senha e "último login"**: qualquer pessoa logada
+  pode trocar a própria senha pela tela de Usuários (pede a senha atual);
+  a mesma tela mostra quando cada conta acessou pela última vez. Para
+  quando ninguém mais consegue entrar, ver "Recuperando acesso" abaixo.
+- **Correção de um bug de CSS que afetava várias telas**: qualquer
+  elemento escondido com o atributo `hidden` cuja classe definisse
+  `display` (a maioria dos botões, barras de ferramentas, formulários
+  recolhíveis) na verdade continuava aparecendo — "Limpar busca"
+  aparecia mesmo sem busca nenhuma, a barra de progresso de upload
+  aparecia parada em "0%" sem upload nenhum, os formulários "Convidar
+  Pessoa"/"Trocar minha senha" apareciam sempre abertos. Corrigido com
+  uma regra CSS única e global, em vez de remendo por componente.
+
 ## Estrutura
 
 ```
@@ -156,6 +194,26 @@ cabeçalho — não é preciso acesso ao servidor nem rodar nada pelo
 terminal. **Remover** uma conta, porém, só administradores podem fazer.
 As demais travas continuam valendo para todo mundo: ninguém pode remover
 a própria conta enquanto logado com ela, nem a última conta que resta.
+
+Qualquer pessoa logada pode **trocar a própria senha** pela tela de
+Usuários (pede a senha atual, para confirmar que é o dono da conta mesmo
+com a sessão aberta). O sistema também guarda o **último login** de cada
+conta, visível na mesma tela — dá para ver quem de fato usa o sistema,
+não só quem tem conta cadastrada.
+
+### Recuperando acesso (ninguém consegue mais entrar)
+
+Se a única conta administradora esquecer a senha, não há como recuperar
+pela própria tela de login (de propósito — não existe envio de e-mail
+configurado). Com acesso à máquina onde o servidor roda (ou a uma cópia
+do `gestao.db`), rode a partir de `web/server`:
+
+```powershell
+npm run resetar-senha -- <usuario> "<nova senha>"
+```
+
+Isso redefine a senha direto no banco, sem precisar saber a antiga. Veja
+`resetar-senha.js` para os detalhes.
 
 ## Backup e restauração
 

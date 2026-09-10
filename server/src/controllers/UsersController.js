@@ -26,6 +26,16 @@ class UsersController {
       next(err);
     }
   };
+
+  changeOwnPassword = (req, res, next) => {
+    try {
+      const { senhaAtual, senhaNova } = req.body || {};
+      this.authService.changePassword(req.session.user, senhaAtual, senhaNova);
+      res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  };
 }
 
 module.exports = { UsersController };

@@ -47,6 +47,12 @@ const PATHS = {
     '<circle cx="10" cy="10" r="2.6"/><path d="M10 2.2v1.9M10 15.9v1.9M17.8 10h-1.9M4.1 10H2.2M15.5 4.5l-1.3 1.3M5.8 14.2l-1.3 1.3M15.5 15.5l-1.3-1.3M5.8 5.8 4.5 4.5" stroke-linecap="round"/>',
   relogio: '<circle cx="10" cy="10" r="7"/><path d="M10 5.8V10l2.8 1.8" stroke-linecap="round" stroke-linejoin="round"/>',
   calendario: '<rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v4M13 2v4" stroke-linecap="round"/>',
+
+  // -- acrescentado junto com o cadastro de Acessos remotos (aba Clientes) --
+  acessos:
+    '<rect x="2.5" y="3.5" width="15" height="10" rx="1.5"/><path d="M7 17h6M10 13.5V17" stroke-linecap="round"/><path d="M6.5 8.5l2-2 1.7 1.7 2.8-2.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  copiar:
+    '<rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M4.5 13H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v.5" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 
 /** @param {keyof typeof PATHS} name @returns {string} markup do `<svg>` pronto pra inserir via innerHTML */

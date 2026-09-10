@@ -107,6 +107,29 @@ class AgendamentoRepository extends BaseRepository {
   }
 
   /**
+   * Os registros completos (mesmas colunas de list(), sem criado_em/
+   * concluido_em) de uma lista de ids -- usado pelo "Desfazer" das ações em
+   * lote (exclusão e conclusão), que precisam do estado ANTES da ação para
+   * poder recriar/restaurar exatamente o que havia.
+   */
+  findByIds(ids) {
+    const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
+    if (limpos.length === 0) return [];
+    const marcadores = limpos.map(() => "?").join(", ");
+    return this.conn.prepare(`SELECT id, ${COLUMNS.join(", ")} FROM ${this.table} WHERE id IN (${marcadores})`).all(...limpos);
+  }
+
+  /** Variante em lote de markDone -- só toca as tarefas informadas, todas com o mesmo instante de conclusão. */
+  markDoneMany(ids, doneLabel) {
+    const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
+    if (limpos.length === 0) return 0;
+    const marcadores = limpos.map(() => "?").join(", ");
+    const stmt = this.conn.prepare(`UPDATE ${this.table} SET status = ?, concluido_em = ? WHERE id IN (${marcadores})`);
+    const concluidoEm = new Date().toISOString();
+    return this.conn.transaction(() => stmt.run(doneLabel, concluidoEm, ...limpos).changes)();
+  }
+
+  /**
    * Tempo medio (em dias) entre a tarefa ser criada e ser concluida, por
    * responsavel -- so entra no calculo quem tem as duas datas (tarefas
    * criadas antes desta coluna existir ficam de fora, em vez de contar com

@@ -34,7 +34,13 @@ class AuthService {
     if (!this.needsSetup()) {
       throw new ValidationError("Já existe uma conta cadastrada; use a tela de login.");
     }
-    return this.createUser({ nome, usuario, senha }, null, "admin");
+    const criado = this.createUser({ nome, usuario, senha }, null, "admin");
+    // Sem isto, a tela de Usuários mostraria "Nunca acessou" para o próprio
+    // admin, mesmo estando ele nesse exato momento olhando a tela recém-aberta
+    // -- setupAdmin() cria a sessão direto (ver AuthController), sem passar
+    // por login(), que é onde ultimo_login normalmente é registrado.
+    this.db.usuarios.registrarLogin(criado.id);
+    return criado;
   }
 
   /**
@@ -104,7 +110,33 @@ class AuthService {
     if (!linha) throw erroPadrao;
     const confere = bcrypt.compareSync(senha || "", linha.senha_hash);
     if (!confere) throw erroPadrao;
+    this.db.usuarios.registrarLogin(linha.id);
     return { id: linha.id, nome: linha.nome, usuario: linha.usuario, role: linha.role };
+  }
+
+  /**
+   * Troca a própria senha -- antes disso a única forma de "esquecer" uma
+   * senha era um administrador apagar a conta e criar outra (perdendo o
+   * histórico de quem fez o quê, já que ele referencia o id da conta). Exige
+   * a senha atual (não basta estar logado): a sessão pode ter ficado aberta
+   * num computador que não é o da pessoa, e trocar a senha sem confirmar a
+   * atual travaria o dono de verdade pra fora.
+   * @param {{id:number}} usuarioLogado
+   */
+  changePassword(usuarioLogado, senhaAtual, senhaNova) {
+    const linha = this.db.usuarios.findByUsuario(usuarioLogado.usuario);
+    // Só acontece se a conta foi excluída por outra pessoa entre a sessão
+    // abrir e este pedido chegar -- não é um caminho que a tela normal
+    // alcança, mas devolve um erro claro em vez de travar num bcrypt.compareSync(null).
+    if (!linha) throw new ValidationError("Sua conta não foi encontrada. Faça login novamente.");
+    if (!bcrypt.compareSync(senhaAtual || "", linha.senha_hash)) {
+      throw new ValidationError("Senha atual incorreta.");
+    }
+    if (!senhaNova || senhaNova.length < SENHA_MIN_LENGTH) {
+      throw new ValidationError(`A nova senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
+    }
+    this.db.usuarios.updateSenhaHash(linha.id, bcrypt.hashSync(senhaNova, SALT_ROUNDS));
+    this.historico.registrar(usuarioLogado, "atualizar", "usuario", `Senha de "${linha.nome}" (@${linha.usuario}) alterada`);
   }
 }
 

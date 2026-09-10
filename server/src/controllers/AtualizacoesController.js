@@ -42,6 +42,10 @@ class AtualizacoesController {
     res.json(this.atualizacaoService.lastUpdateForClient(req.params.nome));
   };
 
+  recentForClient = (req, res) => {
+    res.json(this.atualizacaoService.recentUpdatesForClient(req.params.nome, req.query.limit));
+  };
+
   latestVersionBySystem = (req, res) => {
     res.json(this.atualizacaoService.latestVersionBySystem());
   };
