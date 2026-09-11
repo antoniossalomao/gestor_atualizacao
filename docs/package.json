@@ -1,0 +1,12 @@
+{
+  "name": "gestor-docs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gerador do PDF da documentacao consolidada",
+  "scripts": {
+    "pdf": "node gerar-pdf.js"
+  },
+  "dependencies": {
+    "marked": "^15.0.12"
+  }
+}

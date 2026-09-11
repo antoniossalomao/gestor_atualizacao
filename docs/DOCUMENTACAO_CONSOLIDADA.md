@@ -9,10 +9,12 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 
 | | |
 |---|---|
-| **Versão deste documento** | 1.0 |
-| **Data** | 09 de setembro de 2026 |
+| **Versão deste documento** | 1.1 |
+| **Data** | 11 de setembro de 2026 |
 | **Autor** | Antonio Salomão |
+| **Nesta revisão** | [Seção 2.7](#27-mudanças-de-11092026) — relatório de atualização, padronização de sistemas/responsáveis, arquivamento de agendamentos, preferências por conta e limpeza do cadastro de clientes |
 | **Substitui** | Ver [seção 6 — histórico deste documento](#6-histórico-deste-documento-o-que-foi-consolidado) |
+| **PDF** | Gerado do `.md` por `npm run pdf` nesta pasta — nunca editado à mão |
 
 ---
 
