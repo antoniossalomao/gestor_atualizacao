@@ -1686,6 +1686,42 @@ table.data-table {
   margin-top: var(--sp-5);
 }
 
+/*
+ * Relatório da aba Atualizações -- o texto pronto para colar num chamado.
+ *
+ * Monoespaçado de propósito, mesmo o texto não sendo alinhado em colunas: a
+ * fonte é o que diz "isto é texto puro, e sai daqui exatamente como você está
+ * vendo", que é a promessa do botão Copiar. `pre-wrap` (e não `pre`) porque
+ * uma observação longa deve quebrar dentro da caixa -- rolagem horizontal
+ * para ler um relatório de oito linhas seria só estorvo.
+ */
+.relatorio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.relatorio .modal-box__title {
+  margin: 0;
+}
+
+/* Sem isto o alternador esticaria na largura toda do modal (é filho de um
+   flex em coluna) e pareceria uma barra de navegação, não um controle. */
+.relatorio .segmented {
+  align-self: flex-start;
+}
+
+textarea.relatorio__texto {
+  min-height: 260px;
+  max-height: min(420px, 50vh);
+  font-family: var(--fonte-mono);
+  font-size: var(--txt-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow: auto;
+  resize: vertical;
+}
+
 /* -- selo de ícone de painel (Configurações, e disponível para os demais) --
    O `.painel__head` que morava aqui saiu junto com a lista única de ajustes:
    o cabeçalho do painel de Configurações virou `.cfg__top`, com busca e botão

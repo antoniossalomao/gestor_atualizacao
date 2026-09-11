@@ -130,9 +130,19 @@ class AtualizacaoService {
     return this.db.atualizacoes.lastUpdateForClient(nome);
   }
 
-  /** As últimas N atualizações de um cliente específico (aba Consultar Cliente, "Histórico recente"). */
+  /**
+   * As últimas N atualizações de um cliente específico (aba Consultar Cliente,
+   * "Histórico recente").
+   *
+   * `limit=todas` pede o histórico completo -- é o que o relatório do cliente
+   * (aba Atualizações, botão "Gerar Relatório") usa, porque ele existe
+   * justamente para mostrar tudo o que já foi feito naquele cliente. `-1` é
+   * como o SQLite escreve "sem limite" num LIMIT. O teto de 50 continua
+   * valendo para qualquer número, que é o caso do "Histórico recente".
+   */
   recentUpdatesForClient(nome, limit = 5) {
-    return this.db.atualizacoes.recentUpdatesForClient(nome, Math.min(Math.max(Number(limit) || 5, 1), 50));
+    const efetivo = String(limit) === "todas" ? -1 : Math.min(Math.max(Number(limit) || 5, 1), 50);
+    return this.db.atualizacoes.recentUpdatesForClient(nome, efetivo);
   }
 
   /** Última versão registrada para cada sistema do histórico operacional. */

@@ -137,6 +137,28 @@ como referência.
   Pessoa"/"Trocar minha senha" apareciam sempre abertos. Corrigido com
   uma regra CSS única e global, em vez de remendo por componente.
 
+## Funcionalidades adicionadas — 11/09/2026
+
+- **Relatório de atualização** (aba Atualizações, botão **Gerar
+  Relatório** ao lado de "Atualizar Selecionado"): monta o texto do que
+  foi feito, pronto para copiar num chamado. Dois formatos no mesmo
+  modal — **Esta atualização** (o registro selecionado, com a versão
+  anterior do cliente entre parênteses) e **Histórico do cliente**
+  (todas as atualizações daquele cliente, da mais recente para a mais
+  antiga). O botão "Copiar" leva o texto para a área de transferência e
+  fecha; se o navegador não deixar copiar (HTTP puro, ver
+  `copyToClipboard` em `client/js/core/html.js`), o modal fica aberto
+  com o texto selecionado em vez de sumir com ele.
+
+  Não exigiu campo novo nenhum: o relatório usa só o que já está gravado
+  em `atualizacoes` e `clientes`, então os registros antigos vindos de
+  planilha geram relatório igual aos de hoje. Campo vazio não vira linha
+  — quase metade do histórico não tem responsável preenchido, e uma
+  página de "Por: —" seria pior que um texto mais curto. A única
+  mudança no backend foi aceitar `limit=todas` em
+  `/atualizacoes/recent-by-client/:nome`, que antes travava em 50: o
+  relatório do cliente existe justamente para mostrar tudo.
+
 ## Estrutura
 
 ```

@@ -9,7 +9,8 @@ import { toast } from "../core/Toast.js";
 import { debounce } from "../core/debounce.js";
 import { todayBR, isValidDateBR } from "../core/date.js";
 import { icon } from "../core/icons.js";
-import { escapeHtml, plural } from "../core/html.js";
+import { escapeHtml, plural, copyToClipboard } from "../core/html.js";
+import { relatorioDeAtualizacao, relatorioDoCliente } from "../core/relatorio.js";
 import { emptyState } from "../core/EmptyState.js";
 import { withBusyButton, marcarOcupado } from "../core/guard.js";
 import { prefs } from "../core/prefs.js";
@@ -35,6 +36,7 @@ export class AtualizacoesView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
     this.selectedId = null;
+    this.selectedRow = null;
     // Filtros restaurados da sessão: sair da aba e voltar não zera mais nada.
     const salvo = prefs.get("atualizacoes:filtros", {});
     this.page = 1;
@@ -55,6 +57,13 @@ export class AtualizacoesView extends View {
         <div class="form-actions">
           <button type="submit" class="btn btn--accent" data-action="add">Adicionar</button>
           <button type="button" class="btn" data-action="update">Atualizar Selecionado</button>
+          <!--
+            "Gerar Relatório" fica aqui, e não lá embaixo junto de Importar /
+            Exportar: como "Atualizar Selecionado", ele age sobre a linha
+            selecionada na tabela, e é aqui que estão os botões que dependem
+            dessa seleção. Lá embaixo estão os que agem sobre a lista inteira.
+          -->
+          <button type="button" class="btn" data-action="relatorio">Gerar Relatório</button>
           <button type="button" class="btn btn--ghost" data-action="clear">Limpar</button>
           <span class="form-actions__hint text-muted" data-role="modo"></span>
         </div>
@@ -234,6 +243,7 @@ export class AtualizacoesView extends View {
 
     this.addBtn = this.container.querySelector('[data-action="add"]');
     this.updateBtn = this.container.querySelector('[data-action="update"]');
+    this.relatorioBtn = this.container.querySelector('[data-action="relatorio"]');
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
     const exportBtn = this.container.querySelector('[data-action="export"]');
 
@@ -244,6 +254,7 @@ export class AtualizacoesView extends View {
       this._submit();
     });
     this.updateBtn.addEventListener("click", () => this.updateRecord());
+    this.relatorioBtn.addEventListener("click", () => this.abrirRelatorio());
     this.container.querySelector('[data-action="clear"]').addEventListener("click", () => this.clearForm({ comDesfazer: true }));
     this.deleteBtn.addEventListener("click", () => this.deleteRecord());
     exportBtn.addEventListener("click", withBusyButton(exportBtn, () => this.exportXlsx()));
@@ -437,6 +448,11 @@ export class AtualizacoesView extends View {
 
   _loadIntoForm(row) {
     this.selectedId = row.id;
+    // Guardado inteiro (e não só o id) porque o relatório sai DO REGISTRO
+    // SALVO, não do que está digitado no formulário: quem abriu a linha,
+    // mexeu num campo e não salvou continua recebendo o relatório do que de
+    // fato está gravado, que é o que ele vai colar no chamado.
+    this.selectedRow = row;
     for (const col of COLUMNS) this.fields[col.key].value = row[col.key] ?? "";
     this._pintarModo();
   }
@@ -469,6 +485,7 @@ export class AtualizacoesView extends View {
     const modo = this.container.querySelector('[data-role="modo"]');
     modo.textContent = this.selectedId == null ? "" : `Editando o registro #${this.selectedId}`;
     this.updateBtn.disabled = this.selectedId == null;
+    this.relatorioBtn.disabled = this.selectedId == null;
     this.deleteBtn.disabled = this.selectedId == null;
   }
 
@@ -663,6 +680,7 @@ export class AtualizacoesView extends View {
     }
 
     this.selectedId = null;
+    this.selectedRow = null;
     this.table?.clearSelection();
     for (const col of COLUMNS) this.fields[col.key].value = "";
     this.fields.data.value = todayBR();
@@ -727,6 +745,114 @@ export class AtualizacoesView extends View {
     });
     downloadBlob(blob, `atualizacoes${this._temFiltro() ? "-filtrado" : ""}.xlsx`);
     toast.info(this._temFiltro() ? "Exportação concluída (com os filtros atuais)." : "Exportação concluída.");
+  }
+
+  /**
+   * Abre o relatório da linha selecionada, pronto para colar num chamado.
+   *
+   * Os dois formatos (só esta atualização / histórico do cliente) são
+   * montados de uma vez, da MESMA consulta: o histórico completo do cliente
+   * serve aos dois -- é dele que sai também a "versão anterior" do relatório
+   * individual, sem campo novo nenhum no cadastro. Trocar de formato dentro
+   * do modal, portanto, não vai à rede.
+   */
+  async abrirRelatorio() {
+    if (this.selectedId == null) {
+      Modal.alert("Seleção", "Selecione um registro na tabela primeiro.", "warning");
+      return;
+    }
+    const registro = this.selectedRow;
+    const nome = registro.cliente;
+
+    const liberar = marcarOcupado(this.relatorioBtn);
+    try {
+      const [cliente, historico] = await Promise.all([
+        // Cliente não cadastrado na aba Clientes não é erro -- a importação de
+        // planilha avisa que isso acontece, e o registro de atualização existe
+        // do mesmo jeito. Vem nulo, e o relatório sai sem código nem cidade em
+        // vez de não sair.
+        this.api.get(`/clientes/by-nome/${encodeURIComponent(nome)}`, null, { key: "relatorio:cliente" }),
+        this.api.get(
+          `/atualizacoes/recent-by-client/${encodeURIComponent(nome)}`,
+          { limit: "todas" },
+          { key: "relatorio:historico" }
+        ),
+      ]);
+      this._modalRelatorio(registro, cliente, historico);
+    } catch (err) {
+      if (err?.cancelled) return;
+      Modal.alert("Erro", errorMessage(err), "error");
+    } finally {
+      liberar();
+    }
+  }
+
+  _modalRelatorio(registro, cliente, historico) {
+    const registros = Array.isArray(historico) ? historico : [];
+    const posicao = registros.findIndex((r) => r.id === registro.id);
+    const textos = {
+      atualizacao: relatorioDeAtualizacao(registro, {
+        cliente,
+        // O histórico vem do mais recente para o mais antigo, então a
+        // atualização anterior é simplesmente a próxima da lista.
+        anterior: posicao >= 0 ? registros[posicao + 1] : null,
+      }),
+      cliente: relatorioDoCliente(registro.cliente, registros, cliente),
+    };
+
+    const { box, close } = Modal.abrirCaixa({ largura: 640 });
+    // Sufixo aleatório no `name` dos radios: dois relatórios abertos ao mesmo
+    // tempo não deveriam acontecer, mas se acontecerem os grupos não se
+    // misturam -- é o mesmo cuidado que Modal._open já toma com o id do título.
+    const sufixo = Math.random().toString(36).slice(2, 8);
+    const tituloId = `relatorio-titulo-${sufixo}`;
+    box.setAttribute("aria-labelledby", tituloId);
+    box.innerHTML = `
+      <div class="relatorio">
+        <h3 class="modal-box__title" id="${tituloId}">Relatório</h3>
+        <div class="segmented" role="radiogroup" aria-label="Conteúdo do relatório">
+          <label class="cfg-group__option">
+            <input type="radio" name="rel-${sufixo}" value="atualizacao" checked />
+            <span>Esta atualização</span>
+          </label>
+          <label class="cfg-group__option">
+            <input type="radio" name="rel-${sufixo}" value="cliente" />
+            <span>Histórico do cliente</span>
+          </label>
+        </div>
+        <textarea class="input relatorio__texto" data-role="texto" readonly spellcheck="false"
+                  aria-label="Texto do relatório"></textarea>
+        <div class="modal-box__actions">
+          <button type="button" class="btn" data-action="fechar">Fechar</button>
+          <button type="button" class="btn btn--accent" data-action="copiar">Copiar</button>
+        </div>
+      </div>
+    `;
+
+    const area = box.querySelector('[data-role="texto"]');
+    area.value = textos.atualizacao;
+    for (const radio of box.querySelectorAll('input[type="radio"]')) {
+      radio.addEventListener("change", () => {
+        if (radio.checked) area.value = textos[radio.value];
+      });
+    }
+
+    const copiar = box.querySelector('[data-action="copiar"]');
+    copiar.addEventListener("click", async () => {
+      if (await copyToClipboard(area.value)) {
+        close();
+        toast.success("Relatório copiado.");
+        return;
+      }
+      // Sem área de transferência (pode acontecer em HTTP puro, ver
+      // copyToClipboard) o modal FICA ABERTO, com o texto já selecionado:
+      // fechar aqui jogaria fora a única cópia que a pessoa tem.
+      area.focus();
+      area.select();
+      toast.error("Não foi possível copiar. O texto está selecionado — use Ctrl+C.");
+    });
+    box.querySelector('[data-action="fechar"]').addEventListener("click", () => close());
+    copiar.focus();
   }
 
   _invalidar() {
