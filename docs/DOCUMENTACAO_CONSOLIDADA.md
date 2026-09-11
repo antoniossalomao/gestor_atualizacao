@@ -20,6 +20,7 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 
 1. [Visão geral do projeto](#1-visão-geral-do-projeto)
 2. [Painel web — Gestor de Atualizações](#2-painel-web--gestor-de-atualizações)
+   — inclui [2.7 Mudanças de 11/09/2026](#27-mudanças-de-11092026)
 3. [Atualizador Inteligente de ERP — agente local (C#)](#3-atualizador-inteligente-de-erp--agente-local-c)
 4. [Como verificar](#4-como-verificar)
 5. [Auditoria de agosto/set 2026 — o que mudou desde então](#5-auditoria-de-agostoset2026-o-que-mudou-desde-então)
@@ -473,6 +474,84 @@ uso):
   instantaneamente enquanto outra pessoa edita.
 - SQLite com `journal_mode=WAL` aguenta bem uma equipe pequena/média; para uso muito intenso e
   concorrente, a migração natural seria PostgreSQL — não feita nesta versão.
+- 32 nomes de cliente em `atualizacoes` ainda não têm cadastro correspondente (48 registros), e
+  por isso não aparecem no Resumo nem na Consulta. A triagem é manual por enquanto: não existe
+  tela de conciliação que ofereça "vincular ao cliente parecido" ou "cadastrar" — ver
+  [2.7](#27-mudanças-de-11092026).
+- O cadastro de Clientes não gera o código do cliente: o campo é texto livre e nasce vazio,
+  embora o padrão da base seja `C` + 6 dígitos sem exceção em 374 cadastros.
+
+### 2.7 Mudanças de 11/09/2026
+
+Cinco mudanças, das quais duas corrigem defeitos que estavam escondidos nos dados, não no código.
+
+**Relatório de atualização** (aba Atualizações, botão "Gerar Relatório"). Monta o texto do que foi
+feito, pronto para colar num chamado, em dois formatos: a atualização selecionada (com a versão
+anterior daquele cliente entre parênteses) e o histórico completo do cliente. Não exigiu campo
+novo: sai só do que já está em `atualizacoes` e `clientes`, então os registros antigos vindos de
+planilha geram relatório igual aos de hoje. Campo vazio não vira linha — quase metade do histórico
+não tem responsável preenchido, e uma página de "Por: —" seria pior que um texto mais curto. Os
+dois formatos vêm da mesma consulta (o histórico do cliente serve aos dois), então trocar de
+formato no modal não vai à rede. Única mudança no backend: `limit=todas` em
+`/atualizacoes/recent-by-client/:nome`, que antes travava em 50.
+
+**Padronização de nomes de sistema e de responsável** (`services/normalizacao.js`). O campo
+"Sistema" sempre foi texto livre e tinha acumulado **144 grafias para 14 sistemas** — `B_NFE`
+(342 ocorrências), `B_importaXML` (301), `B_areadocontador e B_importaXML` (203), `B_vendas`,
+`NFCe`, `Sped`. Não era um problema estético: `relatorioPorSistema` compara texto exato, então
+**60 dos 370 clientes de B_NFe apareciam como "Nunca atualizado"** só porque alguém tinha digitado
+`B_NFE`. O campo Responsável tinha o mesmo defeito em menor escala (`CAMILA`/`Camila`/`cAMILA`/
+`camila` eram quatro pessoas para o filtro e para a média de dias do Resumo).
+
+A normalização quebra o texto nos separadores que as pessoas usaram de verdade (vírgula, ponto,
+`" e "`, `" - "`) e casa cada pedaço com o catálogo ignorando caixa, acento e pontuação,
+consultando um mapa de apelidos para o que não casa por semelhança. Responsável segue a mesma
+ideia, mas **sem lista fixa de pessoas**: canoniza contra as grafias que já existem, então quem
+entrar na equipe amanhã é canonizado pela primeira grafia gravada. Roda no cadastro, na edição e
+**na importação de planilha** — normalizar só na tela deixaria a próxima importação desfazer a
+faxina. Um nome que não casa com nada é mantido intacto de propósito: inventar destino para o
+desconhecido estragaria em silêncio a primeira atualização de um sistema novo.
+
+O histórico já gravado foi acertado por `scripts/normalizar-historico.js`, com as mesmas funções
+(simulação por padrão, `--aplicar` numa transação só). Resultado medido: 650 atualizações com
+sistema reescrito, 36 com responsável, 1 agendamento; as grafias fora do catálogo caíram de 144
+(1.164 ocorrências) para 6 (10 ocorrências), todas as seis deliberadamente ignoradas (`CTe`,
+`DFE`, `B_Rat`, `B_Vet`, `B_SYNC`, `B_DFe` — não são sistemas). Cinco sistemas entraram no
+catálogo por já aparecerem em atualizações reais: `B_NFCe`, `B_Sped`, `B_Vendas Simples`,
+`B_Marques` e `B_Marivet`.
+
+**Arquivamento automático de agendamentos concluídos.** Tarefa concluída há mais de
+`AGENDAMENTO_ARQUIVAR_DIAS` (30, no `.env`) sai da lista sozinha. A varredura roda junto da
+listagem, **sem agendador**: o app não tem um, um cron só para isto seria mais peça do que o
+problema pede, e um `UPDATE` cujo `WHERE` quase nunca casa, numa tabela de dezenas de linhas, roda
+exatamente quando alguém está olhando a lista. Coluna `arquivado_em`, **não** `DELETE`: a tarefa
+arquivada continua contando no tempo médio de resolução por responsável do Resumo — apagar a linha
+limparia a tela e estragaria a métrica no mesmo gesto. O filtro de Status ganhou "Arquivadas" (com
+a contagem no rótulo) e um botão "Reabrir". Desarquivar **reabre** de propósito: como a varredura
+roda a cada listagem, uma tarefa que só saísse do arquivo continuando "Concluído" seria arquivada
+de novo no mesmo segundo. Só arquiva quem tem `concluido_em` preenchido — tarefas concluídas antes
+daquela coluna existir não têm como saber há quanto tempo, e sumir por um prazo incalculável seria
+arquivar no escuro.
+
+**Preferências passam a ser da conta** (`usuario_preferencias`, `GET`/`PUT /api/preferencias`).
+Detalhado em [2.2](#22-arquitetura-do-código). Em resumo: viviam só no `localStorage`, e o efeito
+aparecia na hora errada — trocar de máquina ou de navegador devolvia o app aos padrões, e num
+computador compartilhado as escolhas de uma pessoa recebiam a seguinte. O `localStorage` continua
+sendo escrito como **cache**, porque `theme-init.js` roda no `<head>` e precisa de resposta
+síncrona; esperar uma requisição ali faria a página nascer no tema errado. Migração é invisível: a
+conta que entra sem nada salvo no servidor sobe o que estava no navegador. O aviso de falhas por
+notificação não acompanha a conta — depende de permissão concedida por aparelho.
+
+**Limpeza do cadastro de clientes.** Uma comparação da tabela `clientes` (373 linhas) contra a
+lista mantida fora do sistema (374) mostrou o cadastro praticamente idêntico: 1 faltando, 0
+sobrando, 0 nomes divergentes, 0 cidades divergentes. O problema real estava do outro lado — **38
+nomes de cliente apareciam em `atualizacoes` sem cadastro correspondente**, e esses 57 registros
+não apareciam no Resumo nem na Consulta. Foram resolvidos 6: três clientes cancelados tiveram suas
+5 atualizações apagadas (`LISS ESMERALDA`, `RECANTO DAS PISCINAS`, `MY BABY`), o ex-cliente
+`ZIF CONFEC.` teve a sua apagada, `AELLA BOUTIQUE LTDA` foi cadastrado (código `C017083`, o
+próximo da sequência `C` + 6 dígitos) e as duas atualizações escritas como `AELLA BOUTIQUE` foram
+vinculadas a ele. Restam **32 órfãos / 48 registros**, pendentes de triagem. Toda a limpeza está
+registrada na aba Histórico sob o autor "limpeza de cadastro".
 
 ---
 
