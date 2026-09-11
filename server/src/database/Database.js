@@ -274,7 +274,7 @@ class Database {
       ["atualizador_logs", "duracao_ms", "INTEGER"],
       ["atualizador_logs", "maquina", "TEXT"],
       // "grupo": agrupa clientes com varias unidades sob uma rede/franquia
-      // (ex.: sete lojas "SORVEMIX") -- so um rotulo de texto livre, nao
+      // (ex.: sete lojas da mesma rede) -- so um rotulo de texto livre, nao
       // uma tabela propria, para nao exigir migrar cadastros existentes.
       ["clientes", "grupo", "TEXT"],
       // criado_em/concluido_em: sem isso nao havia como medir quanto tempo

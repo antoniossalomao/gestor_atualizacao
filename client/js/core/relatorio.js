@@ -105,7 +105,7 @@ function texto(valor) {
   return String(valor ?? "").trim();
 }
 
-/** "CASA DE CARNES SÃO FRANCISCO (C014200)" -- sem o código se não houver. */
+/** "MERCADO EXEMPLO (C012345)" -- sem o código se não houver. */
 function nomeComCodigo(nome, cliente) {
   const codigo = texto(cliente?.codigo);
   return codigo ? `${texto(nome)} (${codigo})` : texto(nome);

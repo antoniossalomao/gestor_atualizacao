@@ -50,7 +50,7 @@ export class ClientesView extends View {
           <div class="field"><label class="field__label" for="cli-cidade">Cidade</label><input type="text" class="input" id="cli-cidade" data-field="cidade" /></div>
           <div class="field">
             <label class="field__label" for="cli-grupo">Grupo/Rede</label>
-            <input type="text" class="input" id="cli-grupo" data-field="grupo" placeholder="ex.: SORVEMIX" autocomplete="off" />
+            <input type="text" class="input" id="cli-grupo" data-field="grupo" placeholder="ex.: REDE EXEMPLO" autocomplete="off" />
           </div>
         </div>
 

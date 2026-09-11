@@ -549,10 +549,9 @@ lista mantida fora do sistema (374) mostrou o cadastro praticamente idêntico: 1
 sobrando, 0 nomes divergentes, 0 cidades divergentes. O problema real estava do outro lado — **38
 nomes de cliente apareciam em `atualizacoes` sem cadastro correspondente**, e esses 57 registros
 não apareciam no Resumo nem na Consulta. Foram resolvidos 6: três clientes cancelados tiveram suas
-5 atualizações apagadas (`LISS ESMERALDA`, `RECANTO DAS PISCINAS`, `MY BABY`), o ex-cliente
-`ZIF CONFEC.` teve a sua apagada, `AELLA BOUTIQUE LTDA` foi cadastrado (código `C017083`, o
-próximo da sequência `C` + 6 dígitos) e as duas atualizações escritas como `AELLA BOUTIQUE` foram
-vinculadas a ele. Restam **32 órfãos / 48 registros**, pendentes de triagem. Toda a limpeza está
+5 atualizações apagadas, um ex-cliente teve a sua apagada, um cliente que estava na lista externa
+mas não no cadastro foi criado (com o próximo código da sequência `C` + 6 dígitos) e as duas
+atualizações que traziam o nome dele sem o sufixo "LTDA" foram vinculadas a esse cadastro. Restam **32 órfãos / 48 registros**, pendentes de triagem. Toda a limpeza está
 registrada na aba Histórico sob o autor "limpeza de cadastro".
 
 ---
@@ -725,7 +724,7 @@ configurado. `atualizador.ini` nunca deve ser commitado (tem credencial real) �
 
 `API_TOKEN` precisa bater com `AGENT_API_TOKEN` do servidor. `CODIGO_CLIENTE` não precisa ser CNPJ
 de verdade — é um identificador livre; recomendado usar o `codigo` já cadastrado na aba
-**Clientes** do painel (ex.: `C016058`), que o painel casa automaticamente com o cliente. `SISTEMA`
+**Clientes** do painel (ex.: `C012345`), que o painel casa automaticamente com o cliente. `SISTEMA`
 precisa bater, letra por letra, com um sistema cadastrado na aba **Sistemas** — uma máquina que
 roda mais de um sistema precisa de uma instância do serviço por sistema.
 

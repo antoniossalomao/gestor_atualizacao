@@ -1,0 +1,14 @@
+# Normaliza a quebra de linha no repositório: tudo é gravado com LF no git,
+# independente do que o Windows usa no disco de quem edita.
+#
+# Sem isto, uma ferramenta que salve um arquivo em CRLF faz o git mostrar o
+# ARQUIVO INTEIRO como alterado, e a mudança de verdade -- duas linhas --
+# desaparece no meio de trezentas. Aconteceu aqui em 11/09/2026.
+* text=auto eol=lf
+
+# Binários: nunca converter, nunca tentar fazer diff de texto.
+*.png   binary
+*.ico   binary
+*.pdf   binary
+*.db    binary
+*.xlsx  binary
