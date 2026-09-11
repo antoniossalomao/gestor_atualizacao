@@ -43,6 +43,36 @@ class UsuarioRepository extends BaseRepository {
   registrarLogin(id) {
     this.conn.prepare("UPDATE usuarios SET ultimo_login = ? WHERE id = ?").run(new Date().toISOString(), id);
   }
+
+  /**
+   * As preferencias de apresentacao desta conta.
+   *
+   * Devolve `{}` -- e nao null -- quando a conta nunca salvou nenhuma: quem
+   * chama quer aplicar um conjunto de preferencias, e "nenhuma" e um conjunto
+   * vazio, nao a ausencia de resposta. JSON corrompido (edicao manual do
+   * banco, gravacao interrompida) tambem vira `{}`: o app abrir nos padroes e
+   * muito melhor que ele nao abrir.
+   */
+  preferencias(usuarioId) {
+    const linha = this.conn.prepare("SELECT prefs_json FROM usuario_preferencias WHERE usuario_id = ?").get(usuarioId);
+    if (!linha) return {};
+    try {
+      const valor = JSON.parse(linha.prefs_json);
+      return valor && typeof valor === "object" && !Array.isArray(valor) ? valor : {};
+    } catch {
+      return {};
+    }
+  }
+
+  /** Grava o conjunto INTEIRO de preferencias da conta (substitui o anterior). */
+  salvarPreferencias(usuarioId, prefs) {
+    this.conn
+      .prepare(
+        `INSERT INTO usuario_preferencias (usuario_id, prefs_json, atualizado_em) VALUES (@id, @json, @agora)
+         ON CONFLICT(usuario_id) DO UPDATE SET prefs_json = @json, atualizado_em = @agora`
+      )
+      .run({ id: usuarioId, json: JSON.stringify(prefs), agora: new Date().toISOString() });
+  }
 }
 
 module.exports = { UsuarioRepository };

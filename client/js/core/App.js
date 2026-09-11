@@ -7,9 +7,9 @@ import { Router } from "./router.js";
 import { CommandPalette } from "./CommandPalette.js";
 import { ligarAtalhoAjuda, mostrarAtalhos } from "./Shortcuts.js";
 import { theme } from "./theme.js";
-import { settings } from "./prefs.js";
+import { settings, conectarPreferencias } from "./prefs.js";
 import { abrirConfiguracoes } from "./ConfiguracoesPanel.js";
-import { aparencia } from "./appearance.js";
+import { aparencia, reaplicarAparencia } from "./appearance.js";
 import { RequestCancelled } from "../api/ApiClient.js";
 import { LoginView } from "../views/LoginView.js";
 import { ResumoView } from "../views/ResumoView.js";
@@ -138,6 +138,18 @@ export class App {
   _onAuthenticated(user) {
     this.user = user;
     this.api.resetUnauthorized();
+
+    // As preferências de apresentação são da CONTA, não do navegador. O
+    // localStorage já pintou a tela (theme-init.js, no <head>, antes do
+    // primeiro pixel) -- isto busca as da conta e corrige se divergirem, o
+    // que é o caso quando a pessoa entra de outra máquina ou quando outra
+    // pessoa usou este mesmo navegador antes. Sem `await`: o app não fica
+    // esperando por isso para abrir.
+    conectarPreferencias(this.api, user, () => {
+      theme.aplicar();
+      reaplicarAparencia();
+    });
+
     this._buildShell();
     this.router = new Router(
       TABS.map((t) => t.key),

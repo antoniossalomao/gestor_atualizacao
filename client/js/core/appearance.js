@@ -190,24 +190,36 @@ export const aparencia = {
     if (posicaoAvisos) settings.set("posicaoAvisos", posicaoAvisos);
     if (lembrarFiltros !== undefined) settings.set("lembrarFiltros", Boolean(lembrarFiltros));
 
-    pintar();
-
-    // Quem mudou foi só o CSS quando a densidade muda -- mas o número de
-    // linhas por página muda o que as telas precisam PEDIR ao servidor, e elas
-    // não têm como adivinhar sozinhas que a preferência virou outra. O evento
-    // avisa; quem se importa, escuta (ver App._ligarAparencia).
-    document.dispatchEvent(
-      new CustomEvent("aparencia:mudou", {
-        detail: {
-          densidade: this.densidade(),
-          linhasPorPagina: this.linhasPorPagina(),
-          altura: this.altura(),
-          ritmoPainel: this.ritmoPainel(),
-        },
-      })
-    );
+    reaplicarAparencia();
   },
 };
+
+/**
+ * Redesenha tudo que depende das preferências e avisa quem precisa recarregar.
+ *
+ * Serve a dois momentos: quem acabou de mexer no painel de Configurações, e a
+ * chegada das preferências da conta vindas do servidor (ver
+ * `conectarPreferencias` em prefs.js), que pode trazer valores diferentes dos
+ * que o cache local pintou alguns milissegundos antes.
+ */
+export function reaplicarAparencia() {
+  pintar();
+
+  // Quem mudou foi só o CSS quando a densidade muda -- mas o número de
+  // linhas por página muda o que as telas precisam PEDIR ao servidor, e elas
+  // não têm como adivinhar sozinhas que a preferência virou outra. O evento
+  // avisa; quem se importa, escuta (ver App._ligarAparencia).
+  document.dispatchEvent(
+    new CustomEvent("aparencia:mudou", {
+      detail: {
+        densidade: aparencia.densidade(),
+        linhasPorPagina: aparencia.linhasPorPagina(),
+        altura: aparencia.altura(),
+        ritmoPainel: aparencia.ritmoPainel(),
+      },
+    })
+  );
+}
 
 /**
  * Escreve no `<html>` o estado atual de tudo que o CSS lê.

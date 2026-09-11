@@ -180,8 +180,33 @@ como referência.
   como a varredura roda a cada listagem, uma tarefa que apenas saísse do
   arquivo continuando "Concluído" sumiria de novo no mesmo instante. O
   prazo está em `AGENDAMENTO_ARQUIVAR_DIAS` no `.env` — é regra da equipe
-  inteira, e não uma preferência por pessoa como as do painel de
-  Configurações (que vivem no localStorage de cada navegador).
+  inteira, não uma preferência de cada pessoa: o conteúdo da lista precisa
+  ser o mesmo para todo mundo.
+
+- **Configurações passam a ser da conta, não do navegador**: tema, cor de
+  destaque, tamanho do texto, densidade, linhas por página, tela inicial e
+  as demais opções do painel agora ficam no servidor
+  (`usuario_preferencias`, via `GET`/`PUT /api/preferencias`), uma linha
+  por conta. Antes viviam só no localStorage, e o efeito aparecia na hora
+  errada: trocar de máquina, usar o Edge em vez do Chrome ou limpar os
+  dados do site devolvia o app aos padrões — e num computador
+  compartilhado as escolhas de uma pessoa recebiam a seguinte.
+
+  O localStorage **continua sendo escrito**, agora como cache, e isso não é
+  redundância: `theme-init.js` roda no `<head>`, antes do primeiro pixel, e
+  precisa de uma resposta síncrona. Esperar uma requisição ali faria a
+  página nascer no tema errado e trocar na cara de quem está olhando. O
+  cache pinta na hora; as preferências da conta chegam alguns
+  milissegundos depois e corrigem se divergirem. Quem entra numa conta
+  diferente no mesmo navegador tem o cache limpo antes, para não herdar o
+  tema de quem usou por último.
+
+  Migração é invisível: na primeira vez que uma conta entra sem nada salvo
+  no servidor, o que estava no localStorage daquele navegador vira as
+  preferências dela. A única opção que **não** acompanha a conta é o aviso
+  de falhas por notificação — depende da permissão que o navegador concede
+  por aparelho, e sincronizá-la faria o painel dizer "ativado" numa máquina
+  onde a permissão nunca foi pedida.
 
 ## Estrutura
 

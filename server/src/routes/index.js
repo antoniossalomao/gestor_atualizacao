@@ -76,9 +76,15 @@ class ApiRouter {
 
   // Tudo abaixo exige sessao valida (ver middlewares/requireAuth.js).
   _registerProtectedRoutes() {
-    const { clientes, sistemas, atualizacoes, agendamentos, resumo, backups, historico, usuarios, versoes } = this.controllers;
+    const { clientes, sistemas, atualizacoes, agendamentos, resumo, backups, historico, usuarios, versoes, preferencias } = this.controllers;
     const api = express.Router();
     api.use(requireAuth);
+
+    // Preferencias de apresentacao da conta logada (tema, densidade, linhas
+    // por pagina...). Sem :id na rota de proposito: sao sempre as de quem
+    // esta logado -- ver PreferenciasController.
+    api.get("/preferencias", preferencias.get);
+    api.put("/preferencias", preferencias.put);
 
     api.get("/clientes", clientes.list);
     api.get("/clientes/names", clientes.names);

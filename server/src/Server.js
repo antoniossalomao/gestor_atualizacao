@@ -14,6 +14,7 @@ const { AgendamentoService } = require("./services/AgendamentoService");
 const { BackupService } = require("./services/BackupService");
 const { NotificationService } = require("./services/NotificationService");
 const { VersaoService } = require("./services/VersaoService");
+const { PreferenciaService } = require("./services/PreferenciaService");
 const { AlertaAgenteService } = require("./services/AlertaAgenteService");
 const { AuthController } = require("./controllers/AuthController");
 const { ClientesController } = require("./controllers/ClientesController");
@@ -25,6 +26,7 @@ const { BackupsController } = require("./controllers/BackupsController");
 const { HistoricoController } = require("./controllers/HistoricoController");
 const { UsersController } = require("./controllers/UsersController");
 const { VersoesController } = require("./controllers/VersoesController");
+const { PreferenciasController } = require("./controllers/PreferenciasController");
 const { LoginRateLimiter } = require("./middlewares/LoginRateLimiter");
 const { ApiRouter } = require("./routes/index");
 const { errorHandler } = require("./middlewares/errorHandler");
@@ -64,6 +66,7 @@ class Server {
       historico,
       notifications,
       auth: new AuthService(this.db, historico),
+      preferencias: new PreferenciaService(this.db),
       clientes: new ClienteService(this.db, historico),
       atualizacoes: new AtualizacaoService(this.db, historico, notifications),
       agendamentos: new AgendamentoService(this.db, historico),
@@ -89,6 +92,7 @@ class Server {
       historico: new HistoricoController(s.historico),
       usuarios: new UsersController(s.auth),
       versoes: new VersoesController(s.versoes),
+      preferencias: new PreferenciasController(s.preferencias),
     };
     this.loginLimiter = new LoginRateLimiter();
   }

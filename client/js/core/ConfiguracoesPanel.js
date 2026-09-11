@@ -10,7 +10,7 @@ import {
   ESCALAS,
   POSICOES_AVISO,
 } from "./appearance.js";
-import { settings, prefs } from "./prefs.js";
+import { settings, prefs, salvarPreferenciasAgora } from "./prefs.js";
 import { mostrarAtalhos } from "./Shortcuts.js";
 import { notificacoes } from "./notify.js";
 import { icon } from "./icons.js";
@@ -782,6 +782,11 @@ export class ConfiguracoesPanel {
     );
     if (!ok) return;
     aparencia.restaurarPadroes();
+    // Esperar o servidor ANTES de recarregar: o envio normal é agrupado por
+    // alguns décimos de segundo, e o reload mataria a requisição no meio --
+    // os padrões valeriam aqui e a conta continuaria com as preferências
+    // antigas, que voltariam no próximo login.
+    await salvarPreferenciasAgora();
     // Recarregar é honesto aqui: o tema, o menu e a densidade são aplicados em
     // pontos diferentes do arranque, e desfazer cada um na mão seria
     // reimplementar a inicialização inteira só para esta tecla.

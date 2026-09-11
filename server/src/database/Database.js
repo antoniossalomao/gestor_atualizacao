@@ -189,6 +189,27 @@ class Database {
     // depois -- por isso "usuario_nome" também é guardado como texto,
     // congelado no momento da ação, para o histórico continuar legível
     // mesmo que a conta não exista mais.
+    // Preferencias de apresentacao (tema, cor, densidade, linhas por pagina...)
+    // POR CONTA, e nao por navegador.
+    //
+    // Elas viviam so no localStorage, o que na pratica significava: trocar de
+    // maquina, usar o Edge em vez do Chrome ou limpar os dados do site
+    // devolvia o app aos padroes. Pior, num computador compartilhado as
+    // escolhas de uma pessoa apareciam para a seguinte, porque o localStorage
+    // nao sabe quem esta logado.
+    //
+    // Um JSON inteiro numa coluna, e nao uma linha por chave: o conjunto e
+    // sempre lido e gravado de uma vez so (a tela aplica tudo junto), nunca
+    // ha consulta por chave individual, e assim acrescentar uma preferencia
+    // nova nao pede migracao nenhuma.
+    conn.exec(`
+      CREATE TABLE IF NOT EXISTS usuario_preferencias (
+        usuario_id INTEGER PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
+        prefs_json TEXT NOT NULL,
+        atualizado_em TEXT NOT NULL
+      )
+    `);
+
     conn.exec(`
       CREATE TABLE IF NOT EXISTS historico (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

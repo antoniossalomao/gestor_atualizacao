@@ -160,10 +160,16 @@ core/theme.js + core/appearance.js + core/ConfiguracoesPanel.js
              -- as preferências do usuário. theme.js cuida só de claro/escuro/sistema;
                 appearance.js cuida do resto (cor de destaque, tamanho do texto, densidade e
                 altura das tabelas, linhas por página, animações, fundo, posição dos avisos,
-                tela inicial, lembrar filtros). Ambos gravam em localStorage e escrevem um
-                atributo no <html> (data-tema, data-realce, data-densidade, ...) que o CSS lê --
-                nenhum componente conhece as preferências. ConfiguracoesPanel.js é o painel de
-                duas colunas com busca que expõe tudo isso
+                tela inicial, lembrar filtros). Escrevem um atributo no <html> (data-tema,
+                data-realce, data-densidade, ...) que o CSS lê -- nenhum componente conhece as
+                preferências. ConfiguracoesPanel.js é o painel de duas colunas com busca que
+                expõe tudo isso.
+                As preferências são da CONTA: ficam em usuario_preferencias no servidor
+                (GET/PUT /api/preferencias). O localStorage continua sendo escrito, mas como
+                cache -- theme-init.js roda no <head> e precisa de resposta síncrona, senão a
+                página nasceria no tema errado e trocaria na cara de quem olha. prefs.js
+                (conectarPreferencias) busca as da conta no login e corrige o cache se
+                divergir, e limpa o cache quando quem entra é outra pessoa
 api/ApiClient.js -- único lugar que chama fetch; todo o resto fala com o servidor por ele
 ```
 
