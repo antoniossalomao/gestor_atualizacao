@@ -48,9 +48,29 @@ export class ResumoView extends View {
         ${statTile("desatualizados", "alerta", `Parados Há Mais de ${DESATUALIZADO_DIAS} Dias`, "Ver por sistema")}
       </div>
 
-      <div class="card">
-        <h2 class="card__title">Situação dos Clientes</h2>
-        <div data-role="pie"></div>
+      <!--
+        A rosca e a tendência dividem uma linha, e essa é a correção de um
+        defeito que ninguém consegue nomear mas todo mundo sente: a "Situação
+        dos Clientes" era um card de largura inteira com um gráfico de 148px
+        dentro, ou seja, uns 900px de card vazio à direita de um desenho
+        pequeno. Não é só feio -- espaço vazio num painel promete que ALGO vem
+        ali, e a pessoa procura o que não existe.
+
+        A divisão é desigual de propósito (ver "card-row--aside" no CSS): a
+        rosca é redonda e satura numa largura pequena, enquanto a tendência
+        melhora com cada pixel a mais -- doze meses de barras numa metade de
+        tela ficam curtos demais para comparar. Cada um fica com a largura que
+        o seu formato sabe usar, que é diferente de cada um ficar com metade.
+      -->
+      <div class="card-row card-row--aside">
+        <div class="card">
+          <h2 class="card__title">Situação dos Clientes</h2>
+          <div data-role="pie"></div>
+        </div>
+        <div class="card">
+          <h2 class="card__title">Tendência Mensal de Atualizações</h2>
+          <div data-role="tendencia"></div>
+        </div>
       </div>
 
       <div class="card-row">
@@ -62,11 +82,6 @@ export class ResumoView extends View {
           <h2 class="card__title">Atualizações Por Sistema Este Mês</h2>
           <div data-role="sistemas"></div>
         </div>
-      </div>
-
-      <div class="card">
-        <h2 class="card__title">Tendência Mensal de Atualizações</h2>
-        <div data-role="tendencia"></div>
       </div>
 
       <div class="card">
@@ -95,7 +110,10 @@ export class ResumoView extends View {
       rotas[tile.dataset.stat]?.();
     });
 
-    this.pie = new PieChart(this.container.querySelector('[data-role="pie"]'));
+    // "373" sozinho no meio da rosca é um número grande sem substantivo --
+    // e num painel que também conta atualizações e agendamentos, é a coisa
+    // mais fácil de ler como a contagem errada.
+    this.pie = new PieChart(this.container.querySelector('[data-role="pie"]'), { unidade: "clientes" });
 
     this.respTable = new SortableTable(this.container.querySelector('[data-role="responsaveis"]'), {
       columns: [

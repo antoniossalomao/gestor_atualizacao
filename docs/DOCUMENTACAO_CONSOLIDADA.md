@@ -155,7 +155,15 @@ core/View.js -- classe base: listeners rastreados (removidos no destroy()) + cic
 views/*.js   -- uma classe por tela (Resumo, Atualizações, Agendamentos, Clientes, Consultar
                 Cliente, Distribuição, Versões, Sistemas, Histórico, Login)
 core/*.js    -- peças reaproveitadas: SortableTable, Pagination, Autocomplete, Modal, Toast,
-                PieChart/BarChart, CommandPalette (Ctrl+K), EmptyState, SwrCache, router, theme
+                PieChart/BarChart, CommandPalette (Ctrl+K), EmptyState, SwrCache, router
+core/theme.js + core/appearance.js + core/ConfiguracoesPanel.js
+             -- as preferências do usuário. theme.js cuida só de claro/escuro/sistema;
+                appearance.js cuida do resto (cor de destaque, tamanho do texto, densidade e
+                altura das tabelas, linhas por página, animações, fundo, posição dos avisos,
+                tela inicial, lembrar filtros). Ambos gravam em localStorage e escrevem um
+                atributo no <html> (data-tema, data-realce, data-densidade, ...) que o CSS lê --
+                nenhum componente conhece as preferências. ConfiguracoesPanel.js é o painel de
+                duas colunas com busca que expõe tudo isso
 api/ApiClient.js -- único lugar que chama fetch; todo o resto fala com o servidor por ele
 ```
 

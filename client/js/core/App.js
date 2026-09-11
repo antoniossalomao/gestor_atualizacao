@@ -423,6 +423,10 @@ export class App {
       },
       aoMudarSidebar: (recolhida) => this._definirSidebar(recolhida),
       abas: TABS.map((t) => ({ key: t.key, label: t.label })),
+      // Quem está logado aparece na seção Sistema, logo acima de Backups e
+      // Usuários -- é a conta que vai fazer as duas coisas, e conferir isso
+      // antes era uma viagem até o canto do cabeçalho.
+      usuario: this.user,
       // Backups e Usuários abrem painéis próprios que precisam da API (e o de
       // usuários, de quem está logado, para não deixar ninguém se rebaixar ou
       // se excluir). O painel de Configurações não os constrói: recebe prontas

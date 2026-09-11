@@ -52,10 +52,16 @@
      5.88 sobre --cor-superficie e 5.29 sobre --cor-superficie-alta. */
   --cor-texto-fraco: #8496b0;
 
-  /* -- destaque e estados -- */
-  --cor-accent: #4a9eff;
-  --cor-accent-forte: #6fb4ff;
-  --cor-accent-fraco: rgba(74, 158, 255, 0.15);
+  /* -- destaque e estados --
+     O par accent/accent-forte não é escrito aqui: vem de `--realce-escuro*`,
+     que o bloco `[data-realce=...]` lá embaixo define (Configurações >
+     Aparência > Cor de destaque). O valor depois da vírgula é o azul de
+     sempre, usado quando nenhuma variante foi escolhida -- é assim que a
+     preferência nova não precisou de um `[data-realce="azul"]` só para
+     repetir o padrão. */
+  --cor-accent: var(--realce-escuro, #4a9eff);
+  --cor-accent-forte: var(--realce-escuro-forte, #6fb4ff);
+  --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 15%, transparent);
   --cor-verde: #4ade80;
   --cor-verde-fraco: rgba(74, 222, 128, 0.14);
   --cor-vermelho: #f87171;
@@ -82,7 +88,7 @@
   --veu-linha: rgba(15, 21, 31, 0.55);
   --veu-overlay: rgba(5, 6, 9, 0.62);
   --sidebar-fundo: rgba(13, 18, 25, 0.94);
-  --halo-topo: rgba(37, 99, 235, 0.16);
+  --halo-topo: color-mix(in srgb, var(--cor-accent) 16%, transparent);
   --grade: rgba(120, 170, 255, 0.02);
 
   /* ==========================================================================
@@ -97,16 +103,24 @@
      (10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 19, 22, 24, 25, 26, 28,
      30, 34px) -- a maioria escolhida no olho, um a um, o que faz a interface
      parecer levemente desalinhada sem que se consiga apontar onde.
-     Sete degraus dão conta de tudo que o app precisa. */
-  --txt-2xs: 10px;   /* eyebrows, tags minúsculas */
-  --txt-xs: 11px;    /* rótulos de campo, legendas */
-  --txt-sm: 12px;    /* textos de apoio, paginação */
-  --txt-base: 13px;  /* corpo: células de tabela, botões */
-  --txt-md: 14px;    /* campos de formulário */
-  --txt-lg: 19px;    /* títulos de card com destaque */
-  --txt-xl: 24px;    /* títulos de seção (hero) */
-  --txt-2xl: 28px;   /* título da página */
-  --txt-numero: 30px;/* valores grandes dos indicadores */
+     Sete degraus dão conta de tudo que o app precisa.
+
+     Os sete são multiplicados por `--escala`, que é a preferência
+     "Tamanho do texto" (Configurações > Aparência). Um multiplicador em vez
+     de três tabelas de tamanhos escritas à mão: a proporção entre os degraus
+     -- que é o que faz a escala parecer uma escala -- fica garantida por
+     construção, e acrescentar um degrau novo não obriga a acertar o valor
+     dele em três lugares. */
+  --escala: 1;
+  --txt-2xs: calc(10px * var(--escala));   /* eyebrows, tags minúsculas */
+  --txt-xs: calc(11px * var(--escala));    /* rótulos de campo, legendas */
+  --txt-sm: calc(12px * var(--escala));    /* textos de apoio, paginação */
+  --txt-base: calc(13px * var(--escala));  /* corpo: células de tabela, botões */
+  --txt-md: calc(14px * var(--escala));    /* campos de formulário */
+  --txt-lg: calc(19px * var(--escala));    /* títulos de card com destaque */
+  --txt-xl: calc(24px * var(--escala));    /* títulos de seção (hero) */
+  --txt-2xl: calc(28px * var(--escala));   /* título da página */
+  --txt-numero: calc(30px * var(--escala));/* valores grandes dos indicadores */
 
   --peso-medio: 500;
   --peso-forte: 600;
@@ -139,7 +153,8 @@
 
   --sombra-card: 0 1px 1px rgba(0, 0, 0, 0.25), 0 12px 30px -18px rgba(0, 0, 0, 0.7);
   --sombra-flutuante: 0 12px 32px -8px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
-  --sombra-card-hover: 0 12px 28px -18px rgba(0, 0, 0, 0.9), 0 0 24px -8px rgba(74, 158, 255, 0.18);
+  --sombra-card-hover: 0 12px 28px -18px rgba(0, 0, 0, 0.9),
+    0 0 24px -8px color-mix(in srgb, var(--cor-accent) 18%, transparent);
 
   /* Duas durações e duas curvas, em vez de "150ms ease" para tudo. O
      `--saida` mais curto que a `--entrada` é o padrão do Material/iOS: sair
@@ -179,6 +194,98 @@
   --cabecalho-pad-y: 12px;
 }
 
+/* ==========================================================================
+   COR DE DESTAQUE
+   Escolhida em Configurações > Aparência, aplicada como `data-realce` no
+   <html> -- mesmo mecanismo do tema e da densidade.
+
+   Cada variante declara QUATRO valores, não dois: o mesmo roxo que tem
+   contraste de sobra sobre o fundo quase-preto do tema escuro fica ilegível
+   sobre o branco do tema claro, e vice-versa. Guardando o par de cada tema
+   aqui, os blocos de tema lá em cima escolhem o lado certo com um
+   `var(--realce-escuro)` / `var(--realce-claro)` -- e nenhuma variante nova
+   precisa ser escrita três vezes (escuro, claro explícito e claro do sistema).
+
+   Os tons claros de cada par foram escurecidos até passarem de 4.5:1 sobre o
+   branco do card, que é o mínimo do WCAG AA para texto -- o accent não é só
+   enfeite aqui, é a cor dos links e dos rótulos de botão.
+   ========================================================================== */
+
+:root[data-realce="violeta"] {
+  --realce-escuro: #a78bfa;
+  --realce-escuro-forte: #c4b5fd;
+  --realce-claro: #6d28d9;
+  --realce-claro-forte: #5b21b6;
+}
+
+:root[data-realce="turquesa"] {
+  --realce-escuro: #2dd4bf;
+  --realce-escuro-forte: #5eead4;
+  --realce-claro: #0f766e;
+  --realce-claro-forte: #115e59;
+}
+
+:root[data-realce="verde"] {
+  --realce-escuro: #4ade80;
+  --realce-escuro-forte: #86efac;
+  --realce-claro: #15803d;
+  --realce-claro-forte: #166534;
+}
+
+:root[data-realce="ambar"] {
+  --realce-escuro: #fbbf24;
+  --realce-escuro-forte: #fcd34d;
+  --realce-claro: #a16207;
+  --realce-claro-forte: #854d0e;
+}
+
+:root[data-realce="rosa"] {
+  --realce-escuro: #f472b6;
+  --realce-escuro-forte: #f9a8d4;
+  --realce-claro: #be185d;
+  --realce-claro-forte: #9d174d;
+}
+
+:root[data-realce="grafite"] {
+  --realce-escuro: #a8b8cf;
+  --realce-escuro-forte: #c9d5e6;
+  --realce-claro: #475569;
+  --realce-claro-forte: #334155;
+}
+
+/* ==========================================================================
+   TAMANHO DO TEXTO
+   Multiplica a escala tipográfica inteira (ver `--escala` lá em cima). Mexer
+   no `font-size` do <html> não serviria: os tamanhos deste app são px fixos,
+   e px não acompanha a raiz -- só o multiplicador alcança todos eles.
+   ========================================================================== */
+:root[data-escala="pequeno"] { --escala: 0.92; }
+:root[data-escala="grande"] { --escala: 1.09; }
+:root[data-escala="maior"] { --escala: 1.18; }
+
+/* ==========================================================================
+   FUNDO DA TELA
+   O padrão é a grade de 32px com o halo difuso no topo. "Liso" tira os dois.
+   Existe porque a grade é discreta num monitor bom e vira chuvisco num painel
+   TN barato ou num projetor -- e nesses casos ela não é sutileza, é ruído por
+   cima de tabela de dados o dia inteiro.
+   ========================================================================== */
+:root[data-fundo="liso"] body {
+  background-image: none;
+}
+
+/* ==========================================================================
+   POSIÇÃO DOS AVISOS
+   O canto de baixo à direita é o padrão. Em cima existe porque a paginação e
+   os botões de ação das tabelas moram justamente no rodapé da tela: um toast
+   de 4 segundos ali cobre o botão que a pessoa ia clicar em seguida.
+   ========================================================================== */
+:root[data-avisos="topo"] #toast-stack {
+  top: var(--sp-5);
+  bottom: auto;
+  flex-direction: column-reverse;
+}
+
 /* Altura da caixa rolável de uma tabela (também escolhida em Configurações).
    Em telas grandes, 60vh deixava metade do monitor vazio abaixo da tabela. */
 :root { --altura-tabela: 60vh; }
@@ -206,9 +313,9 @@
   /* 4.62:1 sobre o branco do card -- o mesmo critério AA usado no tema escuro. */
   --cor-texto-fraco: #63728c;
 
-  --cor-accent: #1263d6;
-  --cor-accent-forte: #0d4ead;
-  --cor-accent-fraco: rgba(18, 99, 214, 0.1);
+  --cor-accent: var(--realce-claro, #1263d6);
+  --cor-accent-forte: var(--realce-claro-forte, #0d4ead);
+  --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 10%, transparent);
   --cor-verde: #157f4a;
   --cor-verde-fraco: rgba(21, 127, 74, 0.12);
   --cor-vermelho: #c62f38;
@@ -231,12 +338,13 @@
   --veu-linha: rgba(245, 247, 252, 0.9);
   --veu-overlay: rgba(16, 25, 42, 0.35);
   --sidebar-fundo: rgba(255, 255, 255, 0.92);
-  --halo-topo: rgba(18, 99, 214, 0.09);
+  --halo-topo: color-mix(in srgb, var(--cor-accent) 9%, transparent);
   --grade: rgba(30, 70, 140, 0.035);
 
   --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 10px 24px -18px rgba(16, 25, 42, 0.35);
   --sombra-flutuante: 0 12px 32px -8px rgba(16, 25, 42, 0.22), 0 4px 12px rgba(16, 25, 42, 0.1);
-  --sombra-card-hover: 0 12px 28px -18px rgba(16, 25, 42, 0.4), 0 0 24px -10px rgba(18, 99, 214, 0.25);
+  --sombra-card-hover: 0 12px 28px -18px rgba(16, 25, 42, 0.4),
+    0 0 24px -10px color-mix(in srgb, var(--cor-accent) 25%, transparent);
 }
 
 @media (prefers-color-scheme: light) {
@@ -257,9 +365,9 @@
     --cor-texto-sub: #47566f;
     --cor-texto-fraco: #63728c;
 
-    --cor-accent: #1263d6;
-    --cor-accent-forte: #0d4ead;
-    --cor-accent-fraco: rgba(18, 99, 214, 0.1);
+    --cor-accent: var(--realce-claro, #1263d6);
+    --cor-accent-forte: var(--realce-claro-forte, #0d4ead);
+    --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 10%, transparent);
     --cor-verde: #157f4a;
     --cor-verde-fraco: rgba(21, 127, 74, 0.12);
     --cor-vermelho: #c62f38;
@@ -282,12 +390,13 @@
     --veu-linha: rgba(245, 247, 252, 0.9);
     --veu-overlay: rgba(16, 25, 42, 0.35);
     --sidebar-fundo: rgba(255, 255, 255, 0.92);
-    --halo-topo: rgba(18, 99, 214, 0.09);
+    --halo-topo: color-mix(in srgb, var(--cor-accent) 9%, transparent);
     --grade: rgba(30, 70, 140, 0.035);
 
     --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 10px 24px -18px rgba(16, 25, 42, 0.35);
     --sombra-flutuante: 0 12px 32px -8px rgba(16, 25, 42, 0.22), 0 4px 12px rgba(16, 25, 42, 0.1);
-    --sombra-card-hover: 0 12px 28px -18px rgba(16, 25, 42, 0.4), 0 0 24px -10px rgba(18, 99, 214, 0.25);
+    --sombra-card-hover: 0 12px 28px -18px rgba(16, 25, 42, 0.4),
+    0 0 24px -10px color-mix(in srgb, var(--cor-accent) 25%, transparent);
   }
 }
 
@@ -439,4 +548,20 @@ a {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/*
+ * O mesmo, mas por escolha feita AQUI dentro (Configurações > Aparência).
+ * A do sistema continua valendo sozinha: quem já marcou "reduzir movimento"
+ * no Windows não precisa marcar de novo aqui. Este bloco atende o caso
+ * inverso -- a pessoa que gosta de animação no resto do computador e só não
+ * quer neste painel, onde fica olhando tabela o dia todo.
+ */
+:root[data-movimento="reduzido"] *,
+:root[data-movimento="reduzido"] *::before,
+:root[data-movimento="reduzido"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

@@ -85,16 +85,23 @@ export class Modal {
    * UsersPanel usam -- antes cada um recriava overlay e caixa na mão, sem
    * nenhum dos cuidados de foco/teclado deste arquivo.
    *
-   * @param {{largura?: number, onClose?: (resultado?: any) => void, fecharPorFora?: boolean}} opts
+   * @param {{largura?: number, onClose?: (resultado?: any) => void, fecharPorFora?: boolean, classe?: string}} opts
+   *   `classe` entra ao lado de `.modal-box` para os painéis que precisam de
+   *   uma casca diferente da caixa-de-diálogo padrão -- Configurações, por
+   *   exemplo, não quer o `padding` nem a rolagem geral da caixa, porque a
+   *   rolagem lá é só do painel da direita, com o cabeçalho e o rodapé
+   *   parados. Sem isto o painel teria que desfazer o estilo base no CSS com
+   *   regras do tipo `.modal-box.cfg { padding: 0 }`, que é a mesma coisa
+   *   escrita de um jeito que esconde a intenção.
    */
-  static abrirCaixa({ largura = 420, onClose = () => {}, fecharPorFora = true } = {}) {
+  static abrirCaixa({ largura = 420, onClose = () => {}, fecharPorFora = true, classe = "" } = {}) {
     const focoAnterior = document.activeElement;
 
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
 
     const box = document.createElement("div");
-    box.className = "modal-box";
+    box.className = classe ? `modal-box ${classe}` : "modal-box";
     box.setAttribute("role", "dialog");
     box.setAttribute("aria-modal", "true");
     box.tabIndex = -1;
@@ -123,6 +130,13 @@ export class Modal {
 
     function onKeydown(e) {
       if (!document.contains(overlay)) return;
+      // Só o diálogo do TOPO reage. Os handlers são registrados em captura no
+      // `document`, e captura no mesmo alvo dispara por ordem de registro --
+      // ou seja, o de BAIXO ouvia primeiro. Era isso que fazia o Escape sobre
+      // a confirmação de "Restaurar padrões" fechar o painel de Configurações
+      // junto com ela: quem devia responder era o último a ser perguntado.
+      const abertos = [...document.querySelectorAll(".modal-overlay:not(.is-closing)")];
+      if (abertos.length && abertos[abertos.length - 1] !== overlay) return;
       if (e.key === "Escape") {
         e.stopPropagation();
         close(undefined);
