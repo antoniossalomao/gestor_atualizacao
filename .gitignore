@@ -26,3 +26,8 @@ npm-debug.log*
 # depender do histórico do git). Não são parte do código -- são rede de
 # segurança de quem está mexendo, redundantes com o próprio commit.
 _backup/
+
+# Diretório local do Claude Code (worktrees, configurações da máquina). Hoje
+# está vazio, mas num repositório público vale ignorar antes: o que cai ali
+# são caminhos e preferências desta máquina, não código do projeto.
+.claude/
