@@ -2,6 +2,7 @@ const ExcelJS = require("exceljs");
 
 const { COLUMNS, DESATUALIZADO_DIAS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
 const { dataValida, parseData } = require("./validation");
+const { normalizarSistemas, normalizarResponsavel } = require("./normalizacao");
 const { ValidationError, NotFoundError } = require("./errors");
 
 // Sentinela: cliente nunca atualizado, sempre no topo da lista de
@@ -201,7 +202,40 @@ class AtualizacaoService {
     for (const { key } of COLUMNS) {
       if (key !== "cliente" && key !== "data") registro[key] = (input[key] || "").trim();
     }
-    return registro;
+    return this._normalizar(registro, this._contextoNormalizacao());
+  }
+
+  /**
+   * O que `normalizarSistemas`/`normalizarResponsavel` precisam para decidir a
+   * grafia canônica. Sai numa chamada só porque a importação de planilha
+   * normaliza centenas de linhas seguidas, e consultar catálogo e
+   * responsáveis por linha seria trabalho repetido à toa.
+   */
+  _contextoNormalizacao() {
+    return {
+      catalogo: this.db.sistemas.list(),
+      conhecidos: this.db.atualizacoes.distinctResponsaveis(),
+    };
+  }
+
+  /**
+   * Grava "B_NFe", não "B_NFE"; "Camila", não "CAMILA".
+   *
+   * Este é o lado do problema que olha para a frente -- o histórico que já
+   * estava gravado foi acertado de uma vez por scripts/normalizar-historico.js,
+   * com as MESMAS funções. Sem isto aqui, aquela faxina seria uma foto: o
+   * campo continua livre, e em alguns meses haveria "B_NFE" de novo.
+   *
+   * Um nome que não casa com nada é mantido como veio, de propósito. Inventar
+   * destino para o desconhecido estragaria em silêncio a primeira atualização
+   * de um sistema novo, que é justamente quando ninguém está olhando.
+   */
+  _normalizar(registro, { catalogo, conhecidos }) {
+    return {
+      ...registro,
+      sistema: normalizarSistemas(registro.sistema, catalogo),
+      responsavel: normalizarResponsavel(registro.responsavel, conhecidos),
+    };
   }
 
   /**
@@ -315,6 +349,9 @@ class AtualizacaoService {
 
     const nomesCadastrados = new Set(this.db.clientes.names());
     const naoCadastrados = new Set();
+    // Fora do laço: a planilha pode ter centenas de linhas, e catálogo e
+    // responsáveis não mudam no meio da importação.
+    const contexto = this._contextoNormalizacao();
     let inserted = 0;
 
     for (let r = 2; r <= ws.rowCount; r++) {
@@ -334,9 +371,14 @@ class AtualizacaoService {
       }
       if (!record.cliente) continue;
 
-      if (!nomesCadastrados.has(record.cliente)) naoCadastrados.add(record.cliente);
-      this.db.atualizacoes.insert(record);
-      this._marcarSuporteBredasSeNecessario(record, usuario);
+      // A planilha é a origem MAIS suja de todas -- foi dela que vieram as
+      // 144 grafias de sistema do histórico antigo. Normalizar aqui também
+      // (e não só no cadastro pela tela) é o que impede a próxima importação
+      // de desfazer a faxina.
+      const registro = this._normalizar(record, contexto);
+      if (!nomesCadastrados.has(registro.cliente)) naoCadastrados.add(registro.cliente);
+      this.db.atualizacoes.insert(registro);
+      this._marcarSuporteBredasSeNecessario(registro, usuario);
       inserted += 1;
     }
 

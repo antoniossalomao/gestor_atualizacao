@@ -1,5 +1,6 @@
 const { STATUS_OPTIONS } = require("../config/constants");
 const { dataValida, horaValida } = require("./validation");
+const { normalizarResponsavel } = require("./normalizacao");
 const { ValidationError, NotFoundError } = require("./errors");
 
 /**
@@ -116,7 +117,11 @@ class AgendamentoService {
     return {
       tarefa,
       cliente: (input.cliente || "").trim(),
-      responsavel: (input.responsavel || "").trim(),
+      // Mesma grafia canônica das Atualizações, e de propósito buscada LÁ: é
+      // a mesma equipe, e é lá que está o volume que define qual grafia vale
+      // ("Camila", não "CAMILA"). Sem isto, o campo Responsável de uma aba
+      // divergia do da outra -- foi assim que "Marcos/lennon" nasceu aqui.
+      responsavel: normalizarResponsavel(input.responsavel, this.db.atualizacoes.distinctResponsaveis()),
       data,
       horario,
       status,
