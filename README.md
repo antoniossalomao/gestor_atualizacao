@@ -1,220 +1,99 @@
-# Gestor de Atualizações de Clientes — versão web
+# Gestor de Atualizações
 
-Reescrita em Node.js (backend) + JavaScript puro (front-end) do app
-desktop original (`../gestor`, Python/Tkinter). Faz a mesma coisa —
-controlar atualizações de sistemas em clientes, uma agenda de tarefas
-internas e o cadastro de clientes — só que agora como um servidor web,
-acessível por várias pessoas ao mesmo tempo, cada uma com seu próprio
-login.
+Painel web para controlar as atualizações de sistemas instalados em
+clientes: o que foi atualizado, em quem, por quem e quando. Nasceu de uma
+necessidade concreta — uma equipe pequena atendendo centenas de clientes,
+cada um com uma combinação diferente de sistemas instalados, e nenhum
+lugar confiável para registrar o que já tinha sido feito em cada um.
 
-O projeto Python original continua na pasta acima (`../gestor`), intacto,
-como referência.
+Roda como um servidor na rede da empresa; a equipe acessa pelo navegador,
+cada pessoa com seu próprio login.
 
-## O que mudou em relação ao app desktop
+**Stack:** Node.js + Express + SQLite (via `better-sqlite3`) no servidor, e
+HTML/CSS/JavaScript puro no navegador — **sem framework e sem etapa de
+build**. Não há webpack, nem bundler, nem passo de compilação: o que está em
+`client/` é exatamente o que o navegador executa. Para uma equipe pequena
+que precisa conseguir corrigir um bug abrindo um arquivo, essa foi uma
+escolha deliberada, não uma limitação.
 
-- **Login multiusuário.** O app original era de uso individual (um
-  `.exe`, sem conceito de conta). Agora cada pessoa da equipe tem seu
-  próprio usuário e senha.
-- **Servidor em vez de aplicativo instalado.** Em vez de rodar um `.exe`
-  na máquina de cada pessoa, um servidor roda em um lugar só (um PC, um
-  servidor da empresa, ou uma nuvem) e todo mundo acessa pelo navegador.
-- **Mesmo banco de dados (SQLite), mesmas regras de negócio** — nome de
-  cliente único, renomear cliente propaga o novo nome para o histórico,
-  backup automático a cada início do servidor, etc. Ver a tabela abaixo
-  e [docs/DOCUMENTACAO_CONSOLIDADA.md](docs/DOCUMENTACAO_CONSOLIDADA.md#22-arquitetura-do-código)
-  para como o código está organizado.
+## O que ele faz
 
-### Onde cada parte do app original foi parar
+**Atualizações** — o registro central. Cada linha é um atendimento: cliente,
+sistemas atualizados, versão, responsável, data, motivo, quantas máquinas e
+observações. Busca por qualquer campo, filtro por responsável e por período,
+seleção em lote (`Shift` + clique em duas linhas marca tudo entre elas),
+importação e exportação em `.xlsx`, e **"Gerar Relatório"**, que monta o texto
+do atendimento pronto para colar num chamado.
 
-| Python (`../gestor`) | Node (aqui) |
-|---|---|
-| `config.py` | `server/src/config/constants.js` + `client/js/config.js` |
-| `database.py` (`Database`, `*Repository`) | `server/src/database/*.js` |
-| `validation.py` | `server/src/services/validation.js` (+ checado de novo no front-end, `client/js/core/date.js`, só para feedback instantâneo) |
-| `theme.py` | `client/css/theme.css` |
-| `dialogs.py` | `client/js/core/Modal.js` |
-| `widgets.py` | `client/js/core/{Autocomplete,SortableTable,Toast,debounce}.js` |
-| `main_window.py` (`App`) | `client/js/core/App.js` + `server/src/Server.js` |
-| `views/*.py` | `client/js/views/*.js` |
-| backup automático | `server/src/database/Database.js` (`_backup`/`restoreFrom`) |
-| _(não existia)_ | login multiusuário: `server/src/services/AuthService.js`, `client/js/views/LoginView.js` |
-- **Responsável pré-preenchido** nos formulários de Atualização e
-  Agendamento com o nome de quem está logado (continua editável), e com
-  autocompletar (sugere nomes já usados, igual o campo Cliente).
-- **Aba Histórico**, nova: registra quem criou/editou/excluiu cada
-  cliente, atualização, agendamento, sistema e conta de usuário, e quem
-  restaurou cada backup — importante agora que várias pessoas usam o
-  mesmo sistema (o app original, de uso individual, não precisava disso).
-- **Tela de Usuários** (botão no cabeçalho): convidar ou remover contas
-  pela própria interface, sem precisar de acesso ao servidor.
-- **Paginação** nas listas que podem crescer bastante ao longo do tempo
-  (Atualizações, Agendamentos, Clientes, Histórico) — só um "porém": a
-  ordenação por coluna nessas quatro passou a ser calculada no servidor
-  (pedindo a página já ordenada), em vez de reordenar na tela.
-- **Segurança de servidor web**: cabeçalhos HTTP de proteção (`helmet`) e
-  um limite de tentativas de login por IP — o app original, local e sem
-  login, não precisava de nenhum dos dois.
-- **Visual atualizado** (mesmo tema escuro, com tipografia, espaçamento e
-  gráfico da aba Resumo revisados).
-- **Aba Sistemas**, nova: filtra clientes por sistema (ex.: NFCe) e por
-  uma data de corte opcional, para achar quem ficou pra trás depois de
-  uma mudança grande de um sistema numa certa data.
-- **Lembrete de agendamento**: um aviso aparece no topo do app ao logar
-  quando existem tarefas da aba Agendamentos vencidas ou vencendo hoje.
-- **Notificação no Discord**: opcional (`DISCORD_WEBHOOK_URL` no `.env`)
-  — avisa um canal a cada atualização nova cadastrada.
-- **Status "Sem resposta"** na aba Agendamentos, para quando o cliente
-  não responde ao contato agendado.
-- **Resumo** agora também mostra atualizações por sistema, além de por
-  responsável.
+**Clientes** — cadastro com código, cidade, grupo/rede (para clientes com
+várias unidades sob a mesma bandeira) e quais sistemas cada um usa. O botão
+**Acessos** guarda os IDs de acesso remoto de cada máquina do cliente, com
+botão de copiar ao lado de cada um.
 
-## Funcionalidades adicionadas — set/2026
+**Agendamentos** — agenda das tarefas internas ("atualizar o cliente X"), com
+status, horário e responsável. Um aviso aparece no topo do app ao entrar
+quando há tarefas vencidas ou vencendo hoje. Uma tarefa concluída pode virar
+uma Atualização já pré-preenchida, e tarefas concluídas há mais de um mês
+saem da lista sozinhas (continuam no filtro "Arquivadas").
 
-- **Alerta proativo de agente offline/com erro** (`AlertaAgenteService`):
-  com `DISCORD_WEBHOOK_URL` configurada, o app confere sozinho a cada
-  `ALERTA_AGENTES_INTERVALO_MINUTOS` (padrão 15) a situação de cada agente
-  do Atualizador automático (mesmo cálculo do painel da aba Distribuição)
-  e avisa o canal só na *transição* para "offline" (sem contato há 24h+)
-  ou "erro" — não repete o aviso a cada ciclo enquanto o problema
-  continua, e avisa de novo quando o agente volta a se comunicar. Antes,
-  só quem abrisse a tela do painel saberia que um cliente parou de
-  atualizar.
-- **Tendência mensal de atualizações** (Resumo): gráfico com os últimos 12
-  meses, para ver se o volume de atualizações está subindo ou caindo ao
-  longo do tempo — antes só existia o total do mês atual.
-- **Grupo/rede de clientes**: novo campo opcional "Grupo/Rede" no
-  cadastro de Clientes (com autocompletar dos grupos já usados), pra
-  clientes com várias unidades sob a mesma bandeira (ex.: sete lojas de
-  uma mesma rede) poderem ser encontrados/agrupados por busca. Não muda
-  nada em quem não usa o campo.
-- **Converter Agendamento em Atualização**: botão "Converter em
-  Atualização" na tarefa selecionada da aba Agendamentos — leva pra
-  Atualizações com cliente, responsável, data e um registro novo (não
-  edita nada) já pré-preenchidos a partir da tarefa, em vez de digitar
-  tudo de novo.
-- **Tempo médio de resolução por responsável** (Resumo): quantos dias, em
-  média, uma tarefa de Agendamentos leva entre ser criada e ser marcada
-  "Concluído", por responsável. Só entra no cálculo tarefa criada
-  *depois* desta métrica existir — tarefas antigas não têm como saber
-  quando foram criadas de verdade, e contar uma data inventada seria pior
-  que não mostrar nada.
+**Resumo** — quantas atualizações no mês, por responsável e por sistema,
+tendência dos últimos 12 meses, quantos clientes estão em dia e quantos
+estão para trás, e o tempo médio que uma tarefa leva entre ser criada e ser
+concluída, por pessoa.
 
-## Funcionalidades adicionadas — 10/09/2026
+**Sistemas** — responde "quais clientes de NFCe ainda não atualizaram desde
+a mudança grande de tal data?". Filtra por sistema e por uma data de corte.
 
-- **Acessos remotos por cliente** (aba Clientes, botão **Acessos** no
-  topo, ao lado de "Novo Cliente"): cadastro de AnyDesk/Suporte Bredas de
-  cada máquina de um cliente (servidor, estações, etc.), com botão de
-  copiar ao lado de cada ID. Tabela nova (`cliente_acessos`), apagada
-  automaticamente junto com o cliente se ele for excluído.
-- **Ações em lote em Agendamentos e Clientes** (mesmo padrão que já
-  existia em Atualizações — segurar `Shift` e clicar em duas linhas
-  seleciona tudo entre elas): em Agendamentos dá para concluir ou excluir
-  várias tarefas de uma vez (com "Desfazer"); em Clientes dá para marcar
-  um sistema em vários de uma vez ou excluir vários (sem "Desfazer" aqui
-  — ver comentário em `ClienteService.deleteMany`, a exclusão em lote de
-  cliente também apaga os acessos remotos cadastrados neles).
-- **Changelog em itens na Distribuição**: o campo "Observações" ao
-  preparar uma versão virou uma lista de itens (adicionar/remover linha),
-  em vez de um texto livre só — a aba Versões mostra como lista com
-  marcadores.
-- **Histórico recente na Consulta**: a ficha de um cliente mostra as
-  últimas 5 atualizações dele, não só a mais recente.
-- **Verificação de integridade dos backups**: cada backup automático
-  roda um `PRAGMA integrity_check` do SQLite assim que é criado; se
-  falhar, aparece um aviso "Corrompido" na tela de Backups e um erro no
-  log do serviço — antes, um backup corrompido só seria descoberto na
-  hora de precisar restaurar de verdade.
-- **Trocar a própria senha e "último login"**: qualquer pessoa logada
-  pode trocar a própria senha pela tela de Usuários (pede a senha atual);
-  a mesma tela mostra quando cada conta acessou pela última vez. Para
-  quando ninguém mais consegue entrar, ver "Recuperando acesso" abaixo.
-- **Correção de um bug de CSS que afetava várias telas**: qualquer
-  elemento escondido com o atributo `hidden` cuja classe definisse
-  `display` (a maioria dos botões, barras de ferramentas, formulários
-  recolhíveis) na verdade continuava aparecendo — "Limpar busca"
-  aparecia mesmo sem busca nenhuma, a barra de progresso de upload
-  aparecia parada em "0%" sem upload nenhum, os formulários "Convidar
-  Pessoa"/"Trocar minha senha" apareciam sempre abertos. Corrigido com
-  uma regra CSS única e global, em vez de remendo por componente.
+**Consulta** — a ficha de um cliente: dados de cadastro, sistemas, acessos
+remotos e as últimas atualizações dele.
 
-## Funcionalidades adicionadas — 11/09/2026
+**Histórico** — trilha de auditoria: quem criou, editou ou excluiu cada
+cliente, atualização, agendamento, sistema e conta, e quem restaurou cada
+backup. Com várias pessoas mexendo no mesmo banco, é o que responde "quem
+mudou isso?".
 
-- **Relatório de atualização** (aba Atualizações, botão **Gerar
-  Relatório** ao lado de "Atualizar Selecionado"): monta o texto do que
-  foi feito, pronto para copiar num chamado. Dois formatos no mesmo
-  modal — **Esta atualização** (o registro selecionado, com a versão
-  anterior do cliente entre parênteses) e **Histórico do cliente**
-  (todas as atualizações daquele cliente, da mais recente para a mais
-  antiga). O botão "Copiar" leva o texto para a área de transferência e
-  fecha; se o navegador não deixar copiar (HTTP puro, ver
-  `copyToClipboard` em `client/js/core/html.js`), o modal fica aberto
-  com o texto selecionado em vez de sumir com ele.
+**Distribuição e Versões** — o painel do agente de atualização automática
+(um serviço em C#/.NET que roda no servidor do cliente e aplica as
+atualizações do ERP sozinho). Prepara e publica pacotes de versão, e mostra
+a situação de cada agente em campo. O agente vive em
+[repositório próprio](https://github.com/antoniossalomao/atualizador_automatico).
 
-  Não exigiu campo novo nenhum: o relatório usa só o que já está gravado
-  em `atualizacoes` e `clientes`, então os registros antigos vindos de
-  planilha geram relatório igual aos de hoje. Campo vazio não vira linha
-  — quase metade do histórico não tem responsável preenchido, e uma
-  página de "Por: —" seria pior que um texto mais curto. A única
-  mudança no backend foi aceitar `limit=todas` em
-  `/atualizacoes/recent-by-client/:nome`, que antes travava em 50: o
-  relatório do cliente existe justamente para mostrar tudo.
+## Detalhes que valem menção
 
-- **Padronização de sistemas e responsáveis**: o campo "Sistema" das
-  atualizações era texto livre e tinha acumulado 144 grafias para 14
-  sistemas (`B_NFE`, `B_vendas`, `B_areadocontador e B_importaXML`). Não
-  era só feio: o relatório da aba Sistemas compara texto exato, então 60
-  dos 370 clientes de B_NFe apareciam como "Nunca atualizado" só porque
-  alguém tinha digitado `B_NFE`. Agora toda gravação — cadastro, edição e
-  **importação de planilha** — passa por `services/normalizacao.js`, que
-  casa o nome com o catálogo ignorando caixa, acento e pontuação. O campo
-  Responsável segue a mesma ideia, sem lista fixa de pessoas: canoniza
-  contra as grafias que já existem. O histórico antigo foi acertado de uma
-  vez por `scripts/normalizar-historico.js`, com as mesmas funções.
-
-- **Arquivar agendamentos concluídos** (aba Agendamentos): tarefa
-  concluída há mais de 30 dias sai da lista sozinha — a varredura roda
-  junto da listagem, sem agendador. Ela **não é apagada**: está no filtro
-  de Status em "Arquivadas" (com a contagem no rótulo), continua contando
-  no tempo médio de resolução por responsável do Resumo, e o botão
-  "Reabrir" traz de volta como "A Fazer". Desarquivar reabre de propósito:
-  como a varredura roda a cada listagem, uma tarefa que apenas saísse do
-  arquivo continuando "Concluído" sumiria de novo no mesmo instante. O
-  prazo está em `AGENDAMENTO_ARQUIVAR_DIAS` no `.env` — é regra da equipe
-  inteira, não uma preferência de cada pessoa: o conteúdo da lista precisa
-  ser o mesmo para todo mundo.
-
-- **Configurações passam a ser da conta, não do navegador**: tema, cor de
-  destaque, tamanho do texto, densidade, linhas por página, tela inicial e
-  as demais opções do painel agora ficam no servidor
-  (`usuario_preferencias`, via `GET`/`PUT /api/preferencias`), uma linha
-  por conta. Antes viviam só no localStorage, e o efeito aparecia na hora
-  errada: trocar de máquina, usar o Edge em vez do Chrome ou limpar os
-  dados do site devolvia o app aos padrões — e num computador
-  compartilhado as escolhas de uma pessoa recebiam a seguinte.
-
-  O localStorage **continua sendo escrito**, agora como cache, e isso não é
-  redundância: `theme-init.js` roda no `<head>`, antes do primeiro pixel, e
-  precisa de uma resposta síncrona. Esperar uma requisição ali faria a
-  página nascer no tema errado e trocar na cara de quem está olhando. O
-  cache pinta na hora; as preferências da conta chegam alguns
-  milissegundos depois e corrigem se divergirem. Quem entra numa conta
-  diferente no mesmo navegador tem o cache limpo antes, para não herdar o
-  tema de quem usou por último.
-
-  Migração é invisível: na primeira vez que uma conta entra sem nada salvo
-  no servidor, o que estava no localStorage daquele navegador vira as
-  preferências dela. A única opção que **não** acompanha a conta é o aviso
-  de falhas por notificação — depende da permissão que o navegador concede
-  por aparelho, e sincronizá-la faria o painel dizer "ativado" numa máquina
-  onde a permissão nunca foi pedida.
+- **Login multiusuário** com dois papéis (administrador e usuário comum). A
+  primeira conta é criada pela própria tela, na primeira vez que o servidor
+  sobe — sem editar arquivo nem rodar comando.
+- **Backup automático** a cada início do servidor, com verificação de
+  integridade (`PRAGMA integrity_check`) logo depois — um backup corrompido
+  aparece na tela de Backups em vez de ser descoberto na hora de precisar
+  dele. Restauração por botão, sem acesso ao servidor.
+- **Preferências por conta**, não por navegador: tema, cor de destaque,
+  tamanho do texto, densidade das tabelas e o resto acompanham a pessoa em
+  qualquer máquina.
+- **Nomes de sistema e de responsável são padronizados na gravação** —
+  quem digitar `B_NFE` grava `B_NFe`, e `CAMILA` grava `Camila`. Sem isso, o
+  relatório por sistema erra em silêncio (ver a seção de 11/09 abaixo, que
+  conta como isso foi descoberto).
+- **Notificação no Discord**, opcional: avisa um canal a cada atualização
+  nova, e quando um agente em campo fica offline ou reporta erro.
+- **Paginação e ordenação no servidor** nas listas que crescem
+  (Atualizações, Agendamentos, Clientes, Histórico).
+- **Proteções de servidor web**: cabeçalhos do `helmet`, CSP sob medida,
+  limite de tentativas de login por IP e comparação de token em tempo
+  constante nas rotas do agente.
 
 ## Estrutura
 
 ```
-web/
-  server/    backend (Express + SQLite via better-sqlite3)
-  client/    front-end (HTML/CSS/JavaScript puro, sem framework nem build)
-  docs/      documentação de arquitetura
+server/    backend (Express + SQLite via better-sqlite3)
+  src/controllers/   rotas HTTP -- só traduzem requisição em chamada de serviço
+  src/services/      regras de negócio
+  src/database/      um repositório por tabela; único lugar que escreve SQL
+client/    front-end (HTML/CSS/JavaScript puro, sem framework nem build)
+  js/views/          uma tela por arquivo
+  js/core/           peças reaproveitadas (tabela, modal, toast, tema...)
+  js/api/            único lugar que chama fetch
+docs/      documentação consolidada (.md + gerador do PDF)
 ```
 
 ## Como rodar (desenvolvimento)
@@ -222,7 +101,7 @@ web/
 Requer Node.js 18 ou mais recente.
 
 ```powershell
-cd web/server
+cd server
 npm install
 Copy-Item .env.example .env
 npm run dev
@@ -235,12 +114,13 @@ editar arquivo nenhum nem rodar comando extra para isso).
 `npm run dev` reinicia o servidor sozinho a cada alteração de arquivo
 (via `nodemon`). Para produção, use `npm start`.
 
-### Usando o banco de dados que você já tem
+### Usando um banco que você já tem
 
-Se você já usa o app desktop e quer continuar com os mesmos dados, copie
-o `gestao.db` dele para dentro de `web/server/data/` (ou aponte a
-variável `DB_PATH` do `.env` direto para o arquivo original) — o schema
-é compatível, nada precisa ser convertido.
+Para começar com dados que já existem, copie o `gestao.db` para dentro de
+`server/data/`, ou aponte a variável `DB_PATH` do `.env` direto para o
+arquivo onde ele estiver. Nada precisa ser convertido: as migrações rodam
+sozinhas a cada início do servidor e são idempotentes — tabelas e colunas
+que faltarem são criadas, o que já existe fica como está.
 
 ## Variáveis de ambiente (`.env`)
 
@@ -277,7 +157,7 @@ não só quem tem conta cadastrada.
 Se a única conta administradora esquecer a senha, não há como recuperar
 pela própria tela de login (de propósito — não existe envio de e-mail
 configurado). Com acesso à máquina onde o servidor roda (ou a uma cópia
-do `gestao.db`), rode a partir de `web/server`:
+do `gestao.db`), rode a partir da pasta `server`:
 
 ```powershell
 npm run resetar-senha -- <usuario> "<nova senha>"
@@ -288,8 +168,7 @@ Isso redefine a senha direto no banco, sem precisar saber a antiga. Veja
 
 ## Backup e restauração
 
-Igual ao app original: uma cópia do `gestao.db` é feita automaticamente
-na pasta `server/data/backups/` toda vez que o servidor é ligado
+Uma cópia do `gestao.db` é feita automaticamente na pasta `server/data/backups/` toda vez que o servidor é ligado
 (mantém as 10 mais recentes). O botão **Backups** no cabeçalho do app
 lista esses pontos no tempo e permite restaurar um deles — a página
 inteira recarrega depois de restaurar, para garantir que nenhuma tela
@@ -322,8 +201,8 @@ sozinho se cair**.
 
 ```powershell
 # Uma vez só, num PowerShell aberto como Administrador
-# (botão direito no ícone do PowerShell > "Executar como administrador"):
-cd web
+# (botão direito no ícone do PowerShell > "Executar como administrador"),
+# a partir da raiz do repositório:
 .\instalar-servico.ps1
 ```
 
@@ -376,7 +255,7 @@ correção numa próxima passada pelo script:
   mas seria bom ter uma tarefa agendada apagando rotações com mais de
   ~90 dias.
 
-## Limitações conhecidas desta primeira versão
+## Limitações conhecidas
 
 - Só dois níveis de permissão (administrador e usuário comum) — não há
   papéis mais granulares (ex.: alguém que só pode ver, sem editar).
@@ -391,7 +270,7 @@ correção numa próxima passada pelo script:
 
 ## Segurança das dependências
 
-Rode `npm audit` periodicamente dentro de `web/server`. Uma dependência
+Rode `npm audit` periodicamente dentro de `server/`. Uma dependência
 (`connect-sqlite3`, usada por outros projetos para guardar sessão de
 login) foi deliberadamente evitada aqui porque, no momento em que este
 projeto foi criado, ela trazia uma cadeia de dependências (`sqlite3` →
@@ -470,3 +349,163 @@ antigo foi tirado do índice do git (`git rm --cached`) — o arquivo
 continua no disco de quem já o tinha, só não é mais rastreado. Nenhum
 segredo precisou ser rotacionado, porque não havia nenhum de verdade
 neste arquivo.
+
+
+## Histórico de mudanças
+
+As seções abaixo registram o que foi acrescentado em cada etapa, com o
+motivo de cada decisão — inclusive as que deram errado antes de dar certo.
+
+### Setembro de 2026
+
+- **Alerta proativo de agente offline/com erro** (`AlertaAgenteService`):
+  com `DISCORD_WEBHOOK_URL` configurada, o app confere sozinho a cada
+  `ALERTA_AGENTES_INTERVALO_MINUTOS` (padrão 15) a situação de cada agente
+  do Atualizador automático (mesmo cálculo do painel da aba Distribuição)
+  e avisa o canal só na *transição* para "offline" (sem contato há 24h+)
+  ou "erro" — não repete o aviso a cada ciclo enquanto o problema
+  continua, e avisa de novo quando o agente volta a se comunicar. Antes,
+  só quem abrisse a tela do painel saberia que um cliente parou de
+  atualizar.
+- **Tendência mensal de atualizações** (Resumo): gráfico com os últimos 12
+  meses, para ver se o volume de atualizações está subindo ou caindo ao
+  longo do tempo — antes só existia o total do mês atual.
+- **Grupo/rede de clientes**: novo campo opcional "Grupo/Rede" no
+  cadastro de Clientes (com autocompletar dos grupos já usados), pra
+  clientes com várias unidades sob a mesma bandeira (ex.: sete lojas de
+  uma mesma rede) poderem ser encontrados/agrupados por busca. Não muda
+  nada em quem não usa o campo.
+- **Converter Agendamento em Atualização**: botão "Converter em
+  Atualização" na tarefa selecionada da aba Agendamentos — leva pra
+  Atualizações com cliente, responsável, data e um registro novo (não
+  edita nada) já pré-preenchidos a partir da tarefa, em vez de digitar
+  tudo de novo.
+- **Tempo médio de resolução por responsável** (Resumo): quantos dias, em
+  média, uma tarefa de Agendamentos leva entre ser criada e ser marcada
+  "Concluído", por responsável. Só entra no cálculo tarefa criada
+  *depois* desta métrica existir — tarefas antigas não têm como saber
+  quando foram criadas de verdade, e contar uma data inventada seria pior
+  que não mostrar nada.
+
+### 10/09/2026
+
+- **Acessos remotos por cliente** (aba Clientes, botão **Acessos** no
+  topo, ao lado de "Novo Cliente"): cadastro de AnyDesk/Suporte Bredas de
+  cada máquina de um cliente (servidor, estações, etc.), com botão de
+  copiar ao lado de cada ID. Tabela nova (`cliente_acessos`), apagada
+  automaticamente junto com o cliente se ele for excluído.
+- **Ações em lote em Agendamentos e Clientes** (mesmo padrão que já
+  existia em Atualizações — segurar `Shift` e clicar em duas linhas
+  seleciona tudo entre elas): em Agendamentos dá para concluir ou excluir
+  várias tarefas de uma vez (com "Desfazer"); em Clientes dá para marcar
+  um sistema em vários de uma vez ou excluir vários (sem "Desfazer" aqui
+  — ver comentário em `ClienteService.deleteMany`, a exclusão em lote de
+  cliente também apaga os acessos remotos cadastrados neles).
+- **Changelog em itens na Distribuição**: o campo "Observações" ao
+  preparar uma versão virou uma lista de itens (adicionar/remover linha),
+  em vez de um texto livre só — a aba Versões mostra como lista com
+  marcadores.
+- **Histórico recente na Consulta**: a ficha de um cliente mostra as
+  últimas 5 atualizações dele, não só a mais recente.
+- **Verificação de integridade dos backups**: cada backup automático
+  roda um `PRAGMA integrity_check` do SQLite assim que é criado; se
+  falhar, aparece um aviso "Corrompido" na tela de Backups e um erro no
+  log do serviço — antes, um backup corrompido só seria descoberto na
+  hora de precisar restaurar de verdade.
+- **Trocar a própria senha e "último login"**: qualquer pessoa logada
+  pode trocar a própria senha pela tela de Usuários (pede a senha atual);
+  a mesma tela mostra quando cada conta acessou pela última vez. Para
+  quando ninguém mais consegue entrar, ver "Recuperando acesso" abaixo.
+- **Correção de um bug de CSS que afetava várias telas**: qualquer
+  elemento escondido com o atributo `hidden` cuja classe definisse
+  `display` (a maioria dos botões, barras de ferramentas, formulários
+  recolhíveis) na verdade continuava aparecendo — "Limpar busca"
+  aparecia mesmo sem busca nenhuma, a barra de progresso de upload
+  aparecia parada em "0%" sem upload nenhum, os formulários "Convidar
+  Pessoa"/"Trocar minha senha" apareciam sempre abertos. Corrigido com
+  uma regra CSS única e global, em vez de remendo por componente.
+
+### 11/09/2026
+
+- **Relatório de atualização** (aba Atualizações, botão **Gerar
+  Relatório** ao lado de "Atualizar Selecionado"): monta o texto do que
+  foi feito, pronto para copiar num chamado. Dois formatos no mesmo
+  modal — **Esta atualização** (o registro selecionado, com a versão
+  anterior do cliente entre parênteses) e **Histórico do cliente**
+  (todas as atualizações daquele cliente, da mais recente para a mais
+  antiga). O botão "Copiar" leva o texto para a área de transferência e
+  fecha; se o navegador não deixar copiar (HTTP puro, ver
+  `copyToClipboard` em `client/js/core/html.js`), o modal fica aberto
+  com o texto selecionado em vez de sumir com ele.
+
+  Não exigiu campo novo nenhum: o relatório usa só o que já está gravado
+  em `atualizacoes` e `clientes`, então os registros antigos vindos de
+  planilha geram relatório igual aos de hoje. Campo vazio não vira linha
+  — quase metade do histórico não tem responsável preenchido, e uma
+  página de "Por: —" seria pior que um texto mais curto. A única
+  mudança no backend foi aceitar `limit=todas` em
+  `/atualizacoes/recent-by-client/:nome`, que antes travava em 50: o
+  relatório do cliente existe justamente para mostrar tudo.
+
+- **Padronização de sistemas e responsáveis**: o campo "Sistema" das
+  atualizações era texto livre e tinha acumulado 144 grafias para 14
+  sistemas (`B_NFE`, `B_vendas`, `B_areadocontador e B_importaXML`). Não
+  era só feio: o relatório da aba Sistemas compara texto exato, então 60
+  dos 370 clientes de B_NFe apareciam como "Nunca atualizado" só porque
+  alguém tinha digitado `B_NFE`. Agora toda gravação — cadastro, edição e
+  **importação de planilha** — passa por `services/normalizacao.js`, que
+  casa o nome com o catálogo ignorando caixa, acento e pontuação. O campo
+  Responsável segue a mesma ideia, sem lista fixa de pessoas: canoniza
+  contra as grafias que já existem. O histórico antigo foi acertado de uma
+  vez por `scripts/normalizar-historico.js`, com as mesmas funções.
+
+- **Arquivar agendamentos concluídos** (aba Agendamentos): tarefa
+  concluída há mais de 30 dias sai da lista sozinha — a varredura roda
+  junto da listagem, sem agendador. Ela **não é apagada**: está no filtro
+  de Status em "Arquivadas" (com a contagem no rótulo), continua contando
+  no tempo médio de resolução por responsável do Resumo, e o botão
+  "Reabrir" traz de volta como "A Fazer". Desarquivar reabre de propósito:
+  como a varredura roda a cada listagem, uma tarefa que apenas saísse do
+  arquivo continuando "Concluído" sumiria de novo no mesmo instante. O
+  prazo está em `AGENDAMENTO_ARQUIVAR_DIAS` no `.env` — é regra da equipe
+  inteira, não uma preferência de cada pessoa: o conteúdo da lista precisa
+  ser o mesmo para todo mundo.
+
+- **Configurações passam a ser da conta, não do navegador**: tema, cor de
+  destaque, tamanho do texto, densidade, linhas por página, tela inicial e
+  as demais opções do painel agora ficam no servidor
+  (`usuario_preferencias`, via `GET`/`PUT /api/preferencias`), uma linha
+  por conta. Antes viviam só no localStorage, e o efeito aparecia na hora
+  errada: trocar de máquina, usar o Edge em vez do Chrome ou limpar os
+  dados do site devolvia o app aos padrões — e num computador
+  compartilhado as escolhas de uma pessoa recebiam a seguinte.
+
+  O localStorage **continua sendo escrito**, agora como cache, e isso não é
+  redundância: `theme-init.js` roda no `<head>`, antes do primeiro pixel, e
+  precisa de uma resposta síncrona. Esperar uma requisição ali faria a
+  página nascer no tema errado e trocar na cara de quem está olhando. O
+  cache pinta na hora; as preferências da conta chegam alguns
+  milissegundos depois e corrigem se divergirem. Quem entra numa conta
+  diferente no mesmo navegador tem o cache limpo antes, para não herdar o
+  tema de quem usou por último.
+
+  Migração é invisível: na primeira vez que uma conta entra sem nada salvo
+  no servidor, o que estava no localStorage daquele navegador vira as
+  preferências dela. A única opção que **não** acompanha a conta é o aviso
+  de falhas por notificação — depende da permissão que o navegador concede
+  por aparelho, e sincronizá-la faria o painel dizer "ativado" numa máquina
+  onde a permissão nunca foi pedida.
+
+## Documentação
+
+[`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) —
+documento único que cobre a arquitetura do painel e do agente de
+atualização, as auditorias técnicas e o histórico de correções. O PDF ao
+lado dele é gerado do próprio `.md` (`cd docs && npm install && npm run pdf`)
+e nunca é editado à mão.
+
+## Licença
+
+Proprietária — ver [LICENSE](LICENSE). O código está publicado para leitura;
+usar, copiar, modificar ou incorporar em outro projeto exige autorização por
+escrito.
