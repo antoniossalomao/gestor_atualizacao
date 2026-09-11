@@ -1,4 +1,4 @@
-const { STATUS_OPTIONS } = require("../config/constants");
+const { STATUS_OPTIONS, AGENDAMENTO_ARQUIVAR_DIAS } = require("../config/constants");
 const { dataValida, horaValida } = require("./validation");
 const { normalizarResponsavel } = require("./normalizacao");
 const { ValidationError, NotFoundError } = require("./errors");
@@ -16,8 +16,44 @@ class AgendamentoService {
     this.historico = historico;
   }
 
+  /**
+   * A listagem arquiva antes de listar.
+   *
+   * Sem agendador nenhum, de proposito: o app nao tem um, e um cron so para
+   * isto seria mais peca do que o problema pede. A varredura e um UPDATE com
+   * WHERE que na esmagadora maioria das vezes nao casa com nada, numa tabela
+   * de dezenas de linhas -- e roda exatamente quando alguem esta olhando a
+   * lista, que e quando o resultado importa.
+   *
+   * O total devolvido ganha `arquivadas`: a tela precisa saber quantas
+   * existem para oferecer o filtro sem mandar ninguem procurar no escuro.
+   */
   list(search = "", status = "Todos", paginacao = {}) {
-    return this.db.agendamentos.list(search, status, paginacao);
+    this.arquivarAntigas();
+    return {
+      ...this.db.agendamentos.list(search, status, paginacao),
+      arquivadas: this.db.agendamentos.contarArquivadas(),
+      // A tela explica a regra ("concluídas há mais de N dias saem daqui"),
+      // e o N vem daqui em vez de estar escrito na tela: quem mudar o .env
+      // muda o comportamento E o texto, sem os dois se contradizerem.
+      arquivarDias: AGENDAMENTO_ARQUIVAR_DIAS,
+    };
+  }
+
+  /** @returns {number} quantas tarefas sairam da lista nesta varredura */
+  arquivarAntigas() {
+    return this.db.agendamentos.arquivarConcluidasAntigas(AGENDAMENTO_ARQUIVAR_DIAS, STATUS_OPTIONS[STATUS_OPTIONS.length - 1]);
+  }
+
+  /** Traz uma tarefa arquivada de volta para a lista, reaberta. */
+  reabrir(id, usuario) {
+    const tarefa = this.db.agendamentos.find(id);
+    if (!tarefa) throw new NotFoundError("Esta tarefa não existe mais.");
+    if (this.db.agendamentos.reabrir(id, STATUS_OPTIONS[0]) === 0) {
+      throw new NotFoundError("Esta tarefa não está arquivada.");
+    }
+    this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${tarefa.tarefa}" desarquivada e reaberta`);
+    return { ...tarefa, status: STATUS_OPTIONS[0], concluidoEm: null };
   }
 
   /** Tarefas pendentes vencidas/vencendo hoje, para o banner de lembrete. */

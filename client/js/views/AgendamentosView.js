@@ -1,4 +1,4 @@
-import { AGENDA_COLUMNS, STATUS_OPTIONS } from "../config.js";
+import { AGENDA_COLUMNS, STATUS_OPTIONS, FILTRO_ARQUIVADAS } from "../config.js";
 import { ApiError } from "../api/ApiClient.js";
 import { View } from "../core/View.js";
 import { SortableTable } from "../core/SortableTable.js";
@@ -63,6 +63,11 @@ export class AgendamentosView extends View {
             <select class="input" id="age-status" data-role="status-filter">
               <option>Todos</option>
               ${STATUS_OPTIONS.map((s) => `<option>${s}</option>`).join("")}
+              <!-- Fica no MESMO select dos status, e não num botão à parte,
+                   porque é aqui que a pessoa vem quando quer recortar a
+                   lista -- e "arquivada" é, na prática, mais um recorte. O
+                   rótulo ganha a contagem em _pintarArquivadas(). -->
+              <option value="${FILTRO_ARQUIVADAS}">${FILTRO_ARQUIVADAS}</option>
             </select>
           </div>
           <div class="toolbar__clear">
@@ -74,6 +79,10 @@ export class AgendamentosView extends View {
         <p class="text-muted bulk-hint">
           Dica: segure <kbd>Shift</kbd> e clique em duas linhas para selecionar tudo entre elas.
         </p>
+        <!-- Uma lista que esvazia sozinha sem dizer por quê parece perda de
+             dado. Esta linha só aparece quando a pessoa está OLHANDO as
+             arquivadas, que é quando a pergunta surge. -->
+        <p class="text-muted bulk-hint" data-role="aviso-arquivadas" hidden></p>
         <div class="bulk-bar" data-role="bulk" hidden>
           <span class="bulk-bar__count" data-role="bulk-count" aria-live="polite"></span>
           <button type="button" class="btn btn--small btn--ghost" data-action="bulk-limpar">Desmarcar</button>
@@ -92,6 +101,10 @@ export class AgendamentosView extends View {
           <button type="button" class="btn btn--danger" data-action="delete">Excluir Selecionada</button>
           <button type="button" class="btn" data-action="done">Marcar como Concluída</button>
           <button type="button" class="btn" data-action="converter">Converter em Atualização</button>
+          <!-- Só existe enquanto o filtro é "Arquivadas": em qualquer outra
+               lista não há o que reabrir, e um botão desligado o tempo todo
+               é ruído. -->
+          <button type="button" class="btn btn--accent" data-action="reabrir" hidden>Reabrir</button>
         </div>
       </div>
     `;
@@ -112,7 +125,13 @@ export class AgendamentosView extends View {
       onMultiSelect: (chaves) => this._pintarBulk(chaves),
       caption: "Tarefas agendadas",
       emptyNode: () =>
-        this._temFiltro()
+        this.status === FILTRO_ARQUIVADAS
+          ? emptyState({
+              titulo: "Nenhuma tarefa arquivada",
+              descricao: "Tarefas concluídas saem da lista sozinhas depois de um tempo. Ainda não houve nenhuma.",
+              icone: "agendamentos",
+            })
+          : this._temFiltro()
           ? emptyState({
               titulo: "Nenhuma tarefa com esse filtro",
               descricao: "Tente outro termo, ou limpe os filtros para ver tudo.",
@@ -169,6 +188,9 @@ export class AgendamentosView extends View {
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
     this.doneBtn = this.container.querySelector('[data-action="done"]');
     this.converterBtn = this.container.querySelector('[data-action="converter"]');
+    this.reabrirBtn = this.container.querySelector('[data-action="reabrir"]');
+    this.avisoArquivadas = this.container.querySelector('[data-role="aviso-arquivadas"]');
+    this.reabrirBtn.addEventListener("click", () => this.reabrir());
 
     // -- lote --
     this.bulkBar = this.container.querySelector('[data-role="bulk"]');
@@ -282,6 +304,7 @@ export class AgendamentosView extends View {
           this.table.setRows(resposta.rows);
           this.pagination.update(resposta);
           this.container.querySelector('[data-role="count"]').textContent = plural(resposta.total, "tarefa");
+          this._pintarArquivadas(resposta);
         }
       );
 
@@ -291,6 +314,26 @@ export class AgendamentosView extends View {
       }
     } finally {
       this.table.setRefreshing(false);
+    }
+  }
+
+  /**
+   * A contagem no rótulo do filtro e o aviso que explica a regra.
+   *
+   * Os dois números vêm do servidor (`arquivadas`, `arquivarDias`) em vez de
+   * estarem escritos aqui: o prazo mora no .env, e um texto de tela com "30
+   * dias" fixo passaria a mentir no dia em que alguém mudasse para 60.
+   */
+  _pintarArquivadas({ arquivadas = 0, arquivarDias = 0 } = {}) {
+    const opcao = this.statusFilter.querySelector(`option[value="${FILTRO_ARQUIVADAS}"]`);
+    if (opcao) opcao.textContent = arquivadas > 0 ? `${FILTRO_ARQUIVADAS} (${arquivadas})` : FILTRO_ARQUIVADAS;
+
+    const vendo = this.status === FILTRO_ARQUIVADAS;
+    this.avisoArquivadas.hidden = !vendo;
+    if (vendo) {
+      this.avisoArquivadas.textContent =
+        `Tarefas concluídas há mais de ${plural(arquivarDias, "dia")} saem da lista sozinhas. ` +
+        `"Reabrir" traz a selecionada de volta como "${STATUS_OPTIONS[0]}".`;
     }
   }
 
@@ -335,6 +378,40 @@ export class AgendamentosView extends View {
     this.deleteBtn.disabled = this.selectedId == null;
     this.doneBtn.disabled = this.selectedId == null;
     this.converterBtn.disabled = this.selectedId == null;
+    this.reabrirBtn.disabled = this.selectedId == null;
+
+    // Olhando as arquivadas, "Marcar como Concluída" não tem o que fazer
+    // (todas já estão) -- ele sai e o "Reabrir" toma o lugar.
+    const vendoArquivadas = this.status === FILTRO_ARQUIVADAS;
+    this.reabrirBtn.hidden = !vendoArquivadas;
+    this.doneBtn.hidden = vendoArquivadas;
+  }
+
+  /**
+   * Traz a tarefa selecionada de volta para a lista.
+   *
+   * Reabrir e desarquivar são a mesma ação de propósito: a varredura roda a
+   * cada listagem, então uma tarefa que só saísse do arquivo continuando
+   * "Concluído" seria arquivada de novo no mesmo segundo. Quem traz uma
+   * tarefa de volta quer fazer algo com ela.
+   */
+  async reabrir() {
+    if (this.selectedId == null) {
+      Modal.alert("Seleção", "Selecione uma tarefa na tabela primeiro.", "warning");
+      return;
+    }
+    const liberar = marcarOcupado(this.reabrirBtn);
+    try {
+      const tarefa = await this.api.patch(`/agendamentos/${this.selectedId}/reabrir`);
+      this.clearForm();
+      this._invalidar();
+      await this._reloadList();
+      toast.success(`"${tarefa.tarefa}" voltou para a lista como "${STATUS_OPTIONS[0]}".`);
+    } catch (err) {
+      Modal.alert("Erro", errorMessage(err), "error");
+    } finally {
+      liberar();
+    }
   }
 
   /**

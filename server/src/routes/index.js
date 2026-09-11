@@ -128,6 +128,7 @@ class ApiRouter {
     api.post("/agendamentos", agendamentos.create);
     api.put("/agendamentos/:id", agendamentos.update);
     api.patch("/agendamentos/:id/done", agendamentos.markDone);
+    api.patch("/agendamentos/:id/reabrir", agendamentos.reabrir);
     api.delete("/agendamentos/:id", agendamentos.remove);
 
     api.get("/resumo", resumo.get);

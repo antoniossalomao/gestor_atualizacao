@@ -51,6 +51,14 @@ class AgendamentosController {
     }
   };
 
+  reabrir = (req, res, next) => {
+    try {
+      res.json(this.agendamentoService.reabrir(Number(req.params.id), req.session.user));
+    } catch (err) {
+      next(err);
+    }
+  };
+
   removeMany = (req, res, next) => {
     try {
       const ids = Array.isArray(req.body?.ids) ? req.body.ids : null;

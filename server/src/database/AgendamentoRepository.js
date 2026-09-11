@@ -1,6 +1,7 @@
 const { BaseRepository } = require("./BaseRepository");
 const { DATE_SORT_EXPR, titleCase } = require("./AtualizacaoRepository");
 const { buildOrderBy } = require("./sortHelper");
+const { FILTRO_ARQUIVADAS } = require("../config/constants");
 
 const COLUMNS = ["tarefa", "cliente", "responsavel", "data", "horario", "status"];
 
@@ -47,9 +48,17 @@ class AgendamentoRepository extends BaseRepository {
       clauses.push("(tarefa LIKE @like OR cliente LIKE @like OR responsavel LIKE @like)");
       params.like = `%${search}%`;
     }
-    if (status !== "Todos") {
-      clauses.push("status = @status");
-      params.status = status;
+    // "Arquivadas" nao e um status -- e o pedido de ver justamente o que sai
+    // da lista. Por isso ele SUBSTITUI o recorte por status em vez de se
+    // somar a ele: pedir "Arquivadas" e pedir todas as arquivadas.
+    if (status === FILTRO_ARQUIVADAS) {
+      clauses.push("arquivado_em IS NOT NULL");
+    } else {
+      clauses.push("arquivado_em IS NULL");
+      if (status !== "Todos") {
+        clauses.push("status = @status");
+        params.status = status;
+      }
     }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
@@ -63,7 +72,7 @@ class AgendamentoRepository extends BaseRepository {
       `${STATUS_ORDER_EXPR}, ${DATE_SORT_EXPR} ASC, ${HORARIO_SORT_EXPR}, id DESC`
     );
     const sql = `
-      SELECT id, ${COLUMNS.join(", ")} FROM ${this.table}
+      SELECT id, ${COLUMNS.join(", ")}, arquivado_em AS arquivadoEm FROM ${this.table}
       ${where}
       ORDER BY ${orderBy}
       LIMIT @limit OFFSET @offset
@@ -160,6 +169,53 @@ class AgendamentoRepository extends BaseRepository {
     return [...merged.values()]
       .map((item) => ({ label: item.label, total: item.total, diasMedios: Math.round(item.dias * 10) / 10 }))
       .sort((a, b) => a.diasMedios - b.diasMedios);
+  }
+
+  /**
+   * Tira da lista as tarefas concluidas ha mais de `dias`.
+   *
+   * So toca quem tem `concluido_em` preenchido: tarefas marcadas como
+   * concluidas antes dessa coluna existir nao tem como saber HA QUANTO
+   * TEMPO foram concluidas, e some-las por um prazo que ninguem consegue
+   * calcular seria arquivar no escuro. Elas continuam na lista ate alguem
+   * mexer nelas.
+   *
+   * @returns {number} quantas foram arquivadas agora
+   */
+  arquivarConcluidasAntigas(dias, statusConcluido) {
+    const corte = new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
+    return this.conn
+      .prepare(
+        `UPDATE ${this.table} SET arquivado_em = @agora
+         WHERE arquivado_em IS NULL
+           AND status = @status
+           AND concluido_em IS NOT NULL
+           AND concluido_em < @corte`
+      )
+      .run({ agora: new Date().toISOString(), status: statusConcluido, corte }).changes;
+  }
+
+  /** Quantas tarefas estao arquivadas -- o contador ao lado do filtro. */
+  contarArquivadas() {
+    return this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table} WHERE arquivado_em IS NOT NULL`).get().total;
+  }
+
+  /**
+   * Traz uma tarefa arquivada de volta para a lista.
+   *
+   * Desarquivar REABRE a tarefa (volta ao primeiro status e esquece a
+   * conclusao) em vez de so limpar `arquivado_em`. O motivo e pratico: a
+   * varredura roda a cada listagem, entao uma tarefa concluida ha meses que
+   * apenas "desarquivasse" sumiria de novo no mesmo instante. E quem traz
+   * uma tarefa de volta quer justamente fazer algo com ela.
+   */
+  reabrir(id, statusInicial) {
+    return this.conn
+      .prepare(
+        `UPDATE ${this.table} SET arquivado_em = NULL, concluido_em = NULL, status = @status
+         WHERE id = @id AND arquivado_em IS NOT NULL`
+      )
+      .run({ id, status: statusInicial }).changes;
   }
 
   /**

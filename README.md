@@ -159,6 +159,30 @@ como referência.
   `/atualizacoes/recent-by-client/:nome`, que antes travava em 50: o
   relatório do cliente existe justamente para mostrar tudo.
 
+- **Padronização de sistemas e responsáveis**: o campo "Sistema" das
+  atualizações era texto livre e tinha acumulado 144 grafias para 14
+  sistemas (`B_NFE`, `B_vendas`, `B_areadocontador e B_importaXML`). Não
+  era só feio: o relatório da aba Sistemas compara texto exato, então 60
+  dos 370 clientes de B_NFe apareciam como "Nunca atualizado" só porque
+  alguém tinha digitado `B_NFE`. Agora toda gravação — cadastro, edição e
+  **importação de planilha** — passa por `services/normalizacao.js`, que
+  casa o nome com o catálogo ignorando caixa, acento e pontuação. O campo
+  Responsável segue a mesma ideia, sem lista fixa de pessoas: canoniza
+  contra as grafias que já existem. O histórico antigo foi acertado de uma
+  vez por `scripts/normalizar-historico.js`, com as mesmas funções.
+
+- **Arquivar agendamentos concluídos** (aba Agendamentos): tarefa
+  concluída há mais de 30 dias sai da lista sozinha — a varredura roda
+  junto da listagem, sem agendador. Ela **não é apagada**: está no filtro
+  de Status em "Arquivadas" (com a contagem no rótulo), continua contando
+  no tempo médio de resolução por responsável do Resumo, e o botão
+  "Reabrir" traz de volta como "A Fazer". Desarquivar reabre de propósito:
+  como a varredura roda a cada listagem, uma tarefa que apenas saísse do
+  arquivo continuando "Concluído" sumiria de novo no mesmo instante. O
+  prazo está em `AGENDAMENTO_ARQUIVAR_DIAS` no `.env` — é regra da equipe
+  inteira, e não uma preferência por pessoa como as do painel de
+  Configurações (que vivem no localStorage de cada navegador).
+
 ## Estrutura
 
 ```

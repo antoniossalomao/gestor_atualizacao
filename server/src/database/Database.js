@@ -267,6 +267,12 @@ class Database {
       // data. Texto "HH:MM" (24h), mesmo padrao "guardar como texto e
       // converter so na hora de ordenar" ja usado por "data".
       ["agendamentos", "horario", "TEXT"],
+      // "arquivado_em": tarefa concluida ha bastante tempo sai da lista do
+      // dia a dia sozinha (ver AgendamentoService.arquivarAntigas). Uma
+      // coluna, e nao um DELETE, porque a tarefa arquivada continua contando
+      // no tempo medio de resolucao por responsavel do Resumo -- apagar a
+      // linha limparia a tela e estragaria a metrica no mesmo gesto.
+      ["agendamentos", "arquivado_em", "TEXT"],
     ]) {
       try {
         conn.exec(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${tipo}`);
