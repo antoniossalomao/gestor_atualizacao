@@ -49,9 +49,16 @@ export class Modal {
       onClose: (resultado) => onResolve(resultado === undefined && question ? false : resultado),
     });
 
+    // Toda confirmação chega aqui com `kind: "question"` (ver Modal.confirm) --
+    // mas uma confirmação de exclusão e uma de "importar planilha" não são o
+    // mesmo tipo de pergunta. O selo já muda de cor (`danger` decide entre
+    // `btn--danger` e `btn--accent` no botão, algumas linhas abaixo); o ícone
+    // do topo, que é a primeira coisa que os olhos encontram na caixa, ficava
+    // para trás mostrando sempre o mesmo "?" roxo neutro.
+    const iconeKind = question && danger ? "error" : kind;
     const tituloId = `modal-titulo-${Math.random().toString(36).slice(2, 8)}`;
     box.innerHTML = `
-      <div class="modal-box__icon modal-box__icon--${kind}" aria-hidden="true">${ICONS[kind] || "i"}</div>
+      <div class="modal-box__icon modal-box__icon--${iconeKind}" aria-hidden="true">${ICONS[iconeKind] || "i"}</div>
       <h3 class="modal-box__title" id="${tituloId}"></h3>
       <p class="modal-box__message"></p>
       <div class="modal-box__actions"></div>

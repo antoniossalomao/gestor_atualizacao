@@ -4,6 +4,7 @@ import { toast } from "../core/Toast.js";
 import { icon } from "../core/icons.js";
 import { escapeHtml, copyToClipboard } from "../core/html.js";
 import { marcarOcupado } from "../core/guard.js";
+import { emptyState } from "../core/EmptyState.js";
 
 /**
  * Janela flutuante com os acessos remotos (AnyDesk / Suporte Bredas) das
@@ -52,6 +53,7 @@ export class AcessosModal {
 
     box.querySelector('[data-action="close"]').addEventListener("click", () => close());
 
+    this.list = box.querySelector('[data-role="list"]');
     this.form = box.querySelector('[data-role="form"]');
     this.toggleBtn = box.querySelector('[data-action="toggle-form"]');
     this.salvarBtn = this.form.querySelector('[data-action="salvar"]');
@@ -83,15 +85,20 @@ export class AcessosModal {
     list.replaceChildren();
 
     if (acessos.length === 0) {
-      const vazio = document.createElement("p");
-      vazio.className = "text-muted";
-      vazio.textContent = "Nenhuma máquina cadastrada ainda.";
-      list.appendChild(vazio);
+      list.appendChild(
+        emptyState({
+          titulo: "Nenhuma máquina cadastrada",
+          descricao: "Use o formulário abaixo para adicionar a primeira.",
+          icone: "acessos",
+        })
+      );
     }
 
     for (const a of acessos) {
       const row = document.createElement("div");
       row.className = "users-list__row";
+      row.dataset.id = String(a.id);
+      row.classList.toggle("is-editing", a.id === this.editingId);
 
       const info = document.createElement("div");
       info.className = "users-list__info";
@@ -170,6 +177,14 @@ export class AcessosModal {
     this.toggleBtn.textContent = "";
     this.toggleBtn.innerHTML = `${icon("minus")} Nova Máquina`;
     this._toggleForm(true);
+    this._marcarEdicao();
+  }
+
+  /** Acende a linha da lista que corresponde ao `editingId` atual (ou apaga todas, se nenhum). */
+  _marcarEdicao() {
+    for (const row of this.list.children) {
+      row.classList.toggle("is-editing", row.dataset.id === String(this.editingId));
+    }
   }
 
   _resetForm() {
@@ -179,6 +194,7 @@ export class AcessosModal {
     this.cancelarEdicaoBtn.hidden = true;
     this.toggleBtn.innerHTML = `${icon("plus")} Nova Máquina`;
     this._toggleForm(false);
+    this._marcarEdicao();
   }
 
   async _submit() {

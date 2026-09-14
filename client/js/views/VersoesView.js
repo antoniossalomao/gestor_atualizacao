@@ -84,7 +84,7 @@ export class VersoesView extends View {
 
     this._renderStats(systems, publicadas);
     this._renderSystems(systems, publicadaPorSistema);
-    this._renderPublished(publicadas);
+    this._renderPublished(publicadas, systems);
   }
 
   _renderStats(systems, publicadas) {
@@ -92,7 +92,7 @@ export class VersoesView extends View {
     this.container.querySelector('[data-role="stats"]').innerHTML = `
       <div class="card version-stat"><span>Sistemas acompanhados</span><strong>${systems.length}</strong></div>
       <div class="card version-stat"><span>Publicados para o agente</span><strong>${publicadas.length}</strong></div>
-      <div class="card version-stat"><span>Sem versão publicada</span><strong>${semCanal}</strong></div>
+      <div class="card version-stat${semCanal > 0 ? " version-stat--alerta" : ""}"><span>Sem versão publicada</span><strong>${semCanal}</strong></div>
     `;
   }
 
@@ -120,11 +120,7 @@ export class VersoesView extends View {
 
     for (const item of systems) {
       const publicada = publicadaPorSistema.get(item.sistema);
-      const situacao = !publicada
-        ? { texto: "Sem canal", classe: "badge--muted", dica: "Nenhuma versão deste sistema foi publicada para o atualizador." }
-        : publicada.versao === item.versao
-        ? { texto: "Alinhada", classe: "badge--success", dica: "O registro bate com o que está publicado." }
-        : { texto: "Divergente", classe: "badge--warning", dica: `Publicada ${publicada.versao}, registrada ${item.versao}.` };
+      const situacao = situacaoPublicacao(item.versao, publicada?.versao);
 
       const row = document.createElement("tr");
       row.className = "is-readonly";
@@ -139,7 +135,7 @@ export class VersoesView extends View {
     }
   }
 
-  _renderPublished(versions) {
+  _renderPublished(versions, systems) {
     const list = this.container.querySelector('[data-role="published"]');
     list.replaceChildren();
     this.container.querySelector('[data-role="publishedCount"]').textContent = plural(versions.length, "release");
@@ -157,6 +153,12 @@ export class VersoesView extends View {
     }
 
     for (const item of versions) {
+      // Comparado com o que Atualizações tem registrado para o mesmo sistema
+      // -- a mesma conta que a tabela de sistemas já faz, só que a partir do
+      // lado publicado em vez do lado registrado.
+      const registrada = systems.find((s) => s.sistema === item.sistema);
+      const situacao = situacaoPublicacao(registrada?.versao, item.versao);
+
       const article = document.createElement("article");
       article.className = "published-release";
       article.innerHTML = `
@@ -166,7 +168,9 @@ export class VersoesView extends View {
           <span data-role="meta"></span>
           <div data-role="changelog"></div>
         </div>
-        <div class="published-release__state">NO AR</div>
+        <div class="published-release__state">
+          <span class="badge ${situacao.classe}" title="${escapeHtml(situacao.dica)}">${situacao.texto}</span>
+        </div>
       `;
       const meta = article.querySelector('[data-role="meta"]');
       meta.textContent = `Publicada ${tempoRelativo(item.publicadoEm)} · ${plural(item.pacotes.length, "pacote")} · ${formatarBytes(item.tamanhoBytes)}`;
@@ -175,6 +179,24 @@ export class VersoesView extends View {
       list.appendChild(article);
     }
   }
+}
+
+/**
+ * Compara a versão registrada (cadastro em Atualizações) com a publicada
+ * (Distribuição) para o mesmo sistema -- mesma regra nos dois lugares que
+ * mostram essa comparação: a tabela de sistemas (_renderSystems) e, agora,
+ * os cards de releases publicados (_renderPublished). Lá, o card sempre
+ * dizia "NO AR", um texto fixo sem informação nenhuma -- todo item da lista
+ * é, por definição, uma versão publicada.
+ */
+function situacaoPublicacao(versaoRegistrada, versaoPublicada) {
+  if (!versaoPublicada) {
+    return { texto: "Sem canal", classe: "badge--muted", dica: "Nenhuma versão deste sistema foi publicada para o atualizador." };
+  }
+  if (!versaoRegistrada || versaoPublicada === versaoRegistrada) {
+    return { texto: "Alinhada", classe: "badge--success", dica: "O registro bate com o que está publicado." };
+  }
+  return { texto: "Divergente", classe: "badge--warning", dica: `Publicada ${versaoPublicada}, registrada ${versaoRegistrada}.` };
 }
 
 /**

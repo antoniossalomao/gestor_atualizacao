@@ -1,5 +1,6 @@
 import { ApiError } from "../api/ApiClient.js";
 import { marcarOcupado } from "../core/guard.js";
+import { icon } from "../core/icons.js";
 
 /**
  * Tela cheia de autenticação -- funciona em dois modos:
@@ -32,6 +33,24 @@ export class LoginView {
 
     const screen = document.createElement("div");
     screen.className = "auth-screen";
+
+    // Só aparece em telas largas (ver o media query em components.css) --
+    // reaproveita os mesmos três nomes de aba do resto do app (Clientes,
+    // Atualizações, Distribuição), então não é propaganda inventada, é o que
+    // o sistema de fato faz.
+    const brand = document.createElement("div");
+    brand.className = "auth-screen__brand";
+    brand.innerHTML = `
+      <div class="auth-screen__brand-mark"><img src="/assets/logo.png" alt="" width="48" height="48" /></div>
+      <strong class="auth-screen__brand-name">ATUALIZADOR</strong>
+      <p class="auth-screen__brand-tagline">Gestor de atualizações de clientes, num só lugar.</p>
+      <ul class="auth-screen__brand-list">
+        <li>${icon("clientes")} Cadastro de clientes e sistemas</li>
+        <li>${icon("atualizacoes")} Histórico de atualizações</li>
+        <li>${icon("distribuicao")} Distribuição automática de versões</li>
+      </ul>
+    `;
+    screen.appendChild(brand);
 
     const card = document.createElement("div");
     card.className = "auth-card";

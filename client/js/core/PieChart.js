@@ -57,9 +57,12 @@ export class PieChart {
       return;
     }
 
-    wrap.appendChild(this._buildSvg(slices, total));
-    wrap.appendChild(this._buildLegend(slices, total));
+    const svg = this._buildSvg(slices, total);
+    const legend = this._buildLegend(slices, total);
+    wrap.appendChild(svg);
+    wrap.appendChild(legend);
     this.container.appendChild(wrap);
+    this._ligarIsolamento(svg, legend);
   }
 
   _buildSvg(slices, total) {
@@ -114,6 +117,7 @@ export class PieChart {
       circle.setAttribute("stroke-dasharray", `${fatia} ${circunferencia - fatia}`);
       circle.setAttribute("stroke-dashoffset", String(-acumulado));
       circle.setAttribute("stroke-linecap", visiveis.length > 1 ? "butt" : "round");
+      circle.dataset.label = slice.label;
       group.appendChild(circle);
       acumulado += fatia;
     }
@@ -148,14 +152,22 @@ export class PieChart {
   _buildLegend(slices, total) {
     const legend = document.createElement("div");
     legend.className = "pie-chart__legend";
-    legend.setAttribute("aria-hidden", "true"); // já dito pelo aria-label do SVG
 
     for (const slice of slices) {
       const pct = Math.round((slice.value / total) * 100);
-      const item = document.createElement("div");
+      // <button>, não <div>: a legenda passou a isolar a fatia no clique (ver
+      // _ligarIsolamento), então precisa ser alcançável por teclado e leitor
+      // de tela como o controle que é -- o `aria-hidden` que cobria a legenda
+      // inteira (o SVG já narrava os números sozinho) deixou de valer, porque
+      // agora ela também é onde a interação acontece.
+      const item = document.createElement("button");
+      item.type = "button";
       item.className = "pie-chart__legend-item";
+      item.disabled = slice.value === 0;
+      item.dataset.label = slice.label;
+      item.setAttribute("aria-pressed", "false");
       item.innerHTML = `
-        <span class="pie-chart__dot"></span>
+        <span class="pie-chart__dot" aria-hidden="true"></span>
         <span class="pie-chart__nome"></span>
         <span class="pie-chart__valor"><strong></strong><small></small></span>
       `;
@@ -166,5 +178,32 @@ export class PieChart {
       legend.appendChild(item);
     }
     return legend;
+  }
+
+  /**
+   * Clicar numa fatia da legenda isola ela: a fatia no SVG e a linha na
+   * legenda continuam no lugar, e todo o resto apaga para 28% de opacidade
+   * (não some -- a proporção geral continua visível enquanto o olho foca
+   * numa categoria). Clicar de novo na mesma fatia desfaz.
+   *
+   * Existia um hover na legenda prometendo interação (ver o comentário em
+   * components.css) sem nenhum clique fazer nada -- isto é o que faltava
+   * para a promessa virar realidade.
+   */
+  _ligarIsolamento(svg, legend) {
+    const itens = Array.from(legend.querySelectorAll(".pie-chart__legend-item"));
+    for (const item of itens) {
+      item.addEventListener("click", () => {
+        const jaIsolado = item.getAttribute("aria-pressed") === "true";
+        for (const outro of itens) {
+          const isolarEste = !jaIsolado && outro === item;
+          outro.setAttribute("aria-pressed", String(isolarEste));
+          outro.classList.toggle("is-apagado", !jaIsolado && outro !== item);
+        }
+        for (const circle of svg.querySelectorAll("circle[data-label]")) {
+          circle.classList.toggle("is-apagado", !jaIsolado && circle.dataset.label !== item.dataset.label);
+        }
+      });
+    }
   }
 }

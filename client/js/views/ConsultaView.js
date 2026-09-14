@@ -44,6 +44,11 @@ export class ConsultaView extends View {
     this.searchInput.addEventListener("input", debounce(() => this._filterMatches(), 200));
     // Setas percorrem a lista de resultados sem tirar a mão do campo de busca.
     this.searchInput.addEventListener("keydown", (e) => this._navegarResultados(e));
+    // Uma vez o foco DENTRO da lista (o `primeiro.focus()` logo abaixo leva
+    // para lá), as setas paravam de fazer qualquer coisa -- só o Tab movia.
+    // Delegado no container em vez de um listener por botão: a lista é
+    // redesenhada inteira a cada busca (ver _filterMatches).
+    this.matchesBox.addEventListener("keydown", (e) => this._navegarNaLista(e));
 
     this._renderDetailVazio();
   }
@@ -117,6 +122,26 @@ export class ConsultaView extends View {
     e.preventDefault();
     if (e.key === "Enter") this._selectClient(this.currentMatches[0]);
     else primeiro.focus();
+  }
+
+  /** Seta para cima/baixo e Home/End dentro da lista de resultados (Enter já funciona: é um <button>). */
+  _navegarNaLista(e) {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+    const itens = Array.from(this.matchesBox.querySelectorAll(".consulta-matches__item"));
+    if (itens.length === 0) return;
+    const atual = itens.indexOf(document.activeElement);
+    e.preventDefault();
+
+    if (e.key === "ArrowUp" && atual <= 0) {
+      // Seta para cima no primeiro item devolve o foco à busca -- simétrico
+      // ao ArrowDown do campo, que é o que trouxe o foco para cá.
+      this.searchInput.focus();
+      return;
+    }
+
+    const proximo =
+      e.key === "Home" ? 0 : e.key === "End" ? itens.length - 1 : e.key === "ArrowUp" ? atual - 1 : Math.min(atual + 1, itens.length - 1);
+    itens[Math.max(0, proximo)].focus();
   }
 
   async _selectClient(nome) {

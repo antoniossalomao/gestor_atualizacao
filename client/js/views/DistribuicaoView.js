@@ -51,12 +51,17 @@ export class DistribuicaoView extends View {
     this.filtroSistema = "";
     this.buscaAgente = "";
     this._timer = null;
+    this._ultimaAtualizacao = null;
     this._buildDom();
   }
 
   _buildDom() {
     this.container.innerHTML = `
       <div class="toolbar">
+        <span class="distribution-live" data-role="frescor" hidden>
+          <span class="distribution-live__dot"></span>
+          <span data-role="frescor-texto"></span>
+        </span>
         <div class="toolbar-spacer"></div>
         <button type="button" class="btn btn--small btn--ghost" data-action="refresh">${icon("atualizar")} Atualizar</button>
       </div>
@@ -184,6 +189,8 @@ export class DistribuicaoView extends View {
       </div>
     `;
 
+    this.frescorBox = this.container.querySelector('[data-role="frescor"]');
+    this.frescorTexto = this.container.querySelector('[data-role="frescor-texto"]');
     this.form = this.container.querySelector('[data-role="form"]');
     this.sistemaSelect = this.container.querySelector('[data-role="sistema"]');
     this.progresso = this.container.querySelector('[data-role="progresso"]');
@@ -239,12 +246,19 @@ export class DistribuicaoView extends View {
     await this.swr(
       "distribuicao:painel",
       () => this.api.get("/versoes/painel", null, { key: "dist:painel" }),
-      (dados) => {
+      (dados, { doCache }) => {
         this.painel = dados;
         this._renderIndicadores(dados.indicadores);
         this._renderAtivas(dados.ativas);
         this._renderAgentes();
         this._atualizarAvisoSubstituicao();
+        // Só quando o dado veio da rede agora mesmo: pintar o que já estava
+        // em cache (`doCache`) não é uma confirmação nova de que está tudo
+        // certo, é só reaproveitar o que a tela já mostrava.
+        if (!doCache) {
+          this._ultimaAtualizacao = new Date();
+          this._renderFrescor();
+        }
       }
     );
 
@@ -446,6 +460,14 @@ export class DistribuicaoView extends View {
 
   _invalidarTudo() {
     this.cache?.invalidar("distribuicao:");
+  }
+
+  /** Texto relativo ("Atualizado há 2 min") do selo ao vivo da toolbar; a data exata fica no `title`. */
+  _renderFrescor() {
+    if (!this._ultimaAtualizacao) return;
+    this.frescorBox.hidden = false;
+    this.frescorTexto.textContent = `Atualizado ${tempoRelativo(this._ultimaAtualizacao)}`;
+    this.frescorBox.title = formatarDataHora(this._ultimaAtualizacao);
   }
 
   _renderIndicadores(ind) {

@@ -335,7 +335,14 @@ export class SortableTable {
         // O `title` só entra quando o texto de fato não coube -- antes ele era
         // posto em toda célula não-vazia, e o tooltip nativo do navegador
         // aparecia atrasado e fora do tema em cima de qualquer coisa.
-        if (valor && String(valor).length > 28) td.title = valor;
+        //
+        // `col.title`, quando a coluna declara um, é a exceção: existe
+        // justamente para um dado que NÃO está truncado (ex.: "há 2 h" em vez
+        // de "12/08/2026 03:14") mas ainda merece um tooltip com a versão
+        // completa -- ver HistoricoView, que já pareava as duas no comentário
+        // antes de esta coluna ter como cumprir a promessa.
+        const dica = col.title ? col.title(row) : valor && String(valor).length > 28 ? valor : "";
+        if (dica) td.title = dica;
         else td.removeAttribute("title");
       });
     });

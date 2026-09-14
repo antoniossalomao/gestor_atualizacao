@@ -117,7 +117,11 @@ export class AgendamentosView extends View {
         ...AGENDA_COLUMNS.map((c) => ({ key: c.key, label: c.label, type: c.key === "data" ? "date" : "text" })),
       ],
       onSelect: (row) => this._loadIntoForm(row),
-      rowClass: (row) => (row.status === STATUS_CONCLUIDO ? "is-muted" : ""),
+      rowClass: (row) => {
+        if (row.status === STATUS_CONCLUIDO) return "is-muted";
+        if (estaAtrasada(row.data)) return "is-atrasada";
+        return "";
+      },
       // Seleção múltipla: limpar uma fila de tarefas velhas ou concluir
       // várias de uma vez era um ciclo de "clicar na linha, clicar no botão"
       // por tarefa -- mesma ideia já usada em Atualizações.
@@ -691,6 +695,17 @@ export class AgendamentosView extends View {
 
 function isTypingTarget(el) {
   return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
+}
+
+/** True se `dataBR` (dd/mm/aaaa) for anterior a hoje. Data vazia/mal formada nunca conta como atrasada. */
+function estaAtrasada(dataBR) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dataBR || "");
+  if (!m) return false;
+  const [, diaStr, mesStr, anoStr] = m;
+  const data = new Date(Number(anoStr), Number(mesStr) - 1, Number(diaStr));
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  return data < hoje;
 }
 
 function errorMessage(err) {

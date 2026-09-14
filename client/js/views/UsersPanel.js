@@ -53,7 +53,7 @@ export class UsersPanel {
       <hr class="separator" />
 
       <button type="button" class="btn btn--small" data-action="toggle-senha" aria-expanded="false" aria-controls="trocar-senha">
-        Trocar minha senha
+        ${icon("plus")} Trocar minha senha
       </button>
       <form class="users-new" id="trocar-senha" data-role="senha-form" hidden>
         <div class="form-grid">
@@ -79,6 +79,7 @@ export class UsersPanel {
       const visible = !newForm.hidden;
       newForm.hidden = visible;
       toggle.setAttribute("aria-expanded", String(!visible));
+      toggle.innerHTML = visible ? `${icon("plus")} Convidar Pessoa` : `${icon("minus")} Ocultar Formulário`;
       if (!visible) box.querySelector('[data-field="nome"]').focus();
     });
     // <form> de verdade: Enter em qualquer campo cria a conta, e o navegador
@@ -94,6 +95,7 @@ export class UsersPanel {
       const visible = !senhaForm.hidden;
       senhaForm.hidden = visible;
       toggleSenha.setAttribute("aria-expanded", String(!visible));
+      toggleSenha.innerHTML = visible ? `${icon("plus")} Trocar minha senha` : `${icon("minus")} Ocultar Formulário`;
       if (!visible) box.querySelector('[data-field="senhaAtual"]').focus();
     });
     senhaForm.addEventListener("submit", (e) => {

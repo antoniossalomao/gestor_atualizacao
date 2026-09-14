@@ -30,6 +30,7 @@ export class BarChart {
     }
 
     const max = Math.max(1, ...bars.map((b) => b.total));
+    const fills = [];
     for (const bar of bars) {
       const pct = Math.round((bar.total / max) * 100);
       const row = document.createElement("div");
@@ -37,12 +38,28 @@ export class BarChart {
       row.innerHTML = `
         <span class="bar-chart__label" title="${escapeHtml(bar.label)}">${escapeHtml(bar.label)}</span>
         <span class="bar-chart__track">
-          <span class="bar-chart__fill" style="width:${pct}%; background:${bar.color || this.color}"></span>
+          <span class="bar-chart__fill" style="width:0%; background:${bar.color || this.color}"></span>
         </span>
         <span class="bar-chart__value">${bar.total}</span>
       `;
       wrap.appendChild(row);
+      fills.push({ el: row.querySelector(".bar-chart__fill"), pct });
     }
     this.container.appendChild(wrap);
+
+    // A barra nasce em 0% e só ganha a largura real no quadro seguinte. O CSS
+    // já declara `transition: width` em `.bar-chart__fill` há tempos, mas ela
+    // nunca disparava: `render()` recria os elementos do zero a cada chamada
+    // (troca de aba, revalidação em segundo plano), então a largura final já
+    // chegava pronta no primeiro estilo computado -- sem um "antes" para
+    // comparar, não existe transição. Dois `requestAnimationFrame`, não um: o
+    // primeiro garante que o navegador pintou o 0% antes do segundo mudar
+    // para o valor real; só um costuma colapsar as duas mudanças no mesmo
+    // quadro e a barra volta a "nascer cheia".
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        for (const { el, pct } of fills) el.style.width = `${pct}%`;
+      });
+    });
   }
 }

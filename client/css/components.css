@@ -624,10 +624,53 @@ kbd {
   height: 13px;
 }
 
-.stat-tile__value {
+.stat-tile__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   margin-top: var(--sp-3);
+}
+
+.stat-tile__value {
   font: var(--peso-forte) 34px/1 var(--fonte-display);
   letter-spacing: -0.05em;
+}
+
+/* Variação vs. o mês anterior (só o indicador "Atualizações Este Mês" usa,
+   por enquanto -- é o único com uma série mensal para comparar). Três
+   estados, não dois: sem "neutra", uma variação de 0% cairia em "alta" só
+   por não ser negativa, e pintaria de verde um mês que não mudou nada. */
+.stat-tile__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: var(--raio-pilula);
+  font-family: var(--fonte-display);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-extra);
+}
+.stat-tile__delta svg {
+  width: 9px;
+  height: 9px;
+}
+.stat-tile__delta.is-alta {
+  background: var(--cor-verde-fraco);
+  color: var(--cor-verde);
+}
+.stat-tile__delta.is-alta svg {
+  transform: rotate(-90deg);
+}
+.stat-tile__delta.is-baixa {
+  background: var(--cor-vermelho-fraco);
+  color: var(--cor-vermelho);
+}
+.stat-tile__delta.is-baixa svg {
+  transform: rotate(90deg);
+}
+.stat-tile__delta.is-neutra {
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-fraco);
 }
 
 /* O indicador de clientes parados é o único que pode virar má notícia. Quando
@@ -1321,6 +1364,19 @@ table.data-table {
 
 .data-table tbody tr.is-muted {
   color: var(--cor-texto-fraco);
+}
+
+/* Tarefa de Agendamentos com a data já passada e ainda não concluída (ver
+   AgendamentosView) -- mesma cor de severidade que Sistemas usa para "linha
+   parada", só que como classe fixa: aqui a lista de tarefas em aberto é
+   pequena, não precisa da mistura com a zebra que uma tabela de centenas de
+   clientes pede. O hover repete a própria cor (em vez de ceder para o cinza
+   padrão) para o aviso não sumir só porque o mouse passou por cima. */
+.data-table tbody tr.is-atrasada {
+  background: var(--cor-vermelho-fraco);
+}
+.data-table tbody tr.is-atrasada:hover {
+  background: var(--cor-vermelho-fraco);
 }
 
 /* Foco do "cursor" de teclado da tabela: para dentro, para não ser cortado
@@ -2656,6 +2712,14 @@ textarea.relatorio__texto {
   height: 22px;
 }
 
+/* Ver o comentário em EmptyState.js -- só o vazio de busca/filtro usa o tom
+   de destaque, mesma linguagem de cor que `.badge--accent` já usa em outro
+   lugar do app para "isto é informativo", não "isto é neutro". */
+.empty-state--busca .empty-state__icon {
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+
 .empty-state__title {
   margin: 0;
   color: var(--cor-texto);
@@ -2948,6 +3012,32 @@ hr.separator {
   font-size: var(--txt-xs);
 }
 
+/* Selo de "isto é dado ao vivo", na barra de ferramentas -- um painel de
+   monitoramento com atualização automática (ver DistribuicaoView._ligarPolling)
+   não avisa sozinho que está vivo; sem isto, a única prova é reparar que os
+   números mudaram sozinhos. Só acende depois que a REDE confirma um dado
+   novo (ver o `doCache` em DistribuicaoView.refresh) -- nunca ao pintar o que
+   já estava em cache, que pode ser de uma sessão de minutos atrás. */
+.distribution-live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 9px;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-sm);
+}
+.distribution-live__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--cor-verde);
+  animation: pulso-vivo 2s ease-in-out infinite;
+}
+@keyframes pulso-vivo {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
 /* `auto-fit` com mínimo de 150px: são seis indicadores, e um número fixo de
    colunas deixaria órfãos em quase toda largura de tela. Aqui a grade
    acomoda 6, 3 ou 2 por linha conforme couber, sempre completas. */
@@ -3080,6 +3170,13 @@ hr.separator {
   color: var(--cor-accent);
   font: var(--peso-forte) 25px/1.1 var(--fonte-display);
 }
+/* "Sem versão publicada" > 0 é, estruturalmente, o mesmo tipo de contagem que
+   `.metric-card--danger` já pinta de vermelho na Distribuição -- aqui ficava
+   na mesma cor neutra dos outros dois indicadores da linha, como se fosse só
+   mais uma estatística e não um aviso. */
+.version-stat--alerta strong {
+  color: var(--cor-vermelho);
+}
 
 .published-list {
   display: grid;
@@ -3130,10 +3227,12 @@ hr.separator {
 .published-release__changelog li + li {
   margin-top: 2px;
 }
+/* Só o encaixe do badge (ver VersoesView._renderPublished) -- era texto fixo
+   "NO AR" com a cor/tipografia escritas aqui direto; virou a mesma
+   Alinhada/Divergente/Sem canal que a tabela de sistemas já calcula, então a
+   aparência agora vem inteira do `.badge` que mora dentro deste slot. */
 .published-release__state {
-  color: var(--cor-verde);
-  font: var(--peso-extra) var(--txt-2xs) var(--fonte-display);
-  letter-spacing: 0.08em;
+  flex: 0 0 auto;
 }
 
 .table-actions {
@@ -3196,17 +3295,41 @@ hr.separator {
 }
 
 /* Nome à esquerda, número à direita, numa linha que se acende ao passar o
-   mouse -- a mesma forma de uma linha de tabela, porque é o que ela é. */
+   mouse -- a mesma forma de uma linha de tabela, porque é o que ela é.
+   É um <button> (ver PieChart._buildLegend), por isso o reset do visual
+   nativo logo nas primeiras cinco linhas -- mesmo caso do .stat-tile. */
 .pie-chart__legend-item {
   display: flex;
   align-items: center;
+  width: 100%;
   gap: 8px;
   padding: 7px 8px;
+  border: 0;
   border-radius: var(--raio-pequeno);
+  background: none;
+  color: inherit;
+  font: inherit;
   font-size: var(--txt-base);
+  text-align: left;
+  cursor: pointer;
+  transition: opacity var(--transicao);
 }
-.pie-chart__legend-item:hover {
+.pie-chart__legend-item:hover:not(:disabled) {
   background: var(--cor-superficie-hover);
+}
+.pie-chart__legend-item:disabled {
+  cursor: default;
+}
+
+/* Clicar isola a fatia (ver PieChart._ligarIsolamento): as outras apagam em
+   vez de sumir, para o olho continuar vendo a proporção geral enquanto foca
+   numa categoria. */
+.pie-chart__legend-item.is-apagado,
+.pie-chart svg circle.is-apagado {
+  opacity: 0.28;
+}
+.pie-chart svg circle {
+  transition: opacity var(--transicao);
 }
 
 .pie-chart__dot {
@@ -3297,6 +3420,90 @@ hr.separator {
   min-height: 100vh;
   padding: var(--sp-4);
   background: radial-gradient(circle at 15% 20%, var(--halo-topo), transparent 32%), var(--cor-fundo);
+}
+
+/*
+ * Painel de marca ao lado do formulário -- só em telas largas (ver o
+ * media query abaixo). Estreita, era só o card sozinho boiando no meio de um
+ * monitor de verdade, sem usar a largura disponível na única tela que quem
+ * chega de fora sempre vê primeiro. Escondido por padrão: no celular/tablet
+ * o card sozinho, centralizado, é o comportamento original e continua certo.
+ */
+.auth-screen__brand {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .auth-screen {
+    gap: 64px;
+  }
+  .auth-screen__brand {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    width: min(340px, 32vw);
+  }
+  /* A marca já aparece inteira no painel ao lado -- repeti-la, pequena, em
+     cima do formulário também seria a mesma informação duas vezes na mesma
+     tela. */
+  .auth-card__logo {
+    display: none;
+  }
+}
+
+.auth-screen__brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 48px;
+  height: 48px;
+  border-radius: 11px;
+}
+.auth-screen__brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.auth-screen__brand-name {
+  font-family: var(--fonte-display);
+  font-size: var(--txt-xl);
+  font-weight: var(--peso-extra);
+  letter-spacing: -0.03em;
+}
+
+.auth-screen__brand-tagline {
+  margin: -8px 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-base);
+  max-width: 30ch;
+}
+
+.auth-screen__brand-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin: var(--sp-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.auth-screen__brand-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+.auth-screen__brand-list svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  padding: 5px;
+  border-radius: 7px;
+  background: var(--cor-superficie-alta);
+  color: var(--cor-accent);
+  box-sizing: content-box;
 }
 
 .auth-card {

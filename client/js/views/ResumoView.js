@@ -23,7 +23,10 @@ function statTile(chave, nomeIcone, rotulo, destino) {
         <span class="stat-tile__icon">${icon(nomeIcone)}</span>
         ${escapeHtml(rotulo)}
       </div>
-      <div class="stat-tile__value">—</div>
+      <div class="stat-tile__value-row">
+        <div class="stat-tile__value">—</div>
+        <span class="stat-tile__delta" data-role="delta" hidden></span>
+      </div>
       <span class="stat-tile__go">${escapeHtml(destino)} ${icon("seta")}</span>
     </button>`;
 }
@@ -153,6 +156,7 @@ export class ResumoView extends View {
     this._setStat("atualizacoes", resumo.totalAtualizacoes);
     this._setStat("mes", resumo.mesCount);
     this._setStat("desatualizados", resumo.desatualizados.length);
+    this._setDelta("mes", tendenciaMensal(resumo.atualizacoesPorMes || []));
 
     const desatTile = this.container.querySelector('[data-stat="desatualizados"]');
     desatTile.classList.toggle("is-alert", resumo.desatualizados.length > 0);
@@ -172,6 +176,19 @@ export class ResumoView extends View {
 
   _setStat(key, value) {
     this.container.querySelector(`[data-stat="${key}"] .stat-tile__value`).textContent = String(value);
+  }
+
+  /** @param {{pct: number, tendencia: "alta"|"baixa"|"neutra"}|null} tendencia */
+  _setDelta(key, tendencia) {
+    const el = this.container.querySelector(`[data-stat="${key}"] [data-role="delta"]`);
+    if (!tendencia) {
+      el.hidden = true;
+      return;
+    }
+    el.hidden = false;
+    el.className = `stat-tile__delta is-${tendencia.tendencia}`;
+    el.innerHTML = tendencia.tendencia === "neutra" ? `${Math.abs(tendencia.pct)}%` : `${icon("seta")}${Math.abs(tendencia.pct)}%`;
+    el.title = "Comparado ao mês anterior";
   }
 }
 
@@ -193,4 +210,24 @@ function formatarMes(mesStr) {
   const [ano, mes] = String(mesStr).split("-");
   const indice = Number(mes) - 1;
   return `${MESES_ABREVIADOS[indice] || mes}/${ano}`;
+}
+
+/**
+ * Variação do mês corrente vs. o anterior, em %, a partir da série mensal que
+ * o Resumo já busca para o gráfico de tendência (nenhuma chamada extra ao
+ * servidor). Sem atualização nenhuma no mês anterior não há base para uma
+ * porcentagem -- `null` aqui significa "não mostre nada", não "0%".
+ * @param {Array<{mes: string, total: number}>} porMes
+ */
+function tendenciaMensal(porMes) {
+  const hoje = new Date();
+  const chave = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const mesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+
+  const totalAtual = porMes.find((m) => m.mes === chave(hoje))?.total ?? 0;
+  const totalAnterior = porMes.find((m) => m.mes === chave(mesAnterior))?.total ?? 0;
+  if (totalAnterior === 0) return null;
+
+  const pct = Math.round(((totalAtual - totalAnterior) / totalAnterior) * 100);
+  return { pct, tendencia: pct > 0 ? "alta" : pct < 0 ? "baixa" : "neutra" };
 }

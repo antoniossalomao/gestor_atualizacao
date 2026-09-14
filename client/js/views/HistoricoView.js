@@ -4,7 +4,7 @@ import { Pagination } from "../core/Pagination.js";
 import { debounce } from "../core/debounce.js";
 import { emptyState } from "../core/EmptyState.js";
 import { plural } from "../core/html.js";
-import { tempoRelativo } from "../core/date.js";
+import { tempoRelativo, formatarDataHora } from "../core/date.js";
 import { prefs } from "../core/prefs.js";
 import { aparencia } from "../core/appearance.js";
 
@@ -75,7 +75,7 @@ export class HistoricoView extends View {
 
     this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
       columns: [
-        { key: "quando", label: "Quando", type: "text" },
+        { key: "quando", label: "Quando", type: "text", title: (row) => formatarDataHora(row.criado_em) },
         { key: "usuario_nome", label: "Quem" },
         { key: "acaoLabel", label: "Ação" },
         { key: "entidadeLabel", label: "Tipo" },
