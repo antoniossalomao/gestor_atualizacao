@@ -1,7 +1,6 @@
 import { icon } from "./icons.js";
 import { Modal } from "./Modal.js";
 import { toast } from "./Toast.js";
-import { escapeHtml } from "./html.js";
 import { SwrCache } from "./SwrCache.js";
 import { Router } from "./router.js";
 import { CommandPalette } from "./CommandPalette.js";
@@ -24,6 +23,8 @@ import { UsersPanel } from "../views/UsersPanel.js";
 import { DistribuicaoView } from "../views/DistribuicaoView.js";
 import { VersoesView } from "../views/VersoesView.js";
 import { ReminderBanner } from "./ReminderBanner.js";
+import { MenuConta } from "./MenuConta.js";
+import { ConexaoBanner } from "./ConexaoBanner.js";
 
 /**
  * Uma entrada por aba: chave interna (que é também a rota na URL), rótulo,
@@ -89,6 +90,8 @@ export class App {
     this._jaMostradas = new Set();
     /** @type {Map<string, number>} onde cada aba estava rolada quando foi deixada. */
     this._rolagemPorAba = new Map();
+    /** Quantos lembretes de agendamento estão em aberto -- vai para o título da aba. */
+    this._qtdLembretes = 0;
 
     // Um 401 em QUALQUER chamada -- não só no carregamento de aba -- leva de
     // volta ao login. Antes, a sessão expirar durante um "Adicionar" só
@@ -172,6 +175,23 @@ export class App {
       return; // sem lembrete é melhor que travar o app inteiro por causa disso
     }
     this.reminderBanner.show(itens);
+    this._qtdLembretes = itens.length;
+    this._atualizarTitulo();
+  }
+
+  /**
+   * O título da aba do navegador: `(2) Clientes · Gestor de Atualizações`.
+   *
+   * O Gestor passa boa parte do dia numa aba de fundo, atrás do ERP e do
+   * WhatsApp. A faixa de lembretes só existe para quem está OLHANDO a tela --
+   * e quem está olhando a tela é justamente quem menos precisa ser lembrado. O
+   * número no título é a única parte deste app que alcança quem está em outro
+   * lugar, porque é o que o Windows mostra na barra de tarefas.
+   */
+  _atualizarTitulo() {
+    const nome = this.views.get(this.activeTab)?.tab.label || "Resumo";
+    const prefixo = this._qtdLembretes > 0 ? `(${this._qtdLembretes}) ` : "";
+    document.title = `${prefixo}${nome} · Gestor de Atualizações`;
   }
 
   async _logout() {
@@ -226,6 +246,17 @@ export class App {
         </div>
       </aside>
       <section class="app-shell">
+        <!--
+          Um pixel invisível ANTES do cabeçalho. Quando ele sai de vista, o
+          cabeçalho ganha a sombra que o descola do conteúdo que passa por
+          baixo (ver ".app-header.is-grudado").
+
+          É um observador de interseção, e não um listener de "scroll": o
+          listener roda a cada quadro de rolagem -- numa tabela de duzentas
+          linhas, é trabalho de sobra para descobrir um booleano que muda duas
+          vezes no dia inteiro.
+        -->
+        <div data-role="sentinela" aria-hidden="true"></div>
         <header class="app-header">
           <div class="app-header__titles">
             <span class="app-header__eyebrow">Painel de controle</span>
@@ -234,20 +265,24 @@ export class App {
           </div>
           <div class="app-header__actions">
             <!--
-              O botão de tema saiu daqui. Ele CICLAVA entre sistema/claro/escuro
-              num ícone só: para saber o que fazia era preciso clicar, e para
-              descobrir que havia um terceiro estado era preciso clicar três
-              vezes. As mesmas três opções agora estão em Configurações, lado a
-              lado e escritas por extenso -- o que era um gesto a decorar virou
-              uma escolha a ler. Quem quiser o atalho rápido tem o Ctrl+K.
+              A busca do cabeçalho não é um campo: é um botão com cara de
+              campo, e o que ele abre é a paleta de comandos. O Ctrl+K existe
+              desde a primeira versão e não aparecia em lugar nenhum da tela --
+              atalho que não aparece é atalho que só quem escreveu o código
+              usa. O estilo dele já estava no CSS há tempos, inclusive o que
+              ele vira no tablet (".app-header__search"); faltava o botão.
             -->
-            <button type="button" class="btn btn--small btn--ghost" data-action="config"
-                    title="Configurações" aria-label="Configurações">${icon("config")}</button>
-            <div class="app-header__user">
-              <strong>${escapeHtml(this.user.nome)}</strong>
-              <span>@${escapeHtml(this.user.usuario)}</span>
-            </div>
-            <button type="button" class="btn btn--small btn--ghost" data-action="logout" title="Sair" aria-label="Sair">${icon("logout")}</button>
+            <button type="button" class="btn btn--small app-header__search" data-action="buscar"
+                    aria-label="Buscar telas, clientes e ações (Ctrl+K)">
+              ${icon("busca")}<span>Buscar…</span><kbd>Ctrl</kbd><kbd>K</kbd>
+            </button>
+            <!--
+              Nome, tema, configurações, atalhos e sair, num alvo só (ver
+              MenuConta). Aqui havia um bloco de texto que não fazia nada e
+              dois ícones sem rótulo colados um no outro -- um deles encerrando
+              a sessão de quem errasse o alvo por seis pixels.
+            -->
+            <div data-role="conta"></div>
           </div>
         </header>
         <div data-role="reminder-banner"></div>
@@ -262,27 +297,44 @@ export class App {
       this.switchTab("agendamentos")
     );
 
-    this.root.querySelector('[data-action="logout"]').addEventListener("click", () => this._logout());
-    // Dois botões chegam ao mesmo painel: o do cabeçalho (à mão, sempre
-    // visível) e o do rodapé da barra lateral (onde se procura "as coisas do
-    // sistema", que é onde Backups e Usuários também passaram a morar).
+    this.menuConta = new MenuConta(this.root.querySelector('[data-role="conta"]'), this.user, {
+      aoConfigurar: () => this._abrirConfiguracoes(),
+      aoAtalhos: () => mostrarAtalhos(),
+      aoSair: () => this._logout(),
+      aoAtualizar: () => this.recarregarAba({ avisar: true }),
+    });
+    this._cleanups.push(() => this.menuConta.destroy());
+
+    // Configurações continua a um clique: o do rodapé da barra lateral, onde
+    // se procura "as coisas do sistema" (é ali que Backups e Usuários moram).
+    // O ícone que existia também no cabeçalho saiu -- virou item escrito por
+    // extenso no menu da conta, com o atalho ao lado.
     for (const botao of this.root.querySelectorAll('[data-action="config"]')) {
       botao.addEventListener("click", () => this._abrirConfiguracoes());
     }
 
     this._montarAbas();
     this._montarPaleta();
+    this._ligarSombraDoCabecalho();
+
+    this.root.querySelector('[data-action="buscar"]').addEventListener("click", () => this.palette.abrir());
+
+    // Vive fora das abas e fora do cabeçalho: a queda do servidor não é
+    // assunto de uma tela, é do app inteiro. Quando ele volta, os dados da aba
+    // aberta são buscados de novo -- enquanto esteve fora, outra pessoa pode
+    // ter mudado tudo.
+    this.conexaoBanner = new ConexaoBanner(this.api, () => this.recarregarAba());
+    this._cleanups.push(() => this.conexaoBanner.destroy());
 
     this._cleanups.push(ligarAtalhoAjuda());
     this._cleanups.push(this._ligarAtalhosNumericos());
+    this._cleanups.push(this._ligarAtalhoConfiguracoes());
+    this._cleanups.push(this._ligarAtalhoSidebar());
 
     // Trocar de tema muda cores que algumas telas calculam em JavaScript (o
     // fundo tingido das linhas em Resumo e Sistemas). Redesenhar a aba atual
     // é o jeito mais simples de garantir que nada fique com a paleta antiga.
-    const aoTrocarTema = () => {
-      this.cache.invalidar();
-      if (this.activeTab) this._mostrarAba(this.activeTab);
-    };
+    const aoTrocarTema = () => this.recarregarAba();
     document.addEventListener("tema:mudou", aoTrocarTema);
     this._cleanups.push(() => document.removeEventListener("tema:mudou", aoTrocarTema));
   }
@@ -304,7 +356,12 @@ export class App {
       button.id = `aba-${tab.key}`;
       button.tabIndex = -1;
       button.title = `${tab.label} (Alt+${i + 1})`;
-      button.innerHTML = `${icon(tab.icon)}<span>${tab.label}</span>`;
+      // A dica do atalho fica na própria aba, aparecendo ao passar o mouse ou
+      // ao focar pelo teclado. O `title` só conta a mesma coisa depois de um
+      // segundo parado em cima -- e ninguém para em cima de um menu que já
+      // sabe usar. Ela ocupa o espaço dela o tempo todo (muda só a opacidade),
+      // senão cada aba mudaria de largura quando o mouse passasse.
+      button.innerHTML = `${icon(tab.icon)}<span>${tab.label}</span><kbd class="tab-button__atalho">Alt+${i + 1}</kbd>`;
       tabsNav.appendChild(button);
 
       const container = document.createElement("div");
@@ -362,6 +419,96 @@ export class App {
     return () => document.removeEventListener("keydown", handler);
   }
 
+  /**
+   * `Ctrl + ,` abre as Configurações -- o mesmo atalho do Windows, do macOS,
+   * do VS Code e de praticamente todo app com um painel de preferências. Um
+   * atalho que a pessoa já traz aprendido de outro lugar é o único tipo que
+   * não precisa ser ensinado.
+   */
+  _ligarAtalhoConfiguracoes() {
+    const handler = (e) => {
+      if (e.key !== "," || (!e.ctrlKey && !e.metaKey) || e.altKey) return;
+      // Com um diálogo já aberto o atalho não vale: abriria as Configurações
+      // por cima de uma confirmação de exclusão, e a caixa de baixo continuaria
+      // esperando uma resposta que ninguém consegue mais ver.
+      if (document.querySelector(".modal-overlay")) return;
+      e.preventDefault();
+      this._abrirConfiguracoes();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }
+
+  /**
+   * `Ctrl + B` recolhe e abre a barra lateral.
+   *
+   * A preferência existe desde sempre em Configurações, e é a única de lá que
+   * a pessoa quer mexer VÁRIAS vezes no mesmo dia: recolher para caber mais
+   * coluna numa tabela larga, abrir de volta para procurar outra tela. Quatro
+   * cliques (abrir Configurações, achar a seção, marcar, fechar) para um gesto
+   * dessa frequência é caro demais -- e `Ctrl + B` é o mesmo atalho do VS Code
+   * e de tanta coisa com painel lateral.
+   */
+  _ligarAtalhoSidebar() {
+    const handler = (e) => {
+      if (e.key !== "b" && e.key !== "B") return;
+      if (!e.ctrlKey && !e.metaKey) return;
+      if (e.altKey || e.shiftKey) return;
+      // Num campo de texto o Ctrl+B pode ser negrito (não há campo rico aqui
+      // hoje, mas roubar a tecla de dentro de um input é o tipo de coisa que
+      // surpreende), e com um diálogo aberto a barra lateral nem está à vista.
+      const alvo = e.target;
+      if (alvo && (alvo.tagName === "INPUT" || alvo.tagName === "TEXTAREA" || alvo.isContentEditable)) return;
+      if (document.querySelector(".modal-overlay, .cmdk-overlay")) return;
+      e.preventDefault();
+      this._definirSidebar(!settings.get("sidebarRecolhida", false));
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }
+
+  /**
+   * A sombra que descola o cabeçalho do conteúdo assim que a página sai do
+   * topo. Com o cabeçalho grudado (`position: sticky`), sem ela a primeira
+   * linha da tabela passa por baixo do título e as duas viram uma coisa só.
+   *
+   * Um `IntersectionObserver` sobre um pixel invisível, e não um listener de
+   * rolagem: o listener roda a cada quadro enquanto se rola uma tabela de
+   * duzentas linhas, tudo isso para descobrir um booleano que muda duas vezes
+   * no dia inteiro.
+   */
+  _ligarSombraDoCabecalho() {
+    const sentinela = this.root.querySelector('[data-role="sentinela"]');
+    const cabecalho = this.root.querySelector(".app-header");
+    if (!sentinela || typeof IntersectionObserver !== "function") return;
+    const observador = new IntersectionObserver(
+      ([entrada]) => cabecalho.classList.toggle("is-grudado", !entrada.isIntersecting),
+      { threshold: 1 }
+    );
+    observador.observe(sentinela);
+    this._cleanups.push(() => observador.disconnect());
+  }
+
+  /**
+   * Busca de novo os dados da aba aberta, jogando fora o que estava guardado.
+   *
+   * Existe porque o cache torna a troca de aba instantânea (`SwrCache`), e o
+   * preço disso é não haver um jeito de dizer "esqueça o que você guardou e
+   * pergunte de novo agora" -- que é exatamente o que se quer quando outra
+   * pessoa acabou de mexer no mesmo registro do outro lado da sala. Recarregar
+   * a página inteira fazia esse papel, e cobrava o login, a rolagem e a aba.
+   *
+   * @param {{avisar?: boolean}} [opcoes] `avisar` confirma com um toast: quem
+   *   pediu a atualização merece saber que ela terminou, já que numa rede
+   *   local a resposta costuma voltar rápido demais para se ver diferença.
+   */
+  async recarregarAba({ avisar = false } = {}) {
+    if (!this.activeTab) return;
+    this.cache.invalidar();
+    await this._mostrarAba(this.activeTab);
+    if (avisar) toast.success("Dados atualizados.");
+  }
+
   _montarPaleta() {
     // Telas e ações: montadas na hora, sem rede.
     const comandosBase = () => [
@@ -392,8 +539,31 @@ export class App {
       { id: "acao:imprimir", titulo: "Exportar / Imprimir esta tela",
         subtitulo: "Escolha \"Salvar como PDF\" no diálogo do navegador",
         grupo: "Ações", icone: "download", executar: () => window.print() },
+      { id: "acao:atualizar", titulo: "Atualizar os dados desta tela",
+        subtitulo: "Descarta o que está em cache e pergunta de novo ao servidor",
+        grupo: "Ações", icone: "atualizar", executar: () => this.recarregarAba({ avisar: true }) },
       { id: "acao:tema", titulo: "Alternar tema (claro / escuro / sistema)", grupo: "Ações", icone: "temaClaro",
         executar: () => theme.alternar() },
+      /*
+       * Dois ajustes de aparência que se quer LIGAR E DESLIGAR várias vezes ao
+       * dia -- a densidade quando a tabela da vez é longa, o contraste quando
+       * o sol bate na tela à tarde. Os outros dezesseis moram só em
+       * Configurações, e é onde devem ficar: são decisões que se toma uma vez.
+       * Estes dois viram gesto, e um gesto não pode custar quatro cliques.
+       */
+      { id: "acao:densidade", titulo: "Alternar densidade das linhas (compacta / padrão)",
+        grupo: "Aparência", icone: "tabela",
+        executar: () => {
+          const compacta = aparencia.densidade() === "compacta";
+          aparencia.aplicar({ densidade: compacta ? "padrao" : "compacta" });
+          toast.info(compacta ? "Linhas no tamanho padrão." : "Linhas compactas: cabe mais na tela.");
+        } },
+      { id: "acao:contraste", titulo: "Alternar contraste alto", grupo: "Aparência", icone: "acessibilidade",
+        executar: () => {
+          const alto = aparencia.contraste() === "alto";
+          aparencia.aplicar({ contraste: alto ? "normal" : "alto" });
+          toast.info(alto ? "Contraste normal." : "Contraste alto ligado.");
+        } },
       { id: "acao:atalhos", titulo: "Ver atalhos de teclado", grupo: "Ações", icone: "teclado",
         executar: () => mostrarAtalhos() },
       { id: "acao:sair", titulo: "Sair da conta", grupo: "Ações", icone: "logout",
@@ -429,11 +599,10 @@ export class App {
       // Mudar o tamanho de página torna errado tudo que está guardado: as
       // chaves do cache descrevem os filtros, não quantas linhas cabem. Jogar
       // fora e redesenhar é o caminho curto e seguro.
-      aoMudarLinhas: () => {
-        this.cache.invalidar();
-        if (this.activeTab) this._mostrarAba(this.activeTab);
-      },
+      aoMudarLinhas: () => this.recarregarAba(),
       aoMudarSidebar: (recolhida) => this._definirSidebar(recolhida),
+      // Um perfil ou um arquivo importado mexem em tudo de uma vez.
+      aoMudarVarias: () => this._sincronizarComPreferencias(),
       abas: TABS.map((t) => ({ key: t.key, label: t.label })),
       // Quem está logado aparece na seção Sistema, logo acima de Backups e
       // Usuários -- é a conta que vai fazer as duas coisas, e conferir isso
@@ -452,6 +621,20 @@ export class App {
   _definirSidebar(recolhida) {
     this.root.classList.toggle("is-sidebar-collapsed", recolhida);
     settings.set("sidebarRecolhida", recolhida);
+  }
+
+  /**
+   * Alinha a casca ao que está guardado nas preferências AGORA.
+   *
+   * Serve aos dois casos em que MUITAS preferências mudam de uma vez: um perfil
+   * aplicado e um arquivo de preferências importado. O painel poderia avisar
+   * ajuste por ajuste, mas aí cada preferência nova obrigaria a lembrar de
+   * acrescentar mais um aviso -- e o esquecimento apareceria como "o perfil
+   * mudou tudo, menos o menu lateral".
+   */
+  _sincronizarComPreferencias() {
+    this.root.classList.toggle("is-sidebar-collapsed", settings.get("sidebarRecolhida", false));
+    this.recarregarAba();
   }
 
   /**
@@ -528,13 +711,16 @@ export class App {
 
     this.tituloEl.textContent = entrada.tab.label;
     this.descricaoEl.textContent = entrada.tab.descricao;
-    document.title = `${entrada.tab.label} · Gestor de Atualizações`;
+    this._atualizarTitulo();
 
     const { instance } = entrada;
     if (params && typeof instance.aplicarParams === "function") instance.aplicarParams(params);
     if (typeof instance.refresh !== "function") return;
 
-    instance.refresh().catch((error) => {
+    // Devolve a promessa: quem chamou `recarregarAba` precisa saber quando a
+    // busca terminou para só então confirmar na tela. Quem troca de aba pelo
+    // clique continua ignorando o retorno, como sempre ignorou.
+    return instance.refresh().catch((error) => {
       if (error instanceof RequestCancelled) return;
       if (error?.status === 401) return; // já tratado por api.onUnauthorized
       toast.error("Não foi possível carregar os dados desta tela.");

@@ -1,8 +1,9 @@
 /*
  * Roda no <head>, antes do primeiro pixel. Aplica só o que, chegando tarde,
  * faria a tela PISCAR: o tema (fundo preto virando branco), a cor de destaque
- * (todo botão trocando de cor) e a escala do texto (a página inteira mudando
- * de tamanho e reposicionando tudo).
+ * (todo botão trocando de cor), a escala do texto (a página inteira mudando
+ * de tamanho e reposicionando tudo) e o contraste alto, que redefine bordas e
+ * cor de texto por cima do tema.
  *
  * Densidade, altura de tabela e posição dos avisos não entram aqui: nenhuma
  * delas afeta algo que já esteja desenhado quando o módulo principal assume
@@ -37,4 +38,10 @@
   if (escala && escala !== "padrao") raiz.setAttribute("data-escala", escala);
 
   if (lido("fundoTela", "grade") === "liso") raiz.setAttribute("data-fundo", "liso");
+
+  // Contraste alto e superfícies sólidas entram aqui pelo mesmo critério do
+  // tema: as duas redefinem COR (bordas, texto de apoio, o desfoque da barra
+  // lateral), e cor aplicada tarde é exatamente o que se vê piscar.
+  if (lido("contraste", "normal") === "alto") raiz.setAttribute("data-contraste", "alto");
+  if (lido("transparencia", "normal") === "reduzida") raiz.setAttribute("data-transparencia", "reduzida");
 })();

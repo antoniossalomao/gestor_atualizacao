@@ -498,6 +498,135 @@ motivo de cada decisão — inclusive as que deram errado antes de dar certo.
   por aparelho, e sincronizá-la faria o painel dizer "ativado" numa máquina
   onde a permissão nunca foi pedida.
 
+### 15/09/2026 — interface, acessibilidade e Configurações
+
+- **Cabeçalho que acompanha a rolagem, busca visível e menu da conta.** O
+  cabeçalho agora fica grudado no topo (com sombra e um respiro menor
+  assim que sai do topo): numa tabela de duzentas linhas, rolar até o fim
+  deixava a pessoa sem o nome da tela e sem nenhum botão, e a saída era
+  rolar tudo de volta. Ao lado dele entrou um campo-botão **"Buscar…"**
+  com o `Ctrl + K` escrito — o atalho existia desde a primeira versão e
+  não aparecia em lugar nenhum da tela, e atalho que não aparece é atalho
+  que só quem escreveu o código usa (o CSS dele já estava escrito há
+  tempos; faltava o botão). No canto, o bloco de texto com o nome de quem
+  está logado e os dois ícones sem rótulo (engrenagem e porta) viraram um
+  alvo só: o avatar abre um menu com tema (três opções escritas por
+  extenso), "Atualizar os dados desta tela", Configurações, Atalhos e
+  Sair — este último em vermelho e separado por uma divisória, longe do
+  que se clica sem pensar.
+
+- **Atualizar os dados sem recarregar a página.** O cache que torna a
+  troca de aba instantânea não tinha como ser dispensado: quando outra
+  pessoa mexia no mesmo registro do outro lado da sala, só o F5 resolvia —
+  e o F5 cobra o login, a rolagem e a aba aberta. Agora existe "Atualizar
+  os dados desta tela", no menu da conta e na paleta de comandos.
+
+- **Perfis de aparência** (Configurações > Aparência): **Equilibrado**,
+  **Operação**, **Leitura** e **Alto contraste**, cada um com uma amostra
+  desenhada em CSS. O painel tem dezoito ajustes, e quase ninguém quer
+  decidir dezoito coisas — quer dizer "preciso caber mais linha na tela"
+  e voltar ao trabalho. Um perfil leva ao padrão tudo que ele não
+  menciona, de propósito: aplicado por cima de um tamanho de texto que
+  sobrou de outro dia, entregaria uma tela que não é nem o perfil nem o
+  que havia antes.
+
+- **Dá para ver o que você mudou.** Cada ajuste fora do padrão ganha o
+  selo "alterado" e um fio na borda; cada seção mostra quantos tem; o
+  rodapé resume ("3 ajustes fora do padrão"). A pergunta "o que aqui
+  dentro fui eu que mexi?" era impossível de responder sem lembrar de
+  cada escolha feita meses atrás — e é a primeira pergunta de quem herda
+  uma máquina configurada por outra pessoa. Junto veio **"Restaurar esta
+  seção"** (o botão de restaurar era tudo ou nada, e "tudo" é caro demais
+  para quem só quer desfazer a densidade) e o fim do `location.reload()`
+  que o "Restaurar padrões" dava: o painel continua aberto, sem piscar a
+  página inteira.
+
+- **Exportar e importar preferências** (Configurações > Sistema): um
+  arquivo `.json` com as dezesseis preferências, para deixar a máquina
+  nova — ou a do colega — igual à sua sem refazer as escolhas na mão. A
+  importação ignora em silêncio o que não reconhece (chave de uma versão
+  mais nova, valor editado à mão) e diz quantas ficaram de fora, em vez
+  de recusar o arquivo inteiro.
+
+- **Seção nova: Acessibilidade.** **Contraste alto** reforça bordas e
+  textos de apoio *por cima* do tema escolhido — quem precisa enxergar
+  melhor não devia ter que abrir mão do tema que prefere; ele é escrito
+  uma vez só no CSS, derivando as cores do próprio tema com `color-mix`,
+  em vez de um bloco para escuro e outro para claro. **Superfícies:
+  sólidas** desliga o vidro fosco (`backdrop-filter`), que é o efeito mais
+  caro da tela e é recalculado a cada quadro do que passa por trás dele —
+  ou seja, exatamente enquanto se rola uma tabela longa, numa máquina de
+  escritório sem placa de vídeo dedicada. **Animações** veio de Aparência,
+  onde estava sozinha.
+
+- **Linhas alternadas (zebra) das tabelas viraram opção.** A faixa ajuda
+  a não pular de linha numa tabela larga e atrapalha quando a linha já é
+  tingida por outro motivo (o vermelho de "parado há muito tempo", em
+  Resumo e Sistemas), porque as duas tintas se somam.
+
+- **`Ctrl + ,` abre as Configurações** — o mesmo atalho do Windows, do
+  macOS e do VS Code. Um atalho que a pessoa já traz aprendido de outro
+  lugar é o único tipo que não precisa ser ensinado. Está na lista do
+  `?` e ao lado do item no menu da conta.
+
+- **Tela de login: mostrar a senha e aviso de Caps Lock.** A senha é
+  digitada às cegas, e o erro mais comum não é esquecê-la, é digitá-la
+  errado duas vezes seguidas sem nunca ver o que saiu. O Caps Lock ligado
+  é a causa silenciosa de metade dos "minha senha parou de funcionar": a
+  tecla que estragou a senha fica acesa num canto do teclado que ninguém
+  olha.
+
+- **Aviso de servidor fora do ar, com reconexão sozinha.** O servidor é um
+  serviço do Windows numa máquina da rede, e ele reinicia (atualização do
+  Gestor, reboot, queda do switch). Até agora isso era invisível para quem
+  estava com o app aberto: a tela seguia mostrando os dados de antes — o
+  que é o certo, dado velho é melhor que tela em branco —, mas nada dizia
+  que eles tinham parado no tempo, e a descoberta vinha pelo pior caminho,
+  clicando em "Adicionar" e recebendo um erro que não esclarecia se o
+  problema era daquele registro ou de tudo. Agora uma faixa no topo avisa
+  enquanto durar, tenta de novo a cada cinco segundos (e tem "Tentar
+  agora"), some sozinha quando o servidor volta e, ao voltar, busca de novo
+  os dados da tela aberta — enquanto ele esteve fora, outra pessoa pode ter
+  mudado alguma coisa.
+
+- **Densidade e contraste na paleta de comandos** (`Ctrl + K`): são os dois
+  ajustes que se liga e desliga várias vezes por dia — a densidade quando a
+  tabela da vez é longa, o contraste quando o sol bate na tela à tarde. Os
+  outros dezesseis continuam só em Configurações, que é onde devem ficar:
+  são decisões que se toma uma vez.
+
+- **`Ctrl + B` recolhe e abre o menu lateral**, e cada aba mostra o próprio
+  `Alt+N` ao passar o mouse. Recolher o menu é a única preferência que se
+  quer mexer várias vezes no mesmo dia (mais coluna visível numa tabela
+  larga, menu de volta para trocar de tela), e custava quatro cliques; o
+  atalho numérico existia desde sempre e só aparecia no `title`, que só
+  conta a mesma coisa depois de um segundo parado em cima — e ninguém para
+  em cima de um menu que já sabe usar.
+
+- **Aviso com "Desfazer" não encurta mais quando o mouse passa por cima.**
+  Ele vive mais tempo que um aviso comum de propósito; passar o mouse (e
+  sair) reagendava a saída com a duração padrão, ou seja, o gesto de ir até
+  o botão era justamente o que tirava tempo de usá-lo. O aviso agora também
+  para o relógio quando recebe foco pelo teclado — sem isso ele podia sumir
+  com o foco dentro dele, no meio da ação que a pessoa ia desfazer.
+
+- **Lembretes no título da aba do navegador** (`(2) Clientes · Gestor de
+  Atualizações`). O Gestor passa boa parte do dia numa aba de fundo, atrás
+  do ERP: a faixa de lembretes só alcança quem está olhando a tela, e quem
+  está olhando é justamente quem menos precisa ser lembrado. O número no
+  título é a única parte do app que aparece na barra de tarefas do Windows.
+
+- **A faixa de "sem conexão" também escuta o navegador.** O `offline` do
+  próprio navegador chega na hora em que o cabo sai ou o Wi-Fi cai, sem
+  esperar nenhuma requisição falhar. O caminho de volta continua sendo um
+  só: quem apaga a faixa é a resposta do servidor, não o palpite do
+  navegador — o Wi-Fi voltar não quer dizer que o servidor esteja de pé.
+
+- **Correção de texto que tinha virado mentira:** o painel dizia "valem
+  só para este navegador" desde antes de as preferências passarem a ser
+  gravadas na conta (11/09). Agora diz o que acontece de verdade —
+  "acompanham a sua conta em qualquer máquina".
+
 ## Documentação
 
 [`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) —

@@ -57,6 +57,13 @@ export class ApiClient {
     /** @type {(() => void)|null} chamado no primeiro 401 depois de um login válido */
     this.onUnauthorized = null;
     this._unauthorizedNotified = false;
+    /**
+     * Se a última conversa com o servidor deu certo. Começa otimista: o app só
+     * chega aqui depois de a página ter sido baixada DO servidor, então supor
+     * que ele está de pé é a aposta certa -- e um aviso de "sem conexão"
+     * piscando no arranque de toda sessão seria ruído puro.
+     */
+    this._online = true;
   }
 
   /**
@@ -203,18 +210,66 @@ export class ApiClient {
         signal: controller.signal,
         ...options,
       });
+      // Respondeu -- inclusive com 4xx/5xx. Um 400 é o servidor conversando:
+      // quem está fora do ar não recusa nada, não responde.
+      this._marcarConexao(true);
       return await this._parse(res);
     } catch (error) {
       if (error.name === "AbortError") {
-        if (expirou) throw new ApiError("O servidor demorou para responder. Tente novamente.", 408);
+        if (expirou) {
+          this._marcarConexao(false);
+          throw new ApiError("O servidor demorou para responder. Tente novamente.", 408);
+        }
         throw new RequestCancelled();
       }
       if (error instanceof ApiError) throw error;
+      this._marcarConexao(false);
       throw new ApiError("Não foi possível conectar ao servidor.", 0);
     } finally {
       clearTimeout(timer);
       if (key && this.inFlight.get(key) === controller) this.inFlight.delete(key);
     }
+  }
+
+  /**
+   * Avisa a tela quando o servidor cai e quando ele volta -- só na TROCA de
+   * estado, nunca a cada requisição.
+   *
+   * Existe porque o serviço do Windows reinicia (atualização, reboot da
+   * máquina que hospeda) enquanto as pessoas estão com o app aberto. Até aqui
+   * isso era invisível: a tela continuava mostrando os dados de antes, e o
+   * primeiro clique em "Adicionar" é que virava um "não foi possível conectar"
+   * solto, sem dizer se o problema era daquele registro ou de tudo.
+   *
+   * Um evento no `document`, e não um callback: quem precisa saber disso não é
+   * quem chamou a API (esse já recebeu o erro dele), é a casca do app.
+   */
+  _marcarConexao(ok) {
+    if (this._online === ok) return;
+    this._online = ok;
+    document.dispatchEvent(new CustomEvent("conexao:mudou", { detail: { online: ok } }));
+  }
+
+  /**
+   * Registra que a máquina ficou sem rede, sem precisar de uma requisição para
+   * descobrir isso -- é o que o evento `offline` do navegador conta, e ele
+   * chega na hora em que o cabo sai.
+   *
+   * Existe para o estado ter UM dono. A faixa de "sem conexão" chegou a se
+   * mostrar sozinha nesse evento, e o resultado foi um travamento silencioso:
+   * o `ApiClient` continuava se achando online, então a primeira resposta boa
+   * depois da volta não era uma TROCA de estado, não disparava `conexao:mudou`
+   * -- e a faixa ficava na tela para sempre, sobre um app que já estava
+   * funcionando. Quem descobre a queda avisa aqui; quem apaga a faixa continua
+   * sendo a resposta do servidor.
+   */
+  marcarOffline() {
+    this._marcarConexao(false);
+  }
+
+  /** Se a última conversa com o servidor deu certo. */
+  get online() {
+    return this._online;
   }
 
   async _parse(res) {

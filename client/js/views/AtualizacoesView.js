@@ -13,6 +13,7 @@ import { escapeHtml, plural, copyToClipboard } from "../core/html.js";
 import { relatorioDeAtualizacao, relatorioDoCliente } from "../core/relatorio.js";
 import { emptyState } from "../core/EmptyState.js";
 import { withBusyButton, marcarOcupado } from "../core/guard.js";
+import { baixarBlob } from "../core/arquivo.js";
 import { prefs } from "../core/prefs.js";
 import { aparencia } from "../core/appearance.js";
 
@@ -743,7 +744,7 @@ export class AtualizacoesView extends View {
       desde: this.desde,
       ate: this.ate,
     });
-    downloadBlob(blob, `atualizacoes${this._temFiltro() ? "-filtrado" : ""}.xlsx`);
+    baixarBlob(blob, `atualizacoes${this._temFiltro() ? "-filtrado" : ""}.xlsx`);
     toast.info(this._temFiltro() ? "Exportação concluída (com os filtros atuais)." : "Exportação concluída.");
   }
 
@@ -884,15 +885,6 @@ function primeiroDiaDoMes() {
 
 function isTypingTarget(el) {
   return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
-}
-
-function downloadBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
 function errorMessage(err) {

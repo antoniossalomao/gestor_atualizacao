@@ -22,8 +22,9 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 
 1. [Visão geral do projeto](#1-visão-geral-do-projeto)
 2. [Painel web — Gestor de Atualizações](#2-painel-web--gestor-de-atualizações)
-   — inclui [2.7 Mudanças de 11/09/2026](#27-mudanças-de-11092026) e
-   [2.8 Mudanças de 15/09/2026](#28-mudanças-de-15092026)
+   — inclui [2.7 Mudanças de 11/09/2026](#27-mudanças-de-11092026),
+   [2.8 Mudanças de 15/09/2026](#28-mudanças-de-15092026) e
+   [2.9 Revisão de interface e Configurações](#29-revisão-de-interface-e-configurações--15092026)
 3. [Atualizador Inteligente de ERP — agente local (C#)](#3-atualizador-inteligente-de-erp--agente-local-c)
 4. [Como verificar](#4-como-verificar)
 5. [Auditoria de agosto/set 2026 — o que mudou desde então](#5-auditoria-de-agostoset2026-o-que-mudou-desde-então)
@@ -582,6 +583,118 @@ sumia sem que nada tomasse o lugar dele.
 **Relatório de uma atualização (botão "Gerar Relatório") não mostra mais código nem cidade do
 cliente** — só o nome, como está gravado em `atualizacoes.cliente`. O relatório do histórico
 COMPLETO do cliente (o outro formato do mesmo modal) não mudou e continua mostrando a cidade.
+
+---
+
+### 2.9 Revisão de interface e Configurações — 15/09/2026
+
+Uma segunda leva do mesmo dia, toda no cliente web. Nenhuma rota nova no servidor: as
+preferências já aceitam qualquer chave (`PreferenciaService`, ver [2.7](#27-mudanças-de-11092026)),
+então uma opção nova passou a acompanhar a conta sem tocar no backend.
+
+**Casca: cabeçalho grudado, busca visível, menu da conta.** O `.app-header` virou
+`position: sticky` com fundo translúcido e desfoque; ao sair do topo ele ganha sombra e encolhe o
+respiro (classe `is-grudado`). Quem decide isso é um `IntersectionObserver` sobre um pixel
+invisível colocado antes do cabeçalho, e não um listener de `scroll`: o listener roda a cada quadro
+de rolagem de uma tabela de duzentas linhas para descobrir um booleano que muda duas vezes no dia.
+O botão de busca (`.app-header__search`) tinha CSS escrito — inclusive o que ele vira no tablet —
+para um elemento que nunca era criado; agora existe, e abre a paleta de comandos mostrando o
+`Ctrl + K` que antes não aparecia em lugar nenhum. O canto direito, que tinha um bloco de texto
+inerte e dois ícones sem rótulo (um deles encerrando a sessão de quem errasse o alvo por seis
+pixels), virou `core/MenuConta.js`: avatar com iniciais, tema em três opções escritas por extenso,
+"Atualizar os dados desta tela", Configurações (com `Ctrl + ,` ao lado), Atalhos e Sair.
+
+**`App.recarregarAba()`.** O `SwrCache` torna a troca de aba instantânea e, em troca, não havia
+como dizer "esqueça o que você guardou e pergunte de novo" — só recarregando a página, que cobra o
+login, a rolagem e a aba aberta. O método invalida o cache e redesenha a aba atual; `_mostrarAba`
+passou a devolver a promessa do `refresh()` para o aviso de "Dados atualizados" só aparecer quando
+a busca de fato terminar. A troca de tema e a mudança de "linhas por página", que faziam isso na
+mão em dois lugares, agora chamam o mesmo método.
+
+**Preferências: um mapa de padrões no lugar de duas listas.** `core/appearance.js` tinha sete
+constantes `PADRAO_*` mais uma lista `CHAVES` escrita à mão para o "Restaurar padrões" — duas
+listas para a mesma coisa, sendo a segunda o lugar clássico de esquecer a preferência nova (e o
+esquecimento só apareceria no dia em que alguém restaurasse os padrões). Um `PADROES` único agora
+responde quatro perguntas: qual é o padrão de X, quais são todas as chaves, o que o usuário já
+mexeu (`diferencas()`, que alimenta os selos "alterado") e o que sai num arquivo de exportação.
+Sobre ele vieram `PERFIS` (Equilibrado, Operação, Leitura, Alto contraste), `perfilAtivo()` — que
+compara o estado inteiro, não "qual foi o último clicado", porque quem aplica um perfil e depois
+aumenta o texto não está mais nele — e `exportar()`/`importar()`, com uma tabela `VALIDOS` por
+chave: importar é o único caminho pelo qual um valor chega sem ter passado por um controle da tela.
+
+**Painel de Configurações.** Seis seções (entrou **Acessibilidade**), selo "alterado" por linha,
+contagem por seção, resumo no rodapé e "Restaurar esta seção" — o botão de restaurar era tudo ou
+nada. Cada item da lista de definições declara de quais chaves é dono (`chaves: [...]`), o que
+mantém selos, contagens e restauração por seção lendo a mesma fonte que já alimentava o desenho, a
+trilha e a busca. Mudanças em lote (perfil, importação, restauração) deixaram de fazer
+`location.reload()`: `_aplicarEmLote()` repinta tema e aparência, pede ao `App` que alinhe o que é
+dele (menu lateral e dados da aba, via `aoMudarVarias`) e remonta os controles do painel, que
+continua aberto. Com o reload fora, `salvarPreferenciasAgora()` — que existia só para o envio
+agrupado não ser morto no meio pelo reload — saiu do `prefs.js`.
+
+**Três preferências novas, todas como atributo no `<html>` + tokens no CSS.** `data-contraste="alto"`
+é escrito **uma vez só**, derivando cada token do próprio tema com `color-mix` (texto misturado com
+o fundo): no escuro o texto é claro sobre fundo escuro, no claro é o contrário, e a mesma conta
+empurra os dois na direção de mais contraste — sem exigir um bloco por tema como o `[data-realce]`
+precisou. `data-transparencia="reduzida"` desliga o `backdrop-filter` da barra lateral, do
+cabeçalho, dos modais e da paleta, e troca os véus por cor cheia. `data-zebra="nao"` apaga a listra
+mexendo no token `--veu-linha`, e não num seletor que desfaça o `background` da linha ímpar: um
+seletor com `:root[...]` na frente ganharia também das linhas de severidade e de atraso, que
+precisam continuar pintadas. Contraste e transparência entraram também no `theme-init.js` (no
+`<head>`), pelo mesmo motivo do tema: redefinem cor, e cor aplicada tarde é o que se vê piscar.
+
+**Login.** Botão de mostrar a senha e aviso de Caps Lock. O aviso escuta `keyup` além de `keydown`
+porque o estado da tecla só muda depois de ela subir — sem isso o aviso ficaria um caractere
+atrasado, sumindo justamente quando a pessoa desliga a tecla para consertar.
+
+**Aviso de conexão perdida.** O `ApiClient` passou a distinguir "o servidor respondeu" (mesmo com
+4xx: quem está fora do ar não recusa nada, não responde) de "não deu para falar com ele" — status 0
+e timeout —, e dispara `conexao:mudou` no `document` **só na troca de estado**. `core/ConexaoBanner.js`
+escuta, põe uma faixa fixa no topo enquanto durar, tenta `/auth/status` a cada 5s e some quando o
+servidor volta, chamando `recarregarAba()` na saída. Quem apaga a faixa não é o `_tentar()`: é o
+próprio evento do `ApiClient`, para haver um caminho só para "voltou" — vale também quando quem
+descobriu foi outra chamada qualquer feita no meio tempo. A faixa fica em `z-index: 1050`, abaixo
+dos modais (1100): uma confirmação aberta continua sendo a coisa mais urgente da tela. Enquanto ela
+existe, cabeçalho e barra lateral descem 44px (`body:has(.conexao-aviso)`), em vez de o conteúdo
+inteiro ser empurrado — o que faria a página saltar na queda e de novo na volta.
+
+**Lembretes no título da aba** (`(2) Clientes · Gestor de Atualizações`). O app vive numa aba de
+fundo boa parte do dia; a faixa de lembretes só alcança quem está olhando a tela, e o título é a
+única parte dele que aparece na barra de tarefas do Windows. `_atualizarTitulo()` passou a ser o
+único lugar que escreve `document.title`, chamado na troca de aba e quando os lembretes chegam.
+
+**A faixa de conexão também escuta o `offline` do navegador**, que chega na hora em que o cabo sai,
+sem esperar requisição nenhuma falhar. O primeiro desenho disso tinha um bug que o teste pegou: a
+faixa se mostrava sozinha nesse evento, o `ApiClient` continuava se achando online, e por isso a
+primeira resposta boa depois da volta não era uma TROCA de estado — não disparava `conexao:mudou`, e
+a faixa ficava na tela para sempre sobre um app que já funcionava. O estado ficou com um dono só:
+quem descobre a queda chama `api.marcarOffline()`; quem apaga a faixa continua sendo a resposta do
+servidor.
+
+**Densidade e contraste também na paleta de comandos**, por serem os dois ajustes que se liga e
+desliga várias vezes ao dia; os outros dezesseis seguem só em Configurações.
+
+**Atalhos e avisos.** `Ctrl + B` alterna a barra lateral pelo mesmo `_definirSidebar` que o painel
+de Configurações usa (uma preferência, um caminho), e cada aba passou a mostrar seu `Alt+N` num
+`<kbd>` que ocupa o espaço o tempo todo e só muda de opacidade — aparecer do nada empurraria o
+rótulo e mudaria a largura da aba debaixo do cursor. No `Toast`, a duração original passou a ser
+guardada na entrada ativa: `mouseleave` reagendava a saída com `DURACAO_MS`, encurtando a janela do
+toast de "Desfazer" (`DURACAO_ACAO_MS`) justamente para quem levou o mouse até ele; `focusin`/
+`focusout` entraram pelo mesmo motivo, já que o botão "Desfazer" é alcançável por Tab.
+
+**Dois arquivos novos de apoio**, os dois para não duplicar regra: `core/pessoa.js` (iniciais do
+avatar e nome do papel, usados pelo menu e pelo painel, que não deviam depender um do outro) e
+`core/arquivo.js` (`baixarBlob`/`escolherArquivo`; o `downloadBlob` que vivia solto dentro de
+`AtualizacoesView` mudou de casa e passou a ser usado também pela exportação de preferências).
+
+**Conferência.** A revisão foi verificada com o Chrome em modo headless dirigido por CDP contra uma
+instância de teste (porta 3100, banco vazio): criação da conta inicial, login, menu da conta,
+painel em todas as seções, aplicação de perfil, restauração por seção, busca do painel, ciclo
+exportar→importar (inclusive com valores inválidos, que são ignorados), contraste alto, superfícies
+sólidas, zebra desligada, `Ctrl + ,`, cabeçalho grudando e soltando na rolagem, e os dois temas.
+Nenhum erro de console em nenhum dos passos. O bug encontrado no caminho foi meu: uma crase dentro
+de um comentário HTML **dentro de um template literal** fecha a string — `node --check` passava e o
+navegador recusava o módulo inteiro, deixando a página em branco.
 
 ---
 

@@ -64,6 +64,18 @@ const PATHS = {
     '<path d="M3 6h8M15 6h2M3 14h2M9 14h8" stroke-linecap="round"/><circle cx="13" cy="6" r="2"/><circle cx="7" cy="14" r="2"/>',
   conta: '<circle cx="10" cy="7" r="3"/><path d="M4 16.5c0-2.8 2.7-4.5 6-4.5s6 1.7 6 4.5" stroke-linecap="round"/>',
   fechar: '<path d="M5.5 5.5l9 9M14.5 5.5l-9 9" stroke-linecap="round"/>',
+
+  /* -- mostrar/esconder senha (tela de login) -- */
+  olho: '<path d="M1.8 10S4.7 5 10 5s8.2 5 8.2 5-2.9 5-8.2 5-8.2-5-8.2-5z" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.4"/>',
+  olhoRiscado:
+    '<path d="M6.6 5.7A8.5 8.5 0 0 1 10 5c5.3 0 8.2 5 8.2 5a13 13 0 0 1-2.7 3.2M12.6 12.4A2.4 2.4 0 0 1 8.3 9.9M4.6 6.8A13 13 0 0 0 1.8 10s2.9 5 8.2 5c1 0 1.9-.2 2.7-.5" stroke-linecap="round" stroke-linejoin="round"/><path d="m3.4 3.4 13.2 13.2" stroke-linecap="round"/>',
+  /* O símbolo universal de acessibilidade, e não um olho: o olho diria "para
+     quem enxerga mal", e metade do que essa seção oferece (animação, contraste,
+     transparência) atende também enjoo e cansaço visual. */
+  acessibilidade:
+    '<circle cx="10" cy="10" r="7.6"/><circle cx="10" cy="5.9" r="1.3" fill="currentColor" stroke="none"/><path d="M6.2 8.4c2.5.8 5.1.8 7.6 0M10 8.9v3.4M10 12.3l-1.9 3.2M10 12.3l1.9 3.2" stroke-linecap="round"/>',
+  perfis:
+    '<rect x="2.6" y="3.4" width="6.2" height="13.2" rx="1.4"/><rect x="11.2" y="3.4" width="6.2" height="6" rx="1.4"/><rect x="11.2" y="11.4" width="6.2" height="5.2" rx="1.4"/>',
 };
 
 /** @param {keyof typeof PATHS} name @returns {string} markup do `<svg>` pronto pra inserir via innerHTML */

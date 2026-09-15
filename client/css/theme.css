@@ -401,6 +401,93 @@
 }
 
 /* ==========================================================================
+   CONTRASTE ALTO
+   Escolhido em Configurações > Acessibilidade. NÃO é um terceiro tema: é um
+   reforço que vale POR CIMA do tema atual, escuro ou claro -- e é por isso que
+   está escrito uma vez só, enquanto a cor de destaque precisou de um par de
+   valores por variante.
+
+   O que permite a economia é não haver nenhuma cor literal aqui: cada token é
+   derivado dos que o tema já definiu, misturando o texto com o fundo
+   (`color-mix`). No tema escuro o texto é claro sobre fundo escuro; no claro é
+   o contrário; e a MESMA conta empurra os dois na direção de mais contraste.
+
+   Precisa vir depois dos blocos de tema: `:root[data-tema="claro"]` e
+   `:root[data-contraste="alto"]` têm a mesma especificidade, e nesse empate
+   quem ganha é quem estiver escrito por último.
+   ========================================================================== */
+:root[data-contraste="alto"] {
+  --cor-texto-sub: color-mix(in srgb, var(--cor-texto) 88%, var(--cor-fundo));
+  --cor-texto-fraco: color-mix(in srgb, var(--cor-texto) 72%, var(--cor-fundo));
+  --cor-borda: color-mix(in srgb, var(--cor-texto) 42%, var(--cor-fundo));
+  --cor-borda-forte: color-mix(in srgb, var(--cor-texto) 58%, var(--cor-fundo));
+  --cor-borda-campo: color-mix(in srgb, var(--cor-texto) 74%, var(--cor-fundo));
+  --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 26%, transparent);
+
+  /* A sombra difusa vira contorno. Num modo de alto contraste quem separa duas
+     superfícies é a borda; a sombra só embaça a divisa entre elas. */
+  --sombra-card: 0 0 0 1px var(--cor-borda);
+  --sombra-card-hover: 0 0 0 1px var(--cor-accent);
+
+  /* A grade de 32px e o halo do topo são decoração, e decoração translúcida é
+     ruído de baixa amplitude -- exatamente o que atrapalha quem ligou o modo. */
+  --grade: transparent;
+  --halo-topo: transparent;
+}
+
+/* O anel de foco engrossa junto: é o único indicador de "onde estou" para quem
+   navega por teclado, e 2px numa tela de alto contraste somem no meio das
+   bordas fortes que o resto do modo acabou de criar. */
+:root[data-contraste="alto"] :focus-visible {
+  outline-width: 3px;
+}
+
+/* ==========================================================================
+   SUPERFÍCIES SÓLIDAS
+   Desliga o vidro fosco (`backdrop-filter`) da barra lateral, dos modais e da
+   paleta de comandos, e troca os véus translúcidos por cor cheia.
+
+   Não é só gosto: o desfoque é o efeito mais caro desta interface, e ele é
+   recalculado a cada quadro do que passa POR TRÁS dele -- ou seja, justamente
+   enquanto se rola uma tabela longa, que é o que este app faz o dia inteiro.
+   Em máquina de escritório sem placa de vídeo dedicada isso se sente.
+   ========================================================================== */
+:root[data-transparencia="reduzida"] {
+  --sidebar-fundo: var(--cor-fundo-alt);
+  --veu-tabela: var(--cor-superficie);
+  --veu-overlay: color-mix(in srgb, var(--cor-fundo) 92%, transparent);
+}
+
+:root[data-transparencia="reduzida"] .app-sidebar,
+:root[data-transparencia="reduzida"] .app-header,
+:root[data-transparencia="reduzida"] .modal-overlay,
+:root[data-transparencia="reduzida"] .cmdk-overlay {
+  backdrop-filter: none;
+}
+
+/* O cabeçalho grudado precisa de fundo CHEIO quando não há desfoque: um fundo
+   translúcido sem o desfoque por trás deixa a tabela passar legível por baixo
+   do título, que é pior que qualquer um dos dois efeitos sozinho. */
+:root[data-transparencia="reduzida"] .app-header {
+  background: var(--cor-fundo);
+}
+
+/* ==========================================================================
+   LINHAS ALTERNADAS (zebra)
+   A zebra ajuda a não pular de linha numa tabela larga, e atrapalha quando a
+   linha já é tingida por outro motivo (o vermelho de "parado há muito tempo",
+   em Resumo e Sistemas), porque as duas tintas se somam.
+
+   Apagar a zebra mexendo no TOKEN, e não escrevendo um seletor que desfaz o
+   `background` da linha ímpar, não é preciosismo: um seletor com `:root[...]`
+   na frente ganharia também das linhas de severidade e de atraso, que são
+   justamente as que precisam continuar pintadas.
+   ========================================================================== */
+:root[data-zebra="nao"] {
+  --veu-linha: transparent;
+}
+
+/* ==========================================================================
    BASE
    ========================================================================== */
 

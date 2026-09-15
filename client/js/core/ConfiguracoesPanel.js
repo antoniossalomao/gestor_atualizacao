@@ -2,6 +2,7 @@ import { Modal } from "./Modal.js";
 import { theme } from "./theme.js";
 import {
   aparencia,
+  reaplicarAparencia,
   DENSIDADES,
   LINHAS_OPCOES,
   ALTURAS,
@@ -9,13 +10,19 @@ import {
   REALCES,
   ESCALAS,
   POSICOES_AVISO,
+  CONTRASTES,
+  TRANSPARENCIAS,
+  ZEBRAS,
+  PERFIS,
 } from "./appearance.js";
-import { settings, prefs, salvarPreferenciasAgora } from "./prefs.js";
+import { settings, prefs } from "./prefs.js";
 import { mostrarAtalhos } from "./Shortcuts.js";
 import { notificacoes } from "./notify.js";
 import { icon } from "./icons.js";
 import { toast } from "./Toast.js";
 import { escapeHtml } from "./html.js";
+import { iniciais, rotuloPapel } from "./pessoa.js";
+import { baixarTexto, escolherArquivo } from "./arquivo.js";
 
 /**
  * Painel de Configurações.
@@ -33,19 +40,35 @@ import { escapeHtml } from "./html.js";
  * sinal de ONDE se está enquanto se rola. A forma passou a atrapalhar o
  * conteúdo.
  *
- * Agora é um painel de duas colunas, que é a forma que quase todo sistema
+ * Hoje é um painel de duas colunas, que é a forma que quase todo sistema
  * operacional e quase todo app de porte usam para a mesma coisa, e pelos
  * mesmos motivos:
  *
- *  - **seções com nome** (Aparência, Tabelas, Comportamento, Avisos, Sistema).
- *    Cada uma cabe na tela inteira sem rolar, então escolher a seção é
- *    escolher um conjunto pequeno de decisões relacionadas -- em vez de
- *    procurar uma agulha numa lista de catorze;
+ *  - **seções com nome** (Aparência, Tabelas, Acessibilidade, Comportamento,
+ *    Avisos, Sistema). Cada uma cabe na tela inteira sem rolar, então escolher
+ *    a seção é escolher um conjunto pequeno de decisões relacionadas -- em vez
+ *    de procurar uma agulha numa lista de dezoito;
  *  - **uma trilha de navegação fixa à esquerda**, que responde "onde estou e o
  *    que mais existe aqui" sem precisar rolar para descobrir;
  *  - **busca**, porque a pergunta real de quem abre configurações quase nunca
- *    é "quero ver a seção Aparência": é "onde muda o tamanho da letra". Com a
- *    busca, saber em que seção o ajuste mora deixa de ser pré-requisito.
+ *    é "quais seções existem", é "onde fica aquilo".
+ *
+ * O que ele ganhou nesta revisão, e por quê:
+ *
+ *  - **Perfis.** Dezoito ajustes é mais do que a maioria das pessoas quer
+ *    decidir. Um clique em "Operação" ou "Leitura" põe a interface inteira
+ *    numa configuração coerente, e cada ajuste continua editável embaixo.
+ *  - **Selo "alterado", contagem por seção e resumo no rodapé.** "O que aqui
+ *    dentro fui EU que mexi?" era impossível de responder sem lembrar de cada
+ *    escolha feita meses atrás -- e é a primeira pergunta de quem herda uma
+ *    máquina configurada por outra pessoa, ou de quem quer desfazer um ajuste
+ *    de que se arrependeu sem zerar todo o resto junto.
+ *  - **Restaurar só uma seção**, pelo mesmo motivo: o botão de restaurar era
+ *    tudo ou nada, e "tudo" é caro demais para quem só quer desfazer a
+ *    densidade.
+ *  - **Exportar e importar as preferências** num arquivo, para montar uma
+ *    máquina nova (ou a de um colega) igual à sua sem refazer dezoito
+ *    escolhas na mão.
  *
  * Tudo continua se aplicando na hora, sem botão de "Salvar": são preferências
  * reversíveis de um clique, e nenhuma delas destrói nada. Pedir confirmação
@@ -56,6 +79,7 @@ export class ConfiguracoesPanel {
    * @param {{
    *   aoMudarLinhas?: () => void,
    *   aoMudarSidebar?: (recolhida: boolean) => void,
+   *   aoMudarVarias?: () => void,
    *   abas?: Array<{key: string, label: string}>,
    *   usuario?: {nome: string, usuario: string, role?: string},
    *   abrirBackups?: () => void,
@@ -65,10 +89,17 @@ export class ConfiguracoesPanel {
    *   rótulo do botão de recolher e recarregar a aba aberta é o App, então ele
    *   entrega essas ações aqui em vez de o painel ir procurar elementos pela
    *   tela e adivinhar como cada um se comporta.
+   *
+   *   `aoMudarVarias` é o caso em que MUITAS preferências mudam de uma vez (um
+   *   perfil aplicado, um arquivo importado, uma seção restaurada): avisar
+   *   ajuste por ajuste obrigaria a lembrar de acrescentar um aviso novo a
+   *   cada preferência criada, e o esquecimento apareceria como "o perfil
+   *   mudou tudo, menos o menu lateral".
    */
-  constructor({ aoMudarLinhas, aoMudarSidebar, abas, usuario, abrirBackups, abrirUsuarios } = {}) {
+  constructor({ aoMudarLinhas, aoMudarSidebar, aoMudarVarias, abas, usuario, abrirBackups, abrirUsuarios } = {}) {
     this.aoMudarLinhas = aoMudarLinhas || (() => {});
     this.aoMudarSidebar = aoMudarSidebar || (() => {});
+    this.aoMudarVarias = aoMudarVarias || (() => {});
     /** @type {Array<{key: string, label: string}>} para o seletor de tela inicial */
     this.abas = abas || [];
     this.usuario = usuario || null;
@@ -79,7 +110,7 @@ export class ConfiguracoesPanel {
   }
 
   open() {
-    const { box, close } = Modal.abrirCaixa({ largura: 860, classe: "cfg" });
+    const { box, close } = Modal.abrirCaixa({ largura: 880, classe: "cfg" });
     this.close = close;
     this.box = box;
 
@@ -88,7 +119,11 @@ export class ConfiguracoesPanel {
         <div class="painel__icon" aria-hidden="true">${icon("config")}</div>
         <div class="cfg__titles">
           <h3 class="modal-box__title" id="config-titulo">Configurações</h3>
-          <p class="modal-box__message">Valem só para este navegador, e mudam na hora.</p>
+          <!-- Estas preferências deixaram de ser "deste navegador" quando
+               passaram a ser gravadas na conta (ver prefs.js). A frase antiga
+               continuava dizendo o contrário, que é o tipo de texto que só
+               engana quem confia nele. -->
+          <p class="modal-box__message">Acompanham a sua conta em qualquer máquina, e valem na hora.</p>
         </div>
         <div class="cfg__search">
           <span class="cfg__search-icon" aria-hidden="true">${icon("busca")}</span>
@@ -109,8 +144,9 @@ export class ConfiguracoesPanel {
       </div>
 
       <footer class="cfg__foot">
-        <button type="button" class="btn btn--ghost btn--small" data-action="restaurar">Restaurar padrões</button>
+        <span class="cfg__resumo" data-role="resumo" aria-live="polite"></span>
         <span class="toolbar-spacer"></span>
+        <button type="button" class="btn btn--ghost btn--small" data-action="restaurar">Restaurar tudo</button>
         <button type="button" class="btn btn--accent" data-action="concluir">Concluído</button>
       </footer>
     `;
@@ -119,22 +155,25 @@ export class ConfiguracoesPanel {
     this.nav = box.querySelector('[data-role="nav"]');
     this.pane = box.querySelector('[data-role="pane"]');
     this.semResultado = box.querySelector('[data-role="semResultado"]');
+    this.resumo = box.querySelector('[data-role="resumo"]');
+    this.busca = box.querySelector('[data-role="busca"]');
 
     for (const secao of this._definicoes()) this._montarSecao(secao);
     this._irPara(this._definicoes()[0].id);
+    this._atualizarSelos();
 
-    this._ligarBusca(box.querySelector('[data-role="busca"]'));
+    this._ligarBusca(this.busca);
     this._ligarNavegacaoPorSetas();
 
     box.querySelector('[data-action="concluir"]').addEventListener("click", () => close());
     box.querySelector('[data-action="fechar"]').addEventListener("click", () => close());
-    box.querySelector('[data-action="restaurar"]').addEventListener("click", () => this._restaurar());
+    box.querySelector('[data-action="restaurar"]').addEventListener("click", () => this._restaurarTudo());
 
     // O foco vai para a busca: é a primeira coisa que serve para QUALQUER
     // intenção de quem abriu o painel, e dali o Tab desce naturalmente para a
     // trilha de seções. Focar o primeiro ajuste presumiria que a pessoa veio
     // atrás justamente dele.
-    box.querySelector('[data-role="busca"]').focus();
+    this.busca.focus();
   }
 
   // ==========================================================================
@@ -145,12 +184,16 @@ export class ConfiguracoesPanel {
    * A lista inteira de ajustes, como dados.
    *
    * Está escrita assim -- e não como uma sequência de chamadas que empurram
-   * elementos numa div, como era antes -- porque três coisas diferentes
+   * elementos numa div, como era antes -- porque quatro coisas diferentes
    * precisam percorrer a MESMA lista: o desenho das seções, a trilha de
-   * navegação e a busca. Com a lista sendo dado, as três leem a mesma fonte;
-   * com ela sendo código, cada uma teria que ser mantida em sincronia na mão,
-   * e a busca seria a primeira a ficar desatualizada quando um ajuste novo
-   * entrasse.
+   * navegação, a busca e o cálculo do que está fora do padrão. Com a lista
+   * sendo dado, as quatro leem a mesma fonte; com ela sendo código, cada uma
+   * teria que ser mantida em sincronia na mão, e a busca seria a primeira a
+   * ficar desatualizada quando um ajuste novo entrasse.
+   *
+   * O campo `chaves` de cada item diz de quais preferências ele é dono. É o
+   * que permite o selo "alterado", a contagem por seção e o "restaurar esta
+   * seção" existirem sem uma segunda tabela dizendo a mesma coisa.
    */
   _definicoes() {
     if (this._cacheDefinicoes) return this._cacheDefinicoes;
@@ -160,18 +203,26 @@ export class ConfiguracoesPanel {
         id: "aparencia",
         titulo: "Aparência",
         icone: "paleta",
-        descricao: "Como o Gestor se parece nesta máquina.",
+        descricao: "Como o Gestor se parece. Comece por um perfil, ajuste o resto se quiser.",
         itens: [
+          {
+            tipo: "perfis",
+            titulo: "Perfil",
+            ajuda: "Um clique arruma vários ajustes de uma vez. Nada aqui é definitivo.",
+            busca: "perfil predefinido modo padrão operação leitura acessível conjunto",
+          },
           {
             tipo: "temas",
             titulo: "Tema",
             ajuda: '"Sistema" acompanha a configuração do seu computador.',
+            chaves: ["tema"],
             busca: "tema claro escuro noturno modo sistema cor de fundo",
           },
           {
             tipo: "cores",
             titulo: "Cor de destaque",
             ajuda: "A cor dos botões, links e da aba ativa.",
+            chaves: ["realce"],
             busca: "cor destaque realce accent azul verde roxo violeta rosa âmbar",
           },
           {
@@ -179,6 +230,7 @@ export class ConfiguracoesPanel {
             titulo: "Tamanho do texto",
             ajuda: "Aumenta tudo junto, sem desalinhar a interface.",
             nome: "cfg-escala",
+            chaves: ["escalaTexto"],
             busca: "tamanho do texto letra fonte zoom acessibilidade enxergar",
             opcoes: ESCALAS.map((e) => ({ valor: e.valor, rotulo: e.rotulo })),
             atual: () => aparencia.escalaTexto(),
@@ -186,22 +238,10 @@ export class ConfiguracoesPanel {
           },
           {
             tipo: "segmentado",
-            titulo: "Animações",
-            ajuda: "Transições, deslizes e o fade das janelas.",
-            nome: "cfg-movimento",
-            busca: "animação movimento transição efeito reduzir enjoo",
-            opcoes: [
-              { valor: "normal", rotulo: "Normais" },
-              { valor: "reduzido", rotulo: "Reduzidas" },
-            ],
-            atual: () => aparencia.movimento(),
-            aoEscolher: (valor) => aparencia.aplicar({ movimento: valor }),
-          },
-          {
-            tipo: "segmentado",
             titulo: "Fundo da tela",
             ajuda: "A grade discreta atrás do conteúdo, com o brilho no topo.",
             nome: "cfg-fundo",
+            chaves: ["fundoTela"],
             busca: "fundo grade textura brilho halo liso plano",
             opcoes: [
               { valor: "grade", rotulo: "Com grade" },
@@ -224,7 +264,8 @@ export class ConfiguracoesPanel {
             titulo: "Densidade das linhas",
             ajuda: "Quanto respiro cada linha tem. Compacta mostra mais registros sem rolar.",
             nome: "cfg-densidade",
-            busca: "densidade linha altura da linha compacta confortável espaçamento",
+            chaves: ["densidade"],
+            busca: "densidade linha altura da linha compacta confortável espaçamento apertada",
             opcoes: DENSIDADES.map((d) => ({ valor: d.valor, rotulo: d.rotulo })),
             atual: () => aparencia.densidade(),
             aoEscolher: (valor) => aparencia.aplicar({ densidade: valor }),
@@ -234,6 +275,7 @@ export class ConfiguracoesPanel {
             titulo: "Altura das tabelas",
             ajuda: "Quanto da tela a tabela ocupa antes de precisar rolar por dentro.",
             nome: "cfg-altura",
+            chaves: ["alturaTabela"],
             busca: "altura tabela rolagem scroll tela cheia",
             opcoes: ALTURAS.map((a) => ({ valor: a.valor, rotulo: a.rotulo })),
             atual: () => aparencia.altura(),
@@ -244,6 +286,7 @@ export class ConfiguracoesPanel {
             titulo: "Linhas por página",
             ajuda: "Vale para Atualizações, Clientes, Agendamentos e Histórico.",
             nome: "cfg-linhas",
+            chaves: ["linhasPorPagina"],
             busca: "linhas por página paginação quantidade registros",
             opcoes: LINHAS_OPCOES.map((n) => ({ valor: String(n), rotulo: String(n) })),
             atual: () => String(aparencia.linhasPorPagina()),
@@ -251,6 +294,62 @@ export class ConfiguracoesPanel {
               aparencia.aplicar({ linhasPorPagina: Number(valor) });
               this.aoMudarLinhas();
             },
+          },
+          {
+            tipo: "segmentado",
+            titulo: "Linhas alternadas",
+            ajuda: "A faixa clara em uma linha sim, outra não, para não pular de linha numa tabela larga.",
+            nome: "cfg-zebra",
+            chaves: ["zebra"],
+            busca: "zebra listrado linhas alternadas faixa risca lisa",
+            opcoes: ZEBRAS.map((z) => ({ valor: z.valor, rotulo: z.rotulo })),
+            atual: () => aparencia.zebra(),
+            aoEscolher: (valor) => aparencia.aplicar({ zebra: valor }),
+          },
+        ],
+      },
+
+      {
+        id: "acessibilidade",
+        titulo: "Acessibilidade",
+        icone: "acessibilidade",
+        descricao: "Enxergar melhor, cansar menos e deixar a tela mais leve na máquina.",
+        itens: [
+          {
+            tipo: "segmentado",
+            titulo: "Contraste",
+            ajuda: "Reforça bordas e textos de apoio, sem trocar o tema que você escolheu.",
+            nome: "cfg-contraste",
+            chaves: ["contraste"],
+            busca: "contraste alto enxergar legibilidade borda fraca claro demais acessibilidade",
+            opcoes: CONTRASTES.map((c) => ({ valor: c.valor, rotulo: c.rotulo })),
+            atual: () => aparencia.contraste(),
+            aoEscolher: (valor) => aparencia.aplicar({ contraste: valor }),
+          },
+          {
+            tipo: "segmentado",
+            titulo: "Animações",
+            ajuda: "Transições, deslizes e o fade das janelas.",
+            nome: "cfg-movimento",
+            chaves: ["movimento"],
+            busca: "animação movimento transição efeito reduzir enjoo vertigem",
+            opcoes: [
+              { valor: "normal", rotulo: "Normais" },
+              { valor: "reduzido", rotulo: "Reduzidas" },
+            ],
+            atual: () => aparencia.movimento(),
+            aoEscolher: (valor) => aparencia.aplicar({ movimento: valor }),
+          },
+          {
+            tipo: "segmentado",
+            titulo: "Superfícies",
+            ajuda: "O vidro fosco da barra lateral e das janelas. Sólidas pesam menos em máquina fraca.",
+            nome: "cfg-transparencia",
+            chaves: ["transparencia"],
+            busca: "transparência desfoque blur vidro fosco desempenho lento travando sólido",
+            opcoes: TRANSPARENCIAS.map((t) => ({ valor: t.valor, rotulo: t.rotulo })),
+            atual: () => aparencia.transparencia(),
+            aoEscolher: (valor) => aparencia.aplicar({ transparencia: valor }),
           },
         ],
       },
@@ -268,6 +367,7 @@ export class ConfiguracoesPanel {
             tipo: "select",
             titulo: "Tela inicial",
             ajuda: "Onde o sistema abre quando você entra.",
+            chaves: ["abaInicial"],
             busca: "tela inicial abertura página inicial padrão entrar",
             oculto: () => this.abas.length === 0,
             opcoes: [
@@ -282,6 +382,7 @@ export class ConfiguracoesPanel {
             titulo: "Menu lateral",
             ajuda: "Recolhido, sobra bastante largura para as tabelas.",
             nome: "cfg-menu",
+            chaves: ["sidebarRecolhida"],
             busca: "menu lateral barra sidebar recolher esconder largura",
             opcoes: [
               { valor: "aberto", rotulo: "Aberto" },
@@ -295,6 +396,7 @@ export class ConfiguracoesPanel {
             titulo: "Lembrar filtros ao trocar de aba",
             ajuda: "Busca, filtro e ordenação continuam como estavam ao voltar. Somem quando o navegador fecha.",
             nome: "cfg-filtros",
+            chaves: ["lembrarFiltros"],
             busca: "lembrar filtros busca ordenação memória limpar sessão",
             opcoes: [
               { valor: "sim", rotulo: "Lembrar" },
@@ -315,6 +417,7 @@ export class ConfiguracoesPanel {
             titulo: "Atualizar a Distribuição sozinha",
             ajuda: "De quanto em quanto tempo o painel busca o retorno dos agentes.",
             nome: "cfg-ritmo",
+            chaves: ["ritmoPainel"],
             busca: "atualizar sozinha automático distribuição agentes intervalo tempo",
             opcoes: RITMOS.map((r) => ({ valor: String(r.valor), rotulo: r.rotulo })),
             atual: () => String(aparencia.ritmoPainel()),
@@ -332,7 +435,7 @@ export class ConfiguracoesPanel {
           {
             tipo: "segmentado",
             titulo: "Avisar quando um agente falhar",
-            ajuda: "Notificação do sistema, mesmo com o Gestor em outra aba.",
+            ajuda: "Notificação do sistema, mesmo com o Gestor em outra aba. Vale só nesta máquina.",
             nome: "cfg-notificacoes",
             busca: "notificação aviso falha erro agente windows alerta som",
             oculto: () => !notificacoes.suportado(),
@@ -358,6 +461,7 @@ export class ConfiguracoesPanel {
             titulo: "Onde os avisos aparecem",
             ajuda: 'Os recados rápidos ("Registro salvo"). Embaixo eles passam por cima da paginação.',
             nome: "cfg-avisos",
+            chaves: ["posicaoAvisos"],
             busca: "avisos toast posição canto topo rodapé onde aparecem",
             opcoes: POSICOES_AVISO.map((p) => ({ valor: p.valor, rotulo: p.rotulo })),
             atual: () => aparencia.posicaoAvisos(),
@@ -375,7 +479,7 @@ export class ConfiguracoesPanel {
         id: "sistema",
         titulo: "Sistema",
         icone: "config",
-        descricao: "Quem está usando, e as telas que não são ajuste.",
+        descricao: "Quem está usando, o que levar para outra máquina, e as telas que não são ajuste.",
         itens: [
           {
             tipo: "conta",
@@ -386,10 +490,33 @@ export class ConfiguracoesPanel {
             oculto: () => !this.usuario,
           },
           /*
-           * Backups, Usuários e Atalhos não são preferências -- são telas que
-           * se abrem -- e por isso têm forma de link, não de ajuste. Um ajuste
-           * muda como o app se comporta; estes três levam a outro lugar, e
-           * desenhá-los como trilho de opções diria que são a mesma coisa.
+           * Exportar e importar não são preferências: são duas ações sobre o
+           * conjunto delas. Ficam em Sistema, junto de Backups, porque é o
+           * mesmo tipo de tarefa -- levar um estado daqui para outro lugar.
+           */
+          {
+            tipo: "link",
+            titulo: "Exportar preferências",
+            ajuda: "Salva um arquivo com tudo que está escolhido aqui",
+            icone: "download",
+            busca: "exportar salvar arquivo json preferências levar copiar backup ajustes",
+            fecharAntes: false,
+            acao: () => this._exportar(),
+          },
+          {
+            tipo: "link",
+            titulo: "Importar preferências",
+            ajuda: "Aplica um arquivo exportado de outra máquina",
+            icone: "upload",
+            busca: "importar carregar arquivo json preferências restaurar ajustes de outra máquina",
+            fecharAntes: false,
+            acao: () => this._importar(),
+          },
+          /*
+           * Backups, Usuários e Atalhos também têm forma de link, e não de
+           * ajuste: um ajuste muda como o app se comporta; estes três levam a
+           * outro lugar, e desenhá-los como trilho de opções diria que são a
+           * mesma coisa.
            */
           {
             tipo: "link",
@@ -422,7 +549,7 @@ export class ConfiguracoesPanel {
     ];
 
     // Um item escondido (sem abas para escolher, sem suporte a notificação)
-    // sai da lista AQUI, antes de qualquer um dos três consumidores -- assim a
+    // sai da lista AQUI, antes de qualquer um dos consumidores -- assim a
     // busca não encontra um ajuste que não existe nesta máquina, e a seção não
     // nasce vazia sem ninguém perceber.
     for (const secao of secoes) secao.itens = secao.itens.filter((item) => !item.oculto?.());
@@ -439,7 +566,11 @@ export class ConfiguracoesPanel {
     botao.type = "button";
     botao.className = "cfg__nav-item";
     botao.dataset.secao = secao.id;
-    botao.innerHTML = `<span class="cfg__nav-icon">${icon(secao.icone)}</span><span>${escapeHtml(secao.titulo)}</span>`;
+    botao.innerHTML = `
+      <span class="cfg__nav-icon">${icon(secao.icone)}</span>
+      <span class="cfg__nav-texto">${escapeHtml(secao.titulo)}</span>
+      <span class="cfg__nav-count" hidden></span>
+    `;
     botao.addEventListener("click", () => this._irPara(secao.id));
     this.nav.appendChild(botao);
 
@@ -449,13 +580,24 @@ export class ConfiguracoesPanel {
     painel.hidden = true;
     painel.innerHTML = `
       <div class="cfg__section-head">
-        <h4>${escapeHtml(secao.titulo)}</h4>
-        <p>${escapeHtml(secao.descricao)}</p>
+        <div class="cfg__section-titles">
+          <h4>${escapeHtml(secao.titulo)}</h4>
+          <p>${escapeHtml(secao.descricao)}</p>
+        </div>
+        <button type="button" class="btn btn--ghost btn--small cfg__restaurar-secao"
+                data-role="restaurarSecao" hidden>Restaurar esta seção</button>
       </div>
       <div class="cfg__rows"></div>
     `;
     const linhas = painel.querySelector(".cfg__rows");
     for (const item of secao.itens) linhas.appendChild(this._montarItem(item, secao));
+
+    // Só aparece quando há o que restaurar (ver `_atualizarSelos`): um botão
+    // permanentemente sem efeito ensina a ignorá-lo.
+    painel
+      .querySelector('[data-role="restaurarSecao"]')
+      .addEventListener("click", () => this._restaurarSecao(secao));
+
     this.pane.appendChild(painel);
     this.secoes.set(secao.id, painel);
   }
@@ -468,10 +610,12 @@ export class ConfiguracoesPanel {
     // procura "cor"; ninguém procura "densidade", procura "linha apertada".
     linha.dataset.busca = normalizar(`${item.titulo || ""} ${item.ajuda || ""} ${item.busca || ""} ${secao.titulo}`);
     linha.dataset.secaoTitulo = secao.titulo;
+    linha.dataset.chaves = (item.chaves || []).join(",");
     return linha;
   }
 
   _porTipo(item) {
+    if (item.tipo === "perfis") return this._perfis(item);
     if (item.tipo === "temas") return this._temas(item);
     if (item.tipo === "cores") return this._cores(item);
     if (item.tipo === "select") return this._select(item);
@@ -480,16 +624,73 @@ export class ConfiguracoesPanel {
     return this._segmentado(item);
   }
 
-  /** Rótulo à esquerda + controle à direita, a forma padrão de uma linha. */
+  /**
+   * Rótulo à esquerda + controle à direita, a forma padrão de uma linha.
+   *
+   * O selo "alterado" nasce escondido em toda linha que tem rótulo, e é
+   * `_atualizarSelos` quem decide quais aparecem. Criar todos de uma vez e
+   * apenas mostrar/esconder evita a alternativa: inserir e remover elementos a
+   * cada clique, que é como se perde o foco do controle que acabou de ser
+   * usado.
+   */
   _linha(titulo, ajuda) {
     const linha = document.createElement("div");
     linha.className = "cfg-group";
     const legenda = document.createElement("div");
     legenda.className = "cfg-group__labels";
-    legenda.innerHTML = `<span class="cfg-group__title"></span><span class="cfg-group__help"></span>`;
+    legenda.innerHTML = `
+      <span class="cfg-group__title-row">
+        <span class="cfg-group__title"></span>
+        <span class="cfg-group__selo" hidden>alterado</span>
+      </span>
+      <span class="cfg-group__help"></span>
+    `;
     legenda.querySelector(".cfg-group__title").textContent = titulo;
     legenda.querySelector(".cfg-group__help").textContent = ajuda || "";
     linha.appendChild(legenda);
+    return linha;
+  }
+
+  /**
+   * Os perfis, como cartões escolhíveis.
+   *
+   * Cada um traz uma amostra desenhada em CSS -- três traços finos e juntos
+   * para "Operação", dois grossos e espaçados para "Leitura" -- pelo mesmo
+   * motivo das miniaturas de tema: o que o perfil faz é VISUAL, e mostrar o
+   * resultado é sempre mais direto do que descrevê-lo em duas linhas de texto
+   * que a pessoa vai ter que imaginar.
+   */
+  _perfis({ titulo, ajuda }) {
+    const linha = this._linha(titulo, ajuda);
+    linha.classList.add("cfg-group--largo");
+
+    const grade = document.createElement("div");
+    grade.className = "cfg-perfis";
+    for (const perfil of PERFIS) {
+      const botao = document.createElement("button");
+      botao.type = "button";
+      botao.className = "cfg-perfil";
+      botao.dataset.perfil = perfil.valor;
+      botao.setAttribute("aria-pressed", "false");
+      botao.innerHTML = `
+        <span class="cfg-perfil__amostra cfg-perfil__amostra--${perfil.valor}" aria-hidden="true">
+          <i></i><i></i><i></i><i></i>
+        </span>
+        <span class="cfg-perfil__nome"></span>
+        <span class="cfg-perfil__desc"></span>
+        <span class="cfg-perfil__check" aria-hidden="true">${icon("check")}</span>
+      `;
+      botao.querySelector(".cfg-perfil__nome").textContent = perfil.rotulo;
+      botao.querySelector(".cfg-perfil__desc").textContent = perfil.descricao;
+      botao.addEventListener("click", () => {
+        aparencia.aplicarPerfil(perfil.valor);
+        this._aplicarEmLote();
+        toast.success(`Perfil "${perfil.rotulo}" aplicado.`);
+      });
+      grade.appendChild(botao);
+    }
+
+    linha.appendChild(grade);
     return linha;
   }
 
@@ -528,7 +729,11 @@ export class ConfiguracoesPanel {
       // marcados (a permissão de notificação, que quem decide é o navegador) e
       // precisam desmarcar a opção de volta.
       input.addEventListener("change", () => {
-        if (input.checked) aoEscolher(opcao.valor, trilho);
+        if (!input.checked) return;
+        // `Promise.resolve` porque um dos manipuladores é assíncrono (a
+        // permissão de notificação): sem esperar, o selo seria recalculado
+        // antes de a escolha ter de fato valido.
+        Promise.resolve(aoEscolher(opcao.valor, trilho)).then(() => this._atualizarSelos());
       });
     }
 
@@ -577,7 +782,9 @@ export class ConfiguracoesPanel {
          <span class="cfg-tema__rotulo">${escapeHtml(opcao.rotulo)}${icon("check")}</span>`
       );
       input.addEventListener("change", () => {
-        if (input.checked) theme.aplicar(opcao.valor);
+        if (!input.checked) return;
+        theme.aplicar(opcao.valor);
+        this._atualizarSelos();
       });
       grade.appendChild(label);
     }
@@ -613,7 +820,9 @@ export class ConfiguracoesPanel {
       nome.textContent = cor.rotulo;
       label.append(input, nome);
       input.addEventListener("change", () => {
-        if (input.checked) aparencia.aplicar({ realce: cor.valor });
+        if (!input.checked) return;
+        aparencia.aplicar({ realce: cor.valor });
+        this._atualizarSelos();
       });
       trilho.appendChild(label);
     }
@@ -634,13 +843,24 @@ export class ConfiguracoesPanel {
       select.appendChild(el);
     }
     select.value = atual();
-    select.addEventListener("change", () => aoEscolher(select.value));
+    select.addEventListener("change", () => {
+      aoEscolher(select.value);
+      this._atualizarSelos();
+    });
     linha.appendChild(select);
     return linha;
   }
 
-  /** Linha clicável (ícone, rótulo, seta) -- "isto leva a outro lugar". */
-  _link({ titulo, ajuda, icone, acao }) {
+  /**
+   * Linha clicável (ícone, rótulo, seta) -- "isto leva a outro lugar".
+   *
+   * `fecharAntes` decide se o painel some ao clicar. Backups e Usuários abrem
+   * DIÁLOGOS, e dois diálogos empilhados prendem o foco no de cima e escondem
+   * o de baixo pela metade. Exportar e importar preferências não abrem nada --
+   * é um arquivo indo ou vindo --, e fechar o painel neles seria expulsar a
+   * pessoa da tela que ela ainda está usando.
+   */
+  _link({ titulo, ajuda, icone, acao, fecharAntes = true }) {
     const botao = document.createElement("button");
     botao.type = "button";
     botao.className = "cfg-link";
@@ -651,10 +871,8 @@ export class ConfiguracoesPanel {
     `;
     botao.querySelector("strong").textContent = titulo;
     botao.querySelector(".cfg-link__labels span").textContent = ajuda;
-    // Fecha este painel antes de abrir o outro: dois diálogos empilhados
-    // prendem o foco no de cima e escondem o de baixo pela metade.
     botao.addEventListener("click", () => {
-      this.close();
+      if (fecharAntes) this.close();
       acao();
     });
     return botao;
@@ -679,12 +897,173 @@ export class ConfiguracoesPanel {
     `;
     caixa.querySelector(".cfg-conta__avatar").textContent = iniciais(nome || usuario);
     caixa.querySelector("strong").textContent = nome || usuario;
-    // "admin" é o valor guardado no banco (ver AuthService), não uma palavra
-    // para mostrar: quem lê quer saber se pode mexer em usuários, e é isso que
-    // "Administrador" responde.
-    const papel = role === "admin" ? "Administrador" : "Usuário";
-    caixa.querySelector(".cfg-conta__texto span").textContent = `@${usuario} — ${papel}`;
+    caixa.querySelector(".cfg-conta__texto span").textContent = `@${usuario} — ${rotuloPapel(role)}`;
     return caixa;
+  }
+
+  // ==========================================================================
+  // O QUE FOI ALTERADO
+  // ==========================================================================
+
+  /**
+   * Repassa a tela inteira marcando o que está fora do padrão: o selo de cada
+   * linha, a contagem de cada seção, o botão de restaurar seção, o resumo do
+   * rodapé e o perfil em vigor.
+   *
+   * Roda inteiro a cada mudança em vez de atualizar só o que mexeu. São
+   * dezoito linhas num painel que já está aberto na frente da pessoa -- o
+   * custo é irrelevante, e a alternativa (cada controle sabendo quais selos ele
+   * afeta) é o tipo de dependência cruzada que quebra em silêncio quando um
+   * perfil muda seis preferências de uma vez.
+   */
+  _atualizarSelos() {
+    const mudadas = aparencia.diferencas();
+    let total = 0;
+
+    for (const [id, painel] of this.secoes) {
+      let naSecao = 0;
+      for (const linha of painel.querySelectorAll(".cfg__row")) {
+        const chaves = (linha.dataset.chaves || "").split(",").filter(Boolean);
+        const alterada = chaves.some((chave) => mudadas.has(chave));
+        linha.classList.toggle("is-alterado", alterada);
+        const selo = linha.querySelector(".cfg-group__selo");
+        if (selo) selo.hidden = !alterada;
+        if (alterada) naSecao += 1;
+      }
+      total += naSecao;
+
+      painel.querySelector('[data-role="restaurarSecao"]').hidden = naSecao === 0;
+      const contador = this.nav.querySelector(`[data-secao="${id}"] .cfg__nav-count`);
+      if (contador) {
+        contador.textContent = String(naSecao);
+        contador.hidden = naSecao === 0;
+        contador.title = `${naSecao} ajuste(s) fora do padrão nesta seção`;
+      }
+    }
+
+    this.resumo.textContent =
+      total === 0 ? "Tudo como vem de fábrica." : `${total} ${total === 1 ? "ajuste" : "ajustes"} fora do padrão.`;
+
+    this._marcarPerfil();
+  }
+
+  /** Marca (ou desmarca) o cartão do perfil que descreve o estado atual. */
+  _marcarPerfil() {
+    const ativo = aparencia.perfilAtivo();
+    for (const cartao of this.pane.querySelectorAll(".cfg-perfil")) {
+      const marcado = cartao.dataset.perfil === ativo;
+      cartao.classList.toggle("is-active", marcado);
+      cartao.setAttribute("aria-pressed", String(marcado));
+    }
+  }
+
+  // ==========================================================================
+  // MUDANÇAS EM LOTE
+  // ==========================================================================
+
+  /**
+   * O que fazer depois de mexer em muitas preferências de uma vez.
+   *
+   * A versão anterior resolvia isso com `location.reload()`, e a justificativa
+   * era boa: tema, menu e densidade são aplicados em pontos diferentes do
+   * arranque, e desfazer cada um na mão seria reimplementar a inicialização.
+   * Só que recarregar cobra caro pelo que entrega -- a página pisca inteira, o
+   * painel fecha, a aba e a rolagem voltam ao começo, e quem estava explorando
+   * perfis perde o lugar a cada clique.
+   *
+   * Agora existem os três chamados que a inicialização também faz, e eles
+   * cabem em três linhas: repintar o tema, repintar a aparência e pedir ao App
+   * que alinhe o que é dele (menu lateral e dados da aba). O quarto -- remontar
+   * os controles do painel -- é o que faz eles pararem de mostrar os valores
+   * antigos.
+   */
+  _aplicarEmLote() {
+    theme.aplicar();
+    reaplicarAparencia();
+    this.aoMudarVarias();
+    this._remontar();
+  }
+
+  /** Redesenha nav e seções a partir das definições, mantendo onde se estava. */
+  _remontar() {
+    const secaoAnterior = this.secaoAtual;
+    this._cacheDefinicoes = null;
+    this.secoes.clear();
+    this.nav.replaceChildren();
+    for (const painel of this.pane.querySelectorAll(".cfg__section")) painel.remove();
+
+    for (const secao of this._definicoes()) this._montarSecao(secao);
+    this._irPara(this.secoes.has(secaoAnterior) ? secaoAnterior : this._definicoes()[0].id);
+    this._atualizarSelos();
+    // Uma busca em curso precisa continuar valendo depois da remontagem: as
+    // linhas são outras, e nasceram todas visíveis. Reaproveitar o próprio
+    // manipulador do campo evita repetir aqui a regra de filtragem.
+    if (this.busca.value) this.busca.dispatchEvent(new Event("input"));
+  }
+
+  _restaurarSecao(secao) {
+    const chaves = secao.itens.flatMap((item) => item.chaves || []);
+    if (chaves.length === 0) return;
+    aparencia.restaurarPadroes(chaves);
+    this._aplicarEmLote();
+    toast.success(`"${secao.titulo}" voltou aos padrões.`);
+  }
+
+  async _restaurarTudo() {
+    const ok = await Modal.confirm(
+      "Restaurar padrões",
+      "Todas as preferências da sua conta voltam ao estado original: tema, cor de destaque, tamanho do texto, contraste, densidade, altura, linhas por página, tela inicial, menu e avisos.\n\nNenhum dado do sistema é afetado.",
+      { confirmLabel: "Restaurar", danger: false }
+    );
+    if (!ok) return;
+    aparencia.restaurarPadroes();
+    this._aplicarEmLote();
+    toast.success("Preferências restauradas.");
+  }
+
+  // ==========================================================================
+  // LEVAR PARA OUTRA MÁQUINA
+  // ==========================================================================
+
+  _exportar() {
+    const agora = new Date();
+    const carimbo = [
+      agora.getFullYear(),
+      String(agora.getMonth() + 1).padStart(2, "0"),
+      String(agora.getDate()).padStart(2, "0"),
+    ].join("-");
+    baixarTexto(JSON.stringify(aparencia.exportar(), null, 2), `preferencias-gestor-${carimbo}.json`);
+    toast.success("Arquivo de preferências salvo.");
+  }
+
+  async _importar() {
+    const arquivo = await escolherArquivo({ accept: "application/json,.json" });
+    if (!arquivo) return; // diálogo cancelado: nada a dizer
+
+    let conteudo;
+    try {
+      conteudo = JSON.parse(await arquivo.text());
+    } catch {
+      toast.error("Arquivo inválido: não é um JSON legível.");
+      return;
+    }
+
+    let resultado;
+    try {
+      resultado = aparencia.importar(conteudo);
+    } catch (erro) {
+      // As mensagens de `importar` são escritas para serem lidas por quem
+      // escolheu o arquivo -- repassar direto é melhor que traduzir aqui.
+      toast.error(erro.message);
+      return;
+    }
+
+    this._aplicarEmLote();
+    toast.success(
+      resultado.ignoradas > 0
+        ? `${resultado.aplicadas} preferências aplicadas. ${resultado.ignoradas} não foram reconhecidas.`
+        : `${resultado.aplicadas} preferências aplicadas.`
+    );
   }
 
   // ==========================================================================
@@ -760,6 +1139,10 @@ export class ConfiguracoesPanel {
    * botão antes de chegar aos ajustes. Uma lista vertical de navegação é o
    * caso clássico em que a seta é o gesto esperado -- e sem ela o teclado fica
    * medindo esforço em número de Tabs.
+   *
+   * Fica no elemento da trilha, e não em cada botão, porque a trilha é
+   * remontada inteira quando um perfil é aplicado: um listener no pai
+   * sobrevive à troca dos filhos, dezenas de listeners nos filhos não.
    */
   _ligarNavegacaoPorSetas() {
     this.nav.addEventListener("keydown", (e) => {
@@ -773,33 +1156,6 @@ export class ConfiguracoesPanel {
       botoes[proximo].click();
     });
   }
-
-  async _restaurar() {
-    const ok = await Modal.confirm(
-      "Restaurar padrões",
-      "Todas as preferências deste navegador voltam ao estado original: tema, cor de destaque, tamanho do texto, densidade, altura, linhas por página, tela inicial, menu e avisos.\n\nNenhum dado do sistema é afetado.",
-      { confirmLabel: "Restaurar", danger: false }
-    );
-    if (!ok) return;
-    aparencia.restaurarPadroes();
-    // Esperar o servidor ANTES de recarregar: o envio normal é agrupado por
-    // alguns décimos de segundo, e o reload mataria a requisição no meio --
-    // os padrões valeriam aqui e a conta continuaria com as preferências
-    // antigas, que voltariam no próximo login.
-    await salvarPreferenciasAgora();
-    // Recarregar é honesto aqui: o tema, o menu e a densidade são aplicados em
-    // pontos diferentes do arranque, e desfazer cada um na mão seria
-    // reimplementar a inicialização inteira só para esta tecla.
-    location.reload();
-  }
-}
-
-/** "Antonio Salomão" -> "AS". Duas letras bastam para o avatar. */
-function iniciais(nome) {
-  const partes = String(nome || "?").trim().split(/\s+/);
-  const primeira = partes[0]?.[0] || "?";
-  const ultima = partes.length > 1 ? partes[partes.length - 1][0] : "";
-  return (primeira + ultima).toUpperCase();
 }
 
 /**
@@ -811,17 +1167,18 @@ function normalizar(texto) {
   return String(texto)
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[̀-ͯ]/g, "");
 }
 
 /**
  * Abre o painel. Wrapper minúsculo, mas evita repetir a montagem nos três
- * lugares que chegam até aqui (botão do cabeçalho, botão da barra lateral e
- * paleta de comandos).
+ * lugares que chegam até aqui (botão da barra lateral, menu da conta e paleta
+ * de comandos).
  */
 export function abrirConfiguracoes({
   aoMudarLinhas,
   aoMudarSidebar,
+  aoMudarVarias,
   abas,
   usuario,
   abrirBackups,
@@ -829,6 +1186,7 @@ export function abrirConfiguracoes({
 } = {}) {
   new ConfiguracoesPanel({
     aoMudarSidebar,
+    aoMudarVarias,
     abas,
     usuario,
     abrirBackups,

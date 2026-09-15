@@ -97,13 +97,26 @@ export class ToastManager {
     el.appendChild(fechar);
 
     // Ler uma mensagem exige que ela pare de correr contra o relógio: com o
-    // mouse em cima, o toast fica.
-    el.addEventListener("mouseenter", () => clearTimeout(this.ativos.get(chave)?.timer));
-    el.addEventListener("mouseleave", () => this._agendarSaida(chave, DURACAO_MS));
+    // mouse em cima -- ou com o teclado dentro dela --, o toast fica.
+    //
+    // O `focusin` não é detalhe: o toast de "Desfazer" é alcançável por Tab, e
+    // sem isto ele podia sumir com o foco DENTRO dele, jogando o foco de volta
+    // para o começo da página no meio da ação que a pessoa ia desfazer.
+    const segurar = () => clearTimeout(this.ativos.get(chave)?.timer);
+    // Devolve a duração ORIGINAL, e não a padrão. O toast com "Desfazer" vive
+    // mais tempo de propósito (`DURACAO_ACAO_MS`): passar o mouse por cima dele
+    // e sair encurtava a janela de desfazer para a de um aviso comum -- ou
+    // seja, o gesto de ir até o botão era o que tirava tempo de usá-lo.
+    const soltar = () => this._agendarSaida(chave, this.ativos.get(chave)?.duracao || DURACAO_MS);
+    el.addEventListener("mouseenter", segurar);
+    el.addEventListener("mouseleave", soltar);
+    el.addEventListener("focusin", segurar);
+    el.addEventListener("focusout", soltar);
 
+    const duracao = opts.duracao || (opts.acao ? DURACAO_ACAO_MS : DURACAO_MS);
     this.stack.appendChild(el);
-    this.ativos.set(chave, { el, n: 1, timer: 0 });
-    this._agendarSaida(chave, opts.duracao || (opts.acao ? DURACAO_ACAO_MS : DURACAO_MS));
+    this.ativos.set(chave, { el, n: 1, timer: 0, duracao });
+    this._agendarSaida(chave, duracao);
   }
 
   success(message, opts) {

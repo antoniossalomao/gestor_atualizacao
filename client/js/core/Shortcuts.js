@@ -10,7 +10,9 @@ import { Modal } from "./Modal.js";
  */
 /** Definição plana: [teclas, descrição, grupo] */
 const TABELA = [
-  ["Ctrl + K", "Abrir a paleta de comandos", "Global"],
+  ["Ctrl + K", "Abrir a paleta de comandos: telas, clientes e ações", "Global"],
+  ["Ctrl + ,", "Abrir as Configurações", "Global"],
+  ["Ctrl + B", "Recolher ou abrir o menu lateral", "Global"],
   ["?", "Mostrar esta lista de atalhos", "Global"],
   ["Alt + 1 … 9", "Ir direto para a aba de mesmo número", "Global"],
   ["Esc", "Fechar a janela ou a lista de sugestões aberta", "Global"],

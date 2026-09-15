@@ -96,6 +96,12 @@ const CHAVE_DONO = "prefsDe";
 
 // Instalados por `conectarPreferencias`. Antes do login (e se o servidor não
 // responder) são no-ops: o app segue funcionando só com o cache local.
+//
+// `enviarAgora` não é exportado. Já foi: o "Restaurar padrões" recarregava a
+// página em seguida, e um `location.reload()` no meio do agrupamento de 400ms
+// matava a requisição antes de ela sair. O painel de Configurações deixou de
+// recarregar (ver `_aplicarEmLote` lá), então o envio agrupado normal dá conta
+// -- e uma porta pública que ninguém mais abre é porta a menos para manter.
 let enviarAoServidor = () => {};
 let enviarAgora = async () => {};
 
@@ -125,20 +131,6 @@ export const settings = {
     if (!SO_DESTE_APARELHO.has(chave)) enviarAoServidor();
   },
 };
-
-/**
- * Envia as preferências ao servidor JÁ, sem esperar o agrupamento.
- *
- * Existe para quem vai recarregar a página logo em seguida ("Restaurar
- * padrões"): o envio normal espera alguns décimos de segundo para não fazer
- * uma viagem por clique, e um `location.reload()` no meio desse intervalo
- * mataria a requisição antes de ela sair -- as preferências voltariam aos
- * padrões aqui e continuariam as antigas na conta, reaparecendo no próximo
- * login.
- */
-export function salvarPreferenciasAgora() {
-  return enviarAgora();
-}
 
 /**
  * Tudo que deve acompanhar a conta, lido do cache local.

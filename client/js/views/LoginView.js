@@ -74,7 +74,24 @@ export class LoginView {
         </div>
         <div class="field">
           <label class="field__label">Senha</label>
-          <input class="input" type="password" name="senha" required autocomplete="${isSetup ? "new-password" : "current-password"}" />
+          <!--
+            O olho de "mostrar senha" não é enfeite: a senha é digitada às
+            cegas, e quando ela é longa (ou o teclado é de notebook, com o
+            número em cima da letra) o erro mais comum não é esquecer a senha,
+            é digitá-la errado duas vezes seguidas sem nunca ver o que saiu.
+          -->
+          <div class="input-com-acao">
+            <input class="input" type="password" name="senha" required
+                   autocomplete="${isSetup ? "new-password" : "current-password"}" />
+            <button type="button" class="input-acao" data-action="ver-senha"
+                    aria-label="Mostrar a senha" aria-pressed="false" title="Mostrar a senha">${icon("olho")}</button>
+          </div>
+          <!--
+            Caps Lock ligado é a causa silenciosa de metade dos "minha senha
+            parou de funcionar": a senha some atrás das bolinhas, e a tecla que
+            a estragou fica acesa num canto do teclado que ninguém olha.
+          -->
+          <p class="field__aviso" data-role="capslock" hidden>Caps Lock está ligado.</p>
         </div>
         <button type="submit" class="btn btn--accent">${isSetup ? "Criar conta e entrar" : "Entrar"}</button>
       </form>
@@ -84,7 +101,47 @@ export class LoginView {
 
     this.errorBox = card.querySelector(".auth-card__error");
     card.querySelector("form").addEventListener("submit", (e) => this._onSubmit(e));
+    this._ligarSenha(card);
     card.querySelector('input[name="usuario"]').focus();
+  }
+
+  /**
+   * Mostrar/esconder a senha e avisar sobre o Caps Lock.
+   *
+   * O aviso escuta `keyup` além de `keydown` porque o próprio pressionar da
+   * tecla Caps Lock só muda o estado DEPOIS de ela subir: sem o `keyup`, o
+   * aviso aparece um caractere atrasado -- ou seja, some justamente quando a
+   * pessoa desliga a tecla para consertar o problema.
+   */
+  _ligarSenha(card) {
+    const campo = card.querySelector('input[name="senha"]');
+    const botao = card.querySelector('[data-action="ver-senha"]');
+    const aviso = card.querySelector('[data-role="capslock"]');
+
+    botao.addEventListener("click", () => {
+      const mostrando = campo.type === "text";
+      campo.type = mostrando ? "password" : "text";
+      botao.innerHTML = icon(mostrando ? "olho" : "olhoRiscado");
+      botao.setAttribute("aria-pressed", String(!mostrando));
+      const rotulo = mostrando ? "Mostrar a senha" : "Esconder a senha";
+      botao.setAttribute("aria-label", rotulo);
+      botao.title = rotulo;
+      // O foco volta para o campo, na mesma posição: quem clicou no olho está
+      // no meio da digitação, e sair do campo obrigaria a clicar de volta.
+      campo.focus();
+    });
+
+    const conferirCaps = (e) => {
+      if (typeof e.getModifierState !== "function") return;
+      aviso.hidden = !e.getModifierState("CapsLock");
+    };
+    campo.addEventListener("keydown", conferirCaps);
+    campo.addEventListener("keyup", conferirCaps);
+    // Sair do campo esconde o aviso: ele fala do que está sendo digitado ali,
+    // e continuar na tela depois disso viraria um alerta sem dono.
+    campo.addEventListener("blur", () => {
+      aviso.hidden = true;
+    });
   }
 
   async _onSubmit(event) {
