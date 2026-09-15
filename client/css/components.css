@@ -3407,6 +3407,143 @@ hr.separator {
   font-weight: var(--peso-extra);
 }
 
+/*
+ * Linha de tendência (ex.: atualizações por mês). `position: relative` porque
+ * o tooltip é um <div> HTML irmão do <svg>, posicionado em % -- a mesma
+ * fração do viewBox cai na mesma fração do card renderizado, então não
+ * precisa recalcular nada no resize.
+ */
+.line-chart {
+  position: relative;
+}
+
+.line-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  cursor: crosshair;
+}
+
+.line-chart__grade {
+  stroke: var(--cor-borda);
+  stroke-width: 1;
+}
+
+.line-chart__eixo {
+  fill: var(--cor-texto-fraco);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* O fill de verdade é o gradiente em <defs> (ver LineChart.render) -- aqui só
+   as cores DAS PARADAS do gradiente, que view sim resolvem `var()` num
+   elemento SVG (diferente de `fill`/`stroke` como atributo cru). Mais forte
+   perto da linha, sumindo perto da base: um accent fraco (Grafite, no painel
+   de Aparência) ainda lê como área, porque a força vem do degradê. */
+.line-chart__area-topo {
+  stop-color: var(--cor-accent);
+  stop-opacity: 0.32;
+}
+.line-chart__area-base {
+  stop-color: var(--cor-accent);
+  stop-opacity: 0;
+}
+.line-chart__area {
+  stroke: none;
+}
+
+.line-chart__linha {
+  fill: none;
+  stroke: var(--cor-accent-forte);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.line-chart__ponto {
+  fill: var(--cor-accent);
+  stroke: var(--cor-superficie);
+  stroke-width: 2;
+}
+.line-chart__ponto--fim {
+  fill: var(--cor-accent-forte);
+}
+
+/* Halo atrás do ponto final (dois círculos concêntricos, ver LineChart) --
+   puxa o olho pro valor mais recente sem depender de quão saturada a cor de
+   destaque é. */
+.line-chart__halo {
+  fill: var(--cor-accent);
+}
+.line-chart__halo--externo {
+  opacity: 0.08;
+}
+.line-chart__halo--interno {
+  opacity: 0.16;
+}
+
+/* Ponto de destaque do hover: nasce escondido (r:0) e cresce -- fica claro
+   que ele SEGUE o ponteiro, em vez de piscar de um lugar pro outro. */
+.line-chart__ponto--hover {
+  r: 0;
+  fill: var(--cor-accent-forte);
+  stroke: var(--cor-superficie);
+  stroke-width: 2;
+  transition: r var(--dur-rapida) var(--curva-padrao);
+}
+.line-chart__ponto--hover.is-visivel {
+  r: 5;
+}
+
+.line-chart__valor-fim {
+  fill: var(--cor-texto);
+  font-weight: var(--peso-extra);
+  font-size: 12px;
+}
+
+.line-chart__crosshair {
+  stroke: var(--cor-borda-forte);
+  stroke-width: 1;
+  opacity: 0;
+  transition: opacity var(--dur-rapida) var(--curva-padrao);
+  pointer-events: none;
+}
+.line-chart__crosshair.is-visivel {
+  opacity: 1;
+}
+
+.line-chart__tooltip {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  box-shadow: var(--sombra-card);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, calc(-100% - 12px));
+  transition: opacity var(--dur-rapida) var(--curva-padrao);
+  pointer-events: none;
+}
+.line-chart__tooltip.is-visivel {
+  opacity: 1;
+}
+.line-chart__tooltip strong {
+  font-family: var(--fonte-display);
+  font-size: var(--txt-md);
+  font-weight: var(--peso-extra);
+  color: var(--cor-texto);
+}
+.line-chart__tooltip span {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
+
 /* ==========================================================================
    14. LOGIN
    ========================================================================== */

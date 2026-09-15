@@ -2,6 +2,7 @@ import { View } from "../core/View.js";
 import { SortableTable } from "../core/SortableTable.js";
 import { PieChart } from "../core/PieChart.js";
 import { BarChart } from "../core/BarChart.js";
+import { LineChart } from "../core/LineChart.js";
 import { tokenHex } from "../core/color.js";
 import { icon } from "../core/icons.js";
 import { escapeHtml } from "../core/html.js";
@@ -129,7 +130,7 @@ export class ResumoView extends View {
     });
 
     this.sistemaChart = new BarChart(this.container.querySelector('[data-role="sistemas"]'));
-    this.tendenciaChart = new BarChart(this.container.querySelector('[data-role="tendencia"]'));
+    this.tendenciaChart = new LineChart(this.container.querySelector('[data-role="tendencia"]'));
 
     this.resolucaoTable = new SortableTable(this.container.querySelector('[data-role="resolucao"]'), {
       columns: [
