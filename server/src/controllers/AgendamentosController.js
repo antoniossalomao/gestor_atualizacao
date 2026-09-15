@@ -59,6 +59,15 @@ class AgendamentosController {
     }
   };
 
+  arquivar = (req, res, next) => {
+    try {
+      this.agendamentoService.arquivar(Number(req.params.id), req.session.user);
+      res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  };
+
   removeMany = (req, res, next) => {
     try {
       const ids = Array.isArray(req.body?.ids) ? req.body.ids : null;

@@ -195,6 +195,16 @@ class AgendamentoRepository extends BaseRepository {
       .run({ agora: new Date().toISOString(), status: statusConcluido, corte }).changes;
   }
 
+  /**
+   * Arquiva uma tarefa na hora, sem esperar a varredura automatica alcancar
+   * o prazo do .env. So toca quem ainda nao esta arquivado.
+   */
+  arquivar(id) {
+    return this.conn
+      .prepare(`UPDATE ${this.table} SET arquivado_em = @agora WHERE id = @id AND arquivado_em IS NULL`)
+      .run({ id, agora: new Date().toISOString() }).changes;
+  }
+
   /** Quantas tarefas estao arquivadas -- o contador ao lado do filtro. */
   contarArquivadas() {
     return this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table} WHERE arquivado_em IS NOT NULL`).get().total;

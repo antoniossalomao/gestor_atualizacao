@@ -99,6 +99,7 @@ export class AgendamentosView extends View {
         <div data-role="pagination"></div>
         <div class="form-actions" style="margin-top: var(--sp-4)">
           <button type="button" class="btn btn--danger" data-action="delete">Excluir Selecionada</button>
+          <button type="button" class="btn" data-action="arquivar">Arquivar</button>
           <button type="button" class="btn" data-action="done">Marcar como Concluída</button>
           <button type="button" class="btn" data-action="converter">Converter em Atualização</button>
           <!-- Só existe enquanto o filtro é "Arquivadas": em qualquer outra
@@ -191,6 +192,7 @@ export class AgendamentosView extends View {
     this.updateBtn = this.container.querySelector('[data-action="update"]');
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
     this.doneBtn = this.container.querySelector('[data-action="done"]');
+    this.arquivarBtn = this.container.querySelector('[data-action="arquivar"]');
     this.converterBtn = this.container.querySelector('[data-action="converter"]');
     this.reabrirBtn = this.container.querySelector('[data-action="reabrir"]');
     this.avisoArquivadas = this.container.querySelector('[data-role="aviso-arquivadas"]');
@@ -213,6 +215,7 @@ export class AgendamentosView extends View {
     this.container.querySelector('[data-action="clear"]').addEventListener("click", () => this.clearForm({ comDesfazer: true }));
     this.deleteBtn.addEventListener("click", () => this.deleteTask());
     this.doneBtn.addEventListener("click", () => this.markDone());
+    this.arquivarBtn.addEventListener("click", () => this.arquivar());
     this.converterBtn.addEventListener("click", () => this.converterEmAtualizacao());
 
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
@@ -381,14 +384,17 @@ export class AgendamentosView extends View {
     this.updateBtn.disabled = this.selectedId == null;
     this.deleteBtn.disabled = this.selectedId == null;
     this.doneBtn.disabled = this.selectedId == null;
+    this.arquivarBtn.disabled = this.selectedId == null;
     this.converterBtn.disabled = this.selectedId == null;
     this.reabrirBtn.disabled = this.selectedId == null;
 
-    // Olhando as arquivadas, "Marcar como Concluída" não tem o que fazer
-    // (todas já estão) -- ele sai e o "Reabrir" toma o lugar.
+    // Olhando as arquivadas, "Marcar como Concluída" e "Arquivar" não têm o
+    // que fazer (já estão concluídas/arquivadas) -- eles saem e o "Reabrir"
+    // toma o lugar.
     const vendoArquivadas = this.status === FILTRO_ARQUIVADAS;
     this.reabrirBtn.hidden = !vendoArquivadas;
     this.doneBtn.hidden = vendoArquivadas;
+    this.arquivarBtn.hidden = vendoArquivadas;
   }
 
   /**
@@ -550,6 +556,35 @@ export class AgendamentosView extends View {
     }
   }
 
+  /**
+   * Arquiva a tarefa selecionada na hora, sem esperar o prazo automático do
+   * .env. Só concluídas podem ser arquivadas (mesma regra da varredura
+   * automática) -- validado aqui para não gastar uma ida ao servidor com um
+   * erro que a tela já sabe de antemão.
+   */
+  async arquivar() {
+    if (this.selectedId == null) {
+      Modal.alert("Seleção", "Selecione uma tarefa na tabela primeiro.", "warning");
+      return;
+    }
+    if (this.fields.status.value !== STATUS_CONCLUIDO) {
+      Modal.alert("Arquivar", `Só é possível arquivar tarefas "${STATUS_CONCLUIDO}".`, "warning");
+      return;
+    }
+    const liberar = marcarOcupado(this.arquivarBtn);
+    try {
+      await this.api.patch(`/agendamentos/${this.selectedId}/arquivar`);
+      this.clearForm();
+      this._invalidar();
+      await this._reloadList();
+      toast.success("Tarefa arquivada.");
+    } catch (err) {
+      Modal.alert("Erro", errorMessage(err), "error");
+    } finally {
+      liberar();
+    }
+  }
+
   _pintarBulk(chaves) {
     const n = chaves.length;
     this.bulkBar.hidden = n === 0;
@@ -561,6 +596,7 @@ export class AgendamentosView extends View {
     // continua sempre disponível.
     this.deleteBtn.hidden = n > 0;
     this.doneBtn.hidden = n > 0;
+    this.arquivarBtn.hidden = n > 0;
   }
 
   /**

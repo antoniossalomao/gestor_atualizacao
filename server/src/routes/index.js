@@ -135,6 +135,7 @@ class ApiRouter {
     api.put("/agendamentos/:id", agendamentos.update);
     api.patch("/agendamentos/:id/done", agendamentos.markDone);
     api.patch("/agendamentos/:id/reabrir", agendamentos.reabrir);
+    api.patch("/agendamentos/:id/arquivar", agendamentos.arquivar);
     api.delete("/agendamentos/:id", agendamentos.remove);
 
     api.get("/resumo", resumo.get);

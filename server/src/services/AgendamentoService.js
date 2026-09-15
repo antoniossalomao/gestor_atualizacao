@@ -56,6 +56,26 @@ class AgendamentoService {
     return { ...tarefa, status: STATUS_OPTIONS[0], concluidoEm: null };
   }
 
+  /**
+   * Arquiva uma tarefa concluida na hora, sem esperar `arquivarAntigas`
+   * alcancar o prazo do .env. Restrito a tarefas "Concluído" pelo mesmo
+   * motivo da varredura automatica: arquivar uma tarefa ainda pendente faria
+   * "Reabrir" resetar o status dela para o primeiro da lista sem necessidade
+   * (ver AgendamentoRepository.reabrir).
+   */
+  arquivar(id, usuario) {
+    const tarefa = this.db.agendamentos.find(id);
+    if (!tarefa) throw new NotFoundError("Esta tarefa não existe mais.");
+    const statusConcluido = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+    if (tarefa.status !== statusConcluido) {
+      throw new ValidationError(`Só é possível arquivar tarefas "${statusConcluido}".`);
+    }
+    if (this.db.agendamentos.arquivar(id) === 0) {
+      throw new NotFoundError("Esta tarefa já está arquivada.");
+    }
+    this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${tarefa.tarefa}" arquivada`);
+  }
+
   /** Tarefas pendentes vencidas/vencendo hoje, para o banner de lembrete. */
   lembretes() {
     return this.db.agendamentos.dueSoon();
