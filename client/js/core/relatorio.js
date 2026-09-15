@@ -20,25 +20,20 @@ import { plural } from "./html.js";
  * Relatório de UMA atualização.
  *
  * @param {object} registro linha da grid (id, cliente, sistema, versao, ...)
- * @param {{cliente?: object|null, anterior?: object|null}} [contexto]
- *   `cliente` vem de /clientes/by-nome (código e cidade) e pode ser nulo --
- *   dá pra registrar atualização de cliente que não está cadastrado, e nesse
- *   caso o relatório sai só com o nome. `anterior` é a atualização
- *   imediatamente anterior do mesmo cliente: é dela que sai a "versão
- *   anterior", sem precisar de campo novo nenhum.
+ * @param {{anterior?: object|null}} [contexto]
+ *   `anterior` é a atualização imediatamente anterior do mesmo cliente: é
+ *   dela que sai a "versão anterior", sem precisar de campo novo nenhum.
  */
-export function relatorioDeAtualizacao(registro, { cliente = null, anterior = null } = {}) {
+export function relatorioDeAtualizacao(registro, { anterior = null } = {}) {
   const linhas = [];
   const titulo = `ATUALIZAÇÃO #${registro.id}`;
   linhas.push(registro.data ? `${titulo} — ${registro.data}` : titulo);
   linhas.push("");
 
-  const cidade = cliente?.cidade ? ` — ${cliente.cidade}` : "";
-  linhas.push(`Cliente: ${nomeComCodigo(registro.cliente, cliente)}${cidade}`);
+  linhas.push(`Cliente: ${texto(registro.cliente)}`);
   campo(linhas, "Sistemas", registro.sistema);
   campo(linhas, "Versão", versaoComAnterior(registro.versao, anterior));
   campo(linhas, "Máquinas", registro.maquinas);
-  campo(linhas, "Motivo", registro.motivo);
   campo(linhas, "Por", registro.responsavel);
   campo(linhas, "Obs", registro.obs);
 
@@ -55,7 +50,7 @@ export function relatorioDeAtualizacao(registro, { cliente = null, anterior = nu
  */
 export function relatorioDoCliente(nome, historico, cliente = null) {
   const registros = Array.isArray(historico) ? historico : [];
-  const linhas = [`HISTÓRICO DE ATUALIZAÇÕES — ${nomeComCodigo(nome, cliente)}`];
+  const linhas = [`HISTÓRICO DE ATUALIZAÇÕES — ${texto(nome)}`];
 
   const resumo = [];
   if (cliente?.cidade) resumo.push(cliente.cidade);
@@ -103,12 +98,6 @@ function campo(linhas, rotulo, valor) {
 
 function texto(valor) {
   return String(valor ?? "").trim();
-}
-
-/** "MERCADO EXEMPLO (C012345)" -- sem o código se não houver. */
-function nomeComCodigo(nome, cliente) {
-  const codigo = texto(cliente?.codigo);
-  return codigo ? `${texto(nome)} (${codigo})` : texto(nome);
 }
 
 /**

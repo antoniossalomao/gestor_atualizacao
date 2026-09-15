@@ -792,7 +792,6 @@ export class AtualizacoesView extends View {
     const posicao = registros.findIndex((r) => r.id === registro.id);
     const textos = {
       atualizacao: relatorioDeAtualizacao(registro, {
-        cliente,
         // O histórico vem do mais recente para o mais antigo, então a
         // atualização anterior é simplesmente a próxima da lista.
         anterior: posicao >= 0 ? registros[posicao + 1] : null,
