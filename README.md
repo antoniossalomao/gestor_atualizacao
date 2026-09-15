@@ -469,7 +469,9 @@ motivo de cada decisão — inclusive as que deram errado antes de dar certo.
   arquivo continuando "Concluído" sumiria de novo no mesmo instante. O
   prazo está em `AGENDAMENTO_ARQUIVAR_DIAS` no `.env` — é regra da equipe
   inteira, não uma preferência de cada pessoa: o conteúdo da lista precisa
-  ser o mesmo para todo mundo.
+  ser o mesmo para todo mundo. Quem não quer esperar o prazo tem o botão
+  "Arquivar" (ao lado de "Excluir Selecionada"), restrito a tarefas já
+  "Concluído".
 
 - **Configurações passam a ser da conta, não do navegador**: tema, cor de
   destaque, tamanho do texto, densidade, linhas por página, tela inicial e

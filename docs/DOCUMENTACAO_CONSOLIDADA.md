@@ -9,10 +9,10 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 
 | | |
 |---|---|
-| **Versão deste documento** | 1.1 |
-| **Data** | 11 de setembro de 2026 |
+| **Versão deste documento** | 1.2 |
+| **Data** | 15 de setembro de 2026 |
 | **Autor** | Antonio Salomão |
-| **Nesta revisão** | [Seção 2.7](#27-mudanças-de-11092026) — relatório de atualização, padronização de sistemas/responsáveis, arquivamento de agendamentos, preferências por conta e limpeza do cadastro de clientes |
+| **Nesta revisão** | [Seção 2.8](#28-mudanças-de-15092026) — arquivamento manual de agendamentos, gráfico de tendência mensal em linha, relatório de atualização sem código/cidade |
 | **Substitui** | Ver [seção 6 — histórico deste documento](#6-histórico-deste-documento-o-que-foi-consolidado) |
 | **PDF** | Gerado do `.md` por `npm run pdf` nesta pasta — nunca editado à mão |
 
@@ -22,7 +22,8 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 
 1. [Visão geral do projeto](#1-visão-geral-do-projeto)
 2. [Painel web — Gestor de Atualizações](#2-painel-web--gestor-de-atualizações)
-   — inclui [2.7 Mudanças de 11/09/2026](#27-mudanças-de-11092026)
+   — inclui [2.7 Mudanças de 11/09/2026](#27-mudanças-de-11092026) e
+   [2.8 Mudanças de 15/09/2026](#28-mudanças-de-15092026)
 3. [Atualizador Inteligente de ERP — agente local (C#)](#3-atualizador-inteligente-de-erp--agente-local-c)
 4. [Como verificar](#4-como-verificar)
 5. [Auditoria de agosto/set 2026 — o que mudou desde então](#5-auditoria-de-agostoset2026-o-que-mudou-desde-então)
@@ -553,6 +554,34 @@ não apareciam no Resumo nem na Consulta. Foram resolvidos 6: três clientes can
 mas não no cadastro foi criado (com o próximo código da sequência `C` + 6 dígitos) e as duas
 atualizações que traziam o nome dele sem o sufixo "LTDA" foram vinculadas a esse cadastro. Restam **32 órfãos / 48 registros**, pendentes de triagem. Toda a limpeza está
 registrada na aba Histórico sob o autor "limpeza de cadastro".
+
+### 2.8 Mudanças de 15/09/2026
+
+Três mudanças pequenas.
+
+**Botão "Arquivar" manual em Agendamentos**, ao lado de "Excluir Selecionada". Até aqui uma tarefa
+só saía da lista pela varredura automática ([2.7](#27-mudanças-de-11092026)) — quem queria tirar
+uma tarefa já concluída da vista sem esperar `AGENDAMENTO_ARQUIVAR_DIAS` não tinha como. Novo
+endpoint `PATCH /agendamentos/:id/arquivar`, restrito a tarefas "Concluído" (mesma regra da
+varredura): arquivar uma tarefa ainda pendente faria "Reabrir" resetar o status dela para "A Fazer"
+sem necessidade, já que reabrir sempre volta ao primeiro status da lista.
+
+**Gráfico de "Tendência Mensal de Atualizações" (Resumo) virou linha, não mais barras
+horizontais.** Usava o mesmo componente `BarChart` do gráfico "Por Sistema" — bom para comparar
+categorias, ruim para ler evolução no tempo, porque barra horizontal não tem um eixo
+esquerda→direita representando o tempo. Novo componente `core/LineChart.js` (SVG puro, sem
+biblioteca): linha suavizada (Catmull-Rom convertido para Bézier cúbica, não segmentos retos
+ponto-a-ponto), área com gradiente — forte perto da linha, sumindo perto da base, o que continua
+legível mesmo com a cor de destaque "Grafite" (dessaturada) —, halo atrás do ponto mais recente, e
+crosshair + tooltip ao passar o mouse. Os rótulos do eixo X são escolhidos por **posição** (no
+máximo 6, sempre incluindo o primeiro e o último mês) em vez de "um a cada N": a primeira versão
+pulava de 2 em 2 mas forçava o último mês a aparecer sempre, o que deixava os dois últimos rótulos
+colados quando `n-1` não caía num índice múltiplo do passo — e um mês inteiro (julho/2026, no caso)
+sumia sem que nada tomasse o lugar dele.
+
+**Relatório de uma atualização (botão "Gerar Relatório") não mostra mais código nem cidade do
+cliente** — só o nome, como está gravado em `atualizacoes.cliente`. O relatório do histórico
+COMPLETO do cliente (o outro formato do mesmo modal) não mudou e continua mostrando a cidade.
 
 ---
 
