@@ -84,6 +84,7 @@ export class ConfiguracoesPanel {
    *   usuario?: {nome: string, usuario: string, role?: string},
    *   abrirBackups?: () => void,
    *   abrirUsuarios?: () => void,
+   *   abrirConfiguracaoApi?: () => void,
    * }} [acoes]
    *   O painel não mexe no shell por conta própria: quem sabe atualizar o
    *   rótulo do botão de recolher e recarregar a aba aberta é o App, então ele
@@ -96,7 +97,7 @@ export class ConfiguracoesPanel {
    *   cada preferência criada, e o esquecimento apareceria como "o perfil
    *   mudou tudo, menos o menu lateral".
    */
-  constructor({ aoMudarLinhas, aoMudarSidebar, aoMudarVarias, abas, usuario, abrirBackups, abrirUsuarios } = {}) {
+  constructor({ aoMudarLinhas, aoMudarSidebar, aoMudarVarias, abas, usuario, abrirBackups, abrirUsuarios, abrirConfiguracaoApi } = {}) {
     this.aoMudarLinhas = aoMudarLinhas || (() => {});
     this.aoMudarSidebar = aoMudarSidebar || (() => {});
     this.aoMudarVarias = aoMudarVarias || (() => {});
@@ -105,6 +106,7 @@ export class ConfiguracoesPanel {
     this.usuario = usuario || null;
     this.abrirBackups = abrirBackups || null;
     this.abrirUsuarios = abrirUsuarios || null;
+    this.abrirConfiguracaoApi = abrirConfiguracaoApi || null;
     /** @type {Map<string, HTMLElement>} id da seção -> painel montado */
     this.secoes = new Map();
   }
@@ -518,6 +520,15 @@ export class ConfiguracoesPanel {
            * outro lugar, e desenhá-los como trilho de opções diria que são a
            * mesma coisa.
            */
+          {
+            tipo: "link",
+            titulo: "Configuração da API",
+            ajuda: "URL pública, chave dos agentes, webhook do Discord",
+            icone: "acessos",
+            busca: "api url chave token agente atualizador discord webhook intervalo configuração servidor .env",
+            acao: () => this.abrirConfiguracaoApi?.(),
+            oculto: () => typeof this.abrirConfiguracaoApi !== "function",
+          },
           {
             tipo: "link",
             titulo: "Backups",
@@ -1183,6 +1194,7 @@ export function abrirConfiguracoes({
   usuario,
   abrirBackups,
   abrirUsuarios,
+  abrirConfiguracaoApi,
 } = {}) {
   new ConfiguracoesPanel({
     aoMudarSidebar,
@@ -1191,6 +1203,7 @@ export function abrirConfiguracoes({
     usuario,
     abrirBackups,
     abrirUsuarios,
+    abrirConfiguracaoApi,
     aoMudarLinhas: () => {
       aoMudarLinhas?.();
       // As outras preferências se explicam sozinhas na tela (o tema muda a

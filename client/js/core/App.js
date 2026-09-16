@@ -20,6 +20,7 @@ import { HistoricoView } from "../views/HistoricoView.js";
 import { SistemasView } from "../views/SistemasView.js";
 import { BackupsPanel } from "../views/BackupsPanel.js";
 import { UsersPanel } from "../views/UsersPanel.js";
+import { ConfiguracaoApiPanel } from "../views/ConfiguracaoApiPanel.js";
 import { DistribuicaoView } from "../views/DistribuicaoView.js";
 import { VersoesView } from "../views/VersoesView.js";
 import { ReminderBanner } from "./ReminderBanner.js";
@@ -524,6 +525,10 @@ export class App {
         executar: () => new BackupsPanel(this.api).open() },
       { id: "acao:usuarios", titulo: "Abrir Usuários", grupo: "Ações", icone: "users",
         executar: () => new UsersPanel(this.api, this.user).open() },
+      ...(this.user?.role === "admin"
+        ? [{ id: "acao:configuracao-api", titulo: "Configuração da API", subtitulo: "URL pública, chave dos agentes, webhook do Discord",
+            grupo: "Ações", icone: "acessos", executar: () => new ConfiguracaoApiPanel(this.api).open() }]
+        : []),
       { id: "acao:config", titulo: "Abrir Configurações", subtitulo: "Tema, densidade, backups, usuários",
         grupo: "Ações", icone: "config", executar: () => this._abrirConfiguracoes() },
       /*
@@ -614,6 +619,11 @@ export class App {
       // as duas funções que os abrem, e continua sem saber o que eles fazem.
       abrirBackups: () => new BackupsPanel(this.api).open(),
       abrirUsuarios: () => new UsersPanel(this.api, this.user).open(),
+      // Só aparece para administradores -- a própria tela recusa o acesso
+      // no backend (a chave da API é um segredo de todos os clientes, não
+      // uma preferência de conta), então nem oferecer o link evita um "sem
+      // permissão" depois de já ter aberto a janela.
+      abrirConfiguracaoApi: this.user?.role === "admin" ? () => new ConfiguracaoApiPanel(this.api).open() : undefined,
     });
   }
 

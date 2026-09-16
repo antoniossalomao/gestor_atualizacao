@@ -43,6 +43,7 @@ class ApiRouter {
    *   backups: import('../controllers/BackupsController').BackupsController,
    *   historico: import('../controllers/HistoricoController').HistoricoController,
    *   usuarios: import('../controllers/UsersController').UsersController,
+   *   configuracaoApi: import('../controllers/ConfiguracaoApiController').ConfiguracaoApiController,
    * }} controllers
    * @param {import('../middlewares/LoginRateLimiter').LoginRateLimiter} loginLimiter
    */
@@ -76,7 +77,8 @@ class ApiRouter {
 
   // Tudo abaixo exige sessao valida (ver middlewares/requireAuth.js).
   _registerProtectedRoutes() {
-    const { clientes, sistemas, atualizacoes, agendamentos, resumo, backups, historico, usuarios, versoes, preferencias } = this.controllers;
+    const { clientes, sistemas, atualizacoes, agendamentos, resumo, backups, historico, usuarios, versoes, preferencias, configuracaoApi } =
+      this.controllers;
     const api = express.Router();
     api.use(requireAuth);
 
@@ -85,6 +87,13 @@ class ApiRouter {
     // esta logado -- ver PreferenciasController.
     api.get("/preferencias", preferencias.get);
     api.put("/preferencias", preferencias.put);
+
+    // Configuração "de equipe" (URL pública, chave dos agentes, webhook do
+    // Discord...) -- diferente das preferências acima, que são por conta.
+    // Restrito a administradores dentro do próprio service.
+    api.get("/configuracao-api", configuracaoApi.get);
+    api.put("/configuracao-api", configuracaoApi.put);
+    api.post("/configuracao-api/gerar-token", configuracaoApi.gerarToken);
 
     api.get("/clientes", clientes.list);
     api.get("/clientes/names", clientes.names);

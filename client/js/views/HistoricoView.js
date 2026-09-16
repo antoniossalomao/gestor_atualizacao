@@ -26,6 +26,7 @@ const ENTIDADE_LABEL = {
   usuario: "Usuário",
   backup: "Backup",
   versao: "Versão",
+  configuracao: "Configuração",
 };
 
 const ENTIDADES = Object.keys(ENTIDADE_LABEL);

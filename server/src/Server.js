@@ -16,6 +16,7 @@ const { NotificationService } = require("./services/NotificationService");
 const { VersaoService } = require("./services/VersaoService");
 const { PreferenciaService } = require("./services/PreferenciaService");
 const { AlertaAgenteService } = require("./services/AlertaAgenteService");
+const { ConfiguracaoApiService } = require("./services/ConfiguracaoApiService");
 const { AuthController } = require("./controllers/AuthController");
 const { ClientesController } = require("./controllers/ClientesController");
 const { SistemasController } = require("./controllers/SistemasController");
@@ -27,6 +28,7 @@ const { HistoricoController } = require("./controllers/HistoricoController");
 const { UsersController } = require("./controllers/UsersController");
 const { VersoesController } = require("./controllers/VersoesController");
 const { PreferenciasController } = require("./controllers/PreferenciasController");
+const { ConfiguracaoApiController } = require("./controllers/ConfiguracaoApiController");
 const { LoginRateLimiter } = require("./middlewares/LoginRateLimiter");
 const { ApiRouter } = require("./routes/index");
 const { errorHandler } = require("./middlewares/errorHandler");
@@ -76,6 +78,7 @@ class Server {
       // Discord quando um fica offline/com erro -- ver start()/stop()
       // abaixo, que ligam e desligam o timer junto com o servidor HTTP.
       alertaAgentes: new AlertaAgenteService(this.db, versoes, notifications),
+      configuracaoApi: new ConfiguracaoApiService({ historico }),
     };
   }
 
@@ -93,6 +96,7 @@ class Server {
       usuarios: new UsersController(s.auth),
       versoes: new VersoesController(s.versoes),
       preferencias: new PreferenciasController(s.preferencias),
+      configuracaoApi: new ConfiguracaoApiController(s.configuracaoApi),
     };
     this.loginLimiter = new LoginRateLimiter();
   }
