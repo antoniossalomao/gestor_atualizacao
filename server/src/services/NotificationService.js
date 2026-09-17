@@ -28,7 +28,7 @@ class NotificationService {
 
   /**
    * Avisa o Discord quando um agente C# entra ou sai de um estado ruim
-   * (offline / erro) -- ver AlertaAgenteService, que decide QUANDO chamar
+   * (offline / erro / pendências) -- ver AlertaAgenteService, que decide QUANDO chamar
    * isso (só na transição, não a cada verificação).
    * @param {{empresa:string, situacao:"offline"|"erro"|string, detalhe?:string}} info
    */
@@ -39,6 +39,10 @@ class NotificationService {
       texto = `🔴 **${empresa}** — agente sem contato há mais de 24h (offline).`;
     } else if (situacao === "erro") {
       texto = `🟠 **${empresa}** — agente reportou erro na última atualização${detalhe ? `: ${detalhe}` : "."}`;
+    } else if (situacao === "pendencias") {
+      texto = `🟡 **${empresa}** — atualização concluída com scripts pendentes${detalhe ? `: ${detalhe}` : "."}`;
+    } else if (situacao === "aguardando_autorizacao_demorada") {
+      texto = `🟡 **${empresa}** — atualização baixada há mais de 24h esperando autorização (Fase 2) e ainda não foi liberada.`;
     } else {
       texto = `✅ **${empresa}** — agente normalizou (situação atual: ${situacao}).`;
     }

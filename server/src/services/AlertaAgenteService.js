@@ -1,11 +1,12 @@
 /** Situações do painel (ver VersaoService.derivarSituacao) que valem alerta. */
-const SITUACOES_RUINS = new Set(["offline", "erro"]);
+const SITUACOES_RUINS = new Set(["offline", "erro", "pendencias", "aguardando_autorizacao_demorada"]);
 
 /**
  * Verifica periodicamente a situação de cada agente C# (mesmo cálculo do
  * painel da aba Distribuição) e avisa o Discord quando um agente ENTRA em
- * "offline" ou "erro" -- sem isso, ninguém sabe que um cliente parou de
- * atualizar a não ser que alguém abra a tela e olhe.
+ * "offline", "erro", "pendencias" ou autorização demorada -- sem isso,
+ * ninguém sabe que um cliente parou de atualizar a não ser que alguém abra
+ * a tela e olhe.
  *
  * Só avisa na transição (ver VersaoRepository.situacaoAlertada): um agente
  * que já está offline há uma semana não gera um aviso novo a cada ciclo,

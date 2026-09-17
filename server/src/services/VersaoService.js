@@ -8,6 +8,8 @@ const STATUS_SUCESSO = ["OK", "SUCESSO", "ATUALIZADO", "CONCLUIDO"];
 const STATUS_FALHA = ["ERRO", "FALHA"];
 /** Sem notícia por mais que isso, o agente é considerado offline. */
 const HORAS_ATE_OFFLINE = 26;
+/** Sistema em PENDENTE (esperando autorização da Fase 2) por mais que isso vira alerta. */
+const HORAS_ATE_PENDENTE_DEMORADO = 24;
 
 /**
  * Regras de negócio da distribuição de versões.
@@ -61,6 +63,35 @@ class VersaoService {
   }
 
   /**
+   * Remove do painel um agente e todos os retornos associados ao seu CNPJ.
+   * Ele reaparece normalmente caso volte a enviar um retorno depois disso.
+   */
+  removerAgente(cnpj, usuario) {
+    const identificador = String(cnpj || "").trim();
+    if (!identificador) throw new ValidationError("Informe o identificador do agente.");
+
+    const somenteDigitos = identificador.replace(/\D/g, "");
+    const cnpjNumerico = somenteDigitos.length === 14 && /^[\d.\-/\s]+$/.test(identificador);
+    const agente = this.db.versoes.agentes().find((item) => {
+      const atual = String(item.cnpj || "").trim();
+      return cnpjNumerico ? atual.replace(/\D/g, "") === somenteDigitos : atual === identificador;
+    });
+    if (!agente) throw new ValidationError("Agente não encontrado.");
+
+    const retornosExcluidos = this.db.versoes.removerAgente(identificador);
+    if (retornosExcluidos === 0) {
+      throw new ValidationError("Nenhum retorno do agente foi excluído. Atualize a tela e tente novamente.");
+    }
+    this.historico.registrar(
+      usuario,
+      "excluir",
+      "agente",
+      `Agente ${agente.empresa || agente.cnpj} (${agente.cnpj}) excluído com ${retornosExcluidos} retorno(s)`
+    );
+    return { ok: true, retornosExcluidos };
+  }
+
+  /**
    * Panorama completo do atualizador automático: o que está publicado, como
    * está cada agente, e os indicadores do período.
    *
@@ -82,23 +113,36 @@ class VersaoService {
       const online = ultima >= limiteOffline;
       const alvo = versaoPorSistema.get(a.ultimoSistema) || null;
       const status = String(a.ultimoStatus || "").toUpperCase();
+      const horasSemContato = ultima ? Math.floor((agora - ultima) / 3600000) : null;
       return {
         ...a,
         online,
-        horasSemContato: ultima ? Math.floor((agora - ultima) / 3600000) : null,
+        horasSemContato,
         // "Está na versão que publicamos?" é a pergunta central do painel e
         // não dava para responder antes: a tela mostrava o status do agente,
         // mas não contra o que ele deveria estar rodando.
         versaoAlvo: alvo,
         atualizado: alvo != null && a.ultimaVersao === alvo,
-        situacao: derivarSituacao({ online, status, ultimaVersao: a.ultimaVersao, alvo }),
+        situacao: derivarSituacao({
+          online,
+          status,
+          ultimaVersao: a.ultimaVersao,
+          alvo,
+          horasSemContato,
+          detalhes: a.ultimoDetalhe,
+        }),
         taxaSucesso: a.total > 0 ? Math.round((a.sucessos / a.total) * 100) : null,
       };
     });
 
     const comErro = agentes.filter((a) => a.situacao === "erro").length;
+    const comPendencias = agentes.filter((a) => a.situacao === "pendencias").length;
     const desatualizados = agentes.filter((a) => a.situacao === "desatualizado").length;
     const offline = agentes.filter((a) => !a.online).length;
+    const aguardandoAutorizacao = agentes.filter(
+      (a) => a.situacao === "aguardando_autorizacao" || a.situacao === "aguardando_autorizacao_demorada"
+    ).length;
+    const porStatus24h = this.db.versoes.contagemPorStatus(desde24h);
 
     return {
       geradoEm: new Date().toISOString(),
@@ -109,9 +153,12 @@ class VersaoService {
         emDia: agentes.filter((a) => a.situacao === "ok").length,
         desatualizados,
         comErro,
+        comPendencias,
         offline,
-        execucoes24h: this.db.versoes.contagemPorStatus(desde24h).reduce((s, l) => s + l.total, 0),
-        porStatus24h: this.db.versoes.contagemPorStatus(desde24h),
+        aguardandoAutorizacao,
+        execucoes24h: porStatus24h.reduce((s, l) => s + l.total, 0),
+        falhas24h: porStatus24h.filter((l) => STATUS_FALHA.includes(l.status)).reduce((s, l) => s + l.total, 0),
+        porStatus24h,
       },
     };
   }
@@ -191,21 +238,17 @@ class VersaoService {
   }
 
   /**
-   * Remove uma versão e o arquivo do pacote.
-   *
-   * A versão que está no ar não pode ser removida: apagá-la deixaria os
-   * agentes daquele sistema sem nada para baixar, no meio de uma janela de
-   * atualização, sem nenhum aviso. Para tirar uma versão de circulação o
-   * caminho é publicar a próxima -- que é justamente o fluxo automático.
+   * Remove uma versão e o arquivo do pacote -- inclusive a que está no ar
+   * (a pedido: antes isso era bloqueado, mas o único jeito de tirar uma
+   * versão publicada de vez era publicar outra por cima, o que nem sempre é
+   * o que se quer). Excluir a publicada deixa o sistema sem versão-alvo até
+   * a próxima publicação (`check()` simplesmente responde "sem atualização"
+   * nesse meio-tempo) -- não quebra nada, só destrava o histórico.
    */
   remove(id, usuario) {
     const atual = this.db.versoes.find(id);
     if (!atual) throw new ValidationError("Versão não encontrada.");
-    if (atual.status === "publicada") {
-      throw new ValidationError(
-        "Esta é a versão no ar deste sistema. Publique uma versão mais nova para substituí-la, ou remova-a depois disso."
-      );
-    }
+    const eraPublicada = atual.status === "publicada";
 
     for (const pacote of JSON.parse(atual.pacotesJson || "[]")) {
       const caminho = this._caminhoPacote(pacote.file);
@@ -219,8 +262,13 @@ class VersaoService {
     }
 
     this.db.versoes.remove(id);
-    this.historico.registrar(usuario, "excluir", "versao", `Versão ${atual.versao} de ${atual.sistema} excluída`);
-    return { ok: true };
+    this.historico.registrar(
+      usuario,
+      "excluir",
+      "versao",
+      `Versão ${atual.versao} de ${atual.sistema} excluída${eraPublicada ? " (estava publicada -- sistema fica sem versão-alvo)" : ""}`
+    );
+    return { ok: true, eraPublicada };
   }
 
   /**
@@ -260,6 +308,7 @@ class VersaoService {
       versao: String(input.versao || input.version || "").trim(),
       versaoAnterior: String(input.versaoAnterior || input.previous_version || "").trim(),
       duracaoMs: Number(input.duracaoMs || input.duration_ms) || null,
+      fase: String(input.fase || input.phase || "").trim(),
       status,
       detalhes: String(input.detalhes || input.details || "").trim(),
       criadoEm: new Date().toISOString(),
@@ -315,11 +364,23 @@ class VersaoService {
 /**
  * Traduz o estado bruto de um agente na situação que o painel mostra.
  * A ordem importa: "offline" ganha de tudo (não dá para afirmar nada sobre
- * uma máquina que sumiu), e erro ganha de desatualizado.
+ * uma máquina que sumiu), erro ganha de desatualizado, e um PENDENTE (Fase 2)
+ * ganha uma situação própria em vez de cair no "desatualizado" genérico --
+ * antes disso, um sistema esperando autorização há dias parecia só mais um
+ * "desatualizado" qualquer, indistinguível de um agente que nunca nem baixou
+ * a atualização.
  */
-function derivarSituacao({ online, status, ultimaVersao, alvo }) {
+function derivarSituacao({ online, status, ultimaVersao, alvo, horasSemContato, detalhes }) {
   if (!online) return "offline";
   if (STATUS_FALHA.includes(status)) return "erro";
+  // O agente pode concluir a troca dos executáveis e reportar SUCESSO mesmo
+  // tendo pulado scripts que falharam. Isso não é "Em dia": exige revisão.
+  if (/\b\d+\s+script\(s\)\s+pulado\(s\)\s+por erro/i.test(String(detalhes || ""))) return "pendencias";
+  if (status === "PENDENTE") {
+    return horasSemContato != null && horasSemContato >= HORAS_ATE_PENDENTE_DEMORADO
+      ? "aguardando_autorizacao_demorada"
+      : "aguardando_autorizacao";
+  }
   if (alvo && ultimaVersao !== alvo) return "desatualizado";
   if (STATUS_SUCESSO.includes(status)) return "ok";
   return "pendente";
@@ -340,4 +401,4 @@ function compareVersions(left, right) {
   return 0;
 }
 
-module.exports = { VersaoService, HORAS_ATE_OFFLINE };
+module.exports = { VersaoService, HORAS_ATE_OFFLINE, HORAS_ATE_PENDENTE_DEMORADO };

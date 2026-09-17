@@ -35,6 +35,14 @@ class VersoesController {
     }
   };
 
+  removeAgent = (req, res, next) => {
+    try {
+      res.json(this.service.removerAgente(req.params.cnpj, req.session.user));
+    } catch (err) {
+      next(err);
+    }
+  };
+
   create = (req, res, next) => {
     try {
       res

@@ -136,7 +136,7 @@ class VersaoRepository extends BaseRepository {
       .prepare(
         `SELECT l.id, l.cnpj, COALESCE(c.nome, c.codigo, l.cnpj) AS empresa, c.cidade AS cidade,
                 l.hwid, l.maquina, l.sistema, l.versao, l.versao_anterior AS versaoAnterior,
-                l.duracao_ms AS duracaoMs, l.status, l.detalhes, l.criado_em AS criadoEm
+                l.duracao_ms AS duracaoMs, l.fase, l.status, l.detalhes, l.criado_em AS criadoEm
          FROM atualizador_logs l
          LEFT JOIN clientes c
            ON REPLACE(REPLACE(REPLACE(REPLACE(c.codigo, '.', ''), '/', ''), '-', ''), ' ', '')
@@ -182,6 +182,7 @@ class VersaoRepository extends BaseRepository {
            u2.sistema       AS ultimoSistema,
            u2.versao        AS ultimaVersao,
            u2.detalhes      AS ultimoDetalhe,
+           u2.fase          AS ultimaFase,
            u2.maquina       AS maquina,
            u2.hwid          AS hwid,
            u2.criado_em     AS ultimaComunicacao,
@@ -200,6 +201,32 @@ class VersaoRepository extends BaseRepository {
       .all();
   }
 
+  /**
+   * Apaga o histórico que materializa um agente no painel e também o estado
+   * de alerta dele. CNPJs reais são comparados sem pontuação para cobrir
+   * formatos diferentes; identificadores legados (como "BREDAS-TESTE") são
+   * comparados literalmente para não perder suas letras.
+   */
+  removerAgente(cnpj) {
+    const identificador = String(cnpj || "").trim();
+    const somenteDigitos = identificador.replace(/\D/g, "");
+    const cnpjNumerico = somenteDigitos.length === 14 && /^[\d.\-/\s]+$/.test(identificador);
+    const expressao = cnpjNumerico
+      ? "REPLACE(REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', ''), ' ', '') = ?"
+      : "cnpj = ?";
+    const parametro = cnpjNumerico ? somenteDigitos : identificador;
+    const remover = this.conn.transaction(() => {
+      const logs = this.conn
+        .prepare(`DELETE FROM atualizador_logs WHERE ${expressao}`)
+        .run(parametro);
+      this.conn
+        .prepare(`DELETE FROM agente_alertas WHERE ${expressao}`)
+        .run(parametro);
+      return logs.changes;
+    });
+    return remover();
+  }
+
   /** Distribuicao de retornos por status, para os indicadores do topo. */
   contagemPorStatus(desde) {
     return this.conn
@@ -216,8 +243,8 @@ class VersaoRepository extends BaseRepository {
   addLog(data) {
     this.conn
       .prepare(
-        `INSERT INTO atualizador_logs (cnpj, hwid, maquina, sistema, versao, versao_anterior, duracao_ms, status, detalhes, criado_em)
-         VALUES (@cnpj, @hwid, @maquina, @sistema, @versao, @versaoAnterior, @duracaoMs, @status, @detalhes, @criadoEm)`
+        `INSERT INTO atualizador_logs (cnpj, hwid, maquina, sistema, versao, versao_anterior, duracao_ms, fase, status, detalhes, criado_em)
+         VALUES (@cnpj, @hwid, @maquina, @sistema, @versao, @versaoAnterior, @duracaoMs, @fase, @status, @detalhes, @criadoEm)`
       )
       .run(data);
   }

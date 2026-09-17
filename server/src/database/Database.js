@@ -273,6 +273,10 @@ class Database {
       ["atualizador_logs", "versao_anterior", "TEXT"],
       ["atualizador_logs", "duracao_ms", "INTEGER"],
       ["atualizador_logs", "maquina", "TEXT"],
+      // "fase": em qual etapa da Fase 3 (shutdown/backup_pre/scripts/copia_arquivos/
+      // injecao_binarios/online/backup_pos/concluido) o agente estava. Sem isso, um
+      // ERRO so dizia a mensagem crua da excecao, nunca ONDE no processo aconteceu.
+      ["atualizador_logs", "fase", "TEXT"],
       // "grupo": agrupa clientes com varias unidades sob uma rede/franquia
       // (ex.: sete lojas da mesma rede) -- so um rotulo de texto livre, nao
       // uma tabela propria, para nao exigir migrar cadastros existentes.

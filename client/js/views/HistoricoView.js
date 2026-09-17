@@ -26,6 +26,7 @@ const ENTIDADE_LABEL = {
   usuario: "Usuário",
   backup: "Backup",
   versao: "Versão",
+  agente: "Agente",
   configuracao: "Configuração",
 };
 

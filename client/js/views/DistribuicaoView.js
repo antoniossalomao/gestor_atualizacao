@@ -3,746 +3,457 @@ import { icon } from "../core/icons.js";
 import { toast } from "../core/Toast.js";
 import { Modal } from "../core/Modal.js";
 import { emptyState } from "../core/EmptyState.js";
-import { escapeHtml, plural } from "../core/html.js";
-import { formatarDataHora, tempoRelativo, formatarBytes, formatarDuracao } from "../core/date.js";
-import { ApiError } from "../api/ApiClient.js";
+import { copyToClipboard, escapeAttr, escapeHtml, plural } from "../core/html.js";
+import { formatarDataHora, tempoRelativo } from "../core/date.js";
 import { notificacoes } from "../core/notify.js";
 import { aparencia } from "../core/appearance.js";
+import { faseLabel } from "../core/agenteLabels.js";
+import { relatorioRetornosTexto } from "../core/agenteReport.js";
+import { classificarRetorno, agruparRetornos } from "../core/agenteStatus.js";
+import { AgenteDetalheModal } from "./AgenteDetalheModal.js";
+import { ApiError } from "../api/ApiClient.js";
 
-/** Como cada situação de agente aparece na tela. */
+const RESULTADOS = {
+  sucesso: "badge--success", erro: "badge--danger", pendencias: "badge--warning",
+  aguardando: "badge--accent", andamento: "badge--accent", desconhecido: "badge--muted",
+};
+
 const SITUACOES = {
   ok: { label: "Em dia", badge: "badge--success" },
   desatualizado: { label: "Desatualizado", badge: "badge--warning" },
   erro: { label: "Com erro", badge: "badge--danger" },
+  pendencias: { label: "Com pendências", badge: "badge--warning" },
   offline: { label: "Sem contato", badge: "badge--muted" },
   pendente: { label: "Em andamento", badge: "badge--accent" },
+  aguardando_autorizacao: { label: "Aguardando autorização", badge: "badge--accent" },
+  aguardando_autorizacao_demorada: { label: "Autorização demorada", badge: "badge--danger" },
 };
 
-/**
- * Painel de distribuição do atualizador automático.
- *
- * A tela foi refeita em cima de três problemas concretos:
- *
- * **1. Não dava para dizer de qual sistema era a versão.** O formulário tinha
- * "Versão" e "Arquivo", só isso -- e o backend guardava a versão sem sistema
- * nenhum, o que fazia o agente de qualquer sistema receber a última versão
- * publicada, qualquer que fosse ela. Agora o sistema é o PRIMEIRO campo, vem
- * do mesmo cadastro da aba Sistemas, e é obrigatório.
- *
- * **2. Não havia como tirar uma versão do ar.** Agora publicar uma versão
- * substitui automaticamente a anterior do mesmo sistema (só existe uma no ar
- * por sistema, sempre), e rascunhos/versões substituídas podem ser excluídas
- * de vez, com o pacote junto.
- *
- * **3. O acompanhamento era raso.** A tabela de agentes mostrava último
- * status, data e duas contagens -- que, pior, eram calculadas em cima dos 30
- * últimos registros que a listagem trazia, e não do total real. Não dava para
- * responder a pergunta central: "quais clientes ainda NÃO estão na versão que
- * publiquei?". Agora o backend agrega tudo (`/versoes/painel`) e a tela mostra
- * situação por agente, versão instalada contra versão alvo, tempo sem
- * contato, taxa de sucesso, máquina, duração da execução e filtros.
- */
+/** Painel operacional: acompanha agentes e os resultados das atualizações. */
 export class DistribuicaoView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
-    this.sistemas = [];
+    this.systems = [];
     this.painel = null;
+    this.logs = [];
     this.filtroSituacao = "todos";
     this.filtroSistema = "";
     this.buscaAgente = "";
+    this.filtroRetorno = "todos";
+    this.filtroSistemaRetorno = "";
+    this.buscaRetorno = "";
     this._timer = null;
     this._ultimaAtualizacao = null;
     this._buildDom();
   }
 
   _buildDom() {
+    this.container.classList.add("distribution-dashboard");
     this.container.innerHTML = `
-      <div class="toolbar">
-        <span class="distribution-live" data-role="frescor" hidden>
+      <div class="distribution-topbar">
+        <p>Visão geral dos agentes</p>
+        <div class="distribution-topbar__actions">
+        <span class="distribution-live" data-role="freshness" hidden>
           <span class="distribution-live__dot"></span>
-          <span data-role="frescor-texto"></span>
+          <span data-role="freshness-text"></span>
         </span>
-        <div class="toolbar-spacer"></div>
         <button type="button" class="btn btn--small btn--ghost" data-action="refresh">${icon("atualizar")} Atualizar</button>
-      </div>
-
-      <div class="distribution-metrics" data-role="indicadores"></div>
-
-      <div class="distribution-layout">
-        <form class="card distribution-form" data-role="form">
-          <div class="section-heading">
-            <div><span class="dashboard-intro__eyebrow">Nova entrega</span><h2>Preparar versão</h2></div>
-          </div>
-
-          <div class="form-grid form-grid--2">
-            <div class="field">
-              <label class="field__label" for="dist-sistema">Sistema</label>
-              <select class="input" id="dist-sistema" name="sistema" required data-role="sistema">
-                <option value="">Selecione o sistema…</option>
-              </select>
-              <small class="field__help" data-role="ajuda-sistema">Vem do cadastro da aba Sistemas.</small>
-            </div>
-            <div class="field">
-              <label class="field__label" for="dist-versao">Versão</label>
-              <input class="input" id="dist-versao" name="versao" placeholder="2026.08.10" required
-                     pattern="\\d+(\\.\\d+){1,3}([-.][0-9A-Za-z.-]+)?" />
-              <div class="field__hint" data-role="hint-versao"></div>
-            </div>
-          </div>
-
-          <div class="field">
-            <label class="field__label" for="dist-pacote">Arquivo compactado</label>
-            <input class="input distribution-file" id="dist-pacote" type="file" name="pacote" accept=".7z,.zip,.rar" required />
-            <small class="field__help">O SHA-256 e a URL de download são gerados pela API a partir deste arquivo.</small>
-          </div>
-
-          <div class="field">
-            <span class="field__label" id="dist-changelog-label">O que mudou nesta entrega</span>
-            <div class="changelog-editor" data-role="changelog-itens" aria-labelledby="dist-changelog-label"></div>
-            <button type="button" class="btn btn--small btn--ghost" data-action="add-changelog-item">${icon("plus")} Adicionar item</button>
-            <!-- Espelha os itens acima num texto só ("- item\n- item"), que é o que
-                 de fato viaja no FormData -- o backend continua guardando uma string
-                 livre em "observacoes" (ver VersaoService), sem precisar de schema
-                 novo só para isto ser uma lista. VersoesView reconhece o prefixo
-                 "- " na hora de mostrar e desenha como lista com marcadores. -->
-            <textarea id="dist-obs" name="observacoes" hidden></textarea>
-          </div>
-
-          <!-- Aviso do que vai acontecer ao publicar: aparece assim que um
-               sistema é escolhido, dizendo qual versão sai do ar. -->
-          <div class="upload-progress" data-role="progresso" hidden>
-            <span class="upload-progress__track"><span class="upload-progress__fill"></span></span>
-            <span data-role="progresso-texto">0%</span>
-          </div>
-
-          <button class="btn btn--accent" type="submit">${icon("upload")} Enviar versão</button>
-        </form>
-
-        <div class="distribution-side">
-          <div class="card">
-            <h2 class="card__title">No ar agora</h2>
-            <div class="active-versions" data-role="ativas"></div>
-          </div>
-          <div class="card">
-            <div class="section-heading">
-              <h2 class="card__title">Últimos retornos</h2>
-              <span class="result-count" data-role="logs-count"></span>
-            </div>
-            <div class="agent-log-list" data-role="logs"></div>
-          </div>
         </div>
       </div>
 
-      <div class="card">
+      <div class="distribution-metrics" data-role="indicators"></div>
+
+      <section class="card distribution-section">
         <div class="section-heading">
-          <div><span class="dashboard-intro__eyebrow">Acompanhamento por cliente</span><h2 class="card__title">Situação dos agentes</h2></div>
-          <span class="result-count" data-role="agentes-count"></span>
+          <div><h2 class="card__title">Retornos recentes</h2><p class="distribution-section__description">Um resumo por agente. Erros e mensagens ficam nos detalhes.</p></div>
+          <div class="distribution-section__actions">
+            <span class="result-count" data-role="logs-count" aria-live="polite"></span>
+            <button type="button" class="btn btn--small btn--ghost" data-action="copy-report">${icon("copiar")} Copiar relatório</button>
+          </div>
         </div>
-        <div class="toolbar">
+        <div class="toolbar distribution-report-filters">
           <div class="field">
-            <label class="field__label" for="dist-busca">Buscar</label>
-            <input type="search" class="input" id="dist-busca" data-role="busca" placeholder="Empresa, CNPJ ou máquina..." />
+            <label class="field__label" for="dist-log-search">Buscar</label>
+            <input type="search" class="input" id="dist-log-search" data-role="log-search" placeholder="Empresa, script ou mensagem..." />
           </div>
           <div class="field">
-            <label class="field__label" for="dist-f-situacao">Situação</label>
-            <select class="input" id="dist-f-situacao" data-role="filtro-situacao">
-              <option value="todos">Todas</option>
-              <option value="desatualizado">Desatualizados</option>
+            <label class="field__label" for="dist-log-status">Último resultado</label>
+            <select class="input" id="dist-log-status" data-role="log-status">
+              <option value="todos">Todos</option>
               <option value="erro">Com erro</option>
-              <option value="offline">Sem contato</option>
-              <option value="ok">Em dia</option>
-              <option value="pendente">Em andamento</option>
+              <option value="pendencias">Com pendências</option>
+              <option value="sucesso">Concluídos</option>
+              <option value="andamento">Em andamento</option>
+              <option value="aguardando">Aguardando autorização</option>
             </select>
           </div>
           <div class="field">
-            <label class="field__label" for="dist-f-sistema">Sistema</label>
-            <select class="input" id="dist-f-sistema" data-role="filtro-sistema"><option value="">Todos</option></select>
+            <label class="field__label" for="dist-log-system">Sistema</label>
+            <select class="input" id="dist-log-system" data-role="log-system"><option value="">Todos</option></select>
           </div>
-          <div class="toolbar-spacer"></div>
         </div>
-        <div class="table-wrap">
-          <table class="data-table">
+        <div class="distribution-report-list" data-role="logs"></div>
+        <p class="distribution-section__footnote" data-role="logs-note"></p>
+      </section>
+
+      <section class="card distribution-section">
+        <div class="section-heading">
+          <div><h2 class="card__title">Situação dos agentes</h2><p class="distribution-section__description">Estado atual e versão do último sistema informado por cada agente.</p></div>
+          <span class="result-count" data-role="agents-count"></span>
+        </div>
+        <div class="toolbar distribution-report-filters">
+          <div class="field">
+            <label class="field__label" for="dist-search">Buscar</label>
+            <input type="search" class="input" id="dist-search" data-role="search" placeholder="Empresa, identificador ou máquina..." />
+          </div>
+          <div class="field">
+            <label class="field__label" for="dist-situation">Situação</label>
+            <select class="input" id="dist-situation" data-role="situation-filter">
+              <option value="todos">Todas</option>
+              <option value="desatualizado">Desatualizados</option>
+              <option value="erro">Com erro</option>
+              <option value="pendencias">Com pendências</option>
+              <option value="offline">Sem contato</option>
+              <option value="ok">Em dia</option>
+              <option value="pendente">Em andamento</option>
+              <option value="aguardando_autorizacao">Aguardando autorização</option>
+              <option value="aguardando_autorizacao_demorada">Autorização demorada</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field__label" for="dist-system">Sistema</label>
+            <select class="input" id="dist-system" data-role="system-filter"><option value="">Todos</option></select>
+          </div>
+        </div>
+        <div class="table-wrap distribution-agent-table-wrap">
+          <table class="data-table distribution-agent-table">
             <thead><tr>
               <th scope="col">Empresa</th><th scope="col">Situação</th><th scope="col">Sistema</th>
-              <th scope="col">Instalada</th><th scope="col">Publicada</th><th scope="col">Último contato</th>
-              <th scope="col">Execuções</th><th scope="col">Sucesso</th>
+              <th scope="col">Versão informada</th><th scope="col">Publicada</th><th scope="col">Último contato</th>
+              <th scope="col">Ações</th>
             </tr></thead>
-            <tbody data-role="agentes"></tbody>
+            <tbody data-role="agents"></tbody>
           </table>
         </div>
-      </div>
-
-      <div class="card">
-        <div class="section-heading">
-          <div><span class="dashboard-intro__eyebrow">Histórico de entregas</span><h2 class="card__title">Versões cadastradas</h2></div>
-          <span class="result-count" data-role="count"></span>
-        </div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead><tr>
-              <th scope="col">Sistema</th><th scope="col">Versão</th><th scope="col">Status</th>
-              <th scope="col">Tamanho</th><th scope="col">Publicada em</th><th scope="col">Ações</th>
-            </tr></thead>
-            <tbody data-role="versions"></tbody>
-          </table>
-        </div>
-      </div>
+      </section>
     `;
 
-    this.frescorBox = this.container.querySelector('[data-role="frescor"]');
-    this.frescorTexto = this.container.querySelector('[data-role="frescor-texto"]');
-    this.form = this.container.querySelector('[data-role="form"]');
-    this.sistemaSelect = this.container.querySelector('[data-role="sistema"]');
-    this.progresso = this.container.querySelector('[data-role="progresso"]');
-    this.buscaInput = this.container.querySelector('[data-role="busca"]');
-    this.filtroSituacaoSelect = this.container.querySelector('[data-role="filtro-situacao"]');
-    this.filtroSistemaSelect = this.container.querySelector('[data-role="filtro-sistema"]');
+    this.freshnessBox = this.container.querySelector('[data-role="freshness"]');
+    this.freshnessText = this.container.querySelector('[data-role="freshness-text"]');
+    this.searchInput = this.container.querySelector('[data-role="search"]');
+    this.situationFilter = this.container.querySelector('[data-role="situation-filter"]');
+    this.systemFilter = this.container.querySelector('[data-role="system-filter"]');
+    this.logSearch = this.container.querySelector('[data-role="log-search"]');
+    this.logStatus = this.container.querySelector('[data-role="log-status"]');
+    this.logSystem = this.container.querySelector('[data-role="log-system"]');
 
-    this.changelogItens = this.container.querySelector('[data-role="changelog-itens"]');
-    this.changelogTextarea = this.container.querySelector("#dist-obs");
-    this.container.querySelector('[data-action="add-changelog-item"]').addEventListener("click", () => this._addChangelogItem("", true));
-    this._resetChangelog();
-
-    this.form.addEventListener("submit", (e) => this._submit(e));
-    this.sistemaSelect.addEventListener("change", () => this._atualizarAvisoSubstituicao());
-    this.container.querySelector('[data-action="refresh"]').addEventListener("click", () => this.refresh(true));
-
-    this.buscaInput.addEventListener("input", () => {
-      this.buscaAgente = this.buscaInput.value.trim().toLowerCase();
-      this._renderAgentes();
+    this.container.querySelector('[data-action="refresh"]').addEventListener("click", async (event) => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      this.cache?.invalidar("distribuicao:");
+      try { await this.refresh(true); }
+      catch { toast.error("Não foi possível atualizar o painel. Tente novamente."); }
+      finally { button.disabled = false; }
     });
-    this.filtroSituacaoSelect.addEventListener("change", () => {
-      this.filtroSituacao = this.filtroSituacaoSelect.value;
-      this._renderAgentes();
+    this.container.querySelector('[data-action="copy-report"]').addEventListener("click", () => this._copyReport());
+    this.searchInput.addEventListener("input", () => {
+      this.buscaAgente = this.searchInput.value.trim().toLowerCase();
+      this._renderAgents();
     });
-    this.filtroSistemaSelect.addEventListener("change", () => {
-      this.filtroSistema = this.filtroSistemaSelect.value;
-      this._renderAgentes();
+    this.situationFilter.addEventListener("change", () => {
+      this.filtroSituacao = this.situationFilter.value;
+      this._renderAgents();
+    });
+    this.systemFilter.addEventListener("change", () => {
+      this.filtroSistema = this.systemFilter.value;
+      this._renderAgents();
+    });
+    this.logSearch.addEventListener("input", () => {
+      this.buscaRetorno = this.logSearch.value.trim().toLowerCase();
+      this._renderLogs();
+    });
+    this.logStatus.addEventListener("change", () => {
+      this.filtroRetorno = this.logStatus.value;
+      this._renderLogs();
+    });
+    this.logSystem.addEventListener("change", () => {
+      this.filtroSistemaRetorno = this.logSystem.value;
+      this._renderLogs();
     });
 
-    // Auto-atualização: um painel de monitoramento com botão manual só mostra
-    // a verdade quando alguém lembra de clicar. Pausa quando a aba do
-    // navegador não está visível -- não faz sentido consultar o servidor a
-    // cada 30s para uma tela que ninguém está olhando.
     this.on(document, "visibilitychange", () => {
-      if (document.visibilityState === "visible" && this.visivel) this._ligarPolling();
-      else this._desligarPolling();
+      if (document.visibilityState === "visible" && this.visivel) this._startPolling();
+      else this._stopPolling();
     });
   }
 
-  aplicarParams() {
-    /* nada a fazer -- a tela não recebe parâmetros por rota */
-  }
+  aplicarParams() {}
 
   async refresh(manual = false) {
-    // Os sistemas mudam raramente; buscar sempre é desperdício, então vão
-    // pelo cache compartilhado com as outras abas.
-    const sistemas = await this.swr("sistemas", () => this.api.get("/sistemas", null, { key: "dist:sistemas" }), (lista) => {
-      this.sistemas = lista;
-      this._preencherSistemas(lista);
+    const systems = await this.swr("sistemas", () => this.api.get("/sistemas", null, { key: "dist:sistemas" }), (list) => {
+      this.systems = list || [];
+      this._fillSystems();
     });
-    this.sistemas = sistemas || [];
+    this.systems = systems || [];
 
     await this.swr(
       "distribuicao:painel",
       () => this.api.get("/versoes/painel", null, { key: "dist:painel" }),
-      (dados, { doCache }) => {
-        this.painel = dados;
-        this._renderIndicadores(dados.indicadores);
-        this._renderAtivas(dados.ativas);
-        this._renderAgentes();
-        this._atualizarAvisoSubstituicao();
-        // Só quando o dado veio da rede agora mesmo: pintar o que já estava
-        // em cache (`doCache`) não é uma confirmação nova de que está tudo
-        // certo, é só reaproveitar o que a tela já mostrava.
+      (data, { doCache }) => {
+        this.painel = data;
+        this._renderIndicators();
+        this._renderAgents();
         if (!doCache) {
           this._ultimaAtualizacao = new Date();
-          this._renderFrescor();
+          this._renderFreshness();
         }
       }
     );
 
     await this.swr(
-      "distribuicao:versoes",
-      () => this.api.get("/versoes", null, { key: "dist:versoes" }),
-      (versoes) => this._renderVersions(versoes)
-    );
-
-    await this.swr(
       "distribuicao:logs",
-      () => this.api.get("/versoes/logs", { limit: 12 }, { key: "dist:logs" }),
+      () => this.api.get("/versoes/logs", { limit: 300 }, { key: "dist:logs" }),
       (logs) => {
-        this._renderLogs(logs);
-        // Avisa fora do navegador sobre falhas novas (ver core/notify.js).
-        // Fica aqui, no desenho, e não no polling: assim vale também para a
-        // primeira carga e para o "Atualizar" manual, e a lista consultada é
-        // exatamente a que a tela está mostrando.
-        notificacoes.sincronizar(logs);
+        this.logs = logs || [];
+        this._renderLogs();
+        notificacoes.sincronizar(this.logs);
       }
     );
 
-    this._ligarPolling();
+    this._startPolling();
     if (manual) toast.info("Painel atualizado.");
   }
 
-  _ligarPolling() {
-    this._desligarPolling();
-    // Ritmo escolhido em Configurações; 0 significa "não atualizar sozinho"
-    // (útil para quem deixa a aba aberta o dia todo numa rede lenta).
-    const intervalo = aparencia.ritmoPainel();
-    if (!intervalo) return;
-    this._timer = setInterval(() => {
-      if (!this.visivel || document.visibilityState !== "visible") return;
-      // Invalida só o painel: as versões e os sistemas não mudam sozinhos,
-      // quem muda o tempo todo é o retorno dos agentes.
-      this.cache?.invalidar("distribuicao:painel");
-      this.cache?.invalidar("distribuicao:logs");
-      this.refresh().catch(() => {
-        /* falha de rede num refresh de fundo não merece alarme na tela */
-      });
-    }, intervalo);
-  }
-
-  _desligarPolling() {
-    if (this._timer) clearInterval(this._timer);
-    this._timer = null;
-  }
-
-  _preencherSistemas(sistemas) {
-    const atual = this.sistemaSelect.value;
-    this.sistemaSelect.innerHTML =
-      `<option value="">Selecione o sistema…</option>` +
-      sistemas.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
-    if (sistemas.includes(atual)) this.sistemaSelect.value = atual;
-
-    const filtroAtual = this.filtroSistemaSelect.value;
-    this.filtroSistemaSelect.innerHTML =
-      `<option value="">Todos</option>` + sistemas.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
-    this.filtroSistemaSelect.value = sistemas.includes(filtroAtual) ? filtroAtual : "";
-
-    const ajuda = this.container.querySelector('[data-role="ajuda-sistema"]');
-    if (sistemas.length === 0) {
-      ajuda.textContent = "Nenhum sistema cadastrado — cadastre um na aba Clientes antes de publicar.";
-    } else {
-      ajuda.textContent = "Vem do cadastro da aba Sistemas.";
+  _fillSystems() {
+    for (const select of [this.systemFilter, this.logSystem]) {
+      const current = select.value;
+      select.innerHTML = `<option value="">Todos</option>` + this.systems.map((s) => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join("");
+      select.value = this.systems.includes(current) ? current : "";
     }
   }
 
-  /**
-   * Diz, ANTES de enviar, qual versão vai sair do ar. Publicar é a ação de
-   * maior consequência da tela -- ela decide o que centenas de máquinas vão
-   * baixar -- e uma substituição automática silenciosa seria uma surpresa
-   * ruim na primeira vez que acontecesse.
-   */
-  _atualizarAvisoSubstituicao() {
-    const aviso = this.container.querySelector('[data-role="aviso-substituicao"]');
-    if (!aviso) return;
-
-    const texto = this.container.querySelector('[data-role="aviso-texto"]');
-    const sistema = this.sistemaSelect.value;
-    const noAr = this.painel?.ativas.find((v) => v.sistema === sistema);
-
-    if (!sistema) {
-      aviso.hidden = true;
-      return;
-    }
-    aviso.hidden = false;
-    texto.textContent = noAr
-      ? `Ao publicar, a versão ${noAr.versao} de ${sistema} sai do ar imediatamente e os agentes passam a baixar a nova.`
-      : `Nenhuma versão de ${sistema} está publicada. Esta será a primeira que os agentes vão receber.`;
+  _renderIndicators() {
+    const agents = this.painel?.agentes || [];
+    const attention = agents.filter((agent) => ["erro", "pendencias", "desatualizado", "aguardando_autorizacao", "aguardando_autorizacao_demorada"].includes(agent.situacao)).length;
+    const aligned = agents.filter((agent) => agent.versaoAlvo && agent.ultimaVersao === agent.versaoAlvo).length;
+    const offline = agents.filter((agent) => agent.situacao === "offline").length;
+    const metrics = [
+      { label: "Agentes monitorados", value: agents.length, hint: "Clientes que já enviaram retornos", icon: "distribuicao", tone: "neutral" },
+      { label: "Precisam de atenção", value: attention, hint: "Erros, pendências ou atualização aguardando", icon: "alerta", tone: attention ? "warning" : "neutral" },
+      { label: "Na versão publicada", value: aligned, hint: "Versão informada igual à publicada", icon: "versoes", tone: "neutral" },
+      { label: "Sem contato", value: offline, hint: "Sem comunicação há mais de 26 horas", icon: "relogio", tone: offline ? "danger" : "neutral" },
+    ];
+    this.container.querySelector('[data-role="indicators"]').innerHTML = `
+      ${metrics.map((metric) => `<div class="card distribution-metric distribution-metric--${metric.tone}">
+        <div class="distribution-metric__head"><span>${metric.label}</span>${icon(metric.icon)}</div>
+        <strong>${metric.value}</strong><small>${metric.hint}</small>
+      </div>`).join("")}`;
   }
 
-  /**
-   * Volta o editor de changelog a um único item vazio -- estado inicial da
-   * tela e também o que fica depois de um envio bem-sucedido (junto com
-   * `this.form.reset()`, que não sabe nada sobre estes itens porque eles não
-   * são campos de formulário de verdade).
-   */
-  _resetChangelog() {
-    this.changelogItens.replaceChildren();
-    this._addChangelogItem("", false);
-  }
-
-  /**
-   * Acrescenta uma linha do changelog. `focar` só é true quando vem do botão
-   * "Adicionar item" clicado pela pessoa -- ao popular a primeira linha vazia
-   * (construção da tela, ou reset pós-envio) não faz sentido roubar o foco de
-   * ninguém.
-   */
-  _addChangelogItem(valor = "", focar = false) {
-    const linha = document.createElement("div");
-    linha.className = "changelog-item";
-
-    const input = document.createElement("input");
-    input.type = "text";
-    input.className = "input";
-    input.placeholder = "ex.: Corrige cálculo de desconto no orçamento";
-    input.value = valor;
-    input.addEventListener("input", () => this._syncChangelog());
-
-    const remover = document.createElement("button");
-    remover.type = "button";
-    remover.className = "changelog-item__remove";
-    remover.setAttribute("aria-label", "Remover este item");
-    remover.title = "Remover este item";
-    remover.textContent = "✕";
-    remover.addEventListener("click", () => {
-      linha.remove();
-      // Nunca deixa a lista com zero linhas -- sem nenhuma, não haveria onde
-      // clicar "Adicionar item" a não ser pelo botão isolado logo abaixo, o
-      // que também funciona, mas uma linha sempre visível deixa claro que
-      // "sem changelog" é uma escolha (campo vazio), não um estado quebrado.
-      if (!this.changelogItens.children.length) this._addChangelogItem("", false);
-      this._syncChangelog();
-    });
-
-    linha.append(input, remover);
-    this.changelogItens.appendChild(linha);
-    if (focar) input.focus();
-    this._syncChangelog();
-  }
-
-  /** Junta os itens não vazios em "- item\n- item", o texto que de fato viaja em "observacoes". */
-  _syncChangelog() {
-    const itens = [...this.changelogItens.querySelectorAll("input")]
-      .map((el) => el.value.trim())
-      .filter(Boolean);
-    this.changelogTextarea.value = itens.map((item) => `- ${item}`).join("\n");
-  }
-
-  async _submit(event) {
-    event.preventDefault();
-    const formData = new FormData(this.form);
-    if (!formData.get("sistema")) {
-      Modal.alert("Validação", "Escolha a qual sistema esta versão pertence.", "warning");
-      this.sistemaSelect.focus();
-      return;
-    }
-
-    const button = this.form.querySelector("button[type=submit]");
-    button.disabled = true;
-    this._mostrarProgresso(0);
-
-    try {
-      await this.api.postForm("/versoes", formData, { onProgress: (pct) => this._mostrarProgresso(pct) });
-      this.form.reset();
-      this._resetChangelog();
-      this._atualizarAvisoSubstituicao();
-      toast.success("Versão enviada. Ela fica como rascunho até você publicar.");
-      this._invalidarTudo();
-      await this.refresh();
-    } catch (error) {
-      Modal.alert("Não foi possível salvar", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
-    } finally {
-      button.disabled = false;
-      this._esconderProgresso();
-    }
-  }
-
-  _mostrarProgresso(pct) {
-    this.progresso.hidden = false;
-    const fill = this.progresso.querySelector(".upload-progress__fill");
-    const texto = this.progresso.querySelector('[data-role="progresso-texto"]');
-    if (pct == null) {
-      this.progresso.classList.add("is-indeterminate");
-      texto.textContent = "Enviando…";
-      return;
-    }
-    this.progresso.classList.remove("is-indeterminate");
-    fill.style.width = `${pct}%`;
-    texto.textContent = pct >= 100 ? "Processando no servidor…" : `${pct}%`;
-  }
-
-  _esconderProgresso() {
-    this.progresso.hidden = true;
-    this.progresso.querySelector(".upload-progress__fill").style.width = "0";
-  }
-
-  _invalidarTudo() {
-    this.cache?.invalidar("distribuicao:");
-  }
-
-  /** Texto relativo ("Atualizado há 2 min") do selo ao vivo da toolbar; a data exata fica no `title`. */
-  _renderFrescor() {
-    if (!this._ultimaAtualizacao) return;
-    this.frescorBox.hidden = false;
-    this.frescorTexto.textContent = `Atualizado ${tempoRelativo(this._ultimaAtualizacao)}`;
-    this.frescorBox.title = formatarDataHora(this._ultimaAtualizacao);
-  }
-
-  _renderIndicadores(ind) {
-    this.container.querySelector('[data-role="indicadores"]').innerHTML = `
-      <div class="card metric-card"><span>Agentes monitorados</span><strong>${ind.totalAgentes}</strong></div>
-      <div class="card metric-card"><span>Na versão publicada</span><strong>${ind.emDia}</strong></div>
-      <div class="card metric-card${ind.desatualizados > 0 ? " metric-card--danger" : ""}"><span>Ainda desatualizados</span><strong>${ind.desatualizados}</strong></div>
-      <div class="card metric-card${ind.comErro > 0 ? " metric-card--danger" : ""}"><span>Com erro</span><strong>${ind.comErro}</strong></div>
-      <div class="card metric-card"><span>Sem contato (24h+)</span><strong>${ind.offline}</strong></div>
-      <div class="card metric-card"><span>Execuções nas 24h</span><strong>${ind.execucoes24h}</strong></div>
-    `;
-  }
-
-  _renderAtivas(ativas) {
-    const box = this.container.querySelector('[data-role="ativas"]');
-    box.replaceChildren();
-    if (!ativas.length) {
-      box.appendChild(
-        emptyState({
-          titulo: "Nenhuma versão publicada",
-          descricao: "Envie um pacote e publique para os agentes começarem a receber.",
-          icone: "distribuicao",
-        })
+  _filteredLogGroups() {
+    const logs = this.filtroSistemaRetorno ? this.logs.filter((log) => log.sistema === this.filtroSistemaRetorno) : this.logs;
+    return agruparRetornos(logs).filter((group) => {
+      if (this.filtroRetorno !== "todos" && group.resultado.tipo !== this.filtroRetorno) return false;
+      return !this.buscaRetorno || group.logs.some((log) =>
+        `${log.empresa || ""} ${log.cnpj || ""} ${log.maquina || ""} ${log.sistema || ""} ${log.detalhes || ""}`.toLowerCase().includes(this.buscaRetorno)
       );
-      return;
-    }
-    for (const v of ativas) {
-      const linha = document.createElement("div");
-      linha.className = "active-version";
-      linha.innerHTML = `
-        <div class="active-version__head">
-          <strong>${escapeHtml(v.sistema)}</strong>
-          <span class="version-chip">${escapeHtml(v.versao)}</span>
-        </div>
-        <span class="active-version__meta">Publicada ${tempoRelativo(v.publicadoEm)} · ${formatarBytes(v.tamanhoBytes)}</span>
-      `;
-      linha.querySelector(".active-version__meta").title = formatarDataHora(v.publicadoEm);
-      box.appendChild(linha);
-    }
-  }
-
-  _renderAgentes() {
-    const corpo = this.container.querySelector('[data-role="agentes"]');
-    const contador = this.container.querySelector('[data-role="agentes-count"]');
-    corpo.replaceChildren();
-
-    const todos = this.painel?.agentes || [];
-    const filtrados = todos.filter((a) => {
-      if (this.filtroSituacao !== "todos" && a.situacao !== this.filtroSituacao) return false;
-      if (this.filtroSistema && a.ultimoSistema !== this.filtroSistema) return false;
-      if (this.buscaAgente) {
-        const alvo = `${a.empresa} ${a.cnpj} ${a.maquina || ""} ${a.cidade || ""}`.toLowerCase();
-        if (!alvo.includes(this.buscaAgente)) return false;
-      }
-      return true;
     });
-
-    contador.textContent =
-      filtrados.length === todos.length
-        ? plural(todos.length, "agente")
-        : `${filtrados.length} de ${plural(todos.length, "agente")}`;
-
-    if (filtrados.length === 0) {
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = 8;
-      td.className = "table-empty";
-      td.appendChild(
-        emptyState({
-          titulo: todos.length === 0 ? "Nenhum agente comunicou ainda" : "Nenhum agente com esse filtro",
-          descricao:
-            todos.length === 0
-              ? "Assim que o Atualizador rodar num cliente, ele aparece aqui com a versão instalada."
-              : "Tente afrouxar a busca ou trocar a situação selecionada.",
-          icone: todos.length === 0 ? "distribuicao" : "busca",
-        })
-      );
-      tr.appendChild(td);
-      corpo.appendChild(tr);
-      return;
-    }
-
-    for (const a of filtrados) {
-      const s = SITUACOES[a.situacao] || SITUACOES.pendente;
-      const tr = document.createElement("tr");
-      tr.className = "is-readonly";
-      tr.innerHTML = `
-        <td>
-          <strong>${escapeHtml(a.empresa)}</strong>
-          <small class="table-subtext">${escapeHtml(a.cnpj)}${a.maquina ? ` · ${escapeHtml(a.maquina)}` : ""}</small>
-        </td>
-        <td><span class="badge ${s.badge}">${s.label}</span></td>
-        <td>${escapeHtml(a.ultimoSistema || "—")}</td>
-        <td>${a.ultimaVersao ? `<span class="version-chip">${escapeHtml(a.ultimaVersao)}</span>` : "—"}</td>
-        <td>${a.versaoAlvo ? escapeHtml(a.versaoAlvo) : "—"}</td>
-        <td data-role="contato"></td>
-        <td>${a.total}</td>
-        <td>${a.taxaSucesso == null ? "—" : `${a.taxaSucesso}%`}</td>
-      `;
-      const contato = tr.querySelector('[data-role="contato"]');
-      contato.textContent = tempoRelativo(a.ultimaComunicacao);
-      contato.title = `${formatarDataHora(a.ultimaComunicacao)}${a.ultimoDetalhe ? `\n${a.ultimoDetalhe}` : ""}`;
-      corpo.appendChild(tr);
-    }
   }
 
-  _renderLogs(logs) {
+  _renderLogs() {
     const list = this.container.querySelector('[data-role="logs"]');
-    const contador = this.container.querySelector('[data-role="logs-count"]');
+    const groups = this._filteredLogGroups();
     list.replaceChildren();
-    contador.textContent = logs.length ? plural(logs.length, "retorno") : "";
+    this.container.querySelector('[data-role="logs-count"]').textContent =
+      plural(groups.length, "agente");
+    this.container.querySelector('[data-role="logs-note"]').textContent = this.logs.length
+      ? `${this.logs.length >= 300 ? "Exibindo as 300 mensagens mais recentes." : `${plural(this.logs.length, "mensagem", "mensagens")} no histórico recente.`} Cada mensagem representa uma etapa ou um resultado da atualização.`
+      : "";
 
-    if (!logs.length) {
+    if (!groups.length) {
       list.appendChild(
-        emptyState({ titulo: "Nenhum retorno ainda", descricao: "Os agentes reportam aqui a cada execução.", icone: "historico" })
+        emptyState({
+          titulo: this.logs.length ? "Nenhum retorno com esse filtro" : "Nenhum retorno ainda",
+          descricao: this.logs.length ? "Tente mudar a busca ou o último resultado." : "As mensagens aparecerão quando um agente se comunicar.",
+          icone: this.logs.length ? "busca" : "historico",
+        })
       );
       return;
     }
 
-    for (const log of logs) {
-      const erro = ["ERRO", "FALHA"].includes(String(log.status).toUpperCase());
-      const item = document.createElement("div");
-      item.className = "agent-log";
-      // Cada retorno agora carrega o contexto que faltava: qual sistema, de
-      // qual versão para qual versão, e quanto tempo levou.
-      const contexto = [
+    for (const group of groups) {
+      const log = group.ultimo;
+      const result = group.resultado;
+      const hasIssues = group.erros.length > 0 || group.avisos.length > 0;
+      const item = document.createElement("article");
+      item.className = `distribution-return distribution-return--${result.tipo}`;
+      const context = [
         log.sistema,
         log.versaoAnterior && log.versao ? `${log.versaoAnterior} → ${log.versao}` : log.versao,
-        formatarDuracao(log.duracaoMs) !== "—" ? formatarDuracao(log.duracaoMs) : null,
-      ]
-        .filter(Boolean)
-        .join(" · ");
+      ].filter(Boolean).join(" · ");
+      const summary = result.tipo === "pendencias"
+        ? `${plural(result.scriptsPulados || 0, "script")} com falha na última atualização. Confira os detalhes antes de considerar o processo concluído.`
+        : result.tipo === "erro" ? "O último retorno indica uma falha. Abra os detalhes para conferir o motivo."
+        : result.tipo === "sucesso" ? "Última atualização concluída sem pendências informadas."
+        : result.tipo === "aguardando" ? "A atualização aguarda autorização para continuar."
+        : result.tipo === "desconhecido" ? "O agente enviou um retorno sem resultado reconhecido."
+        : `Atualização em andamento${log.fase ? ` · ${faseLabel(log.fase)}` : ""}.`;
       item.innerHTML = `
-        <div class="agent-log__dot${erro ? " is-error" : ""}"></div>
-        <div>
-          <strong>${escapeHtml(log.empresa || log.cnpj)}</strong>
-          <span>${escapeHtml(log.status)} · ${tempoRelativo(log.criadoEm)}</span>
-          ${contexto ? `<p class="agent-log__ctx">${escapeHtml(contexto)}</p>` : ""}
-          <p>${escapeHtml(log.detalhes || "Sem detalhes")}</p>
+        <div class="distribution-return__icon">${icon(result.tipo === "sucesso" ? "check" : ["erro", "pendencias"].includes(result.tipo) ? "alerta" : "relogio")}</div>
+        <div class="distribution-return__body">
+          <div class="distribution-return__heading">
+            <h3>${escapeHtml(log.empresa || log.cnpj)}</h3>
+            <span class="badge ${RESULTADOS[result.tipo] || "badge--muted"}">${escapeHtml(result.label)}</span>
+          </div>
+          <p class="distribution-return__context">Último retorno${context ? ` · ${escapeHtml(context)}` : ""}</p>
+          <p class="distribution-return__summary">${escapeHtml(summary)}</p>
+          <p class="distribution-return__history">${plural(group.logs.length, "mensagem", "mensagens")}${group.erros.length ? ` · ${plural(group.erros.length, "registro")} de erro no histórico recente` : ""}${group.sistemas.length > 1 ? ` · ${plural(group.sistemas.length, "sistema")}` : ""}</p>
+        </div>
+        <div class="distribution-return__actions">
+          <time data-role="when"></time>
+          <button type="button" class="btn btn--small" data-action="details">Detalhes ${icon("seta")}</button>
         </div>
       `;
-      item.querySelector("span").title = formatarDataHora(log.criadoEm);
+      const when = item.querySelector('[data-role="when"]');
+      when.textContent = tempoRelativo(log.criadoEm);
+      when.title = formatarDataHora(log.criadoEm);
+      item.querySelector('[data-action="details"]').addEventListener("click", () =>
+        new AgenteDetalheModal(this.api, log, { somenteErros: hasIssues, sistema: this.filtroSistemaRetorno }).open()
+      );
       list.appendChild(item);
     }
   }
 
-  _renderVersions(versions) {
-    const body = this.container.querySelector('[data-role="versions"]');
-    body.replaceChildren();
-    this.container.querySelector('[data-role="count"]').textContent = plural(versions.length, "versão", "versões");
+  async _copyReport() {
+    const logs = this._filteredLogGroups().flatMap((group) => group.logs);
+    if (!logs.length) {
+      toast.info("Não há retornos nesse filtro para copiar.");
+      return;
+    }
+    const classificados = logs.map((log) => ({ ...log, status: classificarRetorno(log).label }));
+    if (await copyToClipboard(relatorioRetornosTexto(classificados))) toast.success("Relatório copiado.");
+    else toast.error("Não foi possível copiar o relatório.");
+  }
 
-    if (!versions.length) {
-      const tr = document.createElement("tr");
-      const td = document.createElement("td");
-      td.colSpan = 6;
-      td.className = "table-empty";
-      td.appendChild(
+  _renderAgents() {
+    const body = this.container.querySelector('[data-role="agents"]');
+    const all = this.painel?.agentes || [];
+    const filtered = all.filter((agent) => {
+      if (this.filtroSituacao !== "todos" && agent.situacao !== this.filtroSituacao) return false;
+      if (this.filtroSistema && agent.ultimoSistema !== this.filtroSistema) return false;
+      if (this.buscaAgente) {
+        const target = `${agent.empresa} ${agent.cnpj} ${agent.maquina || ""} ${agent.cidade || ""}`.toLowerCase();
+        if (!target.includes(this.buscaAgente)) return false;
+      }
+      return true;
+    });
+    body.replaceChildren();
+    this.container.querySelector('[data-role="agents-count"]').textContent =
+      filtered.length === all.length ? plural(all.length, "agente") : `${filtered.length} de ${plural(all.length, "agente")}`;
+
+    if (!filtered.length) {
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 7;
+      cell.className = "table-empty";
+      cell.appendChild(
         emptyState({
-          titulo: "Nenhuma versão cadastrada",
-          descricao: "Use o formulário acima para enviar o primeiro pacote.",
-          icone: "versoes",
+          titulo: all.length ? "Nenhum agente com esse filtro" : "Nenhum agente comunicou ainda",
+          descricao: all.length ? "Tente mudar a busca ou os filtros." : "Assim que o Atualizador rodar num cliente, ele aparecerá aqui.",
+          icone: all.length ? "busca" : "distribuicao",
         })
       );
-      tr.appendChild(td);
-      body.appendChild(tr);
+      row.appendChild(cell);
+      body.appendChild(row);
       return;
     }
 
-    const rotuloStatus = {
-      publicada: { texto: "No ar", classe: "badge--success" },
-      substituida: { texto: "Substituída", classe: "badge--muted" },
-      rascunho: { texto: "Rascunho", classe: "badge--warning" },
-    };
-
-    for (const item of versions) {
-      const st = rotuloStatus[item.status] || rotuloStatus.rascunho;
+    for (const agent of filtered) {
+      const situation = SITUACOES[agent.situacao] || SITUACOES.pendente;
       const row = document.createElement("tr");
       row.className = "is-readonly";
       row.innerHTML = `
-        <td><strong>${escapeHtml(item.sistema || "—")}</strong></td>
-        <td><span class="version-chip">${escapeHtml(item.versao)}</span></td>
-        <td><span class="badge ${st.classe}">${st.texto}</span>${
-        item.substituidoEm ? `<small class="table-subtext">${tempoRelativo(item.substituidoEm)}</small>` : ""
-      }</td>
-        <td>${formatarBytes(item.tamanhoBytes)}</td>
-        <td>${item.publicadoEm ? formatarDataHora(item.publicadoEm) : "—"}</td>
-        <td data-role="acoes"></td>
+        <td data-label="Empresa"><div class="distribution-agent-identity"><strong>${escapeHtml(agent.empresa)}</strong><small class="table-subtext">${escapeHtml(agent.cnpj)}${agent.maquina ? ` · ${escapeHtml(agent.maquina)}` : ""}</small></div></td>
+        <td data-label="Situação"><span class="badge ${situation.badge}">${situation.label}</span></td>
+        <td data-label="Sistema">${escapeHtml(agent.ultimoSistema || "—")}</td>
+        <td data-label="Versão informada">${agent.ultimaVersao ? `<span class="version-chip">${escapeHtml(agent.ultimaVersao)}</span>` : "—"}</td>
+        <td data-label="Publicada">${escapeHtml(agent.versaoAlvo || "—")}</td>
+        <td data-label="Último contato" data-role="contact"></td>
+        <td data-label="Ações"><div class="distribution-row-actions" data-role="actions"></div></td>
       `;
+      const contact = row.querySelector('[data-role="contact"]');
+      contact.textContent = tempoRelativo(agent.ultimaComunicacao);
+      const phase = faseLabel(agent.ultimaFase);
+      contact.title = `${formatarDataHora(agent.ultimaComunicacao)}${phase ? `\nFase: ${phase}` : ""}`;
 
-      const acoes = row.querySelector('[data-role="acoes"]');
-      acoes.classList.add("table-actions");
-      acoes.style.display = "flex";
-      acoes.style.gap = "6px";
+      const details = document.createElement("button");
+      details.type = "button";
+      details.className = "btn btn--small btn--ghost";
+      details.textContent = "Histórico";
+      details.addEventListener("click", () => new AgenteDetalheModal(this.api, agent).open());
+      const actions = row.querySelector('[data-role="actions"]');
+      actions.appendChild(details);
 
-      if (item.status !== "publicada") {
-        const publicar = document.createElement("button");
-        publicar.type = "button";
-        publicar.className = "btn btn--small btn--accent";
-        publicar.textContent = "Publicar";
-        publicar.addEventListener("click", () => this._publicar(item, publicar));
-        acoes.appendChild(publicar);
-
-        const excluir = document.createElement("button");
-        excluir.type = "button";
-        excluir.className = "btn btn--small btn--danger";
-        excluir.textContent = "Excluir";
-        excluir.addEventListener("click", () => this._excluir(item, excluir));
-        acoes.appendChild(excluir);
-      } else {
-        const ativa = document.createElement("span");
-        ativa.className = "text-muted";
-        ativa.style.fontSize = "var(--txt-sm)";
-        ativa.textContent = "Ativa";
-        // A versão no ar não pode ser excluída: apagá-la deixaria os agentes
-        // daquele sistema sem nada para baixar no meio de uma janela de
-        // atualização. Para tirá-la do ar, publica-se a próxima.
-        ativa.title = "Para tirar esta versão do ar, publique uma mais nova deste sistema.";
-        acoes.appendChild(ativa);
-      }
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "btn btn--small btn--danger";
+      remove.textContent = "Excluir";
+      remove.setAttribute("aria-label", `Excluir agente ${agent.empresa}`);
+      remove.addEventListener("click", () => this._removeAgent(agent, remove));
+      actions.appendChild(remove);
       body.appendChild(row);
     }
   }
 
-  async _publicar(item, botao) {
-    const noAr = this.painel?.ativas.find((v) => v.sistema === item.sistema);
-    const ok = await Modal.confirm(
-      "Publicar versão",
-      noAr
-        ? `A versão ${item.versao} de ${item.sistema} passa a ser a única disponível para os agentes.\n\n` +
-            `A versão ${noAr.versao}, que está no ar, sai de circulação imediatamente.`
-        : `A versão ${item.versao} de ${item.sistema} passa a ser distribuída para os agentes deste sistema.`,
-      { confirmLabel: "Publicar", danger: false }
+  async _removeAgent(agent, button) {
+    const confirmed = await Modal.confirm(
+      "Excluir agente",
+      `Excluir o agente ${agent.empresa}?\n\nTodo o histórico de retornos desse CNPJ será apagado. Se o agente voltar a se comunicar, ele aparecerá novamente no painel.`,
+      { confirmLabel: "Excluir" }
     );
-    if (!ok) return;
+    if (!confirmed) return;
 
-    botao.disabled = true;
+    button.disabled = true;
     try {
-      const resultado = await this.api.post(`/versoes/${item.id}/publicar`);
-      const substituidas = resultado?.substituidas || [];
-      toast.success(
-        substituidas.length
-          ? `Versão ${item.versao} no ar. A ${substituidas[0].versao} saiu de circulação.`
-          : `Versão ${item.versao} publicada.`
-      );
-      this._invalidarTudo();
+      const identificador = encodeURIComponent(String(agent.cnpj || "").trim());
+      const result = await this.api.delete(`/versoes/agentes/${identificador}`);
+      const total = Number(result?.retornosExcluidos) || 0;
+      if (total === 0) throw new ApiError("O servidor não removeu nenhum retorno. Reinicie o serviço web e tente novamente.", 409);
+      toast.success(`Agente excluído (${plural(total, "retorno")} removido${total === 1 ? "" : "s"}).`);
+      this.cache?.invalidar("distribuicao:");
       await this.refresh();
-    } catch (err) {
-      Modal.alert("Não foi possível publicar", err instanceof ApiError ? err.message : "Erro inesperado.", "error");
-    } finally {
-      botao.disabled = false;
+    } catch (error) {
+      await Modal.alert("Não foi possível excluir", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      button.disabled = false;
     }
   }
 
-  async _excluir(item, botao) {
-    const ok = await Modal.confirm(
-      "Excluir versão",
-      `Excluir a versão ${item.versao} de ${item.sistema}?\n\nO pacote enviado também é apagado do servidor. Esta ação não pode ser desfeita.`,
-      { confirmLabel: "Excluir" }
-    );
-    if (!ok) return;
+  _renderFreshness() {
+    if (!this._ultimaAtualizacao) return;
+    this.freshnessBox.hidden = false;
+    this.freshnessText.textContent = `Atualizado ${tempoRelativo(this._ultimaAtualizacao)}`;
+    this.freshnessBox.title = formatarDataHora(this._ultimaAtualizacao);
+  }
 
-    botao.disabled = true;
-    try {
-      await this.api.delete(`/versoes/${item.id}`);
-      toast.success(`Versão ${item.versao} excluída.`);
-      this._invalidarTudo();
-      await this.refresh();
-    } catch (err) {
-      Modal.alert("Não foi possível excluir", err instanceof ApiError ? err.message : "Erro inesperado.", "error");
-      botao.disabled = false;
-    }
+  _startPolling() {
+    this._stopPolling();
+    const interval = aparencia.ritmoPainel();
+    if (!interval) return;
+    this._timer = setInterval(() => {
+      if (!this.visivel || document.visibilityState !== "visible") return;
+      this.cache?.invalidar("distribuicao:painel");
+      this.cache?.invalidar("distribuicao:logs");
+      this.refresh().catch(() => {});
+    }, interval);
+  }
+
+  _stopPolling() {
+    if (this._timer) clearInterval(this._timer);
+    this._timer = null;
   }
 
   destroy() {
-    this._desligarPolling();
+    this._stopPolling();
     super.destroy();
   }
 }

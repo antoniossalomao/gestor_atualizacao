@@ -165,6 +165,7 @@ class ApiRouter {
     // agente + indicadores, numa chamada so (ver VersaoService.painel).
     api.get("/versoes/painel", versoes.painel);
     api.get("/versoes/logs", versoes.logs);
+    api.delete("/versoes/agentes/:cnpj", versoes.removeAgent);
     // O multipart contém os metadados do formulário e um único compactado.
     api.post("/versoes", pacoteUpload.single("pacote"), versoes.create);
     api.put("/versoes/:id", versoes.update);
