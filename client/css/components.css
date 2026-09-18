@@ -4113,20 +4113,25 @@ hr.separator {
 .version-timeline {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: var(--sp-2);
-  padding: 8px 12px;
+  justify-content: space-between;
+  gap: 4px;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 10px;
   border-radius: var(--raio-pequeno);
   background: var(--cor-superficie-alta);
+  box-sizing: border-box;
 }
 
 .version-timeline__step {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   color: var(--cor-texto-fraco);
-  font-size: var(--txt-xs);
+  font-size: var(--txt-2xs);
   font-weight: var(--peso-medio);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .version-timeline__step.is-done {
@@ -4141,12 +4146,13 @@ hr.separator {
 .version-timeline__dot {
   display: grid;
   place-items: center;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   border: 1px solid var(--cor-borda-forte);
   background: var(--cor-superficie);
-  font-size: 10px;
+  font-size: 9px;
+  flex-shrink: 0;
 }
 
 .version-timeline__step.is-done .version-timeline__dot {
@@ -4155,8 +4161,8 @@ hr.separator {
   color: var(--status-ok-solido);
 }
 .version-timeline__step.is-done .version-timeline__dot svg {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
 }
 
 .version-timeline__step.is-active .version-timeline__dot {
@@ -4170,7 +4176,7 @@ hr.separator {
 
 .version-timeline__line {
   flex: 1;
-  min-width: 12px;
+  min-width: 6px;
   height: 2px;
   background: var(--cor-borda);
   border-radius: 1px;
@@ -4571,7 +4577,7 @@ hr.separator {
 
 .version-management-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   gap: var(--sp-5);
   align-items: start;
 }
@@ -4660,56 +4666,60 @@ hr.separator {
 
 .published-release {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 13px 14px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
   border: 1px solid var(--cor-borda);
-  border-radius: 7px;
+  border-radius: var(--raio-pequeno);
   background: var(--veu-tabela);
+  overflow: hidden;
+  box-sizing: border-box;
 }
-.published-release__version {
-  min-width: 108px;
-  color: var(--cor-accent);
-  font: var(--peso-forte) var(--txt-lg) var(--fonte-display);
+
+.published-release__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
-.published-release__body {
-  flex: 1;
+
+.published-release__identity {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
   min-width: 0;
 }
-.published-release__body strong,
-.published-release__body span {
-  display: block;
+
+.published-release__version {
+  color: var(--cor-accent);
+  font: var(--peso-extra) var(--txt-lg) var(--fonte-display);
+  white-space: nowrap;
+  letter-spacing: -0.02em;
 }
-.published-release__body strong {
+
+.published-release__system {
   font-size: var(--txt-base);
+  font-weight: var(--peso-forte);
+  color: var(--cor-texto);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.published-release__body span {
-  margin-top: 2px;
-  color: var(--cor-texto-sub);
+
+.published-release__meta {
+  color: var(--cor-texto-fraco);
   font-size: var(--txt-xs);
 }
-.published-release__body p {
-  margin: 6px 0 0;
-  color: var(--cor-texto-sub);
-  font-size: var(--txt-sm);
-}
-.published-release__empty-notes {
-  margin-top: 6px !important;
-  color: var(--cor-texto-fraco) !important;
-  font-style: italic;
-}
+
 .published-release__changelog {
-  margin: 6px 0 0;
+  margin: 2px 0 0;
   padding-left: 18px;
   color: var(--cor-texto-sub);
   font-size: var(--txt-sm);
 }
+
 .published-release__changelog li + li {
   margin-top: 2px;
-}
-/* Encaixe do badge "No ar" no card da versão publicada. */
-.published-release__state {
-  flex: 0 0 auto;
 }
 
 .table-actions {
@@ -5515,17 +5525,6 @@ h1, h2, h3, strong {
   }
   .agente-detalhe__system {
     width: 100%;
-  }
-  .published-release {
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 8px 12px;
-  }
-  .published-release__body {
-    flex-basis: calc(100% - 124px);
-  }
-  .published-release__state {
-    margin-left: 124px;
   }
   .cmdk-overlay {
     padding-top: 6vh;

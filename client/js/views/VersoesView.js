@@ -230,34 +230,36 @@ export class VersoesView extends View {
       const article = document.createElement("article");
       article.className = "published-release";
       article.innerHTML = `
-        <div class="published-release__version">${escapeHtml(item.versao)}</div>
-        <div class="published-release__body">
-          <strong>${escapeHtml(item.sistema || "Sistema não informado")}</strong>
-          <span data-role="meta"></span>
-          <div data-role="changelog"></div>
-          <div class="version-timeline">
-            <div class="version-timeline__step is-done">
-              <span class="version-timeline__dot">${icon("check")}</span>
-              <span class="version-timeline__name">Rascunho</span>
-            </div>
-            <div class="version-timeline__line is-done"></div>
-            <div class="version-timeline__step is-done">
-              <span class="version-timeline__dot">${icon("check")}</span>
-              <span class="version-timeline__name">Publicada</span>
-            </div>
-            <div class="version-timeline__line is-active"></div>
-            <div class="version-timeline__step is-active">
-              <span class="version-timeline__dot"><span class="status-dot status-dot--ok is-pulsing"></span></span>
-              <span class="version-timeline__name">Em distribuição</span>
-            </div>
-            <div class="version-timeline__line"></div>
-            <div class="version-timeline__step">
-              <span class="version-timeline__dot"></span>
-              <span class="version-timeline__name">Substituída</span>
-            </div>
+        <div class="published-release__header">
+          <div class="published-release__identity">
+            <span class="published-release__version">${escapeHtml(item.versao)}</span>
+            <strong class="published-release__system">${escapeHtml(item.sistema || "Sistema não informado")}</strong>
+          </div>
+          <span class="badge badge--success">No ar</span>
+        </div>
+        <div class="published-release__meta" data-role="meta"></div>
+        <div class="published-release__changelog" data-role="changelog"></div>
+        <div class="version-timeline">
+          <div class="version-timeline__step is-done">
+            <span class="version-timeline__dot">${icon("check")}</span>
+            <span class="version-timeline__name">Rascunho</span>
+          </div>
+          <div class="version-timeline__line is-done"></div>
+          <div class="version-timeline__step is-done">
+            <span class="version-timeline__dot">${icon("check")}</span>
+            <span class="version-timeline__name">Publicada</span>
+          </div>
+          <div class="version-timeline__line is-active"></div>
+          <div class="version-timeline__step is-active">
+            <span class="version-timeline__dot"><span class="status-dot status-dot--ok is-pulsing"></span></span>
+            <span class="version-timeline__name">No ar</span>
+          </div>
+          <div class="version-timeline__line"></div>
+          <div class="version-timeline__step">
+            <span class="version-timeline__dot"></span>
+            <span class="version-timeline__name">Substituída</span>
           </div>
         </div>
-        <div class="published-release__state"><span class="badge badge--success">No ar</span></div>
       `;
       const meta = article.querySelector('[data-role="meta"]');
       const pacotes = Array.isArray(item.pacotes) ? item.pacotes : [];
