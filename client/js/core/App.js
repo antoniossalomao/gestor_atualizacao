@@ -21,6 +21,7 @@ import { SistemasView } from "../views/SistemasView.js";
 import { BackupsPanel } from "../views/BackupsPanel.js";
 import { UsersPanel } from "../views/UsersPanel.js";
 import { ConfiguracaoApiPanel } from "../views/ConfiguracaoApiPanel.js";
+import { SaudeSistemaPanel } from "../views/SaudeSistemaPanel.js";
 import { DistribuicaoView } from "../views/DistribuicaoView.js";
 import { VersoesView } from "../views/VersoesView.js";
 import { ReminderBanner } from "./ReminderBanner.js";
@@ -525,6 +526,14 @@ export class App {
       ...(this.user?.role === "admin"
         ? [
             {
+              id: "acao:saude",
+              titulo: "Saúde Operacional do Sistema",
+              subtitulo: "Diagnóstico técnico: integridade do SQLite, memória e runtime",
+              grupo: "Ações",
+              icone: "saude",
+              executar: () => new SaudeSistemaPanel(this.api).open(),
+            },
+            {
               id: "acao:backups",
               titulo: "Abrir Backups",
               subtitulo: "Download preventivo e restauração do banco",
@@ -542,19 +551,40 @@ export class App {
             },
           ]
         : []),
+      ...(["operador", "admin"].includes(this.user?.role)
+        ? [
+            {
+              id: "acao:nova-atualizacao",
+              titulo: "Nova Atualização",
+              subtitulo: "Registrar atualização de cliente",
+              grupo: "Ações",
+              icone: "atualizacoes",
+              executar: () => this.switchTab("atualizacoes", { novo: true }),
+            },
+            {
+              id: "acao:novo-agendamento",
+              titulo: "Novo Agendamento",
+              subtitulo: "Criar agendamento de tarefa ou atualização",
+              grupo: "Ações",
+              icone: "agendamentos",
+              executar: () => this.switchTab("agendamentos", { novo: true }),
+            },
+          ]
+        : []),
+      {
+        id: "acao:incidentes-distribuicao",
+        titulo: "Ver Incidentes da Distribuição",
+        subtitulo: "Filtrar agentes com erros, pendências ou sem contato",
+        grupo: "Ações",
+        icone: "alerta",
+        executar: () => this.switchTab("distribuicao", { situacao: "erro" }),
+      },
       { id: "acao:usuarios", titulo: "Abrir Usuários", grupo: "Ações", icone: "users",
         executar: () => new UsersPanel(this.api, this.user).open() },
       { id: "acao:config", titulo: "Abrir Configurações", subtitulo: "Tema, densidade, segurança, preferências",
         grupo: "Ações", icone: "config", executar: () => this._abrirConfiguracoes() },
       /*
        * Exportar/imprimir a tela aberta.
-       *
-       * Era um botão fixo no Resumo, e um botão que só serve para gerar um PDF
-       * de vez em quando não merece ocupar o topo de um painel que se olha
-       * dezenas de vezes por dia. Como comando, some da tela e continua a um
-       * Ctrl+K de distância -- e o Ctrl+P do navegador também funciona, porque
-       * quem faz o trabalho é a folha de estilo de impressão (components.css),
-       * não este item.
        */
       { id: "acao:imprimir", titulo: "Exportar / Imprimir esta tela",
         subtitulo: "Escolha \"Salvar como PDF\" no diálogo do navegador",
@@ -564,13 +594,6 @@ export class App {
         grupo: "Ações", icone: "atualizar", executar: () => this.recarregarAba({ avisar: true }) },
       { id: "acao:tema", titulo: "Alternar tema (claro / escuro / sistema)", grupo: "Ações", icone: "temaClaro",
         executar: () => theme.alternar() },
-      /*
-       * Dois ajustes de aparência que se quer LIGAR E DESLIGAR várias vezes ao
-       * dia -- a densidade quando a tabela da vez é longa, o contraste quando
-       * o sol bate na tela à tarde. Os outros dezesseis moram só em
-       * Configurações, e é onde devem ficar: são decisões que se toma uma vez.
-       * Estes dois viram gesto, e um gesto não pode custar quatro cliques.
-       */
       { id: "acao:densidade", titulo: "Alternar densidade das linhas (compacta / padrão)",
         grupo: "Aparência", icone: "tabela",
         executar: () => {
@@ -590,51 +613,84 @@ export class App {
         executar: () => this._logout() },
     ];
 
-    // Os clientes entram na mesma busca das telas: achar "Padaria Central" e
-    // cair na ficha dela vira uma coisa só, em vez de "ir para Consulta,
-    // digitar o nome, clicar no resultado".
-    const carregarClientes = async () => {
-      try {
-        const nomes = await this.api.get("/clientes/names", null, { key: "clientes:names" });
-        return nomes.map((nome) => ({
-          id: `cliente:${nome}`,
-          titulo: nome,
-          subtitulo: "Abrir a ficha do cliente",
-          grupo: "Clientes",
-          icone: "clientes",
-          executar: () => this.switchTab("consulta", { cliente: nome }),
-        }));
-      } catch {
-        // Sem a lista de clientes, a paleta ainda serve para telas e ações.
-        return [];
+    // Pesquisa global operacional (Feature 3.6): Clientes, Versões publicadas e Incidentes de Agentes
+    const carregarExtras = async () => {
+      const [resClientes, resAtivas, resPainel] = await Promise.allSettled([
+        this.api.get("/clientes/names", null, { key: "clientes:names" }),
+        this.api.get("/versoes/ativas", null, { key: "cmd:ativas" }),
+        this.api.get("/versoes/painel", null, { key: "cmd:painel" }),
+      ]);
+
+      const itens = [];
+
+      if (resClientes.status === "fulfilled" && Array.isArray(resClientes.value)) {
+        for (const nome of resClientes.value) {
+          itens.push({
+            id: `cliente:${nome}`,
+            titulo: nome,
+            subtitulo: "Abrir a ficha e comparação de versões do cliente",
+            grupo: "Clientes",
+            icone: "clientes",
+            executar: () => this.switchTab("consulta", { cliente: nome }),
+          });
+        }
       }
+
+      if (resAtivas.status === "fulfilled" && Array.isArray(resAtivas.value)) {
+        for (const v of resAtivas.value) {
+          itens.push({
+            id: `versao:${v.sistema}`,
+            titulo: `${v.sistema} v${v.versao}`,
+            subtitulo: "Versão publicada · Filtrar na Distribuição",
+            grupo: "Versões Publicadas",
+            icone: "versoes",
+            executar: () => this.switchTab("distribuicao", { sistema: v.sistema }),
+          });
+        }
+      }
+
+      if (resPainel.status === "fulfilled" && Array.isArray(resPainel.value?.agentes)) {
+        const incidentes = resPainel.value.agentes.filter((a) =>
+          ["erro", "aguardando_autorizacao_demorada", "offline", "pendencias"].includes(a.situacao)
+        );
+        for (const ag of incidentes) {
+          const rotulo =
+            ag.situacao === "erro"
+              ? "com erro"
+              : ag.situacao === "offline"
+              ? "sem contato"
+              : ag.situacao === "pendencias"
+              ? "com pendências"
+              : ag.situacao;
+          itens.push({
+            id: `agente:${ag.cnpj}`,
+            titulo: `${ag.empresa || ag.cnpj} (${rotulo})`,
+            subtitulo: `${ag.ultimoSistema || "Sistema"} · Última: ${ag.ultimaVersao || "—"} · Abrir na Distribuição`,
+            grupo: "Incidentes em Agentes",
+            icone: "alerta",
+            executar: () => this.switchTab("distribuicao", { busca: ag.empresa || ag.cnpj }),
+          });
+        }
+      }
+
+      return itens;
     };
 
-    this.palette = new CommandPalette(comandosBase, carregarClientes);
+    this.palette = new CommandPalette(comandosBase, carregarExtras);
     this._cleanups.push(this.palette.ligarAtalho());
   }
 
   _abrirConfiguracoes() {
     abrirConfiguracoes({
-      // Mudar o tamanho de página torna errado tudo que está guardado: as
-      // chaves do cache descrevem os filtros, não quantas linhas cabem. Jogar
-      // fora e redesenhar é o caminho curto e seguro.
       aoMudarLinhas: () => this.recarregarAba(),
       aoMudarSidebar: (recolhida) => this._definirSidebar(recolhida),
-      // Um perfil ou um arquivo importado mexem em tudo de uma vez.
       aoMudarVarias: () => this._sincronizarComPreferencias(),
       abas: TABS.map((t) => ({ key: t.key, label: t.label })),
-      // Quem está logado aparece na seção Sistema, logo acima de Backups e
-      // Usuários -- é a conta que vai fazer as duas coisas, e conferir isso
-      // antes era uma viagem até o canto do cabeçalho.
       usuario: this.user,
-      // Backups e Usuários abrem painéis próprios que precisam da API (e o de
-      // usuários, de quem está logado, para não deixar ninguém se rebaixar ou
-      // se excluir). O painel de Configurações não os constrói: recebe prontas
-      // as duas funções que os abrem, e continua sem saber o que eles fazem.
       abrirBackups: this.user?.role === "admin" ? () => new BackupsPanel(this.api).open() : undefined,
       abrirUsuarios: () => new UsersPanel(this.api, this.user).open(),
       abrirConfiguracaoApi: this.user?.role === "admin" ? () => new ConfiguracaoApiPanel(this.api).open() : undefined,
+      abrirSaude: this.user?.role === "admin" ? () => new SaudeSistemaPanel(this.api).open() : undefined,
     });
   }
 

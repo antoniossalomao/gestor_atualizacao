@@ -29,6 +29,8 @@ const { UsersController } = require("./controllers/UsersController");
 const { VersoesController } = require("./controllers/VersoesController");
 const { PreferenciasController } = require("./controllers/PreferenciasController");
 const { ConfiguracaoApiController } = require("./controllers/ConfiguracaoApiController");
+const { SaudeService } = require("./services/SaudeService");
+const { SaudeController } = require("./controllers/SaudeController");
 const { LoginRateLimiter } = require("./middlewares/LoginRateLimiter");
 const { ApiRouter } = require("./routes/index");
 const { errorHandler } = require("./middlewares/errorHandler");
@@ -79,6 +81,7 @@ class Server {
       // abaixo, que ligam e desligam o timer junto com o servidor HTTP.
       alertaAgentes: new AlertaAgenteService(this.db, versoes, notifications),
       configuracaoApi: new ConfiguracaoApiService({ historico }),
+      saude: new SaudeService({ db: this.db, backups: new BackupService(this.db, historico), versoes }),
     };
   }
 
@@ -97,6 +100,7 @@ class Server {
       versoes: new VersoesController(s.versoes),
       preferencias: new PreferenciasController(s.preferencias),
       configuracaoApi: new ConfiguracaoApiController(s.configuracaoApi),
+      saude: new SaudeController(s.saude),
     };
     this.loginLimiter = new LoginRateLimiter();
   }

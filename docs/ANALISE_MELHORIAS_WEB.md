@@ -117,7 +117,11 @@ Uma solução simples seria:
 
 Isso é especialmente importante em Atualizações, Clientes, Agendamentos e versões em rascunho.
 
-### 2.3 Centro de saúde operacional
+### 2.3 Centro de saúde operacional (CONCLUÍDO)
+
+> Status: **CONCLUÍDO**
+> - **Serviço e Endpoint de Diagnóstico:** Criado `SaudeService` e endpoint autenticado `GET /api/saude` (restrito ao perfil Administrador), avaliando integridade física SQLite via `PRAGMA integrity_check`, modo de journal (`WAL`), tamanho do arquivo do banco de dados, total e data do último backup, pacotes de distribuição em disco, estatísticas ao vivo dos agentes e métricas de processo Node.js (uptime, heap total e heap usado).
+> - **Painel Operacional no Cliente:** Desenvolvido `SaudeSistemaPanel.js` em modal responsivo com status dot semântico pulsante, cards de subsistemas (SQLite, Servidor Node, Backups, Pacotes e Agentes), atualização sob demanda e atalho direto para a gestão de cópias de segurança. Acessível via menu de Configurações e Paleta de Comandos (`Ctrl+K`).
 
 Criar uma tela administrativa “Saúde do sistema” com:
 
@@ -163,22 +167,7 @@ Caminhos possíveis:
 
 ## 3. Funcionalidades recomendadas
 
-### 3.1 Campanhas de atualização
-
-Além de publicar versões, permitir criar uma campanha contendo:
-
-- sistema e versão-alvo;
-- clientes ou grupos selecionados;
-- data de início;
-- janela de implantação;
-- grupo piloto;
-- percentual concluído;
-- falhas e pendências;
-- encerramento formal.
-
-Isso transformaria a Distribuição em uma ferramenta operacional, não apenas em um painel de observação.
-
-### 3.2 Regras automáticas e SLA
+### 3.1 Regras automáticas e SLA
 
 Criar regras para situações como:
 
@@ -199,7 +188,11 @@ Cada ocorrência poderia ter:
 - comentário;
 - estado “Resolvido”.
 
-### 3.3 Comparação de versões por cliente
+### 3.2 Comparação de versões por cliente (CONCLUÍDO)
+
+> Status: **CONCLUÍDO**
+> - **Matriz de Versões em Consulta:** Implementada matriz comparativa dinâmica na tela de Consulta do cliente, consolidando Sistemas cadastrados, histórico recente e dados em tempo real dos agentes do Atualizador.
+> - **Colunas e Indicadores:** Exibe `Sistema | Instalada | Publicada | Estado | Último contato`, identificando automaticamente versões defasadas (`Atrasado`), alinhadas (`Atualizado`), agentes offline ou sem publicação ativa com chips de versão e badges semânticos de status.
 
 Na Consulta do cliente, incluir uma matriz como:
 
@@ -210,7 +203,7 @@ Na Consulta do cliente, incluir uma matriz como:
 
 Essa visão reuniria informações hoje espalhadas entre Consulta, Sistemas e Distribuição.
 
-### 3.4 Changelog estruturado
+### 3.3 Changelog estruturado
 
 Além das observações livres da versão, registrar:
 
@@ -225,7 +218,7 @@ Além das observações livres da versão, registrar:
 
 Esses dados poderiam aparecer no relatório da implantação e no detalhe do agente.
 
-### 3.5 Histórico com comparação antes e depois
+### 3.4 Histórico com comparação antes e depois
 
 O Histórico ficaria mais útil mostrando:
 
@@ -237,7 +230,7 @@ O Histórico ficaria mais útil mostrando:
 
 Para exclusões, recomenda-se guardar um snapshot JSON do registro removido.
 
-### 3.6 Notificações configuráveis
+### 3.5 Notificações configuráveis
 
 Além do Discord, adicionar:
 
@@ -248,7 +241,12 @@ Além do Discord, adicionar:
 - destinatários diferentes para publicação, agente offline e falha SQL;
 - botão “Reconhecer alerta” no painel.
 
-### 3.7 Pesquisa global operacional
+### 3.6 Pesquisa global operacional (CONCLUÍDO)
+
+> Status: **CONCLUÍDO**
+> - **Busca Universal no Ctrl+K:** Paleta de comandos expandida para pesquisar não apenas telas e clientes, mas também versões publicadas no ar (com atalho direto para filtragem na Distribuição) e agentes que apresentam incidentes ou falta de comunicação (com busca rápida pelo nome/CNPJ na Distribuição).
+> - **Comandos de Ação Direta:** Atalhos operacionais integrados: "Nova Atualização", "Novo Agendamento", "Ver Incidentes da Distribuição", "Saúde Operacional do Sistema" e controle de preferências.
+> - **Deep-linking e Parâmetros entre Views:** Suporte a `aplicarParams` estendido em `DistribuicaoView`, `AgendamentosView`, `AtualizacoesView` e `ConsultaView`, permitindo que buscas como `offline` ou sistemas levem o operador ao estado filtrado com foco imediato no formulário ou na linha do incidente.
 
 O `Ctrl+K` já é uma boa base e poderia pesquisar:
 

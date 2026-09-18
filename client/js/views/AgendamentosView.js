@@ -437,6 +437,31 @@ export class AgendamentosView extends View {
     }
   }
 
+  aplicarParams({ cliente, novo, filtro, status } = {}) {
+    if (status !== undefined) {
+      this.status = status;
+      if (this.statusFilter) this.statusFilter.value = status;
+      this.page = 1;
+      this._reloadList();
+    }
+    if (filtro !== undefined) {
+      this.busca = filtro;
+      if (this.searchInput) this.searchInput.value = filtro;
+      this.page = 1;
+      this._reloadList();
+    }
+    if (novo) {
+      this.clearForm();
+      if (this.fields.cliente) this.fields.cliente.focus();
+    } else if (cliente) {
+      this.clearForm();
+      if (this.fields.cliente) {
+        this.fields.cliente.value = cliente;
+        if (this.fields.tarefa) this.fields.tarefa.focus();
+      }
+    }
+  }
+
   /**
    * Manda os dados da tarefa selecionada pra aba Atualizações, já num
    * registro novo pré-preenchido (ver AtualizacoesView.aplicarParams) --

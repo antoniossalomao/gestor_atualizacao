@@ -78,10 +78,13 @@ class ApiRouter {
 
   // Rotas autenticadas e controladas por papéis (RBAC)
   _registerProtectedRoutes() {
-    const { clientes, sistemas, atualizacoes, agendamentos, resumo, backups, historico, usuarios, versoes, preferencias, configuracaoApi } =
+    const { clientes, sistemas, atualizacoes, agendamentos, resumo, backups, historico, usuarios, versoes, preferencias, configuracaoApi, saude } =
       this.controllers;
     const api = express.Router();
     api.use(requireAuth);
+
+    // Saúde operacional e diagnóstico do sistema (exclusivo Administrador)
+    api.get("/saude", requireRole("admin"), saude.get);
 
     // Preferências pessoais do usuário conectado (acessível a qualquer autenticado)
     api.get("/preferencias", preferencias.get);

@@ -541,11 +541,16 @@ export class AtualizacoesView extends View {
    * -- pré-preenche um registro NOVO (não edita nada existente) com o que a
    * tarefa já tinha, pra não digitar tudo de novo.
    */
-  aplicarParams({ cliente, responsavel, data, motivo, obs, desde, ate } = {}) {
+  aplicarParams({ cliente, responsavel, data, motivo, obs, desde, ate, novo } = {}) {
     // Vindo de um indicador do Resumo: não é para preencher formulário
     // nenhum, é para FILTRAR a lista pelo período que aquele número contava.
     if (desde || ate) {
       this._aplicarPeriodo(desde, ate);
+      return;
+    }
+    if (novo) {
+      this.clearForm();
+      this.fields.cliente.focus();
       return;
     }
     if (!cliente) return;

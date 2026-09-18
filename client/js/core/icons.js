@@ -78,6 +78,7 @@ const PATHS = {
     '<rect x="2.6" y="3.4" width="6.2" height="13.2" rx="1.4"/><rect x="11.2" y="3.4" width="6.2" height="6" rx="1.4"/><rect x="11.2" y="11.4" width="6.2" height="5.2" rx="1.4"/>',
   escudo:
     '<path d="M10 2.5 3.5 5.5v4.5c0 5 6.5 7.5 6.5 7.5s6.5-2.5 6.5-7.5V5.5L10 2.5z" stroke-linecap="round" stroke-linejoin="round"/>',
+  saude: '<path d="M2.5 10h3.5l2-5 3.5 10 2.5-6 1.5 3h2" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 
 /** @param {keyof typeof PATHS} name @returns {string} markup do `<svg>` pronto pra inserir via innerHTML */

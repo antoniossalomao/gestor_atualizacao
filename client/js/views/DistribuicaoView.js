@@ -189,7 +189,24 @@ export class DistribuicaoView extends View {
     });
   }
 
-  aplicarParams() {}
+  aplicarParams(params) {
+    if (!params) return;
+    if (params.situacao !== undefined) {
+      this.filtroSituacao = params.situacao;
+      if (this.situationFilter) this.situationFilter.value = params.situacao;
+    }
+    if (params.sistema !== undefined) {
+      this.filtroSistema = params.sistema;
+      if (this.systemFilter) this.systemFilter.value = params.sistema;
+    }
+    if (params.busca !== undefined) {
+      this.buscaAgente = params.busca.trim().toLowerCase();
+      if (this.searchInput) this.searchInput.value = params.busca;
+    }
+    if (this.painel) {
+      this._renderAgents();
+    }
+  }
 
   async refresh(manual = false) {
     const systems = await this.swr("sistemas", () => this.api.get("/sistemas", null, { key: "dist:sistemas" }), (list) => {

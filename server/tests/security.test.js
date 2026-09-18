@@ -295,3 +295,27 @@ test("Controle de Versões e Stream de Upload - VersaoService", async (t) => {
     }
   });
 });
+
+test("Saúde Operacional do Sistema - SaudeService", async (t) => {
+  const { SaudeService } = require("../src/services/SaudeService");
+  const env = criarAmbienteTeste();
+  const saude = new SaudeService({
+    db: env.db,
+    backups: { list: () => [{ arquivo: "backup-test.sqlite", data: "2026-09-18T10:00:00.000Z" }] },
+    versoes: { painel: () => ({ agentes: [] }), packagesDir: path.join(env.tmpDir, "packages") },
+  });
+
+  try {
+    await t.test("devolve diagnóstico completo com integridade do banco e métricas de processo", () => {
+      const diag = saude.obterDiagnostico();
+      assert.equal(diag.statusGeral, "saudavel");
+      assert.equal(diag.banco.integridade, "ok");
+      assert.equal(typeof diag.servidor.uptimeSegundos, "number");
+      assert.equal(diag.backups.total, 1);
+      assert.equal(typeof diag.agentes.total, "number");
+    });
+  } finally {
+    env.cleanup();
+  }
+});
+

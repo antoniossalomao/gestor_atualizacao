@@ -1,8 +1,9 @@
 import { View } from "../core/View.js";
 import { debounce } from "../core/debounce.js";
 import { emptyState } from "../core/EmptyState.js";
-import { plural } from "../core/html.js";
+import { plural, escapeHtml } from "../core/html.js";
 import { toast } from "../core/Toast.js";
+import { tempoRelativo, formatarDataHora } from "../core/date.js";
 
 const MAX_SUGESTOES = 50;
 
@@ -149,15 +150,16 @@ export class ConsultaView extends View {
     this._filterMatches();
 
     try {
-      const [cliente, historico] = await Promise.all([
+      const [cliente, historico, painelVersoes] = await Promise.all([
         this.api.get(`/clientes/by-nome/${encodeURIComponent(nome)}`, null, { key: "consulta:cliente" }),
-        this.api.get(`/atualizacoes/recent-by-client/${encodeURIComponent(nome)}`, { limit: 5 }, { key: "consulta:historico" }),
+        this.api.get(`/atualizacoes/recent-by-client/${encodeURIComponent(nome)}`, { limit: 10 }, { key: "consulta:historico" }),
+        this.api.get("/versoes/painel", null, { key: "consulta:painel" }).catch(() => null),
       ]);
       if (!cliente) {
         toast.error("Cliente não encontrado.");
         return;
       }
-      this._renderDetail(cliente, historico);
+      this._renderDetail(cliente, historico, painelVersoes);
     } catch (erro) {
       if (erro?.cancelled) return; // outra seleção, mais nova, tomou o lugar
       toast.error("Não foi possível carregar os dados deste cliente.");
@@ -174,36 +176,28 @@ export class ConsultaView extends View {
     );
   }
 
-  _renderDetail(cliente, historico) {
+  _renderDetail(cliente, historico, painelVersoes) {
     this.detailBox.innerHTML = `
       <div class="consulta-detail__name"></div>
       <div class="consulta-detail__subtitle"></div>
       <hr class="separator" />
-      <h2 class="card__title">Sistemas</h2>
-      <div class="badge-row" data-role="badges"></div>
+      <h2 class="card__title">Comparação de Versões</h2>
+      <div data-role="versao-matriz"></div>
       <hr class="separator" />
       <h2 class="card__title">Histórico Recente</h2>
       <div data-role="ultima"></div>
     `;
     this.detailBox.querySelector(".consulta-detail__name").textContent = cliente.nome;
-    this.detailBox.querySelector(
-      ".consulta-detail__subtitle"
-    ).textContent = `Código: ${cliente.codigo || "—"}    ·    Cidade: ${cliente.cidade || "—"}`;
 
-    const badges = this.detailBox.querySelector('[data-role="badges"]');
-    if (cliente.sistemas.length === 0) {
-      const span = document.createElement("span");
-      span.className = "text-muted";
-      span.textContent = "Nenhum sistema registrado.";
-      badges.appendChild(span);
-    } else {
-      for (const sistema of cliente.sistemas) {
-        const badge = document.createElement("span");
-        badge.className = "badge badge--accent";
-        badge.textContent = sistema;
-        badges.appendChild(badge);
-      }
-    }
+    const subtitulos = [];
+    if (cliente.codigo) subtitulos.push(`Código: ${cliente.codigo}`);
+    if (cliente.cidade) subtitulos.push(`Cidade: ${cliente.cidade}`);
+    if (cliente.cnpj) subtitulos.push(`CNPJ: ${cliente.cnpj}`);
+    this.detailBox.querySelector(".consulta-detail__subtitle").textContent =
+      subtitulos.length > 0 ? subtitulos.join("    ·    ") : "Sem informações cadastrais adicionais";
+
+    // Matriz Comparativa de Versões (Feature 3.2): Sistema | Instalada | Publicada | Estado | Último contato
+    this._renderMatrizVersoes(cliente, historico, painelVersoes);
 
     const caixa = this.detailBox.querySelector('[data-role="ultima"]');
     if (!historico || historico.length === 0) {
@@ -235,6 +229,151 @@ export class ConsultaView extends View {
       if (registro.obs) grid.appendChild(infoItem("Obs", registro.obs, true));
       caixa.appendChild(grid);
     });
+  }
+
+  _renderMatrizVersoes(cliente, historico, painelVersoes) {
+    const container = this.detailBox.querySelector('[data-role="versao-matriz"]');
+    const sistemas = new Set(cliente.sistemas || []);
+
+    const nomeNorm = (cliente.nome || "").trim().toLowerCase();
+    const cnpjNorm = String(cliente.cnpj || "").replace(/\D/g, "");
+
+    const agentes = (painelVersoes?.agentes || []).filter((a) => {
+      if (cnpjNorm && a.cnpj && a.cnpj.replace(/\D/g, "") === cnpjNorm) return true;
+      if (a.empresa && a.empresa.trim().toLowerCase() === nomeNorm) return true;
+      return false;
+    });
+
+    agentes.forEach((a) => {
+      if (a.ultimoSistema) sistemas.add(a.ultimoSistema);
+    });
+    (historico || []).forEach((h) => {
+      if (h.sistema) sistemas.add(h.sistema);
+    });
+
+    const listaSistemas = Array.from(sistemas).sort((a, b) => a.localeCompare(b));
+    if (listaSistemas.length === 0) {
+      container.replaceChildren(
+        emptyState({
+          titulo: "Nenhum sistema associado",
+          descricao: "Este cliente não possui sistemas vinculados nem registros prévios.",
+          icone: "sistemas",
+        })
+      );
+      return;
+    }
+
+    const ativas = painelVersoes?.ativas || [];
+
+    const tableWrap = document.createElement("div");
+    tableWrap.className = "table-wrap";
+    tableWrap.style.marginBottom = "var(--sp-2)";
+
+    const table = document.createElement("table");
+    table.className = "table";
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Sistema</th>
+          <th style="text-align: right">Instalada</th>
+          <th style="text-align: right">Publicada</th>
+          <th>Estado</th>
+          <th>Último contato</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+
+    const tbody = table.querySelector("tbody");
+
+    for (const sistema of listaSistemas) {
+      const versaoAtiva = ativas.find((v) => v.sistema.toLowerCase() === sistema.toLowerCase())?.versao || null;
+      const agente = agentes.find((a) => a.ultimoSistema && a.ultimoSistema.toLowerCase() === sistema.toLowerCase());
+      const histReg = (historico || []).find((h) => h.sistema && h.sistema.toLowerCase() === sistema.toLowerCase());
+
+      const instalada = agente?.ultimaVersao || histReg?.versao || "—";
+      const publicada = versaoAtiva || "Nenhuma";
+
+      let estadoLabel = "Atualizado";
+      let estadoBadge = "badge--success";
+
+      if (agente) {
+        if (agente.situacao === "ok") {
+          estadoLabel = "Atualizado";
+          estadoBadge = "badge--success";
+        } else if (agente.situacao === "desatualizado") {
+          estadoLabel = "Atrasado";
+          estadoBadge = "badge--warning";
+        } else if (agente.situacao === "erro") {
+          estadoLabel = "Erro";
+          estadoBadge = "badge--danger";
+        } else if (agente.situacao === "offline") {
+          estadoLabel = "Sem contato";
+          estadoBadge = "badge--muted";
+        } else if (agente.situacao === "pendencias") {
+          estadoLabel = "Pendências";
+          estadoBadge = "badge--warning";
+        } else if (agente.situacao?.startsWith("aguardando_autorizacao")) {
+          estadoLabel = "Aguardando";
+          estadoBadge = "badge--warning";
+        } else if (agente.situacao === "pausado") {
+          estadoLabel = "Pausado";
+          estadoBadge = "badge--muted";
+        } else {
+          estadoLabel = agente.situacao || "Desconhecido";
+          estadoBadge = "badge--muted";
+        }
+      } else {
+        if (instalada !== "—" && versaoAtiva) {
+          if (instalada === versaoAtiva) {
+            estadoLabel = "Atualizado";
+            estadoBadge = "badge--success";
+          } else {
+            estadoLabel = "Atrasado";
+            estadoBadge = "badge--warning";
+          }
+        } else if (!versaoAtiva) {
+          estadoLabel = "Sem publicação";
+          estadoBadge = "badge--muted";
+        } else {
+          estadoLabel = "Não instalado";
+          estadoBadge = "badge--muted";
+        }
+      }
+
+      let contatoTexto = "—";
+      let contatoTitle = "";
+      if (agente?.ultimaComunicacao) {
+        contatoTexto = tempoRelativo(agente.ultimaComunicacao);
+        contatoTitle = formatarDataHora(agente.ultimaComunicacao);
+        if (agente.maquina) contatoTexto += ` (${agente.maquina})`;
+      } else if (histReg?.data) {
+        contatoTexto = histReg.data;
+        contatoTitle = "Última atualização registrada";
+      }
+
+      const tr = document.createElement("tr");
+      tr.className = "is-readonly";
+      tr.innerHTML = `
+        <td data-label="Sistema"><strong>${escapeHtml(sistema)}</strong></td>
+        <td data-label="Instalada" style="text-align: right">
+          ${instalada !== "—" ? `<span class="version-chip">${escapeHtml(instalada)}</span>` : "—"}
+        </td>
+        <td data-label="Publicada" style="text-align: right">
+          ${publicada !== "Nenhuma" ? escapeHtml(publicada) : `<span class="text-muted">Nenhuma</span>`}
+        </td>
+        <td data-label="Estado">
+          <span class="badge ${estadoBadge}">${escapeHtml(estadoLabel)}</span>
+        </td>
+        <td data-label="Último contato" title="${escapeHtml(contatoTitle)}">
+          ${escapeHtml(contatoTexto)}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    tableWrap.appendChild(table);
+    container.replaceChildren(tableWrap);
   }
 }
 

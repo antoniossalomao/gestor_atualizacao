@@ -97,7 +97,7 @@ export class ConfiguracoesPanel {
    *   cada preferência criada, e o esquecimento apareceria como "o perfil
    *   mudou tudo, menos o menu lateral".
    */
-  constructor({ aoMudarLinhas, aoMudarSidebar, aoMudarVarias, abas, usuario, abrirBackups, abrirUsuarios, abrirConfiguracaoApi } = {}) {
+  constructor({ aoMudarLinhas, aoMudarSidebar, aoMudarVarias, abas, usuario, abrirBackups, abrirUsuarios, abrirConfiguracaoApi, abrirSaude } = {}) {
     this.aoMudarLinhas = aoMudarLinhas || (() => {});
     this.aoMudarSidebar = aoMudarSidebar || (() => {});
     this.aoMudarVarias = aoMudarVarias || (() => {});
@@ -107,6 +107,7 @@ export class ConfiguracoesPanel {
     this.abrirBackups = abrirBackups || null;
     this.abrirUsuarios = abrirUsuarios || null;
     this.abrirConfiguracaoApi = abrirConfiguracaoApi || null;
+    this.abrirSaude = abrirSaude || null;
     /** @type {Map<string, HTMLElement>} id da seção -> painel montado */
     this.secoes = new Map();
   }
@@ -509,6 +510,15 @@ export class ConfiguracoesPanel {
             busca: "api url chave token agente atualizador discord webhook intervalo configuração servidor .env",
             acao: () => this.abrirConfiguracaoApi?.(),
             oculto: () => typeof this.abrirConfiguracaoApi !== "function",
+          },
+          {
+            tipo: "link",
+            titulo: "Saúde Operacional do Sistema",
+            ajuda: "Diagnóstico técnico: integridade do SQLite, memória, backups e runtime do servidor",
+            icone: "saude",
+            busca: "saúde integridade diagnóstico servidor banco memória uptime status operacional",
+            acao: () => this.abrirSaude?.(),
+            oculto: () => typeof this.abrirSaude !== "function",
           },
         ],
       },
@@ -1190,6 +1200,7 @@ export function abrirConfiguracoes({
   abrirBackups,
   abrirUsuarios,
   abrirConfiguracaoApi,
+  abrirSaude,
 } = {}) {
   new ConfiguracoesPanel({
     aoMudarSidebar,
@@ -1199,6 +1210,7 @@ export function abrirConfiguracoes({
     abrirBackups,
     abrirUsuarios,
     abrirConfiguracaoApi,
+    abrirSaude,
     aoMudarLinhas: () => {
       aoMudarLinhas?.();
       // As outras preferências se explicam sozinhas na tela (o tema muda a
