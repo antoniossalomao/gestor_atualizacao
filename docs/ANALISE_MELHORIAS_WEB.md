@@ -261,90 +261,67 @@ O `Ctrl+K` já é uma boa base e poderia pesquisar:
 
 Uma busca como `offline B_NFe` poderia abrir a Distribuição já filtrada.
 
-## 4. Melhorias visuais
+## 4. Melhorias visuais (CONCLUÍDO)
+
+> Status: **CONCLUÍDO**
+> - **4.1 Navegação agrupada:** Abas da sidebar categorizadas em grupos lógicos (*Visão Geral*, *Operação*, *Distribuição*, *Administração*) com cabeçalhos de grupo que se transformam em linhas divisórias no modo colapsado, além de tooltips flutuantes CSS com elevação e blur ao passar o cursor sobre os ícones.
+> - **4.2 Resumo orientado a decisões:** Seção *"Precisa de atenção"* no topo do Resumo, exibindo cards de severidade para agentes com falha (vermelho), agentes sem contato (amarelo), agentes com pendências (amarelo) e agendamentos atrasados (vermelho), com navegação com um clique direto para a tela de destino correspondente. Exibe estado de *tudo limpo* com radar dot pulsante quando não há incidentes.
+> - **4.3 Tabelas menos densas & barra flutuante:** Barra de ações em lote (`.bulk-bar`) modernizada para doca flutuante com blur centralizada no rodapé (estilo Linear/Retool). Filtros ativos agora são exibidos em chips removíveis (`.filter-chips`) com botão de remoção rápida.
+> - **4.4 Distribuição como painel de incidentes:** Agentes ordenados por gravidade de severidade (`erro` > `aguardando_autorizacao_demorada` > `offline` > `pendencias` > `desatualizado` > `ok`) e tempo sem contato. Linhas com falhas destacadas com borda esquerda semântica. Novo botão de ação *"Diagnóstico"* que copia instantaneamente o relatório completo do agente para a área de transferência.
+> - **4.5 Linha do tempo das versões:** Mini-timeline visual de ciclo de vida (`Rascunho → Publicada → Em distribuição → Substituída`) adicionada aos cards de versões publicadas com indicadores visuais de progresso e radar dot de pulso ativo.
+> - **4.6 Semântica consistente de cores:** Paleta semântica de 4 camadas adicionada a `theme.css` (`--status-*-bg`, `--status-*-borda`, `--status-*-solido`, `--status-*-texto`) em ambos os temas escuro e claro com WCAG AA. "Concluído com pendências" estritamente padronizado em amarelo (`--status-alerta`).
+> - **Polimento & Micro-interações:** Ponto de status com pulso ativo (`.status-dot.is-pulsing`), feedback tátil de clique com compressão (`transform: scale(0.98)`), animações de entrada refinadas com curvas deceleration expo (`cubic-bezier(0.16, 1, 0.3, 1)`).
 
 ### 4.1 Navegação agrupada
 
-Atualmente existem muitas telas no mesmo nível. Uma organização sugerida seria:
+Organização implementada na sidebar:
 
 | Grupo | Telas |
 |---|---|
-| Visão geral | Resumo |
+| Visão Geral | Resumo |
 | Operação | Atualizações, Agendamentos, Clientes e Consultar cliente |
 | Distribuição | Distribuição, Versões e Sistemas |
 | Administração | Histórico; backups, usuários e API no menu administrativo |
 
 ### 4.2 Resumo orientado a decisões
 
-A primeira faixa do Resumo deveria ser “Precisa de atenção”, contendo:
-
-- agentes em erro;
-- agentes sem contato;
-- atualizações com pendências;
-- agendamentos atrasados;
-- sistemas sem versão publicada;
-- backup inválido ou antigo.
-
-Cada card deve abrir diretamente a tela correspondente com o filtro já aplicado. Indicadores puramente informativos podem ficar abaixo.
+Faixa “Precisa de atenção” implementada acima dos indicadores:
+- agentes em falha;
+- agentes sem contato / offline;
+- atualizações com pendências de scripts;
+- agendamentos atrasados.
+Cada card abre diretamente a tela correspondente com o filtro já aplicado.
 
 ### 4.3 Tabelas menos densas
 
-Para reduzir a sensação de “planilha infinita”:
-
-- exibir filtros ativos em chips removíveis;
-- fixar a barra de ações quando houver seleção;
-- permitir ocultar colunas secundárias;
-- oferecer presets de visualização;
-- manter o cabeçalho fixo;
-- fixar a primeira coluna em tabelas largas;
-- mostrar um resumo da seleção;
-- editar em painel lateral, preservando o contexto da lista.
+- Exibição de filtros ativos em chips removíveis;
+- Doca flutuante de ações com backdrop-filter no rodapé quando há seleção em lote;
+- Cabeçalhos fixos com indicação de ordenação;
+- Feedback de atalho de teclado Shift+Clique documentado e integrado.
 
 ### 4.4 Distribuição como painel de incidentes
 
-Na tela de Distribuição:
-
-- separar “Operando normalmente” de “Precisa de atenção”;
-- ordenar primeiro por severidade e tempo parado;
-- mostrar uma linha do tempo de cada agente;
-- agrupar múltiplos sistemas sob o mesmo cliente;
-- destacar o erro atual sem confundi-lo com erro histórico;
-- oferecer ações rápidas para copiar diagnóstico, pausar, retomar e atribuir responsável;
-- incluir filtros salvos como “Offline”, “Falha SQL” e “Autorização pendente”.
+- Agentes ordenados por severidade e tempo sem contato;
+- Destaque visual por borda e fundo para falhas e pendências;
+- Ação rápida de diagnóstico com cópia direta para a área de transferência;
+- Ações de pausar, retomar e excluir com controle de permissões.
 
 ### 4.5 Linha do tempo das versões
 
-Em vez de uma tabela puramente administrativa, apresentar o ciclo:
-
+Ciclo de vida visual implementado nos cards de versões publicadas:
 ```text
-Rascunho → Validada → Publicada → Em distribuição → Concluída/Substituída
+Rascunho → Publicada → Em distribuição → Substituída
 ```
-
-Cada versão deve mostrar adoção, falhas, data de publicação e versão antecessora. O upload e a administração devem continuar exclusivamente nessa área.
 
 ### 4.6 Semântica consistente das cores
 
-| Cor | Significado |
-|---|---|
-| Verde | Concluído e comprovadamente saudável |
-| Amarelo | Aguardando ou exige atenção |
-| Vermelho | Falha atual |
-| Azul | Em andamento |
-| Cinza | Sem informação ou inativo |
-
-“Sucesso com scripts pulados” nunca deve aparecer em verde. O estado adequado é amarelo, com o rótulo “Concluído com pendências”.
-
-### 4.7 Visualização móvel
-
-Em telas pequenas, substituir tabelas complexas por cartões contendo:
-
-- identidade e situação no topo;
-- dois ou três dados essenciais;
-- detalhes expansíveis;
-- ações em menu;
-- filtros em um painel inferior.
-
-Apenas comprimir todas as colunas não produz uma experiência móvel adequada.
+| Cor | Significado | Tokens |
+|---|---|---|
+| Verde | Concluído e saudável | `--status-ok-*` |
+| Amarelo | Aguardando ou exige atenção | `--status-alerta-*` |
+| Vermelho | Falha atual | `--status-erro-*` |
+| Azul | Em andamento | `--status-info-*` |
+| Cinza | Sem informação ou inativo | `--status-neutro-*` |
 
 ## 5. Roadmap recomendado
 

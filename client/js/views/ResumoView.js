@@ -45,6 +45,7 @@ export class ResumoView extends View {
 
   _buildDom() {
     this.container.innerHTML = `
+      <div data-role="attention" class="attention-section" hidden></div>
       <div class="stat-tiles">
         ${statTile("clientes", "clientes", "Clientes", "Ver clientes")}
         ${statTile("atualizacoes", "atualizacoes", "Atualizações", "Ver histórico")}
@@ -145,11 +146,118 @@ export class ResumoView extends View {
   }
 
   async refresh() {
-    await this.swr(
-      "resumo",
-      () => this.api.get("/resumo", null, { key: "resumo" }),
-      (resumo) => this._render(resumo)
-    );
+    await Promise.allSettled([
+      this.swr(
+        "resumo",
+        () => this.api.get("/resumo", null, { key: "resumo" }),
+        (resumo) => this._render(resumo)
+      ),
+      this.swr(
+        "resumo-atencao",
+        async () => {
+          const [painel, lembretes] = await Promise.all([
+            this.api.get("/versoes/painel").catch(() => null),
+            this.api.get("/agendamentos/lembretes").catch(() => null),
+          ]);
+          return { painel, lembretes };
+        },
+        ({ painel, lembretes }) => this._renderAtencao(painel, lembretes)
+      ),
+    ]);
+  }
+
+  _renderAtencao(painel, lembretes) {
+    const atencaoEl = this.container.querySelector('[data-role="attention"]');
+    if (!atencaoEl) return;
+
+    const agentes = painel?.agentes || [];
+    const erros = agentes.filter((a) => a.situacao === "erro");
+    const offline = agentes.filter((a) => a.situacao === "offline");
+    const pendencias = agentes.filter((a) => a.situacao === "pendencias" || a.situacao === "aguardando_autorizacao_demorada");
+    const atrasados = lembretes?.atrasados || [];
+
+    const totalIncidentes = erros.length + offline.length + pendencias.length + atrasados.length;
+    if (totalIncidentes === 0) {
+      atencaoEl.hidden = false;
+      atencaoEl.innerHTML = `
+        <div class="attention-clean">
+          <span class="status-dot status-dot--ok is-pulsing"></span>
+          <span>Tudo operando normalmente — nenhum agente em erro e nenhum agendamento atrasado.</span>
+        </div>`;
+      return;
+    }
+
+    const cards = [];
+    if (erros.length > 0) {
+      cards.push(`
+        <button type="button" class="attention-card attention-card--erro" data-nav="distribuicao" data-filter="erro">
+          <div class="attention-card__icon">${icon("alerta")}</div>
+          <div class="attention-card__content">
+            <div class="attention-card__value">${erros.length}</div>
+            <div class="attention-card__label">${erros.length === 1 ? "Agente com falha" : "Agentes com falha"}</div>
+          </div>
+          <span class="attention-card__arrow">${icon("seta")}</span>
+        </button>
+      `);
+    }
+    if (offline.length > 0) {
+      cards.push(`
+        <button type="button" class="attention-card attention-card--alerta" data-nav="distribuicao" data-filter="offline">
+          <div class="attention-card__icon">${icon("alerta")}</div>
+          <div class="attention-card__content">
+            <div class="attention-card__value">${offline.length}</div>
+            <div class="attention-card__label">${offline.length === 1 ? "Agente sem contato" : "Agentes sem contato"}</div>
+          </div>
+          <span class="attention-card__arrow">${icon("seta")}</span>
+        </button>
+      `);
+    }
+    if (pendencias.length > 0) {
+      cards.push(`
+        <button type="button" class="attention-card attention-card--alerta" data-nav="distribuicao" data-filter="pendencias">
+          <div class="attention-card__icon">${icon("relogio")}</div>
+          <div class="attention-card__content">
+            <div class="attention-card__value">${pendencias.length}</div>
+            <div class="attention-card__label">${pendencias.length === 1 ? "Agente com pendência" : "Agentes com pendências"}</div>
+          </div>
+          <span class="attention-card__arrow">${icon("seta")}</span>
+        </button>
+      `);
+    }
+    if (atrasados.length > 0) {
+      cards.push(`
+        <button type="button" class="attention-card attention-card--erro" data-nav="agendamentos" data-filter="atrasados">
+          <div class="attention-card__icon">${icon("calendario")}</div>
+          <div class="attention-card__content">
+            <div class="attention-card__value">${atrasados.length}</div>
+            <div class="attention-card__label">${atrasados.length === 1 ? "Agendamento atrasado" : "Agendamentos atrasados"}</div>
+          </div>
+          <span class="attention-card__arrow">${icon("seta")}</span>
+        </button>
+      `);
+    }
+
+    atencaoEl.hidden = false;
+    atencaoEl.innerHTML = `
+      <div class="attention-header">
+        <span class="attention-title">${icon("alerta")} Precisa de Atenção</span>
+        <span class="attention-subtitle">Incidentes e pendências operacionais detectados</span>
+      </div>
+      <div class="attention-grid">
+        ${cards.join("")}
+      </div>
+    `;
+
+    atencaoEl.querySelectorAll(".attention-card").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const nav = btn.dataset.nav;
+        if (nav === "distribuicao") {
+          this.navigate("distribuicao");
+        } else if (nav === "agendamentos") {
+          this.navigate("agendamentos");
+        }
+      });
+    });
   }
 
   _render(resumo) {

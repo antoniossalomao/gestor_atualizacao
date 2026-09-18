@@ -37,23 +37,23 @@ import { ConexaoBanner } from "./ConexaoBanner.js";
  * app inteiro e portanto não dizia nada sobre a tela aberta.
  */
 const TABS = [
-  { key: "resumo", label: "Resumo", icon: "resumo", View: ResumoView,
+  { key: "resumo", label: "Resumo", icon: "resumo", View: ResumoView, grupo: "Visão Geral",
     descricao: "Indicadores gerais e quem está sem atualização há mais tempo." },
-  { key: "atualizacoes", label: "Atualizações", icon: "atualizacoes", View: AtualizacoesView,
+  { key: "atualizacoes", label: "Atualizações", icon: "atualizacoes", View: AtualizacoesView, grupo: "Operação",
     descricao: "Histórico de atualizações feitas em cada cliente." },
-  { key: "distribuicao", label: "Distribuição", icon: "distribuicao", View: DistribuicaoView,
-    descricao: "Acompanhe os agentes e os relatórios das atualizações." },
-  { key: "versoes", label: "Versões", icon: "versoes", View: VersoesView,
-    descricao: "Envie, publique e administre as versões distribuídas." },
-  { key: "agendamentos", label: "Agendamentos", icon: "agendamentos", View: AgendamentosView,
+  { key: "agendamentos", label: "Agendamentos", icon: "agendamentos", View: AgendamentosView, grupo: "Operação",
     descricao: "Agenda interna de tarefas da equipe." },
-  { key: "clientes", label: "Clientes", icon: "clientes", View: ClientesView,
+  { key: "clientes", label: "Clientes", icon: "clientes", View: ClientesView, grupo: "Operação",
     descricao: "Cadastro de clientes e dos sistemas que cada um usa." },
-  { key: "consulta", label: "Consultar Cliente", icon: "consulta", View: ConsultaView,
+  { key: "consulta", label: "Consultar Cliente", icon: "consulta", View: ConsultaView, grupo: "Operação",
     descricao: "Ficha completa de um cliente específico." },
-  { key: "sistemas", label: "Sistemas", icon: "sistemas", View: SistemasView,
+  { key: "distribuicao", label: "Distribuição", icon: "distribuicao", View: DistribuicaoView, grupo: "Distribuição",
+    descricao: "Acompanhe os agentes e os relatórios das atualizações." },
+  { key: "versoes", label: "Versões", icon: "versoes", View: VersoesView, grupo: "Distribuição",
+    descricao: "Envie, publique e administre as versões distribuídas." },
+  { key: "sistemas", label: "Sistemas", icon: "sistemas", View: SistemasView, grupo: "Distribuição",
     descricao: "Relatório por sistema, com data de corte opcional." },
-  { key: "historico", label: "Histórico", icon: "historico", View: HistoricoView,
+  { key: "historico", label: "Histórico", icon: "historico", View: HistoricoView, grupo: "Administração",
     descricao: "Quem criou, editou ou excluiu o quê, e quando." },
 ];
 
@@ -232,18 +232,9 @@ export class App {
         <!-- O botão de recolher também saiu: era um ícone sem rótulo cujo
              efeito só se descobre clicando, e "Menu lateral: Aberto /
              Recolhido" em Configurações diz a mesma coisa por extenso. -->
-        <div class="app-sidebar__label">Workspace</div>
         <nav class="tabs" role="tablist" aria-label="Telas do sistema"></nav>
-        <!--
-          Backups e Usuários moraram aqui por um tempo, soltos ao lado de
-          Configurações. Eram três entradas para o mesmo tipo de coisa ("os
-          ajustes do sistema", não "uma tela de trabalho"), competindo com as
-          nove abas logo acima. Agora existe UMA porta, e as três coisas estão
-          atrás dela -- é o que faz o rodapé parar de ser uma segunda lista de
-          navegação disputando atenção com a primeira.
-        -->
         <div class="app-sidebar__footer">
-          <button type="button" class="btn btn--small btn--sidebar" data-action="config">${icon("config")} <span>Configurações</span></button>
+          <button type="button" class="btn btn--small btn--sidebar" data-action="config" data-tooltip="Configurações">${icon("config")} <span>Configurações</span></button>
         </div>
       </aside>
       <section class="app-shell">
@@ -344,11 +335,21 @@ export class App {
     const tabsNav = this.root.querySelector(".tabs");
     const main = this.root.querySelector(".app-main");
 
+    let ultimoGrupo = null;
     for (const [i, tab] of TABS.entries()) {
+      if (tab.grupo && tab.grupo !== ultimoGrupo) {
+        ultimoGrupo = tab.grupo;
+        const grupoEl = document.createElement("div");
+        grupoEl.className = "app-sidebar__group-title";
+        grupoEl.textContent = tab.grupo;
+        tabsNav.appendChild(grupoEl);
+      }
+
       const button = document.createElement("button");
       button.type = "button";
       button.className = "tab-button";
       button.dataset.tab = tab.key;
+      button.dataset.tooltip = tab.label;
       // Semântica de abas de verdade: o leitor de tela anuncia "aba 3 de 9,
       // selecionada", e as setas navegam entre elas (ver _navegarAbas).
       button.setAttribute("role", "tab");

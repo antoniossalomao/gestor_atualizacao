@@ -349,6 +349,27 @@ export class DistribuicaoView extends View {
       }
       return true;
     });
+
+    // Ordenação por severidade: incidentes (erro, demorado, offline, pendências) primeiro
+    const SEVERIDADE_RANK = {
+      erro: 0,
+      aguardando_autorizacao_demorada: 1,
+      offline: 2,
+      pendencias: 3,
+      desatualizado: 4,
+      pendente: 5,
+      aguardando_autorizacao: 6,
+      pausado: 7,
+      ok: 8,
+    };
+
+    filtered.sort((a, b) => {
+      const rankA = SEVERIDADE_RANK[a.situacao] ?? 99;
+      const rankB = SEVERIDADE_RANK[b.situacao] ?? 99;
+      if (rankA !== rankB) return rankA - rankB;
+      return new Date(a.ultimaComunicacao || 0) - new Date(b.ultimaComunicacao || 0);
+    });
+
     body.replaceChildren();
     this.container.querySelector('[data-role="agents-count"]').textContent =
       filtered.length === all.length ? plural(all.length, "agente") : `${filtered.length} de ${plural(all.length, "agente")}`;
@@ -373,7 +394,9 @@ export class DistribuicaoView extends View {
     for (const agent of filtered) {
       const situation = SITUACOES[agent.situacao] || SITUACOES.pendente;
       const row = document.createElement("tr");
-      row.className = "is-readonly";
+      const isErro = agent.situacao === "erro" || agent.situacao === "aguardando_autorizacao_demorada";
+      const isAlerta = agent.situacao === "offline" || agent.situacao === "pendencias";
+      row.className = `is-readonly ${isErro ? "row--incident-erro" : isAlerta ? "row--incident-alerta" : ""}`;
       row.innerHTML = `
         <td data-label="Empresa"><div class="distribution-agent-identity"><strong>${escapeHtml(agent.empresa)}</strong><small class="table-subtext">${escapeHtml(agent.cnpj)}${agent.maquina ? ` · ${escapeHtml(agent.maquina)}` : ""}</small></div></td>
         <td data-label="Situação"><span class="badge ${situation.badge}">${situation.label}</span></td>
@@ -395,6 +418,33 @@ export class DistribuicaoView extends View {
       details.addEventListener("click", () => new AgenteDetalheModal(this.api, agent).open());
       const actions = row.querySelector('[data-role="actions"]');
       actions.appendChild(details);
+
+      const diagBtn = document.createElement("button");
+      diagBtn.type = "button";
+      diagBtn.className = "btn btn--small btn--ghost";
+      diagBtn.textContent = "Diagnóstico";
+      diagBtn.title = "Copiar dados de diagnóstico deste agente";
+      diagBtn.addEventListener("click", async () => {
+        const textoDiag = [
+          `Empresa: ${agent.empresa}`,
+          `CNPJ: ${agent.cnpj}`,
+          agent.maquina ? `Máquina: ${agent.maquina}` : null,
+          `Sistema: ${agent.ultimoSistema || "N/D"}`,
+          `Versão Atual: ${agent.ultimaVersao || "N/D"}`,
+          `Versão Publicada: ${agent.versaoAlvo || "N/D"}`,
+          `Situação: ${situation.label}`,
+          `Último Contato: ${formatarDataHora(agent.ultimaComunicacao)} (${tempoRelativo(agent.ultimaComunicacao)})`,
+        ]
+          .filter(Boolean)
+          .join("\n");
+
+        if (await copyToClipboard(textoDiag)) {
+          toast.success(`Diagnóstico de ${agent.empresa} copiado.`);
+        } else {
+          toast.error("Não foi possível copiar o diagnóstico.");
+        }
+      });
+      actions.appendChild(diagBtn);
 
       const pause = document.createElement("button");
       pause.type = "button";

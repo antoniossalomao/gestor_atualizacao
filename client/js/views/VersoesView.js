@@ -235,6 +235,27 @@ export class VersoesView extends View {
           <strong>${escapeHtml(item.sistema || "Sistema não informado")}</strong>
           <span data-role="meta"></span>
           <div data-role="changelog"></div>
+          <div class="version-timeline">
+            <div class="version-timeline__step is-done">
+              <span class="version-timeline__dot">${icon("check")}</span>
+              <span class="version-timeline__name">Rascunho</span>
+            </div>
+            <div class="version-timeline__line is-done"></div>
+            <div class="version-timeline__step is-done">
+              <span class="version-timeline__dot">${icon("check")}</span>
+              <span class="version-timeline__name">Publicada</span>
+            </div>
+            <div class="version-timeline__line is-active"></div>
+            <div class="version-timeline__step is-active">
+              <span class="version-timeline__dot"><span class="status-dot status-dot--ok is-pulsing"></span></span>
+              <span class="version-timeline__name">Em distribuição</span>
+            </div>
+            <div class="version-timeline__line"></div>
+            <div class="version-timeline__step">
+              <span class="version-timeline__dot"></span>
+              <span class="version-timeline__name">Substituída</span>
+            </div>
+          </div>
         </div>
         <div class="published-release__state"><span class="badge badge--success">No ar</span></div>
       `;

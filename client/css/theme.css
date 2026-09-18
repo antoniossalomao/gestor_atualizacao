@@ -73,6 +73,32 @@
   --cor-sobre-alerta: #1a1406;
   --cor-sobre-perigo: #1a0d0d;
 
+  /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
+  --status-ok-bg: rgba(74, 222, 128, 0.12);
+  --status-ok-borda: rgba(74, 222, 128, 0.28);
+  --status-ok-solido: #4ade80;
+  --status-ok-texto: #86efac;
+
+  --status-alerta-bg: rgba(251, 191, 36, 0.12);
+  --status-alerta-borda: rgba(251, 191, 36, 0.28);
+  --status-alerta-solido: #fbbf24;
+  --status-alerta-texto: #fde68a;
+
+  --status-erro-bg: rgba(248, 113, 113, 0.12);
+  --status-erro-borda: rgba(248, 113, 113, 0.30);
+  --status-erro-solido: #f87171;
+  --status-erro-texto: #fca5a5;
+
+  --status-info-bg: rgba(74, 158, 255, 0.12);
+  --status-info-borda: rgba(74, 158, 255, 0.28);
+  --status-info-solido: #4a9eff;
+  --status-info-texto: #93c5fd;
+
+  --status-neutro-bg: rgba(148, 163, 184, 0.12);
+  --status-neutro-borda: rgba(148, 163, 184, 0.25);
+  --status-neutro-solido: #94a3b8;
+  --status-neutro-texto: #cbd5e1;
+
   /* Fundos usados pelas tabelas com linha tingida por severidade (Resumo,
      Sistemas). Como o cálculo é feito em JavaScript (blendHex), estes
      precisam ser hex de 6 dígitos -- rgba() não serve para a conta. */
@@ -327,6 +353,32 @@
   --cor-sobre-alerta: #ffffff;
   --cor-sobre-perigo: #ffffff;
 
+  /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
+  --status-ok-bg: #ecfdf5;
+  --status-ok-borda: #a7f3d0;
+  --status-ok-solido: #157f4a;
+  --status-ok-texto: #065f46;
+
+  --status-alerta-bg: #fffbeb;
+  --status-alerta-borda: #fde68a;
+  --status-alerta-solido: #9a6200;
+  --status-alerta-texto: #854d0e;
+
+  --status-erro-bg: #fef2f2;
+  --status-erro-borda: #fecdd3;
+  --status-erro-solido: #c62f38;
+  --status-erro-texto: #991b1b;
+
+  --status-info-bg: #eff6ff;
+  --status-info-borda: #bfdbfe;
+  --status-info-solido: #1263d6;
+  --status-info-texto: #1e40af;
+
+  --status-neutro-bg: #f1f5f9;
+  --status-neutro-borda: #e2e8f0;
+  --status-neutro-solido: #64748b;
+  --status-neutro-texto: #334155;
+
   --zebra-a: #ffffff;
   --zebra-b: #f5f7fc;
   --severidade-alta: #e05252;
@@ -378,6 +430,32 @@
     --cor-sobre-accent: #ffffff;
     --cor-sobre-alerta: #ffffff;
     --cor-sobre-perigo: #ffffff;
+
+    /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
+    --status-ok-bg: #ecfdf5;
+    --status-ok-borda: #a7f3d0;
+    --status-ok-solido: #157f4a;
+    --status-ok-texto: #065f46;
+
+    --status-alerta-bg: #fffbeb;
+    --status-alerta-borda: #fde68a;
+    --status-alerta-solido: #9a6200;
+    --status-alerta-texto: #854d0e;
+
+    --status-erro-bg: #fef2f2;
+    --status-erro-borda: #fecdd3;
+    --status-erro-solido: #c62f38;
+    --status-erro-texto: #991b1b;
+
+    --status-info-bg: #eff6ff;
+    --status-info-borda: #bfdbfe;
+    --status-info-solido: #1263d6;
+    --status-info-texto: #1e40af;
+
+    --status-neutro-bg: #f1f5f9;
+    --status-neutro-borda: #e2e8f0;
+    --status-neutro-solido: #64748b;
+    --status-neutro-texto: #334155;
 
     --zebra-a: #ffffff;
     --zebra-b: #f5f7fc;

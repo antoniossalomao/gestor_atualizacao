@@ -104,6 +104,7 @@ export class AtualizacoesView extends View {
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
         </div>
+        <div data-role="filter-chips" class="filter-chips" hidden></div>
         <!--
           Sem coluna de caixinhas, o Shift+clique não tem NENHUM indício visual
           na tabela -- é um gesto que ninguém adivinha sozinho. Esta linha é a
@@ -434,6 +435,74 @@ export class AtualizacoesView extends View {
 
   _pintarLimparFiltros() {
     this.botaoLimparFiltros.hidden = !this._temFiltro();
+    const chipsEl = this.container.querySelector('[data-role="filter-chips"]');
+    if (!chipsEl) return;
+
+    const chips = [];
+    if (this.busca) {
+      chips.push({
+        id: "busca",
+        label: `Busca: "${this.busca}"`,
+        clear: () => {
+          this.busca = "";
+          this.searchInput.value = "";
+          this._trocouDeFiltro();
+          this._salvarFiltros();
+          this.page = 1;
+          this._reloadList();
+        },
+      });
+    }
+    if (this.responsavel && this.responsavel !== "Todos") {
+      chips.push({
+        id: "responsavel",
+        label: `Responsável: ${this.responsavel}`,
+        clear: () => {
+          this.responsavel = "Todos";
+          this.responsavelFilter.value = "Todos";
+          this._trocouDeFiltro();
+          this._salvarFiltros();
+          this.page = 1;
+          this._reloadList();
+        },
+      });
+    }
+    if (this.desde || this.ate) {
+      const periodoTexto =
+        this.desde && this.ate
+          ? `${this.desde} a ${this.ate}`
+          : this.desde
+          ? `A partir de ${this.desde}`
+          : `Até ${this.ate}`;
+      chips.push({
+        id: "periodo",
+        label: `Período: ${periodoTexto}`,
+        clear: () => {
+          this._aplicarPeriodo("", "");
+        },
+      });
+    }
+
+    if (chips.length === 0) {
+      chipsEl.hidden = true;
+      chipsEl.innerHTML = "";
+      return;
+    }
+
+    chipsEl.hidden = false;
+    chipsEl.innerHTML = chips
+      .map(
+        (c) =>
+          `<span class="filter-chip"><span>${escapeHtml(c.label)}</span><button type="button" class="filter-chip__remove" data-chip="${c.id}" aria-label="Remover filtro">✕</button></span>`
+      )
+      .join("");
+
+    chipsEl.querySelectorAll(".filter-chip__remove").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const found = chips.find((c) => c.id === btn.dataset.chip);
+        found?.clear();
+      });
+    });
   }
 
   _limparFiltros() {
