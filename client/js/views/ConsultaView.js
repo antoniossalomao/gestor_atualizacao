@@ -8,6 +8,22 @@ import { tempoRelativo, formatarDataHora } from "../core/date.js";
 const MAX_SUGESTOES = 50;
 
 /**
+ * Um log de atualização pode registrar vários sistemas de uma vez, separados
+ * por vírgula (ex.: "B_Vendas, B_NFe, B_Importa" quando o lote atualiza os
+ * três juntos). Sem separar esses nomes, a matriz de versões tratava a
+ * string inteira como se fosse um "sistema" só, e cada sistema individual
+ * (ex.: "B_Vendas" sozinho) nunca batia com o registro combinado -- mesmo
+ * instalado, aparecia como "Não instalado". Mesmo critério de split usado no
+ * backend (ver splitSystems em AtualizacaoRepository.js).
+ */
+function splitSistemas(texto) {
+  return String(texto || "")
+    .split(/,|\s+e\s+/i)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
  * Aba Consultar Cliente: busca por nome e mostra sistemas + última
  * atualização. Equivalente de gestor/views/consulta.py.
  *
@@ -244,12 +260,8 @@ export class ConsultaView extends View {
       return false;
     });
 
-    agentes.forEach((a) => {
-      if (a.ultimoSistema) sistemas.add(a.ultimoSistema);
-    });
-    (historico || []).forEach((h) => {
-      if (h.sistema) sistemas.add(h.sistema);
-    });
+    agentes.forEach((a) => splitSistemas(a.ultimoSistema).forEach((s) => sistemas.add(s)));
+    (historico || []).forEach((h) => splitSistemas(h.sistema).forEach((s) => sistemas.add(s)));
 
     const listaSistemas = Array.from(sistemas).sort((a, b) => a.localeCompare(b));
     if (listaSistemas.length === 0) {
@@ -270,15 +282,15 @@ export class ConsultaView extends View {
     tableWrap.style.marginBottom = "var(--sp-2)";
 
     const table = document.createElement("table");
-    table.className = "table";
+    table.className = "data-table";
     table.innerHTML = `
       <thead>
         <tr>
-          <th>Sistema</th>
-          <th style="text-align: right">Instalada</th>
-          <th style="text-align: right">Publicada</th>
-          <th>Estado</th>
-          <th>Último contato</th>
+          <th scope="col">Sistema</th>
+          <th scope="col" style="text-align: right">Instalada</th>
+          <th scope="col" style="text-align: right">Publicada</th>
+          <th scope="col">Estado</th>
+          <th scope="col">Último contato</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -288,8 +300,10 @@ export class ConsultaView extends View {
 
     for (const sistema of listaSistemas) {
       const versaoAtiva = ativas.find((v) => v.sistema.toLowerCase() === sistema.toLowerCase())?.versao || null;
-      const agente = agentes.find((a) => a.ultimoSistema && a.ultimoSistema.toLowerCase() === sistema.toLowerCase());
-      const histReg = (historico || []).find((h) => h.sistema && h.sistema.toLowerCase() === sistema.toLowerCase());
+      const agente = agentes.find((a) => splitSistemas(a.ultimoSistema).some((s) => s.toLowerCase() === sistema.toLowerCase()));
+      // historico já vem ordenado do mais recente pro mais antigo (recent-by-client), então o
+      // primeiro registro cujo campo sistema mencione este sistema é o mais atual para ele.
+      const histReg = (historico || []).find((h) => splitSistemas(h.sistema).some((s) => s.toLowerCase() === sistema.toLowerCase()));
 
       const instalada = agente?.ultimaVersao || histReg?.versao || "—";
       const publicada = versaoAtiva || "Nenhuma";
