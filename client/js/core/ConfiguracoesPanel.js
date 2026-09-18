@@ -478,6 +478,42 @@ export class ConfiguracoesPanel {
       },
 
       {
+        id: "seguranca",
+        titulo: "Segurança",
+        icone: "escudo",
+        descricao: "Controle de acesso, papéis de usuários, proteção de backups e chave da API.",
+        itens: [
+          {
+            tipo: "link",
+            titulo: "Usuários e Permissões",
+            ajuda: "Gerenciar contas da equipe e definir papéis (Administrador, Operador, Consulta)",
+            icone: "users",
+            busca: "segurança usuários permissões papéis rbac admin operador consulta contas",
+            acao: () => this.abrirUsuarios?.(),
+            oculto: () => typeof this.abrirUsuarios !== "function",
+          },
+          {
+            tipo: "link",
+            titulo: "Backups e Restauração Protegida",
+            ajuda: "Download preventivo e restauração protegida com senha e confirmação textual",
+            icone: "backups",
+            busca: "backup segurança restauração banco restaurar download cópia",
+            acao: () => this.abrirBackups?.(),
+            oculto: () => typeof this.abrirBackups !== "function",
+          },
+          {
+            tipo: "link",
+            titulo: "Configuração da API e Agentes",
+            ajuda: "Chave secreta dos agentes C#, URL pública e webhook de alertas",
+            icone: "acessos",
+            busca: "api url chave token agente atualizador discord webhook intervalo configuração servidor .env",
+            acao: () => this.abrirConfiguracaoApi?.(),
+            oculto: () => typeof this.abrirConfiguracaoApi !== "function",
+          },
+        ],
+      },
+
+      {
         id: "sistema",
         titulo: "Sistema",
         icone: "config",
@@ -486,16 +522,8 @@ export class ConfiguracoesPanel {
           {
             tipo: "conta",
             busca: "conta usuário logado perfil quem sou permissão",
-            // Sem usuário (o painel é montável sem ele), a linha sairia da
-            // lista como uma caixa vazia -- e a busca por "conta" a traria de
-            // volta à tona, já que esconder é o que a busca desfaz.
             oculto: () => !this.usuario,
           },
-          /*
-           * Exportar e importar não são preferências: são duas ações sobre o
-           * conjunto delas. Ficam em Sistema, junto de Backups, porque é o
-           * mesmo tipo de tarefa -- levar um estado daqui para outro lugar.
-           */
           {
             tipo: "link",
             titulo: "Exportar preferências",
@@ -513,39 +541,6 @@ export class ConfiguracoesPanel {
             busca: "importar carregar arquivo json preferências restaurar ajustes de outra máquina",
             fecharAntes: false,
             acao: () => this._importar(),
-          },
-          /*
-           * Backups, Usuários e Atalhos também têm forma de link, e não de
-           * ajuste: um ajuste muda como o app se comporta; estes três levam a
-           * outro lugar, e desenhá-los como trilho de opções diria que são a
-           * mesma coisa.
-           */
-          {
-            tipo: "link",
-            titulo: "Configuração da API",
-            ajuda: "URL pública, chave dos agentes, webhook do Discord",
-            icone: "acessos",
-            busca: "api url chave token agente atualizador discord webhook intervalo configuração servidor .env",
-            acao: () => this.abrirConfiguracaoApi?.(),
-            oculto: () => typeof this.abrirConfiguracaoApi !== "function",
-          },
-          {
-            tipo: "link",
-            titulo: "Backups",
-            ajuda: "Salvar e restaurar cópias do banco",
-            icone: "backups",
-            busca: "backup cópia restaurar banco segurança exportar",
-            acao: () => this.abrirBackups?.(),
-            oculto: () => typeof this.abrirBackups !== "function",
-          },
-          {
-            tipo: "link",
-            titulo: "Usuários",
-            ajuda: "Quem tem acesso e com qual permissão",
-            icone: "users",
-            busca: "usuários acesso permissão senha conta equipe",
-            acao: () => this.abrirUsuarios?.(),
-            oculto: () => typeof this.abrirUsuarios !== "function",
           },
           {
             tipo: "link",

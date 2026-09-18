@@ -220,6 +220,19 @@ export class AgendamentosView extends View {
 
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
 
+    if (this.ctx?.user?.role === "consulta") {
+      this.form.hidden = true;
+      this.deleteBtn.hidden = true;
+      this.doneBtn.hidden = true;
+      this.arquivarBtn.hidden = true;
+      this.converterBtn.hidden = true;
+      this.reabrirBtn.hidden = true;
+      this.bulkConcluir.hidden = true;
+      this.bulkExcluir.hidden = true;
+      const hint = this.container.querySelector(".bulk-hint");
+      if (hint) hint.hidden = true;
+    }
+
     this._pintarLimparFiltros();
     this.clearForm();
   }

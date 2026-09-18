@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const { ValidationError } = require("./errors");
+const { ValidationError, ForbiddenError } = require("./errors");
 
 /** Status que o agente pode reportar, agrupados pelo que significam no painel. */
 const STATUS_SUCESSO = ["OK", "SUCESSO", "ATUALIZADO", "CONCLUIDO"];
@@ -63,10 +63,13 @@ class VersaoService {
   }
 
   /**
-   * Remove do painel um agente e todos os retornos associados ao seu CNPJ.
-   * Ele reaparece normalmente caso volte a enviar um retorno depois disso.
+   * Resolve um agente do painel a partir de um identificador informado pelo
+   * usuário (CNPJ com ou sem pontuação, ou um código legado sem dígitos).
+   * Compartilhado por toda ação que age sobre "o agente com este CNPJ" --
+   * remover, pausar, retomar -- para as três nunca divergirem em como
+   * casam o identificador contra `agentes()`.
    */
-  removerAgente(cnpj, usuario) {
+  _encontrarAgente(cnpj) {
     const identificador = String(cnpj || "").trim();
     if (!identificador) throw new ValidationError("Informe o identificador do agente.");
 
@@ -77,8 +80,17 @@ class VersaoService {
       return cnpjNumerico ? atual.replace(/\D/g, "") === somenteDigitos : atual === identificador;
     });
     if (!agente) throw new ValidationError("Agente não encontrado.");
+    return agente;
+  }
 
-    const retornosExcluidos = this.db.versoes.removerAgente(identificador);
+  /**
+   * Remove do painel um agente e todos os retornos associados ao seu CNPJ.
+   * Ele reaparece normalmente caso volte a enviar um retorno depois disso.
+   */
+  removerAgente(cnpj, usuario) {
+    const agente = this._encontrarAgente(cnpj);
+
+    const retornosExcluidos = this.db.versoes.removerAgente(agente.cnpj);
     if (retornosExcluidos === 0) {
       throw new ValidationError("Nenhum retorno do agente foi excluído. Atualize a tela e tente novamente.");
     }
@@ -89,6 +101,40 @@ class VersaoService {
       `Agente ${agente.empresa || agente.cnpj} (${agente.cnpj}) excluído com ${retornosExcluidos} retorno(s)`
     );
     return { ok: true, retornosExcluidos };
+  }
+
+  /**
+   * Pausa remotamente um agente: o Worker C# desse cliente para de verificar
+   * e aplicar atualizações a partir do próximo ciclo (poll de 10s no caminho
+   * saudável -- ver GET /update/status/:cnpj e o "check-safety-net" em
+   * check() abaixo, para agentes que ainda não têm o pre-check dedicado). O
+   * agente continua rodando e comunicando normalmente; só a Fase 1
+   * (checar/baixar) e a Fase 3/4 (aplicar) ficam suspensas. Reversível a
+   * qualquer momento por retomarAgente().
+   */
+  pausarAgente(cnpj, usuario, motivo) {
+    const agente = this._encontrarAgente(cnpj);
+    this.db.versoes.pausarAgente(agente.cnpj, usuario?.id, motivo ? String(motivo).trim() : null);
+    this.historico.registrar(
+      usuario,
+      "pausar",
+      "agente",
+      `Agente ${agente.empresa || agente.cnpj} (${agente.cnpj}) pausado${motivo ? `: ${motivo}` : ""}`
+    );
+    return { ok: true };
+  }
+
+  /** Retoma um agente pausado -- ele volta a verificar atualizações no próximo ciclo. */
+  retomarAgente(cnpj, usuario) {
+    const agente = this._encontrarAgente(cnpj);
+    this.db.versoes.retomarAgente(agente.cnpj);
+    this.historico.registrar(usuario, "retomar", "agente", `Agente ${agente.empresa || agente.cnpj} (${agente.cnpj}) retomado`);
+    return { ok: true };
+  }
+
+  /** Consultado pelo Worker C# (GET /update/status/:cnpj) a cada ciclo saudável. */
+  statusAgente(cnpj) {
+    return { pausado: this.db.versoes.pausado(String(cnpj || "").trim()) };
   }
 
   /**
@@ -114,9 +160,11 @@ class VersaoService {
       const alvo = versaoPorSistema.get(a.ultimoSistema) || null;
       const status = String(a.ultimoStatus || "").toUpperCase();
       const horasSemContato = ultima ? Math.floor((agora - ultima) / 3600000) : null;
+      const pausado = Boolean(a.pausadoEm);
       return {
         ...a,
         online,
+        pausado,
         horasSemContato,
         // "Está na versão que publicamos?" é a pergunta central do painel e
         // não dava para responder antes: a tela mostrava o status do agente,
@@ -124,6 +172,7 @@ class VersaoService {
         versaoAlvo: alvo,
         atualizado: alvo != null && a.ultimaVersao === alvo,
         situacao: derivarSituacao({
+          pausado,
           online,
           status,
           ultimaVersao: a.ultimaVersao,
@@ -139,6 +188,7 @@ class VersaoService {
     const comPendencias = agentes.filter((a) => a.situacao === "pendencias").length;
     const desatualizados = agentes.filter((a) => a.situacao === "desatualizado").length;
     const offline = agentes.filter((a) => !a.online).length;
+    const pausados = agentes.filter((a) => a.pausado).length;
     const aguardandoAutorizacao = agentes.filter(
       (a) => a.situacao === "aguardando_autorizacao" || a.situacao === "aguardando_autorizacao_demorada"
     ).length;
@@ -155,6 +205,7 @@ class VersaoService {
         comErro,
         comPendencias,
         offline,
+        pausados,
         aguardandoAutorizacao,
         execucoes24h: porStatus24h.reduce((s, l) => s + l.total, 0),
         falhas24h: porStatus24h.filter((l) => STATUS_FALHA.includes(l.status)).reduce((s, l) => s + l.total, 0),
@@ -171,29 +222,42 @@ class VersaoService {
   }
 
   /** Cria um rascunho e transforma o upload em um pacote do contrato da API. */
-  create(input, usuario, file, baseUrl) {
-    if (file) {
-      input = {
-        ...input,
-        tamanhoBytes: file.size,
-        pacotes: [
-          {
-            file: file.filename,
-            url: `${baseUrl}/api/update/packages/${encodeURIComponent(file.filename)}`,
-            sha256: sha256(file.path),
-            bytes: file.size,
-          },
-        ],
-      };
+  async create(input, usuario, file, baseUrl) {
+    try {
+      if (file) {
+        const hash = await sha256Stream(file.path);
+        input = {
+          ...input,
+          tamanhoBytes: file.size,
+          pacotes: [
+            {
+              file: file.filename,
+              url: `${baseUrl}/api/update/packages/${encodeURIComponent(file.filename)}`,
+              sha256: hash,
+              bytes: file.size,
+            },
+          ],
+        };
+      }
+      const data = this._validate(input);
+      const item = this.db.versoes.insert({
+        ...data,
+        criadoEm: new Date().toISOString(),
+        criadoPor: usuario?.id || null,
+      });
+      this.historico.registrar(usuario, "criar", "versao", `Versão ${item.versao} de ${item.sistema} criada`);
+      return this._publicItem(item);
+    } catch (err) {
+      // Limpeza de arquivo órfão quando qualquer falha ocorre antes da persistência
+      if (file?.path) {
+        try {
+          if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        } catch {
+          /* ignora erro de limpeza */
+        }
+      }
+      throw err;
     }
-    const data = this._validate(input);
-    const item = this.db.versoes.insert({
-      ...data,
-      criadoEm: new Date().toISOString(),
-      criadoPor: usuario?.id || null,
-    });
-    this.historico.registrar(usuario, "criar", "versao", `Versão ${item.versao} de ${item.sistema} criada`);
-    return this._publicItem(item);
   }
 
   /** Atualiza apenas rascunhos; versões publicadas são imutáveis. */
@@ -207,23 +271,39 @@ class VersaoService {
   }
 
   /**
-   * Publica uma versão e aposenta automaticamente a anterior do mesmo sistema.
-   *
-   * Devolve `{ versao, substituidas }` para a tela poder dizer exatamente o
-   * que saiu do ar -- publicar é a ação de maior consequência do sistema
-   * inteiro (ela muda o que centenas de máquinas vão baixar hoje à noite), e
-   * uma confirmação genérica de "publicado com sucesso" esconde isso.
+   * Publica uma versão e aposenta automaticamente a anterior do mesmo sistema
+   * em uma ÚNICA transação atômica no banco de dados.
+   * Restrito ao perfil de Administrador.
    */
   publish(id, usuario) {
+    if (usuario && usuario.role !== "admin") {
+      throw new ForbiddenError("Apenas administradores podem publicar versões.");
+    }
     const atual = this.db.versoes.find(id);
     if (!atual) throw new ValidationError("Versão não encontrada.");
     if (atual.status === "publicada") throw new ValidationError("Esta versão já está publicada.");
     if (!atual.sistema) throw new ValidationError("Esta versão não tem sistema definido e não pode ser publicada.");
 
+    // Validação preventiva: os arquivos do pacote precisam existir no disco
+    const pacotes = JSON.parse(atual.pacotesJson || "[]");
+    if (!pacotes || pacotes.length === 0) {
+      throw new ValidationError("Esta versão não possui pacote associado e não pode ser publicada.");
+    }
+    for (const pct of pacotes) {
+      const caminho = this._caminhoPacote(pct.file);
+      if (!caminho || !fs.existsSync(caminho)) {
+        throw new ValidationError(`O arquivo do pacote '${pct.file}' não foi encontrado no disco do servidor.`);
+      }
+    }
+
     const agora = new Date().toISOString();
     const anteriores = this.db.versoes.publicadasDoSistemaExceto(atual.sistema, id);
-    const item = this.db.versoes.publish(id, agora);
-    this.db.versoes.substituir(anteriores.map((v) => v.id), agora, id);
+    const item = this.db.versoes.publicarESubstituir(
+      id,
+      agora,
+      anteriores.map((v) => v.id),
+      id
+    );
 
     this.historico.registrar(usuario, "publicar", "versao", `Versão ${item.versao} de ${item.sistema} publicada`);
     for (const antiga of anteriores) {
@@ -238,22 +318,19 @@ class VersaoService {
   }
 
   /**
-   * Remove uma versão e o arquivo do pacote -- inclusive a que está no ar
-   * (a pedido: antes isso era bloqueado, mas o único jeito de tirar uma
-   * versão publicada de vez era publicar outra por cima, o que nem sempre é
-   * o que se quer). Excluir a publicada deixa o sistema sem versão-alvo até
-   * a próxima publicação (`check()` simplesmente responde "sem atualização"
-   * nesse meio-tempo) -- não quebra nada, só destrava o histórico.
+   * Remove uma versão e o arquivo do pacote.
+   * Restrito ao perfil de Administrador.
    */
   remove(id, usuario) {
+    if (usuario && usuario.role !== "admin") {
+      throw new ForbiddenError("Apenas administradores podem excluir versões.");
+    }
     const atual = this.db.versoes.find(id);
     if (!atual) throw new ValidationError("Versão não encontrada.");
     const eraPublicada = atual.status === "publicada";
 
     for (const pacote of JSON.parse(atual.pacotesJson || "[]")) {
       const caminho = this._caminhoPacote(pacote.file);
-      // Falhar ao apagar o arquivo (permissão, arquivo já sumiu) não pode
-      // impedir a remoção do registro -- o registro é a fonte da verdade.
       try {
         if (caminho && fs.existsSync(caminho)) fs.unlinkSync(caminho);
       } catch {
@@ -281,6 +358,16 @@ class VersaoService {
   check(cnpj, versaoAtual, sistema) {
     const alvo = String(sistema || "").trim();
     if (!alvo) throw new ValidationError("Informe o sistema no parâmetro 'sistema'.");
+
+    // Rede de seguranca: o Worker C# atual consulta GET /update/status/:cnpj
+    // ANTES disto e nem chega a chamar check() se estiver pausado, mas um
+    // agente ainda rodando uma versão anterior (sem esse pre-check) não pode
+    // continuar recebendo pacotes só porque não sabe perguntar sobre pausa.
+    const identificador = String(cnpj || "").trim();
+    if (identificador && this.db.versoes.pausado(identificador)) {
+      return { update_available: false, sistema: alvo, pausado: true };
+    }
+
     const latest = this.db.versoes.latestPublished(alvo);
     if (!latest || compareVersions(latest.versao, versaoAtual || "0.0.0") <= 0) {
       return { update_available: false, sistema: alvo };
@@ -363,14 +450,20 @@ class VersaoService {
 
 /**
  * Traduz o estado bruto de um agente na situação que o painel mostra.
- * A ordem importa: "offline" ganha de tudo (não dá para afirmar nada sobre
- * uma máquina que sumiu), erro ganha de desatualizado, e um PENDENTE (Fase 2)
- * ganha uma situação própria em vez de cair no "desatualizado" genérico --
- * antes disso, um sistema esperando autorização há dias parecia só mais um
+ * A ordem importa: "pausado" ganha de tudo -- foi um humano quem decidiu
+ * parar aquele agente, então isso é mais relevante do que "offline" ou
+ * "desatualizado", mesmo que a última comunicação já date de antes da pausa
+ * (um Worker pausado não reporta mais nada, então cedo ou tarde ele também
+ * cruzaria HORAS_ATE_OFFLINE por conta própria). Depois de "pausado",
+ * "offline" ganha de tudo o mais (não dá para afirmar nada sobre uma máquina
+ * que sumiu), erro ganha de desatualizado, e um PENDENTE (Fase 2) ganha uma
+ * situação própria em vez de cair no "desatualizado" genérico -- antes
+ * disso, um sistema esperando autorização há dias parecia só mais um
  * "desatualizado" qualquer, indistinguível de um agente que nunca nem baixou
  * a atualização.
  */
-function derivarSituacao({ online, status, ultimaVersao, alvo, horasSemContato, detalhes }) {
+function derivarSituacao({ pausado, online, status, ultimaVersao, alvo, horasSemContato, detalhes }) {
+  if (pausado) return "pausado";
   if (!online) return "offline";
   if (STATUS_FALHA.includes(status)) return "erro";
   // O agente pode concluir a troca dos executáveis e reportar SUCESSO mesmo
@@ -386,9 +479,16 @@ function derivarSituacao({ online, status, ultimaVersao, alvo, horasSemContato, 
   return "pendente";
 }
 
-/** Calcula o digest do pacote que será usado pelo agente para conferir integridade. */
-function sha256(filePath) {
-  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+/** Calcula o digest do pacote via stream assíncrono para não travar o Event Loop do Node.js. */
+function sha256Stream(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash("sha256");
+    const stream = fs.createReadStream(filePath);
+    stream.on("error", (err) => reject(err));
+    hash.on("error", (err) => reject(err));
+    hash.on("finish", () => resolve(hash.digest("hex")));
+    stream.pipe(hash);
+  });
 }
 
 /** Compara versões numéricas sem depender da ordem lexicográfica das strings. */

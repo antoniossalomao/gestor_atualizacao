@@ -223,6 +223,15 @@ export class ClientesView extends View {
 
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
 
+    if (this.ctx?.user?.role === "consulta") {
+      this.toggleFormBtn.hidden = true;
+      this.deleteBtn.hidden = true;
+      this.bulkAddSistema.hidden = true;
+      this.bulkExcluir.hidden = true;
+      const hint = this.container.querySelector(".bulk-hint");
+      if (hint) hint.hidden = true;
+    }
+
     this.botaoLimparFiltros.hidden = !this.busca;
     this.clearForm();
   }

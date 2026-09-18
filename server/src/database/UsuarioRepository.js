@@ -26,12 +26,30 @@ class UsuarioRepository extends BaseRepository {
     return this.conn.prepare("SELECT id, nome, usuario, role, criado_em, ultimo_login FROM usuarios ORDER BY nome").all();
   }
 
-  insert(nome, usuario, senhaHash, role = "user") {
+  insert(nome, usuario, senhaHash, role = "operador") {
     const criadoEm = new Date().toISOString();
     const info = this.conn
       .prepare("INSERT INTO usuarios (nome, usuario, senha_hash, role, criado_em) VALUES (?, ?, ?, ?, ?)")
       .run(nome, usuario, senhaHash, role, criadoEm);
     return this.findById(info.lastInsertRowid);
+  }
+
+  /** Atualiza o papel do usuário (admin, operador ou consulta). */
+  updateRole(id, role) {
+    this.conn.prepare("UPDATE usuarios SET role = ? WHERE id = ?").run(role, id);
+    return this.findById(id);
+  }
+
+  /** Atualiza nome e papel de um usuário existente. */
+  updateUser(id, { nome, role }) {
+    if (nome && role) {
+      this.conn.prepare("UPDATE usuarios SET nome = ?, role = ? WHERE id = ?").run(nome, role, id);
+    } else if (nome) {
+      this.conn.prepare("UPDATE usuarios SET nome = ? WHERE id = ?").run(nome, id);
+    } else if (role) {
+      this.conn.prepare("UPDATE usuarios SET role = ? WHERE id = ?").run(role, id);
+    }
+    return this.findById(id);
   }
 
   /** Troca só o hash da senha -- usado tanto pela troca de senha própria quanto por um reset futuro. */

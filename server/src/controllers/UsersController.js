@@ -18,6 +18,15 @@ class UsersController {
     }
   };
 
+  update = (req, res, next) => {
+    try {
+      const usuario = this.authService.updateUser(Number(req.params.id), req.body || {}, req.session.user);
+      res.json(usuario);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   remove = (req, res, next) => {
     try {
       this.authService.deleteUser(Number(req.params.id), req.session.user);

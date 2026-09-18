@@ -24,6 +24,7 @@ const SITUACOES = {
   erro: { label: "Com erro", badge: "badge--danger" },
   pendencias: { label: "Com pendências", badge: "badge--warning" },
   offline: { label: "Sem contato", badge: "badge--muted" },
+  pausado: { label: "Pausado", badge: "badge--muted" },
   pendente: { label: "Em andamento", badge: "badge--accent" },
   aguardando_autorizacao: { label: "Aguardando autorização", badge: "badge--accent" },
   aguardando_autorizacao_demorada: { label: "Autorização demorada", badge: "badge--danger" },
@@ -114,6 +115,7 @@ export class DistribuicaoView extends View {
               <option value="erro">Com erro</option>
               <option value="pendencias">Com pendências</option>
               <option value="offline">Sem contato</option>
+              <option value="pausado">Pausados</option>
               <option value="ok">Em dia</option>
               <option value="pendente">Em andamento</option>
               <option value="aguardando_autorizacao">Aguardando autorização</option>
@@ -394,6 +396,14 @@ export class DistribuicaoView extends View {
       const actions = row.querySelector('[data-role="actions"]');
       actions.appendChild(details);
 
+      const pause = document.createElement("button");
+      pause.type = "button";
+      pause.className = "btn btn--small btn--ghost";
+      pause.textContent = agent.pausado ? "Retomar" : "Pausar";
+      pause.setAttribute("aria-label", `${agent.pausado ? "Retomar" : "Pausar"} agente ${agent.empresa}`);
+      pause.addEventListener("click", () => this._toggleAgentPause(agent, pause));
+      actions.appendChild(pause);
+
       const remove = document.createElement("button");
       remove.type = "button";
       remove.className = "btn btn--small btn--danger";
@@ -424,6 +434,34 @@ export class DistribuicaoView extends View {
       await this.refresh();
     } catch (error) {
       await Modal.alert("Não foi possível excluir", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      button.disabled = false;
+    }
+  }
+
+  async _toggleAgentPause(agent, button) {
+    const pausar = !agent.pausado;
+    const confirmed = await Modal.confirm(
+      pausar ? "Pausar agente" : "Retomar agente",
+      pausar
+        ? `Pausar o agente ${agent.empresa}?\n\nEle para de verificar e aplicar atualizações a partir do próximo ciclo (até ~10s), mas continua rodando e pode ser retomado a qualquer momento por aqui.`
+        : `Retomar o agente ${agent.empresa}?\n\nEle volta a verificar e aplicar atualizações normalmente a partir do próximo ciclo.`,
+      { confirmLabel: pausar ? "Pausar" : "Retomar", danger: pausar }
+    );
+    if (!confirmed) return;
+
+    button.disabled = true;
+    try {
+      const identificador = encodeURIComponent(String(agent.cnpj || "").trim());
+      await this.api.patch(`/versoes/agentes/${identificador}/${pausar ? "pausar" : "retomar"}`);
+      toast.success(pausar ? "Agente pausado." : "Agente retomado.");
+      this.cache?.invalidar("distribuicao:");
+      await this.refresh();
+    } catch (error) {
+      await Modal.alert(
+        pausar ? "Não foi possível pausar" : "Não foi possível retomar",
+        error instanceof ApiError ? error.message : "Erro inesperado.",
+        "error"
+      );
       button.disabled = false;
     }
   }

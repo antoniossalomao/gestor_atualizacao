@@ -20,10 +20,10 @@ export function iniciais(nome) {
 }
 
 /**
- * "admin" é o valor guardado no banco (ver AuthService), não uma palavra para
- * mostrar a ninguém. Quem lê isto na tela quer saber se pode mexer em
- * usuários e backups, e é isso que "Administrador" responde.
+ * Mapeia os valores guardados no banco (admin, operador, consulta) para rótulos amigáveis na UI.
  */
 export function rotuloPapel(role) {
-  return role === "admin" ? "Administrador" : "Usuário";
+  if (role === "admin") return "Administrador";
+  if (role === "consulta") return "Consulta";
+  return "Operador";
 }

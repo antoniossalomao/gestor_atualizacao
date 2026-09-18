@@ -44,19 +44,28 @@ class AuthService {
   }
 
   /**
-   * Cria uma conta adicional. Qualquer pessoa já logada pode convidar
-   * mais alguém (mesma filosofia de "todo login tem acesso completo" usada
-   * no resto do app) -- só a remoção de conta é restrita a administradores
-   * (ver deleteUser). Contas convidadas entram com o papel "user"; só a
-   * primeira conta (setupAdmin) recebe "admin" automaticamente.
-   * @param {{id:number, nome:string}|null} usuarioLogado quem está criando (null só no setup inicial)
-   * @param {"admin"|"user"} role
-   */
-  createUser({ nome, usuario, senha }, usuarioLogado, role = "user") {
+    * Cria uma conta adicional. Apenas administradores podem criar novas contas.
+    * Papéis suportados: "admin", "operador" e "consulta" (default: "operador").
+    * @param {{nome:string, usuario:string, senha:string, role?:string}} dados
+    * @param {{id:number, nome:string, role:string}|null} usuarioLogado quem está criando (null só no setup inicial)
+    * @param {"admin"|"operador"|"consulta"} [papelPadrao="operador"]
+    */
+  createUser({ nome, usuario, senha, role }, usuarioLogado, papelPadrao = "operador") {
+    if (usuarioLogado && usuarioLogado.role !== "admin") {
+      throw new ForbiddenError("Apenas administradores podem criar novos usuários.");
+    }
     const nomeLimpo = (nome || "").trim();
     const usuarioLimpo = (usuario || "").trim();
+    const papelEscolhido = (role || papelPadrao || "operador").toLowerCase();
+    const papeisValidos = ["admin", "operador", "consulta", "user"];
+
     if (!nomeLimpo) throw new ValidationError("Informe o nome da pessoa.");
     if (!usuarioLimpo) throw new ValidationError("Informe um nome de usuário para login.");
+    if (!papeisValidos.includes(papelEscolhido)) {
+      throw new ValidationError("Papel inválido. Escolha entre Administrador, Operador ou Consulta.");
+    }
+    const papelFinal = papelEscolhido === "user" ? "operador" : papelEscolhido;
+
     if (!senha || senha.length < SENHA_MIN_LENGTH) {
       throw new ValidationError(`A senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
     }
@@ -64,9 +73,14 @@ class AuthService {
       throw new ValidationError(`Já existe uma conta com o usuário '${usuarioLimpo}'.`);
     }
     const hash = bcrypt.hashSync(senha, SALT_ROUNDS);
-    const criado = this.db.usuarios.insert(nomeLimpo, usuarioLimpo, hash, role);
+    const criado = this.db.usuarios.insert(nomeLimpo, usuarioLimpo, hash, papelFinal);
     if (this.historico) {
-      this.historico.registrar(usuarioLogado, "criar", "usuario", `Usuário "${criado.nome}" (@${criado.usuario})`);
+      this.historico.registrar(
+        usuarioLogado,
+        "criar",
+        "usuario",
+        `Usuário "${criado.nome}" (@${criado.usuario}) criado como [${criado.role}]`
+      );
     }
     return { id: criado.id, nome: criado.nome, usuario: criado.usuario, role: criado.role };
   }
@@ -74,6 +88,49 @@ class AuthService {
   /** Todas as contas cadastradas (sem hash de senha), para a tela de Usuários. */
   listUsers() {
     return this.db.usuarios.list();
+  }
+
+  /**
+   * Atualiza dados de um usuário (nome e/ou papel). Restrito a administradores.
+   * Não permite rebaixar o último administrador do sistema.
+   * @param {number} id
+   * @param {{nome?:string, role?:string}} dados
+   * @param {{id:number, nome:string, role:string}} usuarioLogado
+   */
+  updateUser(id, { nome, role }, usuarioLogado) {
+    if (usuarioLogado.role !== "admin") {
+      throw new ForbiddenError("Apenas administradores podem alterar usuários e permissões.");
+    }
+    const alvo = this.db.usuarios.findById(id);
+    if (!alvo) throw new ValidationError("Usuário não encontrado.");
+
+    let novoPapel = role ? role.toLowerCase() : alvo.role;
+    if (novoPapel === "user") novoPapel = "operador";
+    if (!["admin", "operador", "consulta"].includes(novoPapel)) {
+      throw new ValidationError("Papel inválido. Escolha entre Administrador, Operador ou Consulta.");
+    }
+
+    if (alvo.role === "admin" && novoPapel !== "admin") {
+      const admins = this.db.usuarios.list().filter((u) => u.role === "admin");
+      if (admins.length <= 1) {
+        throw new ValidationError("Não é possível rebaixar o único administrador ativo do sistema.");
+      }
+    }
+
+    const atualizado = this.db.usuarios.updateUser(id, {
+      nome: (nome || alvo.nome).trim(),
+      role: novoPapel,
+    });
+
+    if (this.historico) {
+      this.historico.registrar(
+        usuarioLogado,
+        "atualizar",
+        "usuario",
+        `Usuário "${atualizado.nome}" (@${atualizado.usuario}) atualizado para papel [${atualizado.role}]`
+      );
+    }
+    return atualizado;
   }
 
   /**
@@ -95,6 +152,12 @@ class AuthService {
     if (!alvo) throw new ValidationError("Usuário não encontrado.");
     if (this.db.usuarios.count() <= 1) {
       throw new ValidationError("Não é possível remover a única conta existente.");
+    }
+    if (alvo.role === "admin") {
+      const admins = this.db.usuarios.list().filter((u) => u.role === "admin");
+      if (admins.length <= 1) {
+        throw new ValidationError("Não é possível remover o único administrador ativo do sistema.");
+      }
     }
     this.db.usuarios.delete(id);
     this.historico.registrar(usuarioLogado, "excluir", "usuario", `Usuário "${alvo.nome}" (@${alvo.usuario})`);

@@ -83,6 +83,16 @@ class SqliteSessionStore extends session.Store {
     }
   }
 
+  /** Invalida todas as sessões ativas (usado após restauração do banco de dados). */
+  clearAll(callback) {
+    try {
+      this.conn.prepare("DELETE FROM sessoes").run();
+      if (callback) callback(null);
+    } catch (err) {
+      if (callback) callback(err);
+    }
+  }
+
   /** Renova o prazo de expiracao quando o usuario continua ativo (chamado pelo express-session). */
   touch(sid, sessionData, callback) {
     this.set(sid, sessionData, callback);

@@ -43,18 +43,40 @@ class VersoesController {
     }
   };
 
-  create = (req, res, next) => {
+  pausarAgente = (req, res, next) => {
     try {
-      res
-        .status(201)
-        .json(
-          this.service.create(
-            req.body || {},
-            req.session.user,
-            req.file,
-            req.app.get("publicUrl") || `${req.protocol}://${req.get("host")}`
-          )
-        );
+      res.json(this.service.pausarAgente(req.params.cnpj, req.session.user, req.body?.motivo));
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  retomarAgente = (req, res, next) => {
+    try {
+      res.json(this.service.retomarAgente(req.params.cnpj, req.session.user));
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  /** Consumido pelo Worker C# (rota de agente, sem sessão -- ver requireAgent). */
+  statusAgente = (req, res, next) => {
+    try {
+      res.json(this.service.statusAgente(req.params.cnpj));
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  create = async (req, res, next) => {
+    try {
+      const item = await this.service.create(
+        req.body || {},
+        req.session.user,
+        req.file,
+        req.app.get("publicUrl") || `${req.protocol}://${req.get("host")}`
+      );
+      res.status(201).json(item);
     } catch (err) {
       next(err);
     }

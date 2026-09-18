@@ -60,13 +60,14 @@ a situação de cada agente em campo. O agente vive em
 
 ## Detalhes que valem menção
 
-- **Login multiusuário** com dois papéis (administrador e usuário comum). A
-  primeira conta é criada pela própria tela, na primeira vez que o servidor
-  sobe — sem editar arquivo nem rodar comando.
-- **Backup automático** a cada início do servidor, com verificação de
-  integridade (`PRAGMA integrity_check`) logo depois — um backup corrompido
-  aparece na tela de Backups em vez de ser descoberto na hora de precisar
-  dele. Restauração por botão, sem acesso ao servidor.
+- **Controle de acesso baseado em papéis (RBAC)** com três perfis:
+  **Administrador** (gestão de usuários, publicação de versões e restauração de backups),
+  **Operador** (rotina operacional de atendimentos, clientes e agendamentos) e
+  **Consulta** (leitura, relatórios e exportação).
+- **Backup automático e restauração blindada** a cada início do servidor, com
+  verificação de integridade (`PRAGMA integrity_check`). A restauração exige
+  privilégio de administrador, revalidação da senha atual e confirmação por texto,
+  além de invalidar sessões ativas e disponibilizar download preventivo do banco.
 - **Preferências por conta**, não por navegador: tema, cor de destaque,
   tamanho do texto, densidade das tabelas e o resto acompanham a pessoa em
   qualquer máquina.
@@ -136,21 +137,17 @@ uma. As principais:
 | `DISCORD_WEBHOOK_URL` | Opcional. Quando configurada, avisa um canal do Discord a cada atualização nova cadastrada, e também quando um agente do Atualizador automático fica offline/com erro. |
 | `ALERTA_AGENTES_INTERVALO_MINUTOS` | De quanto em quanto tempo checar a situação dos agentes (padrão 15). Só tem efeito com `DISCORD_WEBHOOK_URL` configurada. |
 
-## Contas de usuário
+## Contas de usuário e Controle de Acesso (RBAC)
 
-A primeira conta, criada na primeira vez que o servidor sobe direto pela
-tela, vira automaticamente **administrador**. Depois disso, qualquer
-pessoa já logada pode convidar outras contas pelo botão **Usuários** no
-cabeçalho — não é preciso acesso ao servidor nem rodar nada pelo
-terminal. **Remover** uma conta, porém, só administradores podem fazer.
-As demais travas continuam valendo para todo mundo: ninguém pode remover
-a própria conta enquanto logado com ela, nem a última conta que resta.
+O sistema conta com três perfis de acesso bem definidos:
 
-Qualquer pessoa logada pode **trocar a própria senha** pela tela de
-Usuários (pede a senha atual, para confirmar que é o dono da conta mesmo
-com a sessão aberta). O sistema também guarda o **último login** de cada
-conta, visível na mesma tela — dá para ver quem de fato usa o sistema,
-não só quem tem conta cadastrada.
+- **Administrador (`admin`):** Acesso completo ao sistema. Pode convidar e remover usuários, alterar papéis, restaurar e baixar backups, publicar e excluir versões, e configurar tokens de integração.
+- **Operador (`operador`):** Voltado para a equipe de suporte e implantação no dia a dia. Pode cadastrar e editar atendimentos, clientes, agendamentos e cadastrar rascunhos de versão.
+- **Consulta (`consulta`):** Apenas leitura. Pode navegar em relatórios, resumos e tabelas, além de exportar dados para Excel. Não possui permissão para criar, editar ou excluir registros.
+
+A primeira conta criada na inicialização inicial é automaticamente **administradora**. Posteriormente, apenas administradores podem cadastrar novas contas ou alterar permissões. Todas as opções de gestão de segurança (Usuários, Backups e Credenciais da API) estão centralizadas e organizadas dentro do painel **Configurações**.
+
+Travas de segurança protegem o sistema contra exclusão ou rebaixamento acidental do último administrador existente. Qualquer pessoa logada pode **trocar a própria senha** pelo painel de Usuários (exige a confirmação da senha atual).
 
 ### Recuperando acesso (ninguém consegue mais entrar)
 
@@ -169,10 +166,12 @@ Isso redefine a senha direto no banco, sem precisar saber a antiga. Veja
 ## Backup e restauração
 
 Uma cópia do `gestao.db` é feita automaticamente na pasta `server/data/backups/` toda vez que o servidor é ligado
-(mantém as 10 mais recentes). O botão **Backups** no cabeçalho do app
-lista esses pontos no tempo e permite restaurar um deles — a página
-inteira recarrega depois de restaurar, para garantir que nenhuma tela
-fique mostrando dado antigo.
+(mantém as 10 mais recentes). O gerenciamento de backups é restrito a administradores.
+
+A restauração de backup conta com proteção operacional reforçada:
+1. **Download Preventivo:** O administrador pode baixar o banco de dados atual (`.db`) diretamente pelo painel antes de qualquer intervenção, além de baixar cópias individuais de qualquer backup anterior.
+2. **Confirmação Dupla:** Exige a digitação manual da palavra `RESTAURAR` em caixa alta e a senha da conta de administrador atual.
+3. **Invalidação de Sessões:** Ao restaurar, todas as sessões ativas são invalidadas no servidor, garantindo consistência total entre os usuários e o estado restaurado do banco.
 
 ## Implantação (deixar acessível para a equipe)
 

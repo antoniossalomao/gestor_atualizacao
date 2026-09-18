@@ -2,21 +2,12 @@ import { Modal } from "../core/Modal.js";
 import { toast } from "../core/Toast.js";
 import { emptyState } from "../core/EmptyState.js";
 import { marcarOcupado } from "../core/guard.js";
+import { icon } from "../core/icons.js";
+import { formatarBytes } from "../core/arquivo.js";
 
 /**
- * Painel de Backups, aberto pelo botão na barra lateral (não é uma aba fixa,
- * igual ao botão "Backups" no canto da janela do app original -- ver
- * gestor/dialogs.py, show_backups_dialog).
- *
- * Depois de restaurar um backup, TODOS os dados da página podem ter mudado (é
- * a mesma ação de "trocar o banco de dados inteiro" por baixo), então em vez
- * de tentar atualizar cada tela individualmente, a forma mais simples e
- * segura de garantir que nada fique com informação velha na tela é recarregar
- * a página inteira.
- *
- * A casca do diálogo agora vem de `Modal.abrirCaixa`, e não é mais montada na
- * mão aqui: assim este painel herda foco preso, `Escape`, `role="dialog"`,
- * devolução do foco e trava de rolagem, que antes ele não tinha.
+ * Painel de Backups e Restauração Protegida.
+ * Restrito ao perfil de Administrador com confirmação de senha e palavra de segurança.
  */
 export class BackupsPanel {
   /** @param {import('../api/ApiClient').ApiClient} api */
@@ -29,15 +20,22 @@ export class BackupsPanel {
     try {
       backups = await this.api.get("/backups");
     } catch {
-      Modal.alert("Erro", "Não foi possível carregar a lista de backups.", "error");
+      Modal.alert("Erro", "Não foi possível carregar a lista de backups. Acesso restrito a administradores.", "error");
       return;
     }
 
-    const { box, close } = Modal.abrirCaixa({ largura: 480 });
+    const { box, close } = Modal.abrirCaixa({ largura: 540 });
     box.innerHTML = `
-      <h3 class="modal-box__title" id="backups-titulo">Backups Automáticos</h3>
-      <p class="modal-box__message">Uma cópia do banco é feita a cada início do servidor. Escolha uma data/hora para restaurar.</p>
-      <div class="consulta-matches" data-role="list" style="margin-top: var(--sp-4); max-height: 280px"
+      <h3 class="modal-box__title" id="backups-titulo">Backups e Segurança do Banco</h3>
+      <p class="modal-box__message">Uma cópia do banco é feita automaticamente a cada início do servidor.</p>
+      
+      <div style="margin: var(--sp-3) 0; display: flex; gap: 8px;">
+        <a href="/api/backups/atual/download" download class="btn btn--small" style="display: inline-flex; align-items: center; gap: 6px;">
+          ${icon("download")} Baixar Cópia do Banco Atual (.db)
+        </a>
+      </div>
+
+      <div class="consulta-matches" data-role="list" style="margin-top: var(--sp-2); max-height: 280px"
            role="listbox" aria-label="Backups disponíveis"></div>
       <div class="modal-box__actions">
         <button type="button" class="btn" data-action="close">Fechar</button>
@@ -59,34 +57,53 @@ export class BackupsPanel {
       );
     } else {
       backups.forEach((b, idx) => {
-        // <button> em vez de <div>: a lista inteira era inalcançável por
-        // teclado, o que num diálogo de restauração de banco é sério.
-        const item = document.createElement("button");
-        item.type = "button";
+        const item = document.createElement("div");
         item.className = "consulta-matches__item" + (idx === 0 ? " is-active" : "");
-        item.setAttribute("role", "option");
-        item.setAttribute("aria-selected", String(idx === 0));
-        item.textContent = b.label;
-        // "false" explicito: PRAGMA integrity_check rodou logo depois deste
-        // backup ser criado e achou algo errado -- diferente de "null"
-        // (backup de antes desta verificação existir, nunca checado), que
-        // não é motivo de alarme. Ver Database._verificarIntegridadeBackup.
+        item.style.display = "flex";
+        item.style.alignItems = "center";
+        item.style.justifyContent = "space-between";
+        item.style.cursor = "pointer";
+
+        const info = document.createElement("div");
+        info.style.display = "flex";
+        info.style.alignItems = "center";
+        info.style.gap = "8px";
+        info.innerHTML = `
+          <strong>${b.label}</strong>
+          ${b.tamanhoBytes ? `<span class="text-muted" style="font-size: 0.85rem">(${formatarBytes(b.tamanhoBytes)})</span>` : ""}
+        `;
+
         if (b.integro === false) {
           const aviso = document.createElement("span");
           aviso.className = "badge badge--danger";
-          aviso.style.marginLeft = "8px";
           aviso.textContent = "Corrompido";
-          aviso.title = "Falhou na verificação de integridade (PRAGMA integrity_check) logo após ser criado.";
-          item.appendChild(aviso);
+          aviso.title = "Falhou na verificação de integridade logo após ser criado.";
+          info.appendChild(aviso);
         }
+
+        const actions = document.createElement("div");
+        actions.style.display = "flex";
+        actions.style.alignItems = "center";
+        actions.style.gap = "6px";
+
+        const downloadLink = document.createElement("a");
+        downloadLink.href = `/api/backups/${encodeURIComponent(b.arquivo)}/download`;
+        downloadLink.download = b.arquivo;
+        downloadLink.className = "btn btn--small";
+        downloadLink.title = "Baixar este backup";
+        downloadLink.innerHTML = icon("download");
+        downloadLink.addEventListener("click", (e) => e.stopPropagation());
+        actions.appendChild(downloadLink);
+
+        item.appendChild(info);
+        item.appendChild(actions);
+
         item.addEventListener("click", () => {
           selected = b;
           for (const el of list.querySelectorAll(".consulta-matches__item")) {
             el.classList.remove("is-active");
-            el.setAttribute("aria-selected", "false");
           }
           item.classList.add("is-active");
-          item.setAttribute("aria-selected", "true");
         });
         list.appendChild(item);
       });
@@ -97,24 +114,61 @@ export class BackupsPanel {
     const restoreBtn = box.querySelector('[data-action="restore"]');
     restoreBtn.addEventListener("click", async () => {
       if (!selected || restoreBtn.disabled) return;
-      const ok = await Modal.confirm(
-        "Confirmar restauração",
-        `Isso vai substituir os dados atuais pelos do backup de ${selected.label}.\n\n` +
-          "Um backup do estado atual é feito automaticamente antes de restaurar, mas essa ação não pode ser " +
-          "desfeita pela tela. Deseja continuar?",
-        { confirmLabel: "Restaurar" }
-      );
-      if (!ok) return;
+      this._confirmarRestauracao(selected, close);
+    });
+  }
 
-      const liberar = marcarOcupado(restoreBtn);
+  async _confirmarRestauracao(selected, closeParent) {
+    const { box, close } = Modal.abrirCaixa({ largura: 480 });
+    box.innerHTML = `
+      <h3 class="modal-box__title" style="color: var(--color-danger)">Atenção: Restauração Crítica</h3>
+      <p class="modal-box__message">
+        Esta operação <strong>substituirá integralmente o banco de dados</strong> pelo backup de <strong>${selected.label}</strong>.
+        Todas as alterações feitas após essa data serão perdidas.
+      </p>
+
+      <form data-role="restore-form" style="margin-top: var(--sp-4);">
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label" for="rest-conf">Digite <strong>RESTAURAR</strong> em maiúsculas para confirmar:</label>
+            <input type="text" class="input" id="rest-conf" data-field="confirmacao" required placeholder="RESTAURAR" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="rest-pwd">Sua senha atual de Administrador:</label>
+            <input type="password" class="input" id="rest-pwd" data-field="senha" required autocomplete="current-password" placeholder="Senha do administrador" />
+          </div>
+        </div>
+        <div class="modal-box__actions" style="margin-top: var(--sp-4);">
+          <button type="button" class="btn" data-action="cancel">Cancelar</button>
+          <button type="submit" class="btn btn--danger" data-action="exec-restore">Autorizar Restauração</button>
+        </div>
+      </form>
+    `;
+
+    box.querySelector('[data-action="cancel"]').addEventListener("click", () => close());
+
+    const form = box.querySelector('[data-role="restore-form"]');
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const confirmacao = box.querySelector('[data-field="confirmacao"]').value.trim();
+      const senha = box.querySelector('[data-field="senha"]').value;
+      const submitBtn = form.querySelector('[data-action="exec-restore"]');
+
+      if (confirmacao !== "RESTAURAR") {
+        Modal.alert("Confirmação inválida", 'Você precisa digitar exatamente a palavra "RESTAURAR".', "warning");
+        return;
+      }
+
+      const liberar = marcarOcupado(submitBtn);
       try {
-        await this.api.post(`/backups/${encodeURIComponent(selected.arquivo)}/restore`);
+        await this.api.post(`/backups/${encodeURIComponent(selected.arquivo)}/restore`, { confirmacao, senha });
         close();
-        toast.success(`Dados restaurados para o backup de ${selected.label}. Recarregando...`);
-        setTimeout(() => window.location.reload(), 900);
+        closeParent();
+        toast.success(`Banco restaurado com sucesso para ${selected.label}. Recarregando aplicação...`);
+        setTimeout(() => window.location.reload(), 1200);
       } catch (err) {
         liberar();
-        Modal.alert("Erro", err instanceof Error ? err.message : "Não foi possível restaurar o backup.", "error");
+        Modal.alert("Erro na restauração", err instanceof Error ? err.message : "Não foi possível restaurar o backup.", "error");
       }
     });
   }

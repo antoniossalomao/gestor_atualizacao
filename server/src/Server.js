@@ -156,9 +156,11 @@ class Server {
     );
 
     this.app.use(express.json());
+    this.sessionStore = new SqliteSessionStore({ filePath: path.join(dbDir, "sessions.sqlite") });
+    this.services.backups.setSessionStore(this.sessionStore);
     this.app.use(
       session({
-        store: new SqliteSessionStore({ filePath: path.join(dbDir, "sessions.sqlite") }),
+        store: this.sessionStore,
         name: "gestor.sid",
         secret: this.config.sessionSecret,
         resave: false,

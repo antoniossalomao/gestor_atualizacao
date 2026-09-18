@@ -5,20 +5,10 @@ import { icon } from "../core/icons.js";
 import { escapeHtml } from "../core/html.js";
 import { marcarOcupado } from "../core/guard.js";
 import { formatarDataHora, tempoRelativo } from "../core/date.js";
+import { rotuloPapel } from "../core/pessoa.js";
 
 /**
- * Painel de gerenciamento de contas, aberto pelo botão "Usuários" na barra
- * lateral -- mesmo padrão do BackupsPanel (uma janela flutuante, não uma aba
- * fixa). Não existia no app Python original (uso individual).
- *
- * Qualquer pessoa logada pode convidar outra conta (mesma filosofia de "todo
- * login tem acesso completo" usada no resto do app) -- remover uma conta,
- * porém, é restrito a administradores (ver AuthService.deleteUser). As demais
- * travas (não poder se autoexcluir, não poder remover a última conta) também
- * são garantidas pelo backend.
- *
- * Como o BackupsPanel, agora usa `Modal.abrirCaixa` e herda dela todo o
- * cuidado de foco e teclado que o diálogo montado à mão não tinha.
+ * Painel de gerenciamento de contas, aberto pelo botão "Usuários".
  */
 export class UsersPanel {
   /** @param {import('../api/ApiClient').ApiClient} api @param {{id:number, nome:string, role:string}} usuarioAtual */
@@ -28,14 +18,19 @@ export class UsersPanel {
   }
 
   async open() {
-    const { box, close } = Modal.abrirCaixa({ largura: 520 });
+    const { box, close } = Modal.abrirCaixa({ largura: 560 });
     this.box = box;
     this.close = close;
 
+    const isAdmin = this.usuarioAtual.role === "admin";
+
     box.innerHTML = `
-      <h3 class="modal-box__title" id="usuarios-titulo">Usuários</h3>
-      <p class="modal-box__message">Quem tem acesso ao sistema.</p>
+      <h3 class="modal-box__title" id="usuarios-titulo">Usuários e Permissões</h3>
+      <p class="modal-box__message">Quem tem acesso ao sistema e quais permissões possui.</p>
       <div class="users-list" data-role="list"></div>
+      ${
+        isAdmin
+          ? `
       <button type="button" class="btn btn--small" data-action="toggle-new" aria-expanded="false" aria-controls="novo-usuario">
         ${icon("plus")} Convidar Pessoa
       </button>
@@ -44,13 +39,22 @@ export class UsersPanel {
           <div class="field"><label class="field__label" for="u-nome">Nome</label><input type="text" class="input" id="u-nome" data-field="nome" required /></div>
           <div class="field"><label class="field__label" for="u-usuario">Usuário</label><input type="text" class="input" id="u-usuario" data-field="usuario" required autocomplete="off" /></div>
           <div class="field"><label class="field__label" for="u-senha">Senha</label><input type="password" class="input" id="u-senha" data-field="senha" required autocomplete="new-password" /></div>
+          <div class="field">
+            <label class="field__label" for="u-role">Papel</label>
+            <select class="input" id="u-role" data-field="role">
+              <option value="operador" selected>Operador (CRUD operacional)</option>
+              <option value="consulta">Consulta (Somente leitura)</option>
+              <option value="admin">Administrador (Acesso total)</option>
+            </select>
+          </div>
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn--accent" data-action="create">Criar Conta</button>
         </div>
       </form>
-
-      <hr class="separator" />
+      <hr class="separator" />`
+          : ""
+      }
 
       <button type="button" class="btn btn--small" data-action="toggle-senha" aria-expanded="false" aria-controls="trocar-senha">
         ${icon("plus")} Trocar minha senha
@@ -75,19 +79,19 @@ export class UsersPanel {
 
     const newForm = box.querySelector('[data-role="new-form"]');
     const toggle = box.querySelector('[data-action="toggle-new"]');
-    toggle.addEventListener("click", () => {
-      const visible = !newForm.hidden;
-      newForm.hidden = visible;
-      toggle.setAttribute("aria-expanded", String(!visible));
-      toggle.innerHTML = visible ? `${icon("plus")} Convidar Pessoa` : `${icon("minus")} Ocultar Formulário`;
-      if (!visible) box.querySelector('[data-field="nome"]').focus();
-    });
-    // <form> de verdade: Enter em qualquer campo cria a conta, e o navegador
-    // já sinaliza os campos obrigatórios vazios.
-    newForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      this._createUser(newForm);
-    });
+    if (toggle && newForm) {
+      toggle.addEventListener("click", () => {
+        const visible = !newForm.hidden;
+        newForm.hidden = visible;
+        toggle.setAttribute("aria-expanded", String(!visible));
+        toggle.innerHTML = visible ? `${icon("plus")} Convidar Pessoa` : `${icon("minus")} Ocultar Formulário`;
+        if (!visible) box.querySelector('[data-field="nome"]').focus();
+      });
+      newForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        this._createUser(newForm);
+      });
+    }
 
     const senhaForm = box.querySelector('[data-role="senha-form"]');
     const toggleSenha = box.querySelector('[data-action="toggle-senha"]');
@@ -107,13 +111,21 @@ export class UsersPanel {
   }
 
   async _reload() {
-    const usuarios = await this.api.get("/usuarios");
+    let usuarios = [];
+    try {
+      usuarios = await this.api.get("/usuarios");
+    } catch {
+      // Se não tiver permissão para listar todos (ex: perfil não admin), exibe pelo menos o usuário atual
+      usuarios = [this.usuarioAtual];
+    }
     const list = this.box.querySelector('[data-role="list"]');
     list.replaceChildren();
 
     for (const u of usuarios) {
       const isSelf = u.id === this.usuarioAtual.id;
-      const isAdmin = u.role === "admin";
+      const papel = u.role === "admin" ? "admin" : (u.role === "consulta" ? "consulta" : "operador");
+      const badgeClass = papel === "admin" ? "badge--accent" : (papel === "consulta" ? "badge--neutral" : "badge--info");
+
       const row = document.createElement("div");
       row.className = "users-list__row";
       row.innerHTML = `
@@ -121,7 +133,7 @@ export class UsersPanel {
           <div class="users-list__name">
             ${escapeHtml(u.nome)}
             ${isSelf ? '<span class="text-muted">(você)</span>' : ""}
-            ${isAdmin ? '<span class="badge badge--accent users-list__tag">Admin</span>' : ""}
+            <span class="badge ${badgeClass} users-list__tag">${rotuloPapel(papel)}</span>
           </div>
           <div class="text-muted users-list__handle">@${escapeHtml(u.usuario)}</div>
           <div class="text-muted users-list__handle" data-role="ultimo-login"></div>
@@ -134,13 +146,44 @@ export class UsersPanel {
       } else {
         ultimoLoginEl.textContent = "Nunca acessou";
       }
+
       if (!isSelf && this.usuarioAtual.role === "admin") {
+        const actions = document.createElement("div");
+        actions.style.display = "flex";
+        actions.style.alignItems = "center";
+        actions.style.gap = "8px";
+
+        const roleSelect = document.createElement("select");
+        roleSelect.className = "input";
+        roleSelect.style.padding = "4px 8px";
+        roleSelect.style.fontSize = "0.85rem";
+        roleSelect.style.width = "auto";
+        roleSelect.innerHTML = `
+          <option value="operador"${papel === "operador" ? " selected" : ""}>Operador</option>
+          <option value="consulta"${papel === "consulta" ? " selected" : ""}>Consulta</option>
+          <option value="admin"${papel === "admin" ? " selected" : ""}>Administrador</option>
+        `;
+        roleSelect.addEventListener("change", async () => {
+          const novoPapel = roleSelect.value;
+          try {
+            await this.api.put(`/usuarios/${u.id}`, { role: novoPapel });
+            toast.success(`Papel de "${u.nome}" alterado para ${rotuloPapel(novoPapel)}.`);
+            await this._reload();
+          } catch (err) {
+            roleSelect.value = papel;
+            Modal.alert("Erro", errorMessage(err), "error");
+          }
+        });
+        actions.appendChild(roleSelect);
+
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
         removeBtn.className = "btn btn--small btn--danger";
         removeBtn.textContent = "Remover";
         removeBtn.addEventListener("click", () => this._removeUser(u, removeBtn));
-        row.appendChild(removeBtn);
+        actions.appendChild(removeBtn);
+
+        row.appendChild(actions);
       }
       list.appendChild(row);
     }
@@ -150,14 +193,15 @@ export class UsersPanel {
     const nome = this.box.querySelector('[data-field="nome"]').value.trim();
     const usuario = this.box.querySelector('[data-field="usuario"]').value.trim();
     const senha = this.box.querySelector('[data-field="senha"]').value;
+    const role = this.box.querySelector('[data-field="role"]')?.value || "operador";
     const botao = form.querySelector('[data-action="create"]');
 
     const liberar = marcarOcupado(botao);
     try {
-      await this.api.post("/usuarios", { nome, usuario, senha });
+      await this.api.post("/usuarios", { nome, usuario, senha, role });
       for (const campo of ["nome", "usuario", "senha"]) this.box.querySelector(`[data-field="${campo}"]`).value = "";
       await this._reload();
-      toast.success(`Conta de "${nome}" criada.`);
+      toast.success(`Conta de "${nome}" criada como [${rotuloPapel(role)}].`);
     } catch (err) {
       Modal.alert("Validação", errorMessage(err), "warning");
     } finally {

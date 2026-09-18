@@ -521,15 +521,29 @@ export class App {
         icone: tab.icon,
         executar: () => this.switchTab(tab.key),
       })),
-      { id: "acao:backups", titulo: "Abrir Backups", grupo: "Ações", icone: "backups",
-        executar: () => new BackupsPanel(this.api).open() },
+      ...(this.user?.role === "admin"
+        ? [
+            {
+              id: "acao:backups",
+              titulo: "Abrir Backups",
+              subtitulo: "Download preventivo e restauração do banco",
+              grupo: "Ações",
+              icone: "backups",
+              executar: () => new BackupsPanel(this.api).open(),
+            },
+            {
+              id: "acao:configuracao-api",
+              titulo: "Configuração da API",
+              subtitulo: "URL pública, chave dos agentes, webhook do Discord",
+              grupo: "Ações",
+              icone: "acessos",
+              executar: () => new ConfiguracaoApiPanel(this.api).open(),
+            },
+          ]
+        : []),
       { id: "acao:usuarios", titulo: "Abrir Usuários", grupo: "Ações", icone: "users",
         executar: () => new UsersPanel(this.api, this.user).open() },
-      ...(this.user?.role === "admin"
-        ? [{ id: "acao:configuracao-api", titulo: "Configuração da API", subtitulo: "URL pública, chave dos agentes, webhook do Discord",
-            grupo: "Ações", icone: "acessos", executar: () => new ConfiguracaoApiPanel(this.api).open() }]
-        : []),
-      { id: "acao:config", titulo: "Abrir Configurações", subtitulo: "Tema, densidade, backups, usuários",
+      { id: "acao:config", titulo: "Abrir Configurações", subtitulo: "Tema, densidade, segurança, preferências",
         grupo: "Ações", icone: "config", executar: () => this._abrirConfiguracoes() },
       /*
        * Exportar/imprimir a tela aberta.
@@ -617,12 +631,8 @@ export class App {
       // usuários, de quem está logado, para não deixar ninguém se rebaixar ou
       // se excluir). O painel de Configurações não os constrói: recebe prontas
       // as duas funções que os abrem, e continua sem saber o que eles fazem.
-      abrirBackups: () => new BackupsPanel(this.api).open(),
+      abrirBackups: this.user?.role === "admin" ? () => new BackupsPanel(this.api).open() : undefined,
       abrirUsuarios: () => new UsersPanel(this.api, this.user).open(),
-      // Só aparece para administradores -- a própria tela recusa o acesso
-      // no backend (a chave da API é um segredo de todos os clientes, não
-      // uma preferência de conta), então nem oferecer o link evita um "sem
-      // permissão" depois de já ter aberto a janela.
       abrirConfiguracaoApi: this.user?.role === "admin" ? () => new ConfiguracaoApiPanel(this.api).open() : undefined,
     });
   }

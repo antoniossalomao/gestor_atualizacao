@@ -176,6 +176,16 @@ class Database {
     } catch (e) {
       if (!String(e.message).includes("duplicate column")) throw e;
     }
+    // Migração de papéis: antoniosalomao é o admin principal; contas legadas com
+    // papel 'user' viram 'operador', e outras contas existentes sem ser o admin viram 'operador'.
+    try {
+      conn.exec("UPDATE usuarios SET role = 'operador' WHERE role = 'user'");
+      conn.exec("UPDATE usuarios SET role = 'admin' WHERE usuario = 'antoniosalomao'");
+      conn.exec("UPDATE usuarios SET role = 'operador' WHERE usuario <> 'antoniosalomao' AND role NOT IN ('admin', 'operador', 'consulta')");
+    } catch {
+      /* tabela pode ainda estar sendo criada */
+    }
+
     // Se nenhuma conta tem o papel de admin ainda (banco recem-migrado),
     // promove automaticamente a conta mais antiga -- garante que sempre
     // exista pelo menos um admin, sem exigir passo manual.
@@ -321,6 +331,23 @@ class Database {
         cnpj TEXT PRIMARY KEY,
         situacao TEXT NOT NULL,
         atualizado_em TEXT NOT NULL
+      )
+    `);
+
+    // Pausa remota de um agente (aba Distribuicao, botao "Pausar"). Uma
+    // linha aqui significa "o Worker C# desse CNPJ nao deve verificar nem
+    // aplicar atualizacao nenhuma ate ser retomado" -- consultado tanto por
+    // VersaoService.check() (rede de seguranca para agentes antigos que
+    // ainda nao tem o pre-check dedicado) quanto pelo endpoint
+    // /update/status/:cnpj (o que o Worker consulta a cada ciclo saudavel).
+    // Ao contrario de agente_alertas, NAO sai sozinha: so quando um humano
+    // manda retomar.
+    conn.exec(`
+      CREATE TABLE IF NOT EXISTS agente_pausas (
+        cnpj TEXT PRIMARY KEY,
+        motivo TEXT,
+        pausado_em TEXT NOT NULL,
+        pausado_por INTEGER
       )
     `);
 
@@ -581,8 +608,33 @@ class Database {
     const verificacoes = this._lerVerificacoesBackup(dir);
     return arquivos.map((arquivo) => {
       const stamp = arquivo.slice(name.length + 1, arquivo.length - ext.length);
-      return { arquivo, label: formatStamp(stamp) || arquivo, integro: verificacoes[arquivo] ?? null };
+      let tamanhoBytes = 0;
+      try {
+        tamanhoBytes = fs.statSync(path.join(dir, arquivo)).size;
+      } catch {}
+      return {
+        arquivo,
+        label: formatStamp(stamp) || arquivo,
+        integro: verificacoes[arquivo] ?? null,
+        tamanhoBytes,
+      };
     });
+  }
+
+  /**
+   * Caminho completo de um backup validado, evitando brechas de traversal.
+   * @param {string} arquivo
+   */
+  getBackupPath(arquivo) {
+    const valido = this.listBackups().some((b) => b.arquivo === arquivo);
+    if (!valido) throw new Error("Backup não encontrado.");
+    const dir = path.join(path.dirname(this.path), "backups");
+    return path.join(dir, arquivo);
+  }
+
+  /** Caminho do banco principal ativo no momento. */
+  getCurrentDbPath() {
+    return this.path;
   }
 
   /**

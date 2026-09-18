@@ -267,9 +267,17 @@ export class AtualizacoesView extends View {
       fileInput.value = "";
     });
 
-    // `this.on` em vez de `document.addEventListener`: fica anotado e é
-    // removido no destroy(). Era exatamente aqui que o listener vazava.
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
+
+    if (this.ctx?.user?.role === "consulta") {
+      this.form.hidden = true;
+      this.deleteBtn.hidden = true;
+      this.bulkExcluir.hidden = true;
+      const importBtn = this.container.querySelector('[data-action="import"]');
+      if (importBtn) importBtn.hidden = true;
+      const hint = this.container.querySelector(".bulk-hint");
+      if (hint) hint.hidden = true;
+    }
 
     this._pintarLimparFiltros();
     this.clearForm();

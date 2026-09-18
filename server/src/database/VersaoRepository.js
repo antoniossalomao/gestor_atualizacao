@@ -86,6 +86,29 @@ class VersaoRepository extends BaseRepository {
   }
 
   /**
+   * Publica a versão indicada e substitui as versões anteriores em uma ÚNICA
+   * transação atômica SQLite, garantindo que o catálogo nunca fique em estado inconsistente.
+   */
+  publicarESubstituir(id, publicadoEm, anterioresIds = []) {
+    const transacao = this.conn.transaction(() => {
+      this.conn
+        .prepare(`UPDATE ${this.table} SET status = 'publicada', publicado_em = @publicadoEm, substituido_em = NULL, substituido_por = NULL WHERE id = @id`)
+        .run({ id, publicadoEm });
+
+      if (anterioresIds.length > 0) {
+        const stmt = this.conn.prepare(
+          `UPDATE ${this.table} SET status = 'substituida', substituido_em = @quando, substituido_por = @porId WHERE id = @id`
+        );
+        for (const antId of anterioresIds) {
+          stmt.run({ id: antId, quando: publicadoEm, porId: id });
+        }
+      }
+    });
+    transacao();
+    return this.find(id);
+  }
+
+  /**
    * Tira de circulacao as versoes indicadas, anotando quando e por qual
    * versao elas foram substituidas.
    */
@@ -189,12 +212,15 @@ class VersaoRepository extends BaseRepository {
            COUNT(*)                                                          AS total,
            SUM(CASE WHEN UPPER(l.status) IN ('ERRO','FALHA') THEN 1 ELSE 0 END) AS falhas,
            SUM(CASE WHEN UPPER(l.status) IN ('OK','SUCESSO','ATUALIZADO') THEN 1 ELSE 0 END) AS sucessos,
-           MIN(l.criado_em)                                                  AS primeiraComunicacao
+           MIN(l.criado_em)                                                  AS primeiraComunicacao,
+           p.pausado_em                                                      AS pausadoEm,
+           p.motivo                                                          AS motivoPausa
          FROM atualizador_logs l
          JOIN ultimo u2 ON u2.cnpj = l.cnpj
          LEFT JOIN clientes c
            ON REPLACE(REPLACE(REPLACE(REPLACE(c.codigo, '.', ''), '/', ''), '-', ''), ' ', '')
             = REPLACE(REPLACE(REPLACE(REPLACE(l.cnpj, '.', ''), '/', ''), '-', ''), ' ', '')
+         LEFT JOIN agente_pausas p ON p.cnpj = l.cnpj
          GROUP BY l.cnpj
          ORDER BY u2.criado_em DESC`
       )
@@ -273,6 +299,31 @@ class VersaoRepository extends BaseRepository {
   /** Tira o agente do alerta -- chamado quando ele normaliza. */
   limparSituacaoAlertada(cnpj) {
     this.conn.prepare("DELETE FROM agente_alertas WHERE cnpj = ?").run(cnpj);
+  }
+
+  /** Pausa (ou atualiza o motivo de uma pausa já existente) um agente por CNPJ. */
+  pausarAgente(cnpj, usuarioId, motivo) {
+    this.conn
+      .prepare(
+        `INSERT INTO agente_pausas (cnpj, motivo, pausado_em, pausado_por) VALUES (@cnpj, @motivo, @agora, @usuarioId)
+         ON CONFLICT(cnpj) DO UPDATE SET motivo = excluded.motivo, pausado_em = excluded.pausado_em, pausado_por = excluded.pausado_por`
+      )
+      .run({ cnpj, motivo: motivo || null, agora: new Date().toISOString(), usuarioId: usuarioId || null });
+  }
+
+  /** Retoma um agente pausado. Sem efeito (nao lança) se ele já não estava pausado. */
+  retomarAgente(cnpj) {
+    this.conn.prepare("DELETE FROM agente_pausas WHERE cnpj = ?").run(cnpj);
+  }
+
+  /**
+   * Checagem rápida e isolada de pausa, usada pelo endpoint que o Worker C#
+   * consulta a cada ciclo (GET /update/status/:cnpj) -- sem juntar com
+   * nenhuma outra tabela, para ficar barata o bastante para rodar a cada
+   * 10 segundos por agente.
+   */
+  pausado(cnpj) {
+    return Boolean(this.conn.prepare("SELECT 1 FROM agente_pausas WHERE cnpj = ?").get(cnpj));
   }
 }
 

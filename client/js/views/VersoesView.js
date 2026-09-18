@@ -136,6 +136,10 @@ export class VersoesView extends View {
     this.changelogValue = this.container.querySelector('[data-role="changelog-value"]');
     this.uploadProgress = this.container.querySelector('[data-role="upload-progress"]');
 
+    if (this.ctx?.user?.role === "consulta") {
+      this.form.hidden = true;
+    }
+
     this.form.addEventListener("submit", (event) => this._submit(event));
     this.systemSelect.addEventListener("change", () => this._updateReplacementWarning());
     this.container.querySelector('[data-action="add-changelog-item"]').addEventListener("click", () => this._addChangelogItem("", true));
@@ -297,13 +301,22 @@ export class VersoesView extends View {
         <td class="table-actions" data-role="actions"></td>
       `;
       const actions = row.querySelector('[data-role="actions"]');
+      const isAdmin = this.ctx?.user?.role === "admin";
+
       if (item.status !== "publicada") {
-        const publish = document.createElement("button");
-        publish.type = "button";
-        publish.className = "btn btn--small btn--accent";
-        publish.textContent = "Publicar";
-        publish.addEventListener("click", () => this._publish(item, publish));
-        actions.appendChild(publish);
+        if (isAdmin) {
+          const publish = document.createElement("button");
+          publish.type = "button";
+          publish.className = "btn btn--small btn--accent";
+          publish.textContent = "Publicar";
+          publish.addEventListener("click", () => this._publish(item, publish));
+          actions.appendChild(publish);
+        } else {
+          const rascunho = document.createElement("span");
+          rascunho.className = "text-muted";
+          rascunho.textContent = "Rascunho";
+          actions.appendChild(rascunho);
+        }
       } else {
         const active = document.createElement("span");
         active.className = "text-muted";
@@ -311,12 +324,14 @@ export class VersoesView extends View {
         actions.appendChild(active);
       }
 
-      const remove = document.createElement("button");
-      remove.type = "button";
-      remove.className = "btn btn--small btn--danger";
-      remove.textContent = "Excluir";
-      remove.addEventListener("click", () => this._remove(item, remove));
-      actions.appendChild(remove);
+      if (isAdmin) {
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "btn btn--small btn--danger";
+        remove.textContent = "Excluir";
+        remove.addEventListener("click", () => this._remove(item, remove));
+        actions.appendChild(remove);
+      }
       body.appendChild(row);
     }
   }

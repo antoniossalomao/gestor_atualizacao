@@ -76,6 +76,8 @@ const PATHS = {
     '<circle cx="10" cy="10" r="7.6"/><circle cx="10" cy="5.9" r="1.3" fill="currentColor" stroke="none"/><path d="M6.2 8.4c2.5.8 5.1.8 7.6 0M10 8.9v3.4M10 12.3l-1.9 3.2M10 12.3l1.9 3.2" stroke-linecap="round"/>',
   perfis:
     '<rect x="2.6" y="3.4" width="6.2" height="13.2" rx="1.4"/><rect x="11.2" y="3.4" width="6.2" height="6" rx="1.4"/><rect x="11.2" y="11.4" width="6.2" height="5.2" rx="1.4"/>',
+  escudo:
+    '<path d="M10 2.5 3.5 5.5v4.5c0 5 6.5 7.5 6.5 7.5s6.5-2.5 6.5-7.5V5.5L10 2.5z" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 
 /** @param {keyof typeof PATHS} name @returns {string} markup do `<svg>` pronto pra inserir via innerHTML */
