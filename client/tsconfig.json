@@ -1,0 +1,53 @@
+{
+  // Verificação estática das camadas do front-end que NÃO tocam no DOM.
+  //
+  // Este projeto não tem etapa de build e não vai ter (ver ADR-0001). Isto aqui
+  // não compila nada: "noEmit" é true, nenhum arquivo é gerado, e o que roda no
+  // navegador continua sendo exatamente o que está em client/. O TypeScript
+  // entra só como CONFERENTE do JavaScript que já existe, lendo os tipos das
+  // anotações JSDoc que o código já tinha.
+  //
+  // O custo documentado no ADR-0001 era "sem checagem de tipos, mitigado com
+  // JSDoc". Isto fecha essa lacuna sem pagar o preço que o ADR recusou.
+  //
+  // POR QUE SÓ "domain" E "utils":
+  // Rodar isto no projeto inteiro produz ~350 erros, e quase todos são o mesmo
+  // ruído: `querySelector` devolve `Element`, e o TypeScript não aceita ler
+  // `.style`/`.disabled`/`.hidden` daí sem um cast. Não são defeitos -- são o
+  // preço de manipular o DOM sem tipos, e um relatório com 350 avisos falsos
+  // não é lido por ninguém.
+  //
+  // `domain/` e `utils/` são justamente as camadas que a organização de pastas
+  // definiu como livres de DOM (ver ADR-0005). Nelas o modo estrito passa com
+  // ZERO erros -- ou seja, isto é um portão que ou está limpo, ou apontou algo
+  // de verdade. É também onde mora a lógica que erra em silêncio (classificação
+  // de retorno de agente, montagem de relatório, validação de data).
+  //
+  // Um arquivo novo em `domain/` ou `utils/` entra nesta rede automaticamente.
+  // Se ele precisar do DOM para passar, isso é o sinal de que ele está na pasta
+  // errada -- e esse aviso é o ponto.
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": true,
+
+    "target": "es2022",
+    "module": "esnext",
+    // "bundler" apesar de não haver bundler: é o modo que resolve
+    // especificadores como o navegador resolve módulos ES nativos, que é
+    // exatamente o que acontece aqui.
+    "moduleResolution": "bundler",
+    "lib": ["es2022", "dom"],
+
+    "strict": true,
+    // Desligado de propósito. Com ele ligado, toda função sem `@param` vira
+    // erro (~80 avisos), o que transformaria isto numa campanha de anotar
+    // assinatura em vez de um detector de inconsistência real. O valor está em
+    // pegar `null` onde se espera número, não em exigir cerimônia.
+    "noImplicitAny": false,
+
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["js/domain/**/*.js", "js/utils/**/*.js"]
+}

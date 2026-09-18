@@ -1,4 +1,4 @@
-import { icon } from "./icons.js";
+import { icon } from "../utils/icons.js";
 
 const DURACAO_MS = 4000;
 const DURACAO_ACAO_MS = 7000;
@@ -36,7 +36,7 @@ const ICONES = { success: "check", error: "alerta", info: "relogio" };
 export class ToastManager {
   constructor() {
     this.stack = document.getElementById("toast-stack");
-    /** @type {Map<string, {el: HTMLElement, n: number, timer: number}>} */
+    /** @type {Map<string, {el: HTMLElement, n: number, timer: number, duracao?: number}>} */
     this.ativos = new Map();
   }
 

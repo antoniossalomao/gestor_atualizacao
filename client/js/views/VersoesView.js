@@ -1,10 +1,10 @@
-import { View } from "../core/View.js";
-import { toast } from "../core/Toast.js";
-import { icon } from "../core/icons.js";
-import { emptyState } from "../core/EmptyState.js";
-import { escapeAttr, escapeHtml, plural } from "../core/html.js";
-import { formatarDataHora, tempoRelativo, formatarBytes } from "../core/date.js";
-import { Modal } from "../core/Modal.js";
+import { View } from "../app/View.js";
+import { toast } from "../components/Toast.js";
+import { icon } from "../utils/icons.js";
+import { emptyState } from "../components/EmptyState.js";
+import { escapeAttr, escapeHtml, plural } from "../utils/html.js";
+import { formatarDataHora, tempoRelativo, formatarBytes } from "../utils/date.js";
+import { Modal } from "../components/Modal.js";
 import { ApiError } from "../api/ApiClient.js";
 
 const STATUS = {

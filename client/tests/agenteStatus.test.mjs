@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { agruparRetornos, classificarRetorno } from "../js/core/agenteStatus.js";
-import { analisarRetorno } from "../js/core/agenteReport.js";
+import { agruparRetornos, classificarRetorno } from "../js/domain/agenteStatus.js";
+import { analisarRetorno } from "../js/domain/agenteReport.js";
 
 test("resultado SUCESSO com scripts pulados exige revisão", () => {
   const resultado = classificarRetorno({

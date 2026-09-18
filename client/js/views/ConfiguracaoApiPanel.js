@@ -1,9 +1,9 @@
 import { ApiError } from "../api/ApiClient.js";
-import { Modal } from "../core/Modal.js";
-import { toast } from "../core/Toast.js";
-import { icon } from "../core/icons.js";
-import { copyToClipboard } from "../core/html.js";
-import { marcarOcupado } from "../core/guard.js";
+import { Modal } from "../components/Modal.js";
+import { toast } from "../components/Toast.js";
+import { icon } from "../utils/icons.js";
+import { copyToClipboard } from "../utils/html.js";
+import { marcarOcupado } from "../utils/guard.js";
 
 /**
  * Painel "Configuração da API" -- URL pública, chave compartilhada com o

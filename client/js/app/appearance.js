@@ -28,7 +28,7 @@ export const DENSIDADES = [
 
 /**
  * O teto de 200 não é escolhido no olho: é o `PAGE_SIZE_MAXIMO` do
- * servidor (server/src/controllers/pagination.js). Oferecer 500 aqui só
+ * servidor (server/src/shared/pagination.js). Oferecer 500 aqui só
  * produziria uma opção que o backend recorta em silêncio, e a pessoa ficaria
  * sem entender por que a lista não cresceu.
  */

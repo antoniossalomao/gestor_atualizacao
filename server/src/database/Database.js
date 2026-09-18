@@ -502,10 +502,22 @@ class Database {
 
       const dir = path.join(path.dirname(this.path), "backups");
       fs.mkdirSync(dir, { recursive: true });
-      const stamp = timestamp();
       const { name, ext } = path.parse(this.path);
-      const destino = path.join(dir, `${name}_${stamp}${ext}`);
-      const arquivoBackup = `${name}_${stamp}${ext}`;
+      // O carimbo tem resolucao de SEGUNDOS, entao duas copias no mesmo segundo
+      // gerariam o mesmo nome -- e `copyFileSync` sobrescreve sem avisar. Na
+      // pratica isso acontece no caminho mais delicado que existe aqui:
+      // `restoreFrom` faz uma copia de seguranca do estado atual logo antes de
+      // restaurar, e essa copia pode cair no mesmo segundo de um backup que ja
+      // existia, apagando-o. Perder um backup em silencio e' exatamente o tipo
+      // de falha que so se descobre no dia em que ele faz falta.
+      //
+      // Subir o carimbo para milissegundos mudaria o formato do nome de todos
+      // os backups ja existentes; acrescentar um sufixo so no caso de colisao
+      // mantem o nome de sempre no caso normal. `formatStamp` nao reconhece o
+      // sufixo e devolve null, e `listBackups` ja cai no proprio nome do
+      // arquivo como rotulo nesse caso -- degrada sozinho, sem quebrar a tela.
+      const arquivoBackup = nomeLivre(dir, name, timestamp(), ext);
+      const destino = path.join(dir, arquivoBackup);
       fs.copyFileSync(this.path, destino);
 
       // Confere se a cópia recém-feita abre e passa no integrity_check do
@@ -672,10 +684,31 @@ class Database {
 
 /** "20260817_143000" -> "17/08/2026 14:30:00" (ou null se o formato nao bater). */
 function formatStamp(stamp) {
-  const m = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/.exec(stamp);
+  // O "_N" final e' opcional: aparece so quando duas copias cairam no mesmo
+  // segundo (ver nomeLivre). Sem reconhece-lo aqui, essas entradas apareceriam
+  // na tela com o nome cru do arquivo no lugar da data.
+  const m = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})(?:_(\d+))?$/.exec(stamp);
   if (!m) return null;
-  const [, ano, mes, dia, h, min, s] = m;
-  return `${dia}/${mes}/${ano} ${h}:${min}:${s}`;
+  const [, ano, mes, dia, h, min, s, n] = m;
+  return `${dia}/${mes}/${ano} ${h}:${min}:${s}${n ? ` (${n})` : ""}`;
+}
+
+/**
+ * Nome de arquivo de backup ainda nao usado nesta pasta. Devolve
+ * "gestao_20260918_143012.db" no caso normal e, so se ele ja existir,
+ * "gestao_20260918_143012_2.db", "_3" e assim por diante -- ver o comentario
+ * em _backup() para o porque.
+ */
+function nomeLivre(dir, name, stamp, ext) {
+  const candidato = (sufixo) => `${name}_${stamp}${sufixo}${ext}`;
+  if (!fs.existsSync(path.join(dir, candidato("")))) return candidato("");
+  // O teto existe so para nao virar laco infinito se algo muito estranho
+  // acontecer com o sistema de arquivos; 99 copias no mesmo segundo nao e' um
+  // cenario real.
+  for (let n = 2; n <= 99; n += 1) {
+    if (!fs.existsSync(path.join(dir, candidato(`_${n}`)))) return candidato(`_${n}`);
+  }
+  return candidato(`_${Date.now()}`);
 }
 
 /** Data/hora atual no formato usado no nome dos arquivos de backup. */

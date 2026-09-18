@@ -1,5 +1,5 @@
 const bcrypt = require("bcryptjs");
-const { NotFoundError, ValidationError, ForbiddenError } = require("./errors");
+const { NotFoundError, ValidationError, ForbiddenError } = require("../shared/errors");
 
 /**
  * Camada sobre Database para a tela de Backups e proteção de restauração.

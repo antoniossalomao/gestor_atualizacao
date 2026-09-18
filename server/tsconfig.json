@@ -1,0 +1,52 @@
+{
+  // Verificação estática do NÚCLEO PURO do servidor -- o código que não fala
+  // com o Node (nem `fs`, nem `process`, nem `Buffer`), não abre banco e não
+  // conhece `req`/`res`. Mesmo princípio e mesma justificativa do
+  // client/tsconfig.json: ver docs/adr/0006-verificacao-de-tipos-sem-build.md.
+  //
+  // Não compila nada ("noEmit"): lê o JavaScript que já existe e as anotações
+  // JSDoc que ele já tinha.
+  //
+  // POR QUE NÃO O `src/` INTEIRO:
+  // Rodar isto sobre os 50 arquivos de `src/` produz ~210 erros, e eles se
+  // dividem em duas famílias, nenhuma delas defeito:
+  //
+  //   1. Globais do Node (`process`, `Buffer`, `console`, `fs`, `setInterval`)
+  //      que o TypeScript só conhece com `@types/node` instalado.
+  //   2. `Object is possibly 'undefined'` em cima de `this.db.<tabela>`, porque
+  //      as propriedades do Database são montadas em tempo de execução e o
+  //      inferidor não tem como saber que existem.
+  //
+  // Nenhuma das duas some sem um trabalho de anotação grande, e nenhuma delas
+  // teria encontrado os defeitos que esta verificação já encontrou. Um portão
+  // com 210 avisos falsos não é lido -- e portão que ninguém lê não é portão.
+  //
+  // O que ESTÁ coberto aqui é exatamente onde mora a regra de negócio pura: as
+  // defesas compartilhadas (paginação, ordenação segura, validação de data,
+  // erros de domínio) e a normalização de sistemas/responsáveis. Foi em
+  // `shared/sortHelper.js` que estava o `?sortBy=constructor` que derrubava
+  // qualquer listagem paginada.
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": true,
+
+    "target": "es2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    // Sem "dom" e sem "node": é essa ausência que garante que nada aqui dentro
+    // passe a depender do navegador nem do runtime. Um arquivo novo que precise
+    // de `fs` para passar está na pasta errada, e o erro é o aviso.
+    "lib": ["es2022"],
+
+    "strict": true,
+    // Desligado pelo mesmo motivo do lado do client: com ele, toda função sem
+    // `@param` vira erro, e isso troca um detector de inconsistência real por
+    // uma campanha de anotar assinatura.
+    "noImplicitAny": false,
+
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/shared/**/*.js", "src/services/normalizacao.js"]
+}

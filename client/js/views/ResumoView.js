@@ -1,11 +1,11 @@
-import { View } from "../core/View.js";
-import { SortableTable } from "../core/SortableTable.js";
-import { PieChart } from "../core/PieChart.js";
-import { BarChart } from "../core/BarChart.js";
-import { LineChart } from "../core/LineChart.js";
-import { tokenHex } from "../core/color.js";
-import { icon } from "../core/icons.js";
-import { escapeHtml } from "../core/html.js";
+import { View } from "../app/View.js";
+import { SortableTable } from "../components/SortableTable.js";
+import { PieChart } from "../components/charts/PieChart.js";
+import { BarChart } from "../components/charts/BarChart.js";
+import { LineChart } from "../components/charts/LineChart.js";
+import { tokenHex } from "../utils/color.js";
+import { icon } from "../utils/icons.js";
+import { escapeHtml } from "../utils/html.js";
 import { DESATUALIZADO_DIAS } from "../config.js";
 
 /**

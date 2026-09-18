@@ -1,7 +1,7 @@
 /**
  * Middleware final do Express: qualquer erro passado para `next(err)` em
  * algum controller cai aqui. Erros "esperados" (ValidationError,
- * NotFoundError -- ver services/errors.js) ja sabem seu proprio
+ * NotFoundError -- ver shared/errors.js) ja sabem seu proprio
  * `statusCode` e tem uma mensagem segura de mostrar pro usuario; qualquer
  * outro erro (bug, falha do banco) vira um 500 generico, sem vazar detalhes
  * internos para quem esta usando o navegador.

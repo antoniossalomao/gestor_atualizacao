@@ -314,6 +314,40 @@ test("Saúde Operacional do Sistema - SaudeService", async (t) => {
       assert.equal(diag.backups.total, 1);
       assert.equal(typeof diag.agentes.total, "number");
     });
+
+    await t.test("o VersaoService REAL expõe packagesDir", () => {
+      // Regressão: o SaudeService sempre leu `this.versoes.packagesDir`, mas a
+      // classe VersaoService não tinha essa propriedade. Como
+      // `fs.existsSync(undefined)` devolve false em vez de lançar, o painel de
+      // Saúde reportava "0 pacotes, 0 bytes" para sempre, em silêncio.
+      //
+      // O teste acima não pegava porque o objeto `versoes` dali é um DUBLÊ, e o
+      // dublê declarava `packagesDir` -- ou seja, o teste afirmava uma interface
+      // que o objeto real não implementava. Por isso esta asserção é contra a
+      // CLASSE DE VERDADE, e não contra o dublê.
+      assert.equal(typeof env.versoes.packagesDir, "string");
+      assert.equal(path.basename(env.versoes.packagesDir), "packages");
+      assert.equal(path.dirname(env.versoes.packagesDir), path.dirname(env.dbPath));
+    });
+
+    await t.test("conta e mede os pacotes de verdade que existem em disco", () => {
+      const comReal = new SaudeService({
+        db: env.db,
+        backups: { list: () => [] },
+        versoes: env.versoes,
+      });
+
+      // Sem a pasta, o diagnóstico não quebra: reporta zero.
+      assert.equal(comReal.obterDiagnostico().pacotes.total, 0);
+
+      fs.mkdirSync(env.versoes.packagesDir, { recursive: true });
+      fs.writeFileSync(path.join(env.versoes.packagesDir, "a.zip"), "12345");
+      fs.writeFileSync(path.join(env.versoes.packagesDir, "b.zip"), "123");
+
+      const diag = comReal.obterDiagnostico();
+      assert.equal(diag.pacotes.total, 2, "deveria enxergar os dois pacotes gravados");
+      assert.equal(diag.pacotes.tamanhoBytes, 8, "e somar o tamanho real dos dois");
+    });
   } finally {
     env.cleanup();
   }

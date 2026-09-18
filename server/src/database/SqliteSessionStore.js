@@ -98,6 +98,21 @@ class SqliteSessionStore extends session.Store {
     this.set(sid, sessionData, callback);
   }
 
+  /**
+   * Fecha o arquivo de sessoes. Chamado por Server.stop() -- sem isto, o
+   * handle do SQLite fica aberto depois do servidor "parar": em producao
+   * apenas atrasa a liberacao do arquivo, mas num teste que sobe e derruba
+   * o servidor num diretorio temporario o Windows recusa apagar a pasta
+   * com EBUSY (foi exatamente assim que a falta deste metodo apareceu).
+   */
+  close() {
+    try {
+      this.conn.close();
+    } catch {
+      /* ja fechado -- fechar duas vezes nao deve derrubar o encerramento */
+    }
+  }
+
   _limparExpiradas() {
     try {
       this.conn.prepare("DELETE FROM sessoes WHERE expira_em < ?").run(Date.now());

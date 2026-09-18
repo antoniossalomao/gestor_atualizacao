@@ -1,4 +1,4 @@
-const { ValidationError } = require("./errors");
+const { ValidationError } = require("../shared/errors");
 
 // Teto de tamanho do conjunto de preferencias. Nao ha caso legitimo perto
 // disso -- sao duas dezenas de escolhas curtas ("escuro", "compacta", 50) --
@@ -14,7 +14,7 @@ const MAX_TEXTO = 200;
  * na hora errada: trocar de maquina, usar outro navegador ou limpar os dados
  * do site devolvia o app aos padroes, e num computador compartilhado as
  * escolhas de uma pessoa recebiam a seguinte. Agora o servidor e a fonte da
- * verdade e o localStorage e so um cache -- ver client/js/core/prefs.js, que
+ * verdade e o localStorage e so um cache -- ver client/js/app/prefs.js, que
  * explica por que o cache continua existindo.
  *
  * O conjunto e gravado inteiro, nunca chave a chave: e assim que a tela

@@ -14,7 +14,12 @@ export function classificarRetorno(log = {}) {
   const scriptsPulados = pulados ? Number(pulados[1]) : null;
 
   if (STATUS_ERRO.has(status)) return { tipo: "erro", label: "Falha na atualização", scriptsPulados };
-  if (scriptsPulados > 0 || status === "PENDENCIAS" || status === "CONCLUIDO_COM_PENDENCIAS") {
+  // `scriptsPulados !== null` explicito antes da comparacao: `null > 0` e' false
+  // em JavaScript, entao o comportamento sempre esteve certo -- mas so por
+  // coercao implicita, que e' o tipo de regra que alguem "simplifica" um dia
+  // sem perceber. Escrito assim, a intencao ("so conta quando o numero existe")
+  // esta no codigo, e a verificacao estatica de tipos passa limpa.
+  if ((scriptsPulados !== null && scriptsPulados > 0) || status === "PENDENCIAS" || status === "CONCLUIDO_COM_PENDENCIAS") {
     return { tipo: "pendencias", label: "Concluída com pendências", scriptsPulados };
   }
   if (STATUS_SUCESSO.has(status)) return { tipo: "sucesso", label: "Concluída", scriptsPulados };

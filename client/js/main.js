@@ -1,7 +1,7 @@
 import { ApiClient } from "./api/ApiClient.js";
-import { App } from "./core/App.js";
-import { iniciarTema } from "./core/theme.js";
-import { iniciarAparencia } from "./core/appearance.js";
+import { App } from "./app/App.js";
+import { iniciarTema } from "./app/theme.js";
+import { iniciarAparencia } from "./app/appearance.js";
 
 // Ponto de entrada do front-end: aplica o tema salvo, cria o cliente de API e
 // a aplicação, e manda ela decidir o que mostrar (login ou o app principal).

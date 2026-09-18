@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const { ValidationError, ForbiddenError } = require("./errors");
+const { ValidationError, ForbiddenError } = require("../shared/errors");
 
 /** Status que o agente pode reportar, agrupados pelo que significam no painel. */
 const STATUS_SUCESSO = ["OK", "SUCESSO", "ATUALIZADO", "CONCLUIDO"];
@@ -39,6 +39,21 @@ class VersaoService {
   constructor(db, historico) {
     this.db = db;
     this.historico = historico;
+  }
+
+  /**
+   * Pasta onde os pacotes de versao ficam gravados, ao lado do gestao.db.
+   *
+   * Existe como propriedade publica porque o SaudeService precisa dela para
+   * contar os pacotes e somar o tamanho em disco -- e ja tentava le-la como
+   * `this.versoes.packagesDir`, que NAO EXISTIA. `fs.existsSync(undefined)`
+   * devolve false em vez de lancar, entao o painel de Saude reportava
+   * "0 pacotes, 0 bytes" para sempre, sem erro nenhum no log. Encontrado por
+   * verificacao estatica de tipos, nao por alguem olhando a tela: o numero
+   * zero e' plausivel demais para chamar atencao.
+   */
+  get packagesDir() {
+    return path.join(path.dirname(this.db.path), "packages");
   }
 
   /** Lista versões para o painel, convertendo o JSON persistido em array. */
@@ -440,7 +455,7 @@ class VersaoService {
   _caminhoPacote(filename) {
     const safeName = path.basename(String(filename || ""));
     if (!safeName || safeName === "." || safeName === "..") return null;
-    return path.join(path.dirname(this.db.path), "packages", safeName);
+    return path.join(this.packagesDir, safeName);
   }
 
   _publicItem(item) {

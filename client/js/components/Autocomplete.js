@@ -1,4 +1,4 @@
-import { escapeHtml } from "./html.js";
+import { escapeHtml } from "../utils/html.js";
 
 const MAX_SUGESTOES = 30;
 

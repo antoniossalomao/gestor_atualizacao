@@ -1,4 +1,4 @@
-const { buildOrderBy } = require("./sortHelper");
+const { buildOrderBy } = require("../shared/sortHelper");
 
 /** Colunas que a tela pode pedir para ordenar, e a expressao SQL segura correspondente. */
 const SORT_MAP = {

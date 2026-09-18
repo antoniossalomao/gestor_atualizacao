@@ -1,10 +1,10 @@
 import { ApiError } from "../api/ApiClient.js";
-import { Modal } from "../core/Modal.js";
-import { toast } from "../core/Toast.js";
-import { icon } from "../core/icons.js";
-import { escapeHtml, copyToClipboard } from "../core/html.js";
-import { marcarOcupado } from "../core/guard.js";
-import { emptyState } from "../core/EmptyState.js";
+import { Modal } from "../components/Modal.js";
+import { toast } from "../components/Toast.js";
+import { icon } from "../utils/icons.js";
+import { escapeHtml, copyToClipboard } from "../utils/html.js";
+import { marcarOcupado } from "../utils/guard.js";
+import { emptyState } from "../components/EmptyState.js";
 
 /**
  * Janela flutuante com os acessos remotos (AnyDesk / Suporte Bredas) das

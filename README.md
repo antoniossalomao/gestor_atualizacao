@@ -86,20 +86,55 @@ a situação de cada agente em campo. O agente vive em
 ## Estrutura
 
 ```
-server/    backend (Express + SQLite via better-sqlite3)
-  src/controllers/   rotas HTTP -- só traduzem requisição em chamada de serviço
-  src/services/      regras de negócio
-  src/database/      um repositório por tabela; único lugar que escreve SQL
-client/    front-end (HTML/CSS/JavaScript puro, sem framework nem build)
-  js/views/          uma tela por arquivo
-  js/core/           peças reaproveitadas (tabela, modal, toast, tema...)
-  js/api/            único lugar que chama fetch
-docs/      documentação consolidada (.md + gerador do PDF)
+README.md              este arquivo -- o que o sistema faz e como rodar
+CONTRIBUTING.md        como trabalhar no código: onde pôr cada coisa, o que não quebrar
+SECURITY.md            o que protege o quê, e os limites assumidos de propósito
+CHANGELOG.md           diário de decisões, em ordem cronológica
+CLAUDE.md              instruções para agentes de IA que trabalhem aqui
+package.json           scripts do projeto inteiro (test, check, start) -- ver "Como rodar"
+
+server/                backend (Express + SQLite via better-sqlite3)
+  server.js              ponto de entrada: só lê o .env e manda o Server subir
+  src/Server.js          classe raiz: abre o banco, monta tudo, liga no Express
+  src/routes/            o mapa de URLs -- o único lugar que sabe qual caminho vai pra qual controller
+  src/controllers/       rotas HTTP -- só traduzem requisição em chamada de serviço
+  src/services/          regras de negócio
+  src/database/          um repositório por tabela; único lugar que escreve SQL
+  src/middlewares/       autenticação, papéis, limite de tentativas, tratamento de erro e 404
+  src/shared/            peças usadas por MAIS DE UMA camada (erros, paginação, ordenação, validação)
+  src/config/            constantes do domínio
+  tests/                 testes do servidor (node:test, sem framework externo)
+  tsconfig.json          escopo da verificação de tipos do núcleo puro
+
+client/                front-end (HTML/CSS/JavaScript puro, sem framework nem build)
+  index.html             a única página; todo o resto é desenhado por JS dentro dela
+  js/main.js             ponto de entrada: instancia o ApiClient e o App
+  js/api/                único lugar que chama fetch
+  js/app/                o "esqueleto" do app: App, View, rota, tema, aparência, preferências, cache
+  js/components/         peças de UI reaproveitáveis (modal, toast, tabela, paginação...)
+  js/components/charts/  gráficos em SVG escritos à mão (barras, linha, pizza)
+  js/views/              uma tela por arquivo
+  js/domain/             vocabulário do negócio, SEM tocar no DOM (status de agente, relatório, papéis)
+  js/utils/              utilidades genéricas (datas, HTML, cores, ícones, debounce)
+  css/                   theme.css (tokens de cor/tipografia) + components.css (o resto)
+  tests/                 testes do que dá pra testar sem navegador
+  tsconfig.json          escopo da verificação de tipos (não compila nada -- ver ADR-0006)
+
+docs/                  a documentação longa -- ver docs/README.md para o índice
+  adr/                   decisões de arquitetura, uma por arquivo
+  OPERACAO.md            runbook por sintoma: deu problema agora, o que fazer
 ```
+
+A divisão do `client/js/` segue uma regra só, fácil de aplicar na hora de criar
+um arquivo novo: **`utils/` não conhece o negócio, `domain/` não conhece o DOM,
+`components/` não conhece a tela em que está, `views/` conhece as duas coisas, e
+`app/` é o que segura tudo isso junto.** Antes existia uma pasta `core/` única
+com 35 arquivos misturando as cinco categorias -- ainda funcionava, mas não
+respondia "onde eu ponho isso?" para quem chega.
 
 ## Como rodar (desenvolvimento)
 
-Requer Node.js 18 ou mais recente.
+Requer Node.js 20.6 ou mais recente (a versão usada em produção e no CI é a 22).
 
 ```powershell
 cd server
@@ -114,6 +149,24 @@ editar arquivo nenhum nem rodar comando extra para isso).
 
 `npm run dev` reinicia o servidor sozinho a cada alteração de arquivo
 (via `nodemon`). Para produção, use `npm start`.
+
+### Os comandos, a partir da raiz de `web/`
+
+Há um `package.json` na raiz que serve de atalho para os dois lados, para não
+ser preciso lembrar em qual pasta cada comando roda:
+
+```powershell
+npm install        # traz só a ferramenta de verificação de tipos
+npm run install:all # dependências do servidor
+npm start          # produção
+npm run dev        # desenvolvimento, com reinício automático
+npm test           # servidor + front-end
+npm run check      # verificação de tipos (não compila nada -- ver ADR-0006)
+```
+
+O front-end **não tem dependência nenhuma** (ver
+[ADR-0001](docs/adr/0001-sem-framework-e-sem-build.md)): não há o que instalar
+em `client/`.
 
 ### Usando um banco que você já tem
 
@@ -350,289 +403,36 @@ segredo precisou ser rotacionado, porque não havia nenhum de verdade
 neste arquivo.
 
 
-## Histórico de mudanças
-
-As seções abaixo registram o que foi acrescentado em cada etapa, com o
-motivo de cada decisão — inclusive as que deram errado antes de dar certo.
-
-### Setembro de 2026
-
-- **Alerta proativo de agente offline/com erro** (`AlertaAgenteService`):
-  com `DISCORD_WEBHOOK_URL` configurada, o app confere sozinho a cada
-  `ALERTA_AGENTES_INTERVALO_MINUTOS` (padrão 15) a situação de cada agente
-  do Atualizador automático (mesmo cálculo do painel da aba Distribuição)
-  e avisa o canal só na *transição* para "offline" (sem contato há 24h+)
-  ou "erro" — não repete o aviso a cada ciclo enquanto o problema
-  continua, e avisa de novo quando o agente volta a se comunicar. Antes,
-  só quem abrisse a tela do painel saberia que um cliente parou de
-  atualizar.
-- **Tendência mensal de atualizações** (Resumo): gráfico com os últimos 12
-  meses, para ver se o volume de atualizações está subindo ou caindo ao
-  longo do tempo — antes só existia o total do mês atual.
-- **Grupo/rede de clientes**: novo campo opcional "Grupo/Rede" no
-  cadastro de Clientes (com autocompletar dos grupos já usados), pra
-  clientes com várias unidades sob a mesma bandeira (ex.: sete lojas de
-  uma mesma rede) poderem ser encontrados/agrupados por busca. Não muda
-  nada em quem não usa o campo.
-- **Converter Agendamento em Atualização**: botão "Converter em
-  Atualização" na tarefa selecionada da aba Agendamentos — leva pra
-  Atualizações com cliente, responsável, data e um registro novo (não
-  edita nada) já pré-preenchidos a partir da tarefa, em vez de digitar
-  tudo de novo.
-- **Tempo médio de resolução por responsável** (Resumo): quantos dias, em
-  média, uma tarefa de Agendamentos leva entre ser criada e ser marcada
-  "Concluído", por responsável. Só entra no cálculo tarefa criada
-  *depois* desta métrica existir — tarefas antigas não têm como saber
-  quando foram criadas de verdade, e contar uma data inventada seria pior
-  que não mostrar nada.
-
-### 10/09/2026
-
-- **Acessos remotos por cliente** (aba Clientes, botão **Acessos** no
-  topo, ao lado de "Novo Cliente"): cadastro de AnyDesk/Suporte Bredas de
-  cada máquina de um cliente (servidor, estações, etc.), com botão de
-  copiar ao lado de cada ID. Tabela nova (`cliente_acessos`), apagada
-  automaticamente junto com o cliente se ele for excluído.
-- **Ações em lote em Agendamentos e Clientes** (mesmo padrão que já
-  existia em Atualizações — segurar `Shift` e clicar em duas linhas
-  seleciona tudo entre elas): em Agendamentos dá para concluir ou excluir
-  várias tarefas de uma vez (com "Desfazer"); em Clientes dá para marcar
-  um sistema em vários de uma vez ou excluir vários (sem "Desfazer" aqui
-  — ver comentário em `ClienteService.deleteMany`, a exclusão em lote de
-  cliente também apaga os acessos remotos cadastrados neles).
-- **Changelog em itens na Distribuição**: o campo "Observações" ao
-  preparar uma versão virou uma lista de itens (adicionar/remover linha),
-  em vez de um texto livre só — a aba Versões mostra como lista com
-  marcadores.
-- **Histórico recente na Consulta**: a ficha de um cliente mostra as
-  últimas 5 atualizações dele, não só a mais recente.
-- **Verificação de integridade dos backups**: cada backup automático
-  roda um `PRAGMA integrity_check` do SQLite assim que é criado; se
-  falhar, aparece um aviso "Corrompido" na tela de Backups e um erro no
-  log do serviço — antes, um backup corrompido só seria descoberto na
-  hora de precisar restaurar de verdade.
-- **Trocar a própria senha e "último login"**: qualquer pessoa logada
-  pode trocar a própria senha pela tela de Usuários (pede a senha atual);
-  a mesma tela mostra quando cada conta acessou pela última vez. Para
-  quando ninguém mais consegue entrar, ver "Recuperando acesso" abaixo.
-- **Correção de um bug de CSS que afetava várias telas**: qualquer
-  elemento escondido com o atributo `hidden` cuja classe definisse
-  `display` (a maioria dos botões, barras de ferramentas, formulários
-  recolhíveis) na verdade continuava aparecendo — "Limpar busca"
-  aparecia mesmo sem busca nenhuma, a barra de progresso de upload
-  aparecia parada em "0%" sem upload nenhum, os formulários "Convidar
-  Pessoa"/"Trocar minha senha" apareciam sempre abertos. Corrigido com
-  uma regra CSS única e global, em vez de remendo por componente.
-
-### 11/09/2026
-
-- **Relatório de atualização** (aba Atualizações, botão **Gerar
-  Relatório** ao lado de "Atualizar Selecionado"): monta o texto do que
-  foi feito, pronto para copiar num chamado. Dois formatos no mesmo
-  modal — **Esta atualização** (o registro selecionado, com a versão
-  anterior do cliente entre parênteses) e **Histórico do cliente**
-  (todas as atualizações daquele cliente, da mais recente para a mais
-  antiga). O botão "Copiar" leva o texto para a área de transferência e
-  fecha; se o navegador não deixar copiar (HTTP puro, ver
-  `copyToClipboard` em `client/js/core/html.js`), o modal fica aberto
-  com o texto selecionado em vez de sumir com ele.
-
-  Não exigiu campo novo nenhum: o relatório usa só o que já está gravado
-  em `atualizacoes` e `clientes`, então os registros antigos vindos de
-  planilha geram relatório igual aos de hoje. Campo vazio não vira linha
-  — quase metade do histórico não tem responsável preenchido, e uma
-  página de "Por: —" seria pior que um texto mais curto. A única
-  mudança no backend foi aceitar `limit=todas` em
-  `/atualizacoes/recent-by-client/:nome`, que antes travava em 50: o
-  relatório do cliente existe justamente para mostrar tudo.
-
-- **Padronização de sistemas e responsáveis**: o campo "Sistema" das
-  atualizações era texto livre e tinha acumulado 144 grafias para 14
-  sistemas (`B_NFE`, `B_vendas`, `B_areadocontador e B_importaXML`). Não
-  era só feio: o relatório da aba Sistemas compara texto exato, então 60
-  dos 370 clientes de B_NFe apareciam como "Nunca atualizado" só porque
-  alguém tinha digitado `B_NFE`. Agora toda gravação — cadastro, edição e
-  **importação de planilha** — passa por `services/normalizacao.js`, que
-  casa o nome com o catálogo ignorando caixa, acento e pontuação. O campo
-  Responsável segue a mesma ideia, sem lista fixa de pessoas: canoniza
-  contra as grafias que já existem. O histórico antigo foi acertado de uma
-  vez por `scripts/normalizar-historico.js`, com as mesmas funções.
-
-- **Arquivar agendamentos concluídos** (aba Agendamentos): tarefa
-  concluída há mais de 30 dias sai da lista sozinha — a varredura roda
-  junto da listagem, sem agendador. Ela **não é apagada**: está no filtro
-  de Status em "Arquivadas" (com a contagem no rótulo), continua contando
-  no tempo médio de resolução por responsável do Resumo, e o botão
-  "Reabrir" traz de volta como "A Fazer". Desarquivar reabre de propósito:
-  como a varredura roda a cada listagem, uma tarefa que apenas saísse do
-  arquivo continuando "Concluído" sumiria de novo no mesmo instante. O
-  prazo está em `AGENDAMENTO_ARQUIVAR_DIAS` no `.env` — é regra da equipe
-  inteira, não uma preferência de cada pessoa: o conteúdo da lista precisa
-  ser o mesmo para todo mundo. Quem não quer esperar o prazo tem o botão
-  "Arquivar" (ao lado de "Excluir Selecionada"), restrito a tarefas já
-  "Concluído".
-
-- **Configurações passam a ser da conta, não do navegador**: tema, cor de
-  destaque, tamanho do texto, densidade, linhas por página, tela inicial e
-  as demais opções do painel agora ficam no servidor
-  (`usuario_preferencias`, via `GET`/`PUT /api/preferencias`), uma linha
-  por conta. Antes viviam só no localStorage, e o efeito aparecia na hora
-  errada: trocar de máquina, usar o Edge em vez do Chrome ou limpar os
-  dados do site devolvia o app aos padrões — e num computador
-  compartilhado as escolhas de uma pessoa recebiam a seguinte.
-
-  O localStorage **continua sendo escrito**, agora como cache, e isso não é
-  redundância: `theme-init.js` roda no `<head>`, antes do primeiro pixel, e
-  precisa de uma resposta síncrona. Esperar uma requisição ali faria a
-  página nascer no tema errado e trocar na cara de quem está olhando. O
-  cache pinta na hora; as preferências da conta chegam alguns
-  milissegundos depois e corrigem se divergirem. Quem entra numa conta
-  diferente no mesmo navegador tem o cache limpo antes, para não herdar o
-  tema de quem usou por último.
-
-  Migração é invisível: na primeira vez que uma conta entra sem nada salvo
-  no servidor, o que estava no localStorage daquele navegador vira as
-  preferências dela. A única opção que **não** acompanha a conta é o aviso
-  de falhas por notificação — depende da permissão que o navegador concede
-  por aparelho, e sincronizá-la faria o painel dizer "ativado" numa máquina
-  onde a permissão nunca foi pedida.
-
-### 15/09/2026 — interface, acessibilidade e Configurações
-
-- **Cabeçalho que acompanha a rolagem, busca visível e menu da conta.** O
-  cabeçalho agora fica grudado no topo (com sombra e um respiro menor
-  assim que sai do topo): numa tabela de duzentas linhas, rolar até o fim
-  deixava a pessoa sem o nome da tela e sem nenhum botão, e a saída era
-  rolar tudo de volta. Ao lado dele entrou um campo-botão **"Buscar…"**
-  com o `Ctrl + K` escrito — o atalho existia desde a primeira versão e
-  não aparecia em lugar nenhum da tela, e atalho que não aparece é atalho
-  que só quem escreveu o código usa (o CSS dele já estava escrito há
-  tempos; faltava o botão). No canto, o bloco de texto com o nome de quem
-  está logado e os dois ícones sem rótulo (engrenagem e porta) viraram um
-  alvo só: o avatar abre um menu com tema (três opções escritas por
-  extenso), "Atualizar os dados desta tela", Configurações, Atalhos e
-  Sair — este último em vermelho e separado por uma divisória, longe do
-  que se clica sem pensar.
-
-- **Atualizar os dados sem recarregar a página.** O cache que torna a
-  troca de aba instantânea não tinha como ser dispensado: quando outra
-  pessoa mexia no mesmo registro do outro lado da sala, só o F5 resolvia —
-  e o F5 cobra o login, a rolagem e a aba aberta. Agora existe "Atualizar
-  os dados desta tela", no menu da conta e na paleta de comandos.
-
-- **Perfis de aparência** (Configurações > Aparência): **Equilibrado**,
-  **Operação**, **Leitura** e **Alto contraste**, cada um com uma amostra
-  desenhada em CSS. O painel tem dezoito ajustes, e quase ninguém quer
-  decidir dezoito coisas — quer dizer "preciso caber mais linha na tela"
-  e voltar ao trabalho. Um perfil leva ao padrão tudo que ele não
-  menciona, de propósito: aplicado por cima de um tamanho de texto que
-  sobrou de outro dia, entregaria uma tela que não é nem o perfil nem o
-  que havia antes.
-
-- **Dá para ver o que você mudou.** Cada ajuste fora do padrão ganha o
-  selo "alterado" e um fio na borda; cada seção mostra quantos tem; o
-  rodapé resume ("3 ajustes fora do padrão"). A pergunta "o que aqui
-  dentro fui eu que mexi?" era impossível de responder sem lembrar de
-  cada escolha feita meses atrás — e é a primeira pergunta de quem herda
-  uma máquina configurada por outra pessoa. Junto veio **"Restaurar esta
-  seção"** (o botão de restaurar era tudo ou nada, e "tudo" é caro demais
-  para quem só quer desfazer a densidade) e o fim do `location.reload()`
-  que o "Restaurar padrões" dava: o painel continua aberto, sem piscar a
-  página inteira.
-
-- **Exportar e importar preferências** (Configurações > Sistema): um
-  arquivo `.json` com as dezesseis preferências, para deixar a máquina
-  nova — ou a do colega — igual à sua sem refazer as escolhas na mão. A
-  importação ignora em silêncio o que não reconhece (chave de uma versão
-  mais nova, valor editado à mão) e diz quantas ficaram de fora, em vez
-  de recusar o arquivo inteiro.
-
-- **Seção nova: Acessibilidade.** **Contraste alto** reforça bordas e
-  textos de apoio *por cima* do tema escolhido — quem precisa enxergar
-  melhor não devia ter que abrir mão do tema que prefere; ele é escrito
-  uma vez só no CSS, derivando as cores do próprio tema com `color-mix`,
-  em vez de um bloco para escuro e outro para claro. **Superfícies:
-  sólidas** desliga o vidro fosco (`backdrop-filter`), que é o efeito mais
-  caro da tela e é recalculado a cada quadro do que passa por trás dele —
-  ou seja, exatamente enquanto se rola uma tabela longa, numa máquina de
-  escritório sem placa de vídeo dedicada. **Animações** veio de Aparência,
-  onde estava sozinha.
-
-- **Linhas alternadas (zebra) das tabelas viraram opção.** A faixa ajuda
-  a não pular de linha numa tabela larga e atrapalha quando a linha já é
-  tingida por outro motivo (o vermelho de "parado há muito tempo", em
-  Resumo e Sistemas), porque as duas tintas se somam.
-
-- **`Ctrl + ,` abre as Configurações** — o mesmo atalho do Windows, do
-  macOS e do VS Code. Um atalho que a pessoa já traz aprendido de outro
-  lugar é o único tipo que não precisa ser ensinado. Está na lista do
-  `?` e ao lado do item no menu da conta.
-
-- **Tela de login: mostrar a senha e aviso de Caps Lock.** A senha é
-  digitada às cegas, e o erro mais comum não é esquecê-la, é digitá-la
-  errado duas vezes seguidas sem nunca ver o que saiu. O Caps Lock ligado
-  é a causa silenciosa de metade dos "minha senha parou de funcionar": a
-  tecla que estragou a senha fica acesa num canto do teclado que ninguém
-  olha.
-
-- **Aviso de servidor fora do ar, com reconexão sozinha.** O servidor é um
-  serviço do Windows numa máquina da rede, e ele reinicia (atualização do
-  Gestor, reboot, queda do switch). Até agora isso era invisível para quem
-  estava com o app aberto: a tela seguia mostrando os dados de antes — o
-  que é o certo, dado velho é melhor que tela em branco —, mas nada dizia
-  que eles tinham parado no tempo, e a descoberta vinha pelo pior caminho,
-  clicando em "Adicionar" e recebendo um erro que não esclarecia se o
-  problema era daquele registro ou de tudo. Agora uma faixa no topo avisa
-  enquanto durar, tenta de novo a cada cinco segundos (e tem "Tentar
-  agora"), some sozinha quando o servidor volta e, ao voltar, busca de novo
-  os dados da tela aberta — enquanto ele esteve fora, outra pessoa pode ter
-  mudado alguma coisa.
-
-- **Densidade e contraste na paleta de comandos** (`Ctrl + K`): são os dois
-  ajustes que se liga e desliga várias vezes por dia — a densidade quando a
-  tabela da vez é longa, o contraste quando o sol bate na tela à tarde. Os
-  outros dezesseis continuam só em Configurações, que é onde devem ficar:
-  são decisões que se toma uma vez.
-
-- **`Ctrl + B` recolhe e abre o menu lateral**, e cada aba mostra o próprio
-  `Alt+N` ao passar o mouse. Recolher o menu é a única preferência que se
-  quer mexer várias vezes no mesmo dia (mais coluna visível numa tabela
-  larga, menu de volta para trocar de tela), e custava quatro cliques; o
-  atalho numérico existia desde sempre e só aparecia no `title`, que só
-  conta a mesma coisa depois de um segundo parado em cima — e ninguém para
-  em cima de um menu que já sabe usar.
-
-- **Aviso com "Desfazer" não encurta mais quando o mouse passa por cima.**
-  Ele vive mais tempo que um aviso comum de propósito; passar o mouse (e
-  sair) reagendava a saída com a duração padrão, ou seja, o gesto de ir até
-  o botão era justamente o que tirava tempo de usá-lo. O aviso agora também
-  para o relógio quando recebe foco pelo teclado — sem isso ele podia sumir
-  com o foco dentro dele, no meio da ação que a pessoa ia desfazer.
-
-- **Lembretes no título da aba do navegador** (`(2) Clientes · Gestor de
-  Atualizações`). O Gestor passa boa parte do dia numa aba de fundo, atrás
-  do ERP: a faixa de lembretes só alcança quem está olhando a tela, e quem
-  está olhando é justamente quem menos precisa ser lembrado. O número no
-  título é a única parte do app que aparece na barra de tarefas do Windows.
-
-- **A faixa de "sem conexão" também escuta o navegador.** O `offline` do
-  próprio navegador chega na hora em que o cabo sai ou o Wi-Fi cai, sem
-  esperar nenhuma requisição falhar. O caminho de volta continua sendo um
-  só: quem apaga a faixa é a resposta do servidor, não o palpite do
-  navegador — o Wi-Fi voltar não quer dizer que o servidor esteja de pé.
-
-- **Correção de texto que tinha virado mentira:** o painel dizia "valem
-  só para este navegador" desde antes de as preferências passarem a ser
-  gravadas na conta (11/09). Agora diz o que acontece de verdade —
-  "acompanham a sua conta em qualquer máquina".
-
 ## Documentação
 
-[`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) —
-documento único que cobre a arquitetura do painel e do agente de
-atualização, as auditorias técnicas e o histórico de correções. O PDF ao
-lado dele é gerado do próprio `.md` (`cd docs && npm install && npm run pdf`)
-e nunca é editado à mão.
+| Documento | Para quem, e quando |
+|---|---|
+| Este README | Quem vai **usar** ou **instalar** o painel |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Quem vai **alterar o código**: como rodar, onde colocar cada coisa, o que não quebrar |
+| [`SECURITY.md`](SECURITY.md) | O que protege o quê, onde ficam os segredos, e os limites assumidos de propósito |
+| [`CHANGELOG.md`](CHANGELOG.md) | "Por que isso é assim?" — diário de decisões, em ordem cronológica |
+| [`docs/README.md`](docs/README.md) | Índice dos documentos longos, e a regra de precedência quando dois discordarem |
+| [`docs/OPERACAO.md`](docs/OPERACAO.md) | **Deu problema agora.** Runbook por sintoma: servidor fora do ar, ninguém entra, agente parado, restaurar backup |
+| [`docs/adr/`](docs/adr/) | As decisões de arquitetura, uma por arquivo, com as alternativas descartadas |
+| [`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) | Documento único cobrindo painel + agente, auditorias técnicas e histórico de correções |
+| [`docs/APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md`](docs/APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md) | Visão para a diretoria, sem detalhe técnico |
+
+Os PDFs ao lado dos `.md` são gerados do próprio Markdown
+(`cd docs && npm install && npm run pdf`) e **nunca** são editados à mão.
+
+A documentação do agente C# fica no repositório dele — em especial
+[`RISCOS-CONHECIDOS.md`](../atualizador/RISCOS-CONHECIDOS.md), que é leitura
+obrigatória antes de mexer naquele lado.
+
+### Qual documento responde o quê
+
+- *"Como eu rodo isso?"* → este README.
+- *"Onde eu ponho este arquivo novo?"* → `CONTRIBUTING.md`.
+- *"Por que não usaram React?"* → `docs/adr/0001`.
+- *"Por que existe uma classe de sessão escrita à mão?"* → `docs/adr/0003`.
+- *"Quando isso mudou, e por quê?"* → `CHANGELOG.md`.
+- *"Isso aqui é seguro?"* → `SECURITY.md`.
+- *"Está fora do ar, e agora?"* → `docs/OPERACAO.md`.
 
 ## Licença
 

@@ -200,3 +200,4 @@ O código-fonte do projeto está organizado em dois repositórios seguros com ve
   `github.com/antoniossalomao/gestor_atualizacao`
 * **Agente Atualizador ERP (Serviço Windows C#):**  
   `github.com/antoniossalomao/atualizador_automatico`
+

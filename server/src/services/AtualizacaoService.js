@@ -1,9 +1,9 @@
 const ExcelJS = require("exceljs");
 
 const { COLUMNS, DESATUALIZADO_DIAS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
-const { dataValida, parseData } = require("./validation");
+const { dataValida, parseData } = require("../shared/validation");
 const { normalizarSistemas, normalizarResponsavel } = require("./normalizacao");
-const { ValidationError, NotFoundError } = require("./errors");
+const { ValidationError, NotFoundError } = require("../shared/errors");
 
 // Sentinela: cliente nunca atualizado, sempre no topo da lista de
 // pendencias (ninguem esta "mais atrasado" do que quem nunca foi atualizado).

@@ -1,13 +1,13 @@
-import { View } from "../core/View.js";
-import { SortableTable } from "../core/SortableTable.js";
-import { blendHex, tokenHex } from "../core/color.js";
-import { isValidDateBR } from "../core/date.js";
+import { View } from "../app/View.js";
+import { SortableTable } from "../components/SortableTable.js";
+import { blendHex, tokenHex } from "../utils/color.js";
+import { isValidDateBR } from "../utils/date.js";
 import { ApiError } from "../api/ApiClient.js";
-import { Modal } from "../core/Modal.js";
-import { debounce } from "../core/debounce.js";
-import { emptyState } from "../core/EmptyState.js";
-import { escapeHtml, plural } from "../core/html.js";
-import { prefs } from "../core/prefs.js";
+import { Modal } from "../components/Modal.js";
+import { debounce } from "../utils/debounce.js";
+import { emptyState } from "../components/EmptyState.js";
+import { escapeHtml, plural } from "../utils/html.js";
+import { prefs } from "../app/prefs.js";
 
 /**
  * Relatório por sistema: filtra clientes que usam um sistema específico

@@ -30,7 +30,7 @@ export class SortableTable {
   /**
    * @param {HTMLElement} container onde a tabela é desenhada
    * @param {{
-   *   columns: Array<{key: string, label: string, type?: "text"|"date"|"numeric", largura?: string}>,
+   *   columns: Array<{key: string, label: string, type?: "text"|"date"|"numeric", largura?: string, title?: (row: any) => string}>,
    *   rowKey?: (row: any) => string|number,
    *   onSelect?: (row: any) => void,
    *   rowClass?: (row: any, i: number) => string,

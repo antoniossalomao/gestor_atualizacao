@@ -1,0 +1,90 @@
+name: CI
+
+# Roda em todo push na main e em todo pull request. O agente C# tem o seu
+# proprio workflow, no outro repositorio -- este cobre so o painel web.
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          # A mesma linha usada em desenvolvimento e em producao. Nao usar
+          # "latest": uma versao nova do Node saindo nao pode quebrar o CI de
+          # um projeto que nao mudou.
+          node-version: "22"
+          cache: npm
+          # Os dois package-lock.json: o da raiz tem so a ferramenta de
+          # verificacao de tipos (devDependency), o de server/ tem o que o app
+          # realmente usa. O front-end nao tem nenhum (ADR-0001).
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      # "npm ci", nao "npm install": instala exatamente o que esta no
+      # package-lock.json e falha se os dois estiverem fora de sincronia --
+      # que e' justamente o tipo de divergencia que so aparece na maquina de
+      # outra pessoa.
+      - name: Instalar as dependências do servidor
+        working-directory: server
+        run: npm ci
+
+      - name: Testes do servidor
+        working-directory: server
+        run: npm test
+
+      # Verificacao estatica de tipos sobre client/js/domain e client/js/utils
+      # -- as camadas que, por desenho, nao tocam no DOM (ADR-0005). Nao compila
+      # nada (noEmit): le o JavaScript que ja existe e as anotacoes JSDoc que ele
+      # ja tinha, e falha se houver inconsistencia real. Ver client/tsconfig.json
+      # para o porque de nao rodar no projeto inteiro.
+      - name: Instalar as ferramentas de verificação
+        run: npm ci
+
+      - name: Verificação de tipos (camadas sem DOM)
+        run: npm run check
+
+      # O front-end nao tem dependencia nenhuma (ver ADR-0001: sem framework,
+      # sem build), entao nao ha o que instalar -- so rodar.
+      - name: Testes do front-end
+        working-directory: client
+        run: npm test
+
+  auditoria:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar o código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar o Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Instalar as dependências do servidor
+        working-directory: server
+        run: npm ci
+
+      # Job separado dos testes de proposito: uma vulnerabilidade nova e'
+      # publicada sem ninguem tocar no codigo, entao ela nao deve derrubar o
+      # job que diz se o codigo funciona. Aqui ela fica visivel como uma
+      # falha propria, com nome proprio.
+      #
+      # "--omit=dev": o que importa e' o que vai para producao. Uma falha no
+      # nodemon, que so roda na maquina de quem desenvolve, nao e' o mesmo
+      # risco que uma falha no express.
+      - name: Auditoria de dependências de produção
+        working-directory: server
+        run: npm audit --omit=dev --audit-level=high

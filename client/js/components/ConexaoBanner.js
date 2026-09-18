@@ -1,4 +1,4 @@
-import { icon } from "./icons.js";
+import { icon } from "../utils/icons.js";
 
 /** De quanto em quanto tempo tentar de novo enquanto o servidor está fora. */
 const INTERVALO_MS = 5000;

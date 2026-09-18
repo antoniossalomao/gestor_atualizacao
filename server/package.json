@@ -18,6 +18,7 @@
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
+    "gestor-de-atualizacoes": "file:..",
     "helmet": "^8.3.0",
     "multer": "^2.3.0"
   },

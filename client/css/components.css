@@ -2,7 +2,7 @@
  * Estilos de componentes reutilizáveis: casca da página, cards, botões,
  * campos de formulário, tabelas, badges, toasts, modais, estados vazios.
  * Cada classe aqui é usada por mais de uma tela (ver client/js/views/*.js
- * e client/js/core/*.js) -- equivalente, em espírito, ao "estilista
+ * e nas pastas de client/js) -- equivalente, em espírito, ao "estilista
  * central" que gestor/theme.py era para o app Tkinter.
  *
  * ORGANIZAÇÃO: o arquivo tinha duas seções ("shell atualizado" e "acabamento
@@ -2392,7 +2392,7 @@ textarea.relatorio__texto {
    CONFIGURAÇÕES -- painel de duas colunas
    A forma é a de um painel de preferências de sistema operacional: trilha de
    seções fixa à esquerda, conteúdo rolando à direita, cabeçalho e rodapé
-   parados. Ver o comentário de abertura em js/core/ConfiguracoesPanel.js para
+   parados. Ver o comentário de abertura em js/views/ConfiguracoesPanel.js para
    o porquê de ter deixado de ser uma lista única dentro de um modal.
    ========================================================================== */
 

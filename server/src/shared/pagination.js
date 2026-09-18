@@ -8,7 +8,7 @@ const PAGE_SIZE_MAXIMO = 200;
  * `?pageSize=999999999` e forçar o servidor a montar uma resposta gigante
  * de propósito. "sortBy" em si não precisa ser validado aqui -- cada
  * repositório só aceita chaves de uma lista própria (ver
- * database/sortHelper.js), então um valor desconhecido simplesmente cai
+ * shared/sortHelper.js), então um valor desconhecido simplesmente cai
  * na ordenação padrão, sem risco de virar SQL.
  */
 function parsePaginacao(query) {

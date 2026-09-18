@@ -1,9 +1,9 @@
-import { View } from "../core/View.js";
-import { debounce } from "../core/debounce.js";
-import { emptyState } from "../core/EmptyState.js";
-import { plural, escapeHtml } from "../core/html.js";
-import { toast } from "../core/Toast.js";
-import { tempoRelativo, formatarDataHora } from "../core/date.js";
+import { View } from "../app/View.js";
+import { debounce } from "../utils/debounce.js";
+import { emptyState } from "../components/EmptyState.js";
+import { plural, escapeHtml } from "../utils/html.js";
+import { toast } from "../components/Toast.js";
+import { tempoRelativo, formatarDataHora } from "../utils/date.js";
 
 const MAX_SUGESTOES = 50;
 

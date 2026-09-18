@@ -164,7 +164,12 @@ function normalizarResponsavel(nome, conhecidos = []) {
   const bruto = String(nome ?? "").trim();
   if (!bruto) return "";
   const k = chave(bruto);
-  if (APELIDOS_RESPONSAVEL.has(k)) return APELIDOS_RESPONSAVEL.get(k);
+  // Um `get` so, em vez de `has` seguido de `get`: alem de consultar o Map uma
+  // vez, e' a forma em que o proprio codigo prova que o retorno nao e'
+  // undefined -- com `has` + `get`, isso fica implicito numa relacao entre duas
+  // chamadas que nada garante que continuem juntas.
+  const apelido = APELIDOS_RESPONSAVEL.get(k);
+  if (apelido) return apelido;
   for (const conhecido of conhecidos) {
     if (chave(conhecido) === k) return conhecido;
   }

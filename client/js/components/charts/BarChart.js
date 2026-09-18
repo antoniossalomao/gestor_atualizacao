@@ -1,4 +1,4 @@
-import { escapeHtml } from "./html.js";
+import { escapeHtml } from "../../utils/html.js";
 
 /**
  * Gráfico de barras horizontais simples, em HTML/CSS puro (sem SVG) -- cada

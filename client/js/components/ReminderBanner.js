@@ -1,5 +1,5 @@
-import { icon } from "./icons.js";
-import { prefs } from "./prefs.js";
+import { icon } from "../utils/icons.js";
+import { prefs } from "../app/prefs.js";
 
 const CHAVE = "lembretes-fechados-em";
 

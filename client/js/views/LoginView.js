@@ -1,6 +1,6 @@
 import { ApiError } from "../api/ApiClient.js";
-import { marcarOcupado } from "../core/guard.js";
-import { icon } from "../core/icons.js";
+import { marcarOcupado } from "../utils/guard.js";
+import { icon } from "../utils/icons.js";
 
 /**
  * Tela cheia de autenticação -- funciona em dois modos:

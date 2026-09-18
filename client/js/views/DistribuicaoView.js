@@ -1,15 +1,15 @@
-import { View } from "../core/View.js";
-import { icon } from "../core/icons.js";
-import { toast } from "../core/Toast.js";
-import { Modal } from "../core/Modal.js";
-import { emptyState } from "../core/EmptyState.js";
-import { copyToClipboard, escapeAttr, escapeHtml, plural } from "../core/html.js";
-import { formatarDataHora, tempoRelativo } from "../core/date.js";
-import { notificacoes } from "../core/notify.js";
-import { aparencia } from "../core/appearance.js";
-import { faseLabel } from "../core/agenteLabels.js";
-import { relatorioRetornosTexto } from "../core/agenteReport.js";
-import { classificarRetorno, agruparRetornos } from "../core/agenteStatus.js";
+import { View } from "../app/View.js";
+import { icon } from "../utils/icons.js";
+import { toast } from "../components/Toast.js";
+import { Modal } from "../components/Modal.js";
+import { emptyState } from "../components/EmptyState.js";
+import { copyToClipboard, escapeAttr, escapeHtml, plural } from "../utils/html.js";
+import { formatarDataHora, tempoRelativo } from "../utils/date.js";
+import { notificacoes } from "../app/notify.js";
+import { aparencia } from "../app/appearance.js";
+import { faseLabel } from "../domain/agenteLabels.js";
+import { relatorioRetornosTexto } from "../domain/agenteReport.js";
+import { classificarRetorno, agruparRetornos } from "../domain/agenteStatus.js";
 import { AgenteDetalheModal } from "./AgenteDetalheModal.js";
 import { ApiError } from "../api/ApiClient.js";
 
@@ -384,7 +384,11 @@ export class DistribuicaoView extends View {
       const rankA = SEVERIDADE_RANK[a.situacao] ?? 99;
       const rankB = SEVERIDADE_RANK[b.situacao] ?? 99;
       if (rankA !== rankB) return rankA - rankB;
-      return new Date(a.ultimaComunicacao || 0) - new Date(b.ultimaComunicacao || 0);
+      // `.getTime()` explicito em vez de subtrair as datas direto: subtrair
+      // dois Date funciona (o JS converte por valueOf), mas so por coercao
+      // implicita -- qualquer verificacao estatica marca como erro, e quem le
+      // precisa lembrar da regra. O resultado e' identico.
+      return new Date(a.ultimaComunicacao || 0).getTime() - new Date(b.ultimaComunicacao || 0).getTime();
     });
 
     body.replaceChildren();

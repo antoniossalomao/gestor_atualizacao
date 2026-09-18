@@ -1,8 +1,8 @@
-import { Modal } from "../core/Modal.js";
-import { icon } from "../core/icons.js";
-import { formatarBytes } from "../core/arquivo.js";
-import { formatarDataHora } from "../core/date.js";
-import { toast } from "../core/Toast.js";
+import { Modal } from "../components/Modal.js";
+import { icon } from "../utils/icons.js";
+import { formatarBytes } from "../utils/arquivo.js";
+import { formatarDataHora } from "../utils/date.js";
+import { toast } from "../components/Toast.js";
 import { BackupsPanel } from "./BackupsPanel.js";
 
 /**

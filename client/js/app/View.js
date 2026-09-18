@@ -32,7 +32,17 @@ export class View {
   /**
    * @param {HTMLElement} container
    * @param {import('../api/ApiClient').ApiClient} api
-   * @param {{user?: object, cache: import('./SwrCache').SwrCache, navigate?: (aba: string) => void}} ctx
+   * @param {{user?: object, cache?: import('./SwrCache').SwrCache, navigate?: (aba: string, params?: object) => void}} ctx
+   *
+   * `navigate` recebe DOIS argumentos, nao um: o destino e um objeto opcional de
+   * filtros pre-aplicados na aba de destino (ver App.switchTab). A anotacao antiga
+   * dizia `(aba: string) => void`, e com isso as chamadas legitimas de ResumoView
+   * ("este mes" abre Atualizacoes ja filtrada pelo mesmo recorte que o numero
+   * contou) e de AgendamentosView apareciam como erro na verificacao de tipos.
+   * O codigo sempre esteve certo; a anotacao e' que estava atras dele.
+   *
+   * `cache` e' opcional porque `ctx` tem default `{}` -- uma View construida sem
+   * contexto e' valida (acontece em teste e no primeiro desenho do login).
    */
   constructor(container, api, ctx = {}) {
     this.container = container;

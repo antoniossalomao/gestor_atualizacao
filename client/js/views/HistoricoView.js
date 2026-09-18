@@ -1,12 +1,12 @@
-import { View } from "../core/View.js";
-import { SortableTable } from "../core/SortableTable.js";
-import { Pagination } from "../core/Pagination.js";
-import { debounce } from "../core/debounce.js";
-import { emptyState } from "../core/EmptyState.js";
-import { plural } from "../core/html.js";
-import { tempoRelativo, formatarDataHora } from "../core/date.js";
-import { prefs } from "../core/prefs.js";
-import { aparencia } from "../core/appearance.js";
+import { View } from "../app/View.js";
+import { SortableTable } from "../components/SortableTable.js";
+import { Pagination } from "../components/Pagination.js";
+import { debounce } from "../utils/debounce.js";
+import { emptyState } from "../components/EmptyState.js";
+import { plural } from "../utils/html.js";
+import { tempoRelativo, formatarDataHora } from "../utils/date.js";
+import { prefs } from "../app/prefs.js";
+import { aparencia } from "../app/appearance.js";
 
 const ACAO_LABEL = {
   criar: "Criou",

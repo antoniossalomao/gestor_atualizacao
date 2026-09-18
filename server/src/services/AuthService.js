@@ -1,6 +1,6 @@
 const bcrypt = require("bcryptjs");
 
-const { ValidationError, ForbiddenError } = require("./errors");
+const { ValidationError, ForbiddenError } = require("../shared/errors");
 
 const SALT_ROUNDS = 10;
 const SENHA_MIN_LENGTH = 6;

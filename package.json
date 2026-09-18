@@ -1,0 +1,25 @@
+{
+  "name": "gestor-de-atualizacoes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gestor de Atualizacoes -- painel web (servidor Express + SQLite e cliente sem build)",
+  "scripts": {
+    "start": "npm start --prefix server",
+    "dev": "npm run dev --prefix server",
+    "install:all": "npm install --prefix server",
+    "test": "npm run test:server && npm run test:client",
+    "check": "npm run check:client && npm run check:server",
+    "check:client": "tsc -p client --noEmit",
+    "check:server": "tsc -p server --noEmit",
+    "test:server": "npm test --prefix server",
+    "test:client": "node --experimental-vm-modules --test client/tests/*.test.mjs",
+    "resetar-senha": "npm run resetar-senha --prefix server"
+  },
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

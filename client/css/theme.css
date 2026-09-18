@@ -197,7 +197,7 @@
 
   /* ==========================================================================
      DENSIDADE DAS TABELAS
-     Escolha do usuário no painel de Configurações (ver js/core/appearance.js),
+     Escolha do usuário no painel de Configurações (ver js/app/appearance.js),
      aplicada como `data-densidade` no <html> -- mesmo mecanismo do tema.
      Só a altura da linha muda; o tamanho do texto fica igual nos três modos,
      porque encolher a fonte para "caber mais" só troca um problema (rolar) por

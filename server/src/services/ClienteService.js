@@ -1,4 +1,4 @@
-const { ValidationError, NotFoundError } = require("./errors");
+const { ValidationError, NotFoundError } = require("../shared/errors");
 
 /**
  * Regras de negocio da aba Clientes, em cima do ClienteRepository /

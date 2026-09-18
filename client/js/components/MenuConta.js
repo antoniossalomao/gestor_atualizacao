@@ -1,7 +1,7 @@
-import { icon } from "./icons.js";
-import { escapeHtml } from "./html.js";
-import { theme } from "./theme.js";
-import { iniciais, rotuloPapel } from "./pessoa.js";
+import { icon } from "../utils/icons.js";
+import { escapeHtml } from "../utils/html.js";
+import { theme } from "../app/theme.js";
+import { iniciais, rotuloPapel } from "../domain/pessoa.js";
 
 /**
  * O menu da conta, no canto do cabeçalho.

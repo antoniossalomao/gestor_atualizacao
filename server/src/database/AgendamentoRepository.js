@@ -1,6 +1,6 @@
 const { BaseRepository } = require("./BaseRepository");
 const { DATE_SORT_EXPR, titleCase } = require("./AtualizacaoRepository");
-const { buildOrderBy } = require("./sortHelper");
+const { buildOrderBy } = require("../shared/sortHelper");
 const { FILTRO_ARQUIVADAS } = require("../config/constants");
 
 const COLUMNS = ["tarefa", "cliente", "responsavel", "data", "horario", "status"];

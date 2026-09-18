@@ -1,5 +1,5 @@
-import { Modal } from "./Modal.js";
-import { theme } from "./theme.js";
+import { Modal } from "../components/Modal.js";
+import { theme } from "../app/theme.js";
 import {
   aparencia,
   reaplicarAparencia,
@@ -14,15 +14,15 @@ import {
   TRANSPARENCIAS,
   ZEBRAS,
   PERFIS,
-} from "./appearance.js";
-import { settings, prefs } from "./prefs.js";
-import { mostrarAtalhos } from "./Shortcuts.js";
-import { notificacoes } from "./notify.js";
-import { icon } from "./icons.js";
-import { toast } from "./Toast.js";
-import { escapeHtml } from "./html.js";
-import { iniciais, rotuloPapel } from "./pessoa.js";
-import { baixarTexto, escolherArquivo } from "./arquivo.js";
+} from "../app/appearance.js";
+import { settings, prefs } from "../app/prefs.js";
+import { mostrarAtalhos } from "../app/Shortcuts.js";
+import { notificacoes } from "../app/notify.js";
+import { icon } from "../utils/icons.js";
+import { toast } from "../components/Toast.js";
+import { escapeHtml } from "../utils/html.js";
+import { iniciais, rotuloPapel } from "../domain/pessoa.js";
+import { baixarTexto, escolherArquivo } from "../utils/arquivo.js";
 
 /**
  * Painel de Configurações.
@@ -85,6 +85,7 @@ export class ConfiguracoesPanel {
    *   abrirBackups?: () => void,
    *   abrirUsuarios?: () => void,
    *   abrirConfiguracaoApi?: () => void,
+   *   abrirSaude?: () => void,
    * }} [acoes]
    *   O painel não mexe no shell por conta própria: quem sabe atualizar o
    *   rótulo do botão de recolher e recarregar a aba aberta é o App, então ele

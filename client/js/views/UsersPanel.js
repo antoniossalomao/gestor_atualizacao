@@ -1,11 +1,11 @@
 import { ApiError } from "../api/ApiClient.js";
-import { Modal } from "../core/Modal.js";
-import { toast } from "../core/Toast.js";
-import { icon } from "../core/icons.js";
-import { escapeHtml } from "../core/html.js";
-import { marcarOcupado } from "../core/guard.js";
-import { formatarDataHora, tempoRelativo } from "../core/date.js";
-import { rotuloPapel } from "../core/pessoa.js";
+import { Modal } from "../components/Modal.js";
+import { toast } from "../components/Toast.js";
+import { icon } from "../utils/icons.js";
+import { escapeHtml } from "../utils/html.js";
+import { marcarOcupado } from "../utils/guard.js";
+import { formatarDataHora, tempoRelativo } from "../utils/date.js";
+import { rotuloPapel } from "../domain/pessoa.js";
 
 /**
  * Painel de gerenciamento de contas, aberto pelo botão "Usuários".

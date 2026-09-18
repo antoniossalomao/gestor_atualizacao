@@ -7,7 +7,7 @@ export function todayBR() {
 
 /**
  * True se `texto` estiver vazio ou for uma data real no formato dd/mm/aaaa.
- * Mesma regra do backend (server/src/services/validation.js) -- checada de
+ * Mesma regra do backend (server/src/shared/validation.js) -- checada de
  * novo aqui só para dar feedback instantâneo no formulário, sem esperar a
  * viagem até o servidor. A validação que realmente importa (a que decide se o
  * registro é salvo) continua sendo a do backend.

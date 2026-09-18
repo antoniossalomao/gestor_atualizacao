@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
-const { ValidationError, ForbiddenError } = require("./errors");
+const { ValidationError, ForbiddenError } = require("../shared/errors");
 
 // Mesmo arquivo que o server.js le no arranque (ver require("dotenv").config()
 // em server.js) -- resolvido a partir deste arquivo, e nao do diretorio de

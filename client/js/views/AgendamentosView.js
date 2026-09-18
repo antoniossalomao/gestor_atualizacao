@@ -1,19 +1,19 @@
 import { AGENDA_COLUMNS, STATUS_OPTIONS, FILTRO_ARQUIVADAS } from "../config.js";
 import { ApiError } from "../api/ApiClient.js";
-import { View } from "../core/View.js";
-import { SortableTable } from "../core/SortableTable.js";
-import { Pagination } from "../core/Pagination.js";
-import { Autocomplete } from "../core/Autocomplete.js";
-import { Modal } from "../core/Modal.js";
-import { toast } from "../core/Toast.js";
-import { debounce } from "../core/debounce.js";
-import { todayBR, isValidDateBR } from "../core/date.js";
-import { emptyState } from "../core/EmptyState.js";
-import { plural } from "../core/html.js";
-import { icon } from "../core/icons.js";
-import { marcarOcupado } from "../core/guard.js";
-import { prefs } from "../core/prefs.js";
-import { aparencia } from "../core/appearance.js";
+import { View } from "../app/View.js";
+import { SortableTable } from "../components/SortableTable.js";
+import { Pagination } from "../components/Pagination.js";
+import { Autocomplete } from "../components/Autocomplete.js";
+import { Modal } from "../components/Modal.js";
+import { toast } from "../components/Toast.js";
+import { debounce } from "../utils/debounce.js";
+import { todayBR, isValidDateBR } from "../utils/date.js";
+import { emptyState } from "../components/EmptyState.js";
+import { plural } from "../utils/html.js";
+import { icon } from "../utils/icons.js";
+import { marcarOcupado } from "../utils/guard.js";
+import { prefs } from "../app/prefs.js";
+import { aparencia } from "../app/appearance.js";
 
 const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
 

@@ -1,5 +1,5 @@
 import { settings } from "./prefs.js";
-import { limparCacheTokens } from "./color.js";
+import { limparCacheTokens } from "../utils/color.js";
 
 /**
  * Alternância entre tema escuro e claro.

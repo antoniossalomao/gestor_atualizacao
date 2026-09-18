@@ -1,5 +1,5 @@
 const { BaseRepository } = require("./BaseRepository");
-const { buildOrderBy } = require("./sortHelper");
+const { buildOrderBy } = require("../shared/sortHelper");
 const { SISTEMA_APELIDOS } = require("../config/constants");
 
 // Datas sao guardadas como texto "dd/mm/aaaa"; esta expressao SQL as

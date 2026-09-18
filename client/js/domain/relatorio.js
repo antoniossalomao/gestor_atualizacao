@@ -1,4 +1,4 @@
-import { plural } from "./html.js";
+import { plural } from "../utils/html.js";
 
 /**
  * Monta o texto dos relatórios do botão "Gerar Relatório" (aba Atualizações).

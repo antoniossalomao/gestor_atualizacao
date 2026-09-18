@@ -1,13 +1,13 @@
-import { icon } from "./icons.js";
-import { Modal } from "./Modal.js";
-import { toast } from "./Toast.js";
+import { icon } from "../utils/icons.js";
+import { Modal } from "../components/Modal.js";
+import { toast } from "../components/Toast.js";
 import { SwrCache } from "./SwrCache.js";
 import { Router } from "./router.js";
-import { CommandPalette } from "./CommandPalette.js";
+import { CommandPalette } from "../components/CommandPalette.js";
 import { ligarAtalhoAjuda, mostrarAtalhos } from "./Shortcuts.js";
 import { theme } from "./theme.js";
 import { settings, conectarPreferencias } from "./prefs.js";
-import { abrirConfiguracoes } from "./ConfiguracoesPanel.js";
+import { abrirConfiguracoes } from "../views/ConfiguracoesPanel.js";
 import { aparencia, reaplicarAparencia } from "./appearance.js";
 import { RequestCancelled } from "../api/ApiClient.js";
 import { LoginView } from "../views/LoginView.js";
@@ -24,9 +24,9 @@ import { ConfiguracaoApiPanel } from "../views/ConfiguracaoApiPanel.js";
 import { SaudeSistemaPanel } from "../views/SaudeSistemaPanel.js";
 import { DistribuicaoView } from "../views/DistribuicaoView.js";
 import { VersoesView } from "../views/VersoesView.js";
-import { ReminderBanner } from "./ReminderBanner.js";
-import { MenuConta } from "./MenuConta.js";
-import { ConexaoBanner } from "./ConexaoBanner.js";
+import { ReminderBanner } from "../components/ReminderBanner.js";
+import { MenuConta } from "../components/MenuConta.js";
+import { ConexaoBanner } from "../components/ConexaoBanner.js";
 
 /**
  * Uma entrada por aba: chave interna (que é também a rota na URL), rótulo,

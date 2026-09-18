@@ -1,5 +1,5 @@
-import { icon } from "./icons.js";
-import { escapeHtml } from "./html.js";
+import { icon } from "../utils/icons.js";
+import { escapeHtml } from "../utils/html.js";
 
 const MAX_RESULTADOS = 12;
 

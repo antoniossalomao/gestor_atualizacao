@@ -1,12 +1,12 @@
-import { Modal } from "../core/Modal.js";
-import { copyToClipboard, escapeHtml } from "../core/html.js";
-import { formatarDataHora, tempoRelativo, formatarDuracao } from "../core/date.js";
-import { emptyState } from "../core/EmptyState.js";
-import { faseLabel } from "../core/agenteLabels.js";
+import { Modal } from "../components/Modal.js";
+import { copyToClipboard, escapeHtml } from "../utils/html.js";
+import { formatarDataHora, tempoRelativo, formatarDuracao } from "../utils/date.js";
+import { emptyState } from "../components/EmptyState.js";
+import { faseLabel } from "../domain/agenteLabels.js";
 import { ApiError } from "../api/ApiClient.js";
-import { toast } from "../core/Toast.js";
-import { criarDetalhesRetorno, relatorioRetornosTexto } from "../core/agenteReport.js";
-import { classificarRetorno } from "../core/agenteStatus.js";
+import { toast } from "../components/Toast.js";
+import { criarDetalhesRetorno, relatorioRetornosTexto } from "../domain/agenteReport.js";
+import { classificarRetorno } from "../domain/agenteStatus.js";
 
 const LIMITE_RETORNOS = 300;
 

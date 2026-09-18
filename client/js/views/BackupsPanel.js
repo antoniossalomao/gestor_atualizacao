@@ -1,9 +1,9 @@
-import { Modal } from "../core/Modal.js";
-import { toast } from "../core/Toast.js";
-import { emptyState } from "../core/EmptyState.js";
-import { marcarOcupado } from "../core/guard.js";
-import { icon } from "../core/icons.js";
-import { formatarBytes } from "../core/arquivo.js";
+import { Modal } from "../components/Modal.js";
+import { toast } from "../components/Toast.js";
+import { emptyState } from "../components/EmptyState.js";
+import { marcarOcupado } from "../utils/guard.js";
+import { icon } from "../utils/icons.js";
+import { formatarBytes } from "../utils/arquivo.js";
 
 /**
  * Painel de Backups e Restauração Protegida.

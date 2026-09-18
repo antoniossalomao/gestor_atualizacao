@@ -9,12 +9,34 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 
 | | |
 |---|---|
-| **Versão deste documento** | 1.2 |
-| **Data** | 15 de setembro de 2026 |
+| **Versão deste documento** | 1.3 |
+| **Data** | 18 de setembro de 2026 |
 | **Autor** | Antonio Salomão |
-| **Nesta revisão** | [Seção 2.8](#28-mudanças-de-15092026) — arquivamento manual de agendamentos, gráfico de tendência mensal em linha, relatório de atualização sem código/cidade |
+| **Nesta revisão** | Reorganização do `client/js` por responsabilidade (seção 2.2), verificação de tipos e testes na seção 4 |
 | **Substitui** | Ver [seção 6 — histórico deste documento](#6-histórico-deste-documento-o-que-foi-consolidado) |
 | **PDF** | Gerado do `.md` por `npm run pdf` nesta pasta — nunca editado à mão |
+
+> ### Este documento é uma fotografia, não a fonte da verdade
+>
+> Ele existe para ser **lido inteiro, de uma vez** — por alguém que chega ao projeto, ou por quem
+> precisa de uma visão completa dos dois lados num arquivo só (daí o PDF). Isso o torna útil, e
+> também o torna o documento que **envelhece mais rápido**: tudo que ele descreve está descrito
+> também em algum lugar que muda junto com o código.
+>
+> **Quando este documento e outro discordarem, o outro está certo.** A ordem de precedência:
+>
+> | Assunto | Onde está a verdade |
+> |---|---|
+> | Como rodar, instalar, o que o sistema faz | `web/README.md`, `atualizador/README.md` |
+> | Onde colocar cada coisa, como testar | `CONTRIBUTING.md` de cada metade |
+> | **Por que** foi feito assim | `docs/adr/` de cada metade |
+> | O que mudou e quando | [`web/CHANGELOG.md`](../CHANGELOG.md) |
+> | O que fazer quando quebra | [`docs/OPERACAO.md`](OPERACAO.md) |
+> | O que ainda pode dar errado no agente | [`atualizador/RISCOS-CONHECIDOS.md`](../../atualizador/RISCOS-CONHECIDOS.md) |
+>
+> Ao alterar o código, atualize **aquele** documento. Este aqui é revisado de tempos em tempos,
+> comparando com o código — como foi feito em set/2026, quando as seções 2.2 e 4 tinham ficado
+> para trás.
 
 ---
 
@@ -142,7 +164,7 @@ não usam `await`. Foge do padrão assíncrono comum em Node, mas segue a mesma 
 direto que o `sqlite3` do Python já usava — o SQLite lê do disco rápido o bastante para
 "assíncrono" não trazer benefício, só complexidade.
 
-**Erros:** `services/errors.js` define `ValidationError` (400) e `NotFoundError` (404) — erros
+**Erros:** `shared/errors.js` define `ValidationError` (400) e `NotFoundError` (404) — erros
 esperados, com mensagem segura de mostrar ao usuário. Qualquer outro erro vira 500 genérico, sem
 vazar detalhe interno.
 
@@ -155,13 +177,23 @@ vazar detalhe interno.
 pelo navegador, sem bundler:
 
 ```
-core/App.js  -- classe raiz: login vs. shell principal, troca de aba, mantém cada View viva
-core/View.js -- classe base: listeners rastreados (removidos no destroy()) + ciclo stale-while-revalidate
-views/*.js   -- uma classe por tela (Resumo, Atualizações, Agendamentos, Clientes, Consultar
-                Cliente, Distribuição, Versões, Sistemas, Histórico, Login)
-core/*.js    -- peças reaproveitadas: SortableTable, Pagination, Autocomplete, Modal, Toast,
-                PieChart/BarChart, CommandPalette (Ctrl+K), EmptyState, SwrCache, router
-core/theme.js + core/appearance.js + core/ConfiguracoesPanel.js
+app/App.js        -- classe raiz: login vs. shell principal, troca de aba, mantém cada View viva
+app/View.js       -- classe base: listeners rastreados (removidos no destroy()) + ciclo
+                     stale-while-revalidate
+app/*.js          -- o esqueleto: router, prefs, SwrCache, theme, appearance, notify, Shortcuts
+components/*.js   -- peças de UI reaproveitáveis: SortableTable, Pagination, Autocomplete, Modal,
+                     Toast, CommandPalette (Ctrl+K), EmptyState, ConexaoBanner, ReminderBanner,
+                     MenuConta
+components/charts -- PieChart, BarChart, LineChart (SVG escrito à mão)
+domain/*.js       -- vocabulário do negócio, SEM tocar no DOM: agenteStatus, agenteReport,
+                     agenteLabels, relatorio, pessoa. É o que dá para testar fora do navegador
+utils/*.js        -- utilidades genéricas: date, html, color, icons, debounce, guard, arquivo
+views/*.js        -- uma classe por tela (Resumo, Atualizações, Agendamentos, Clientes, Consultar
+                     Cliente, Distribuição, Versões, Sistemas, Histórico, Login) e os painéis
+                     (Configurações, Backups, Usuários, Saúde, Configuração da API)
+api/ApiClient.js  -- único lugar que chama fetch; todo o resto fala com o servidor por ele
+
+app/theme.js + app/appearance.js + views/ConfiguracoesPanel.js
              -- as preferências do usuário. theme.js cuida só de claro/escuro/sistema;
                 appearance.js cuida do resto (cor de destaque, tamanho do texto, densidade e
                 altura das tabelas, linhas por página, animações, fundo, posição dos avisos,
@@ -175,21 +207,27 @@ core/theme.js + core/appearance.js + core/ConfiguracoesPanel.js
                 página nasceria no tema errado e trocaria na cara de quem olha. prefs.js
                 (conectarPreferencias) busca as da conta no login e corrige o cache se
                 divergir, e limpa o cache quando quem entra é outra pessoa
-api/ApiClient.js -- único lugar que chama fetch; todo o resto fala com o servidor por ele
 ```
+
+A divisão entre `app/`, `components/`, `domain/` e `utils/` segue uma regra só, e é o que
+responde "onde eu ponho este arquivo novo?": **`utils/` não conhece o negócio, `domain/` não
+conhece o DOM, `components/` não conhece a tela em que está, `views/` conhece as duas coisas, e
+`app/` segura tudo junto.** Até set/2026 existia uma pasta `core/` única com 35 arquivos
+misturando as cinco categorias -- ver
+[ADR-0005](adr/0005-organizacao-do-client-por-responsabilidade.md).
 
 Cada `View` é instanciada uma única vez (não recriada ao trocar de aba), para não perder o que o
 usuário estava digitando. Toda vez que a aba fica visível, `App.js` chama `view.refresh()`, que
-usa **stale-while-revalidate** (`core/SwrCache.js`): o que já foi buscado aparece na hora, a
+usa **stale-while-revalidate** (`app/SwrCache.js`): o que já foi buscado aparece na hora, a
 revalidação roda em segundo plano, e a tela só é redesenhada se a resposta for diferente
 (comparação por serialização estável — `JSON.stringify` puro não serve porque o SQLite não
 garante ordem de colunas entre consultas). Escrita numa aba invalida o cache das outras que
 dependem do mesmo dado.
 
-O estado da navegação vive na URL (`#/clientes`, via `core/router.js`): recarregar mantém a tela
+O estado da navegação vive na URL (`#/clientes`, via `app/router.js`): recarregar mantém a tela
 aberta, e dá para compartilhar o link de uma aba específica.
 
-Toda tela nova deve estender `core/View.js` e usar `this.on(alvo, evento, fn)` em vez de
+Toda tela nova deve estender `app/View.js` e usar `this.on(alvo, evento, fn)` em vez de
 `addEventListener` direto quando o alvo é `document`/`window` — listeners registrados assim são
 removidos no `destroy()` (sem isso, já causou uma tela fantasma reagindo à tecla `Delete` depois
 de um novo login).
@@ -208,7 +246,7 @@ faltava.
 
 | # | Defeito | Onde estava | Correção |
 |---|---|---|---|
-| 1 | Página sem `<h1>` real | `core/App.js` | `<h1>` que muda por aba, junto com `document.title` |
+| 1 | Página sem `<h1>` real | `app/App.js` | `<h1>` que muda por aba, junto com `document.title` |
 | 2 | Lista de clientes parados **nunca era desenhada** — a API devolvia os dados, a tela usava só `.length` | `views/ResumoView.js` | Tabela ordenável, fundo tingido conforme o atraso, indicador vira botão que rola até ela |
 | 3 | **Race condition na busca** — resposta de `"ab"` podia chegar depois da de `"abc"` e sobrescrever a tabela | Todas as telas com busca | `ApiClient` cancela por chave: requisição nova aborta a anterior de mesma chave |
 | 4 | **Listeners vazando** — `document.addEventListener("keydown")` nunca removido; após expirar sessão, `Delete` podia excluir por uma tela fantasma | Atualizações, Agendamentos, Clientes | Classe base `View` com `this.on(...)` rastreado e `destroy()` |
@@ -978,21 +1016,31 @@ O console mostra a migração na primeira vez.
 | Teclado | `Tab` até a tabela, `↑`/`↓` navega, `Enter` seleciona |
 | Atalhos | `?` abre a lista |
 
+**Verificação automática** (substitui a conferência de sintaxe arquivo a arquivo que ficava
+aqui — aquele laço só provava que o arquivo *parseava*, não que os imports resolviam nem que os
+tipos batiam):
+
 ```bash
-# sintaxe de todos os arquivos
-cd web && for f in $(find client/js -name '*.js'); do node --input-type=module --check < "$f"; done
-for f in $(find server/src -name '*.js'); do node --check "$f"; done
+cd web
+npm install       # uma vez; traz só o verificador de tipos
+npm run check     # tipos, sem etapa de build (ver adr/0006)
+npm test          # 458 testes: 359 no servidor, 99 no front-end
 ```
+
+Entre os testes do front-end há um que **linka o grafo de módulos inteiro** a partir do
+`index.html`: ele pega import quebrado, nome importado que não existe e módulo órfão — que era
+justamente o que a conferência de sintaxe não alcançava.
 
 **Agente C#:**
 
 ```bash
 cd atualizador
-dotnet build AtualizadorERP.csproj
-dotnet test AtualizadorERP.Tests
+dotnet build AtualizadorERP.sln -warnaserror
+dotnet test  AtualizadorERP.sln                          # 39 testes (exige Firebird 2.5)
+dotnet test  AtualizadorERP.sln --filter "Requer!=Firebird"   # 6 testes -- é o que o CI roda
 ```
 
-Os 25 testes de integração rodam contra Firebird real (não mockado) — cobrem `ProcessService`,
+Os 39 testes de integração rodam contra Firebird real (não mockado) — cobrem `ProcessService`,
 `DatabaseService`, `ScriptRunnerService` e o ciclo completo do `Worker`, incluindo o formato de
 `EXECUTAVEIS` e a retenção de backups. Para validar o ciclo ponta a ponta contra um cliente de
 teste, ver o passo a passo em `atualizador/README.md` (Fase 2 precisa ser simulada gravando

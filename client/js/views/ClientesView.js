@@ -1,17 +1,17 @@
 import { ApiError } from "../api/ApiClient.js";
-import { View } from "../core/View.js";
-import { SortableTable } from "../core/SortableTable.js";
-import { Pagination } from "../core/Pagination.js";
-import { Modal } from "../core/Modal.js";
-import { toast } from "../core/Toast.js";
-import { debounce } from "../core/debounce.js";
-import { icon } from "../core/icons.js";
-import { emptyState } from "../core/EmptyState.js";
-import { escapeAttr, plural } from "../core/html.js";
-import { marcarOcupado } from "../core/guard.js";
-import { prefs } from "../core/prefs.js";
-import { aparencia } from "../core/appearance.js";
-import { Autocomplete } from "../core/Autocomplete.js";
+import { View } from "../app/View.js";
+import { SortableTable } from "../components/SortableTable.js";
+import { Pagination } from "../components/Pagination.js";
+import { Modal } from "../components/Modal.js";
+import { toast } from "../components/Toast.js";
+import { debounce } from "../utils/debounce.js";
+import { icon } from "../utils/icons.js";
+import { emptyState } from "../components/EmptyState.js";
+import { escapeAttr, plural } from "../utils/html.js";
+import { marcarOcupado } from "../utils/guard.js";
+import { prefs } from "../app/prefs.js";
+import { aparencia } from "../app/appearance.js";
+import { Autocomplete } from "../components/Autocomplete.js";
 import { AcessosModal } from "./AcessosModal.js";
 
 /**

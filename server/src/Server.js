@@ -34,9 +34,21 @@ const { SaudeController } = require("./controllers/SaudeController");
 const { LoginRateLimiter } = require("./middlewares/LoginRateLimiter");
 const { ApiRouter } = require("./routes/index");
 const { errorHandler } = require("./middlewares/errorHandler");
+const { notFoundHandler } = require("./middlewares/notFoundHandler");
 
 const CLIENT_DIR = path.join(__dirname, "..", "..", "client");
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
+
+// Um pedido "de arquivo": o ultimo segmento do caminho termina em ".algo"
+// (ate 8 caracteres, sem barra). Serve para separar "/clientes" (rota do
+// front-end, cai no index.html) de "/js/app/App.js" ou "/css/theme.css"
+// (arquivo que ou existe, ou e' 404) -- ver o fallback no fim de
+// _configureExpress().
+const EXTENSAO_DE_ARQUIVO = /\.[a-zA-Z0-9]{1,8}$/;
+
+// Caminhos dentro de client/ que existem para o desenvolvimento e nao devem
+// ser servidos pelo navegador -- ver _configureExpress().
+const NAO_SERVIR = [/^\/package(-lock)?\.json$/, /^\/tests(\/|$)/];
 
 /**
  * Classe raiz do backend: abre o banco, monta os servicos/controllers
@@ -182,15 +194,44 @@ class Server {
     // rota de API mal digitada nunca cai silenciosamente no fallback do
     // index.html.
     this.app.use("/api", new ApiRouter(this.controllers, this.loginLimiter).router);
+
+    // A pasta client/ e' servida inteira, mas nem tudo que mora nela e' do
+    // navegador: "package.json" (so declara o script de teste) e "tests/"
+    // existem para o desenvolvimento. Servir isso nao vaza segredo nenhum --
+    // nao ha segredo nesses arquivos --, mas entrega de graca um mapa dos
+    // modulos internos a quem esta so olhando, e nao ha um unico motivo para
+    // estarem acessiveis. Bloqueado ANTES do express.static: depois ja seria
+    // tarde, o arquivo teria sido enviado.
+    this.app.use((req, res, next) => {
+      if (!NAO_SERVIR.some((padrao) => padrao.test(req.path))) return next();
+      // 404 direto, no mesmo formato do notFoundHandler. Nao e' "next()" com
+      // desvio: "next('router')" aqui, no nivel do app, tem semantica sutil
+      // (encerra o router atual) e deixaria "/tests" -- sem extensao -- cair
+      // no fallback de SPA e responder o index.html com 200.
+      res.status(404).type("txt").send("Arquivo não encontrado.");
+    });
     this.app.use(express.static(CLIENT_DIR));
     // Qualquer caminho que nao seja /api/... e nao bata com um arquivo
     // estatico devolve o index.html -- o front-end (sem framework de
     // roteamento) decide sozinho, em JS, qual tela mostrar a partir do
     // estado de login, entao toda URL "cai" na mesma pagina.
-    this.app.get(/^(?!\/api).*/, (req, res) => {
+    //
+    // Menos os pedidos que sao claramente de ARQUIVO (tem extensao): esses
+    // recebem 404 de verdade. Sem essa excecao, um caminho de asset errado
+    // -- "/js/core/App.js" depois de o arquivo ter mudado de pasta, por
+    // exemplo -- respondia 200 com o HTML do index.html no lugar do modulo,
+    // e o navegador so reclamava la na frente com "Failed to load module
+    // script: expected a JavaScript module script but the server responded
+    // with a MIME type of text/html". Encontrado exatamente assim numa
+    // reorganizacao de pastas do client. E' o mesmo raciocinio que ja
+    // justifica montar a API antes do estatico, logo acima: erro de
+    // caminho deve falhar alto, nao virar uma pagina em branco.
+    this.app.get(/^(?!\/api).*/, (req, res, next) => {
+      if (EXTENSAO_DE_ARQUIVO.test(req.path)) return next();
       res.sendFile(path.join(CLIENT_DIR, "index.html"));
     });
 
+    this.app.use(notFoundHandler);
     this.app.use(errorHandler);
   }
 
@@ -207,6 +248,10 @@ class Server {
 
   stop() {
     this.services.alertaAgentes.stop();
+    // O store de sessoes tem um arquivo SQLite proprio, separado do banco
+    // principal -- ele nao fecha junto com `db.close()` do chamador, entao
+    // precisa ser fechado aqui, senao o handle sobrevive ao "stop".
+    this.sessionStore?.close();
     return new Promise((resolve, reject) => {
       if (!this.httpServer) return resolve();
       this.httpServer.close((err) => (err ? reject(err) : resolve()));

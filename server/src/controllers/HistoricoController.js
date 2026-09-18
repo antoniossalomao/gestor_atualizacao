@@ -1,4 +1,4 @@
-const { parsePaginacao } = require("./pagination");
+const { parsePaginacao } = require("../shared/pagination");
 
 /** Rota da aba Histórico: lista paginada de quem fez o quê. */
 class HistoricoController {

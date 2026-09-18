@@ -1,5 +1,5 @@
-const { ValidationError } = require("../services/errors");
-const { parsePaginacao } = require("./pagination");
+const { ValidationError } = require("../shared/errors");
+const { parsePaginacao } = require("../shared/pagination");
 
 /** Rotas de CRUD de clientes (aba Clientes) + lista de nomes p/ autocompletar. */
 class ClientesController {

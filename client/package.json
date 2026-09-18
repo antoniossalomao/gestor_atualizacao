@@ -1,0 +1,11 @@
+{
+  "name": "gestor-atualizacoes-client",
+  "version": "1.0.0",
+  "description": "Gestor de Atualizacoes - front-end (HTML/CSS/JS puro, sem build)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "//test": "--experimental-vm-modules e' exigido por tests/modulos.test.mjs, que usa vm.SourceTextModule para linkar o grafo de modulos do front-end sem executa-lo. Sem a flag, o construtor nao existe e o teste falha com 'is not a constructor'.",
+    "test": "node --experimental-vm-modules --test tests/*.test.mjs"
+  }
+}

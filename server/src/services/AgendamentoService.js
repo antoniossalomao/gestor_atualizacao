@@ -1,7 +1,7 @@
 const { STATUS_OPTIONS, AGENDAMENTO_ARQUIVAR_DIAS } = require("../config/constants");
-const { dataValida, horaValida } = require("./validation");
+const { dataValida, horaValida } = require("../shared/validation");
 const { normalizarResponsavel } = require("./normalizacao");
-const { ValidationError, NotFoundError } = require("./errors");
+const { ValidationError, NotFoundError } = require("../shared/errors");
 
 /**
  * Regras de negocio da aba Agendamentos, em cima do AgendamentoRepository.

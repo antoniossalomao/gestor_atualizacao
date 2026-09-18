@@ -1,4 +1,4 @@
-import { Modal } from "./Modal.js";
+import { Modal } from "../components/Modal.js";
 
 /**
  * Lista de atalhos de teclado, aberta com `?`.
