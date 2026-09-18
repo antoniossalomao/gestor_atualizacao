@@ -38,53 +38,63 @@ export class VersoesView extends View {
       </div>
 
       <div class="version-management-layout">
-        <form class="card distribution-form" data-role="form">
-          <div class="section-heading">
-            <div><span class="dashboard-intro__eyebrow">Nova entrega</span><h2>Preparar versão</h2></div>
-          </div>
-
-          <div class="form-grid form-grid--2">
-            <div class="field">
-              <label class="field__label" for="version-system">Sistema</label>
-              <select class="input" id="version-system" name="sistema" required data-role="form-system">
-                <option value="">Selecione o sistema…</option>
-              </select>
-              <small class="field__help" data-role="system-help">Vem do cadastro da aba Sistemas.</small>
+        <div class="version-management-column">
+          <form class="card distribution-form" data-role="form">
+            <div class="section-heading">
+              <div><span class="dashboard-intro__eyebrow">Nova entrega</span><h2>Preparar versão</h2></div>
             </div>
-            <div class="field">
-              <label class="field__label" for="version-number">Versão</label>
-              <input class="input" id="version-number" name="versao" placeholder="2026.08.10" required
-                     pattern="\\d+(\\.\\d+){1,3}([-.][0-9A-Za-z.-]+)?" />
+
+            <div class="form-grid form-grid--2">
+              <div class="field">
+                <label class="field__label" for="version-system">Sistema</label>
+                <select class="input" id="version-system" name="sistema" required data-role="form-system">
+                  <option value="">Selecione o sistema…</option>
+                </select>
+                <small class="field__help" data-role="system-help">Vem do cadastro da aba Sistemas.</small>
+              </div>
+              <div class="field">
+                <label class="field__label" for="version-number">Versão</label>
+                <input class="input" id="version-number" name="versao" placeholder="2026.08.10" required
+                       pattern="\\d+(\\.\\d+){1,3}([-.][0-9A-Za-z.-]+)?" />
+              </div>
             </div>
+
+            <div class="field">
+              <label class="field__label" for="version-package">Arquivo compactado</label>
+              <input class="input distribution-file" id="version-package" type="file" name="pacote" accept=".7z,.zip,.rar" required />
+              <small class="field__help">O SHA-256 e a URL de download serão gerados automaticamente.</small>
+            </div>
+
+            <div class="field">
+              <span class="field__label" id="version-changelog-label">O que mudou nesta entrega</span>
+              <div class="changelog-editor" data-role="changelog-items" aria-labelledby="version-changelog-label"></div>
+              <button type="button" class="btn btn--small btn--ghost" data-action="add-changelog-item">${icon("plus")} Adicionar item</button>
+              <textarea name="observacoes" hidden data-role="changelog-value"></textarea>
+            </div>
+
+            <div class="distribution-note" data-role="replacement-warning" hidden>
+              <span class="distribution-note__icon" aria-hidden="true">i</span>
+              <div><strong>Destino da publicação</strong><p data-role="replacement-text"></p></div>
+            </div>
+
+            <div class="upload-progress" data-role="upload-progress" hidden>
+              <span class="upload-progress__track"><span class="upload-progress__fill"></span></span>
+              <span data-role="upload-progress-text">0%</span>
+            </div>
+
+            <button class="btn btn--accent" type="submit">${icon("upload")} Enviar versão</button>
+          </form>
+
+          <div class="card version-overview-card">
+            <div class="section-heading">
+              <div><span class="dashboard-intro__eyebrow">Indicadores</span><h2 class="card__title">Resumo do catálogo</h2></div>
+            </div>
+            <div class="version-stats version-stats--compact" data-role="stats"></div>
+            <div data-role="coverage" style="margin-top: var(--sp-2);"></div>
           </div>
+        </div>
 
-          <div class="field">
-            <label class="field__label" for="version-package">Arquivo compactado</label>
-            <input class="input distribution-file" id="version-package" type="file" name="pacote" accept=".7z,.zip,.rar" required />
-            <small class="field__help">O SHA-256 e a URL de download serão gerados automaticamente.</small>
-          </div>
-
-          <div class="field">
-            <span class="field__label" id="version-changelog-label">O que mudou nesta entrega</span>
-            <div class="changelog-editor" data-role="changelog-items" aria-labelledby="version-changelog-label"></div>
-            <button type="button" class="btn btn--small btn--ghost" data-action="add-changelog-item">${icon("plus")} Adicionar item</button>
-            <textarea name="observacoes" hidden data-role="changelog-value"></textarea>
-          </div>
-
-          <div class="distribution-note" data-role="replacement-warning" hidden>
-            <span class="distribution-note__icon" aria-hidden="true">i</span>
-            <div><strong>Destino da publicação</strong><p data-role="replacement-text"></p></div>
-          </div>
-
-          <div class="upload-progress" data-role="upload-progress" hidden>
-            <span class="upload-progress__track"><span class="upload-progress__fill"></span></span>
-            <span data-role="upload-progress-text">0%</span>
-          </div>
-
-          <button class="btn btn--accent" type="submit">${icon("upload")} Enviar versão</button>
-        </form>
-
-        <div class="card">
+        <div class="card published-card">
           <div class="section-heading">
             <div><span class="dashboard-intro__eyebrow">Distribuição ativa</span><h2 class="card__title">No ar agora</h2></div>
             <span class="result-count" data-role="publishedCount"></span>
@@ -92,9 +102,6 @@ export class VersoesView extends View {
           <div class="published-list" data-role="published"></div>
         </div>
       </div>
-
-      <div class="version-stats" data-role="stats"></div>
-      <div data-role="coverage"></div>
 
       <div class="card">
         <div class="section-heading">
@@ -191,23 +198,33 @@ export class VersoesView extends View {
 
   _renderStats(publicadas, rascunhos, substituidas, semPublicacao) {
     this.container.querySelector('[data-role="stats"]').innerHTML = `
-      <div class="card version-stat"><span>Versões no ar</span><strong>${publicadas}</strong></div>
-      <div class="card version-stat${rascunhos > 0 ? " version-stat--pending" : ""}"><span>Aguardando publicação</span><strong>${rascunhos}</strong></div>
-      <div class="card version-stat"><span>Versões substituídas</span><strong>${substituidas}</strong></div>
-      <div class="card version-stat${semPublicacao.length > 0 ? " version-stat--alerta" : ""}"><span>Sistemas sem publicação</span><strong>${semPublicacao.length}</strong></div>
+      <div class="version-stat"><span>No ar agora</span><strong>${publicadas}</strong></div>
+      <div class="version-stat${rascunhos > 0 ? " version-stat--pending" : ""}"><span>Rascunhos</span><strong>${rascunhos}</strong></div>
+      <div class="version-stat"><span>Substituídas</span><strong>${substituidas}</strong></div>
+      <div class="version-stat${semPublicacao.length > 0 ? " version-stat--alerta" : ""}"><span>Sem versão</span><strong>${semPublicacao.length}</strong></div>
     `;
 
     const coverage = this.container.querySelector('[data-role="coverage"]');
     coverage.replaceChildren();
-    if (!semPublicacao.length) return;
+    if (!semPublicacao.length) {
+      const ok = document.createElement("div");
+      ok.className = "version-coverage__status is-ok";
+      ok.innerHTML = `${icon("check")} <span>Todos os sistemas cadastrados possuem versão publicada ativa.</span>`;
+      coverage.appendChild(ok);
+      return;
+    }
 
-    const details = document.createElement("details");
-    details.className = "version-coverage card";
-    details.innerHTML = `
-      <summary>${plural(semPublicacao.length, "sistema")} ainda sem versão publicada</summary>
-      <div class="version-coverage__systems">${semPublicacao.map((s) => `<span>${escapeHtml(s)}</span>`).join("")}</div>
+    const box = document.createElement("div");
+    box.className = "version-coverage-box";
+    box.innerHTML = `
+      <div class="version-coverage-box__label">
+        ${plural(semPublicacao.length, "sistema")} sem publicação ativa:
+      </div>
+      <div class="version-coverage__systems">
+        ${semPublicacao.map((s) => `<span class="badge badge--warning">${escapeHtml(s)}</span>`).join("")}
+      </div>
     `;
-    coverage.appendChild(details);
+    coverage.appendChild(box);
   }
 
   _renderPublished(versions) {

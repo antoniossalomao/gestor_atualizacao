@@ -19,3 +19,4 @@ class SaudeController {
 }
 
 module.exports = { SaudeController };
+

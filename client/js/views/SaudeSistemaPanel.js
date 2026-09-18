@@ -176,3 +176,4 @@ function formatarUptime(segundos) {
   partes.push(`${minutos}m`);
   return partes.join(" ");
 }
+
