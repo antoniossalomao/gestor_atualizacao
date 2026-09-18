@@ -223,7 +223,7 @@ export class ClientesView extends View {
 
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
 
-    if (this.ctx?.user?.role === "consulta") {
+    if (this.user?.role === "consulta") {
       this.toggleFormBtn.hidden = true;
       this.deleteBtn.hidden = true;
       this.bulkAddSistema.hidden = true;

@@ -270,7 +270,7 @@ export class AtualizacoesView extends View {
 
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
 
-    if (this.ctx?.user?.role === "consulta") {
+    if (this.user?.role === "consulta") {
       this.form.hidden = true;
       this.deleteBtn.hidden = true;
       this.bulkExcluir.hidden = true;

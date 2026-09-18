@@ -143,7 +143,7 @@ export class VersoesView extends View {
     this.changelogValue = this.container.querySelector('[data-role="changelog-value"]');
     this.uploadProgress = this.container.querySelector('[data-role="upload-progress"]');
 
-    if (this.ctx?.user?.role === "consulta") {
+    if (this.user?.role === "consulta") {
       this.form.hidden = true;
     }
 
@@ -341,7 +341,7 @@ export class VersoesView extends View {
         <td class="table-actions" data-role="actions"></td>
       `;
       const actions = row.querySelector('[data-role="actions"]');
-      const isAdmin = this.ctx?.user?.role === "admin";
+      const isAdmin = this.user?.role === "admin";
 
       if (item.status !== "publicada") {
         if (isAdmin) {
