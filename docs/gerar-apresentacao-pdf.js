@@ -23,7 +23,7 @@ const NAVEGADORES = [
 const ESTILO = `
   @page {
     size: A4;
-    margin: 20mm 18mm 18mm 18mm;
+    margin: 15mm 16mm 14mm 16mm;
   }
 
   :root {
@@ -46,8 +46,8 @@ const ESTILO = `
     margin: 0;
     color: var(--tinta);
     font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", sans-serif;
-    font-size: 10pt;
-    line-height: 1.55;
+    font-size: 9pt;
+    line-height: 1.45;
   }
 
   /* Capa Executiva */
@@ -55,10 +55,10 @@ const ESTILO = `
     display: flex;
     flex-direction: column;
     justify-content: center;
-    height: 235mm;
+    height: 245mm;
     page-break-after: always;
     border-top: 5px solid var(--destaque);
-    padding: 25mm 5mm 15mm;
+    padding: 20mm 5mm 15mm;
   }
   .capa-tag {
     display: inline-block;
@@ -71,7 +71,7 @@ const ESTILO = `
   }
   .capa h1 {
     margin: 0 0 5mm;
-    font-size: 26pt;
+    font-size: 25pt;
     font-weight: 800;
     color: #0f172a;
     line-height: 1.2;
@@ -80,7 +80,7 @@ const ESTILO = `
   }
   .capa h2 {
     margin: 0 0 8mm;
-    font-size: 14pt;
+    font-size: 13.5pt;
     font-weight: 600;
     color: var(--tinta-fraca);
     border: 0;
@@ -93,7 +93,7 @@ const ESTILO = `
     background: var(--fundo-destaque);
     border-left: 4px solid var(--destaque);
     border-radius: 4px;
-    font-size: 10.5pt;
+    font-size: 10pt;
     line-height: 1.6;
     color: #1e3a5f;
   }
@@ -103,19 +103,19 @@ const ESTILO = `
     border-top: 1px solid var(--regua);
     display: flex;
     justify-content: space-between;
-    font-size: 9.5pt;
+    font-size: 9pt;
     color: var(--tinta-fraca);
   }
 
   /* Quebras de Seção em Nova Página */
   h2 {
     page-break-before: always;
-    font-size: 16pt;
+    font-size: 14pt;
     font-weight: 700;
     color: #0f172a;
-    padding-bottom: 3mm;
+    padding-bottom: 2mm;
     border-bottom: 2px solid var(--regua);
-    margin: 0 0 5mm;
+    margin: 0 0 3.5mm;
   }
 
   .capa + h2 {
@@ -128,25 +128,25 @@ const ESTILO = `
   }
 
   h3 {
-    font-size: 12pt;
+    font-size: 10.5pt;
     font-weight: 600;
     color: var(--destaque-escuro);
-    margin: 5mm 0 2.5mm;
+    margin: 3mm 0 1.5mm;
   }
 
   h4 {
-    font-size: 10.5pt;
+    font-size: 9.5pt;
     font-weight: 600;
     color: var(--tinta-fraca);
-    margin: 4mm 0 2mm;
+    margin: 2mm 0 1mm;
   }
 
   p, ul, ol {
-    margin: 0 0 3.5mm;
+    margin: 0 0 2mm;
   }
 
   li {
-    margin-bottom: 1.5mm;
+    margin-bottom: 0.8mm;
   }
 
   strong {
@@ -155,12 +155,12 @@ const ESTILO = `
   }
 
   blockquote {
-    margin: 4mm 0;
-    padding: 3mm 5mm;
+    margin: 3mm 0;
+    padding: 2.5mm 4mm;
     border-left: 3px solid var(--destaque);
     background: var(--fundo-destaque);
     color: #1e3a5f;
-    font-size: 9.5pt;
+    font-size: 9pt;
     border-radius: 0 4px 4px 0;
   }
   blockquote p:last-child { margin-bottom: 0; }
@@ -168,12 +168,12 @@ const ESTILO = `
   /* Tabelas Executivas */
   table {
     width: 100%;
-    margin: 4mm 0 6mm;
+    margin: 2.5mm 0 3.5mm;
     border-collapse: collapse;
-    font-size: 9pt;
+    font-size: 8pt;
   }
   th, td {
-    padding: 2.5mm 3mm;
+    padding: 1.6mm 2mm;
     border: 1px solid var(--regua);
     text-align: left;
     vertical-align: top;
@@ -191,14 +191,14 @@ const ESTILO = `
 
   /* Diagramas e Caixas */
   pre {
-    margin: 4mm 0;
-    padding: 4mm;
+    margin: 2mm 0;
+    padding: 2.5mm;
     background: #0f172a;
     color: #f8fafc;
-    border-radius: 6px;
+    border-radius: 4px;
     font-family: Consolas, "Cascadia Mono", monospace;
-    font-size: 8pt;
-    line-height: 1.45;
+    font-size: 7.2pt;
+    line-height: 1.35;
     white-space: pre-wrap;
     page-break-inside: avoid;
   }
@@ -208,7 +208,7 @@ const ESTILO = `
     border-radius: 3px;
     background: #e2e8f0;
     font-family: Consolas, monospace;
-    font-size: 8.5pt;
+    font-size: 8pt;
     color: #0f172a;
   }
 
@@ -219,7 +219,7 @@ const ESTILO = `
   }
 
   hr {
-    margin: 6mm 0;
+    margin: 4mm 0;
     border: 0;
     border-top: 1px solid var(--regua);
   }
@@ -263,8 +263,9 @@ function main() {
     </div>
   `;
 
-  // Remove o título h1 do markdown para não duplicar com a capa
-  const markdownSemCapa = rawMarkdown.replace(/^#\s+[^\n]+\n+###\s+[^\n]+\n+/m, "");
+  // Pega a partir da Seção 1 para que a Seção 1 comece logo após a capa
+  const match = rawMarkdown.match(/(## 1\.[\s\S]*)/);
+  const markdownSemCapa = match ? match[1] : rawMarkdown;
 
   const html = `<!doctype html>
 <html lang="pt-BR">
@@ -300,6 +301,13 @@ function main() {
 
   const kb = Math.round(fs.statSync(SAIDA).size / 1024);
   console.log(`PDF da apresentação gerado com sucesso: ${path.relative(process.cwd(), SAIDA)} (${kb} KB)`);
+
+  const desktop = path.join(os.homedir(), "Desktop");
+  if (fs.existsSync(desktop)) {
+    const desktopFile = path.join(desktop, "Apresentacao_Automacao_Atualizacao_ERP.pdf");
+    fs.copyFileSync(SAIDA, desktopFile);
+    console.log(`Cópia atualizada na Área de Trabalho: ${desktopFile}`);
+  }
 }
 
 main();
