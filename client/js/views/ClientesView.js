@@ -13,6 +13,7 @@ import { prefs } from "../app/prefs.js";
 import { aparencia } from "../app/appearance.js";
 import { Autocomplete } from "../components/Autocomplete.js";
 import { AcessosModal } from "./AcessosModal.js";
+import { Drawer } from "../components/Drawer.js";
 
 /**
  * Aba Clientes: cadastro, edição e listagem dos clientes e seus sistemas.
@@ -36,21 +37,20 @@ export class ClientesView extends View {
   aplicarParams({ novo } = {}) {
     if (!novo || this.user?.role === "consulta") return;
     this.clearForm();
-    this.fields.nome?.focus();
+    this.drawer?.abrir({ foco: this.fields.nome });
   }
 
   _buildDom() {
     this.container.innerHTML = `
-      <div class="toolbar">
-        <button type="button" class="btn" data-action="toggle-form" aria-expanded="false" aria-controls="clientes-form">
-          ${icon("plus")} Novo Cliente
+      <div class="view-actions">
+        <button type="button" class="btn btn--accent" data-action="toggle-form">
+          + Novo Cliente
         </button>
         <button type="button" class="btn" data-action="acessos" disabled>${icon("acessos")} Acessos</button>
       </div>
 
       <form class="card" id="clientes-form" data-role="form-card" hidden novalidate>
-        <h2 class="card__title" data-role="form-title">Novo Cliente</h2>
-        <div class="form-grid form-grid--4">
+        <div class="form-grid form-grid--2">
           <div class="field"><label class="field__label" for="cli-codigo">Código</label><input type="text" class="input" id="cli-codigo" data-field="codigo" /></div>
           <div class="field"><label class="field__label" for="cli-nome">Cliente</label><input type="text" class="input" id="cli-nome" data-field="nome" required /></div>
           <div class="field"><label class="field__label" for="cli-cidade">Cidade</label><input type="text" class="input" id="cli-cidade" data-field="cidade" /></div>
@@ -60,8 +60,8 @@ export class ClientesView extends View {
           </div>
         </div>
 
-        <div class="clientes-sistemas-head">
-          <span class="field__label">Sistemas</span>
+        <div class="clientes-sistemas-head" style="margin-top: var(--sp-4);">
+          <span class="field__label">Sistemas Contratados</span>
           <button type="button" class="btn btn--small" data-action="toggle-novo-sistema">${icon("plus")} Novo Sistema</button>
         </div>
         <div class="toolbar" data-role="novo-sistema-row" hidden>
@@ -70,10 +70,15 @@ export class ClientesView extends View {
         </div>
         <div class="checkbox-grid" data-role="sistemas-grid"></div>
 
-        <div class="form-actions">
-          <button type="submit" class="btn btn--accent" data-action="add">Adicionar Cliente</button>
-          <button type="button" class="btn" data-action="update">Atualizar Selecionado</button>
-          <button type="button" class="btn btn--ghost" data-action="clear">Limpar</button>
+        <div class="form-actions form-actions--modal">
+          <div class="form-actions__left">
+            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${icon("alerta")} Excluir</button>
+          </div>
+          <div class="form-actions__right">
+            <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
+            <button type="submit" class="btn btn--accent" data-action="add">Adicionar Cliente</button>
+            <button type="button" class="btn btn--accent" data-action="update" hidden>Salvar Alterações</button>
+          </div>
         </div>
       </form>
 
@@ -111,13 +116,16 @@ export class ClientesView extends View {
     `;
 
     this.formCard = this.container.querySelector('[data-role="form-card"]');
-    this.formTitle = this.container.querySelector('[data-role="form-title"]');
+    this.drawer = new Drawer(this.formCard, {
+      titulo: "Novo Cliente",
+      descricao: "Cadastre um novo cliente e selecione seus sistemas.",
+    });
     this.toggleFormBtn = this.container.querySelector('[data-action="toggle-form"]');
     this.fields = {
-      codigo: this.container.querySelector('[data-field="codigo"]'),
-      nome: this.container.querySelector('[data-field="nome"]'),
-      cidade: this.container.querySelector('[data-field="cidade"]'),
-      grupo: this.container.querySelector('[data-field="grupo"]'),
+      codigo: this.formCard.querySelector('[data-field="codigo"]'),
+      nome: this.formCard.querySelector('[data-field="nome"]'),
+      cidade: this.formCard.querySelector('[data-field="cidade"]'),
+      grupo: this.formCard.querySelector('[data-field="grupo"]'),
     };
     for (const input of Object.values(this.fields)) {
       input.addEventListener("keydown", (e) => {
@@ -126,9 +134,9 @@ export class ClientesView extends View {
     }
     this.grupoAutocomplete = new Autocomplete(this.fields.grupo, { values: [] });
 
-    this.sistemasGrid = this.container.querySelector('[data-role="sistemas-grid"]');
-    this.novoSistemaRow = this.container.querySelector('[data-role="novo-sistema-row"]');
-    this.novoSistemaInput = this.container.querySelector('[data-role="novo-sistema-input"]');
+    this.sistemasGrid = this.formCard.querySelector('[data-role="sistemas-grid"]');
+    this.novoSistemaRow = this.formCard.querySelector('[data-role="novo-sistema-row"]');
+    this.novoSistemaInput = this.formCard.querySelector('[data-role="novo-sistema-input"]');
     this.novoSistemaInput.addEventListener("keydown", (e) => {
       // `preventDefault` porque este input mora DENTRO do <form>: sem isso o
       // Enter submeteria o cadastro do cliente em vez de criar o sistema.
@@ -169,7 +177,7 @@ export class ClientesView extends View {
               titulo: "Nenhum cliente cadastrado",
               descricao: "Cadastre o primeiro cliente para começar a registrar atualizações.",
               icone: "clientes",
-              acao: { label: "Novo cliente", onClick: () => this.toggleForm(true) },
+              acao: { label: "Novo cliente", onClick: () => { this.clearForm(); this.drawer.abrir({ foco: this.fields.nome }); } },
             }),
       serverSort: true,
       onSortChange: (key, dir) => {
@@ -201,12 +209,23 @@ export class ClientesView extends View {
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
-    this.toggleFormBtn.addEventListener("click", () => this.toggleForm());
-    this.container.querySelector('[data-action="toggle-novo-sistema"]').addEventListener("click", () => this._toggleNovoSistema());
-    this.container.querySelector('[data-action="add-sistema"]').addEventListener("click", () => this.addSistema());
+    this.toggleFormBtn.addEventListener("click", () => {
+      this.clearForm();
+      this.drawer.abrir({ foco: this.fields.nome });
+    });
+    this.formCard.querySelector('[data-action="toggle-novo-sistema"]').addEventListener("click", () => this._toggleNovoSistema());
+    this.formCard.querySelector('[data-action="add-sistema"]').addEventListener("click", () => this.addSistema());
 
-    this.addBtn = this.container.querySelector('[data-action="add"]');
-    this.updateBtn = this.container.querySelector('[data-action="update"]');
+    this.addBtn = this.formCard.querySelector('[data-action="add"]');
+    this.updateBtn = this.formCard.querySelector('[data-action="update"]');
+    this.modalDeleteBtn = this.formCard.querySelector('[data-action="modal-delete"]');
+    if (this.modalDeleteBtn) {
+      this.modalDeleteBtn.addEventListener("click", async () => {
+        this.drawer.marcarLimpa();
+        await this.drawer.fechar({ forcar: true });
+        this.deleteClient();
+      });
+    }
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
     this.acessosBtn = this.container.querySelector('[data-action="acessos"]');
     this.acessosBtn.addEventListener("click", () => this.abrirAcessos());
@@ -225,9 +244,8 @@ export class ClientesView extends View {
       e.preventDefault();
       this._submit();
     });
-    this.updateBtn.addEventListener("click", () => this.updateClient());
-    this.container.querySelector('[data-action="clear"]').addEventListener("click", () => this.clearForm({ comDesfazer: true }));
-    this.deleteBtn.addEventListener("click", () => this.deleteClient());
+    this.updateBtn?.addEventListener("click", () => this.updateClient());
+    this.deleteBtn?.addEventListener("click", () => this.deleteClient());
 
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
 
@@ -246,13 +264,14 @@ export class ClientesView extends View {
 
   /** @param {boolean} [forcarAberto] */
   toggleForm(forcarAberto) {
-    this.formVisible = forcarAberto ?? !this.formVisible;
-    this.formCard.hidden = !this.formVisible;
-    this.toggleFormBtn.setAttribute("aria-expanded", String(this.formVisible));
-    this.toggleFormBtn.innerHTML = this.formVisible
-      ? `${icon("minus")} Ocultar Formulário`
-      : `${icon("plus")} Novo Cliente`;
-    if (this.formVisible) this.fields.nome.focus();
+    if (forcarAberto === true) {
+      this.drawer.abrir({ foco: this.fields.nome });
+    } else if (forcarAberto === false) {
+      this.drawer.fechar();
+    } else {
+      if (this.drawer.aberta) this.drawer.fechar();
+      else this.drawer.abrir({ foco: this.fields.nome });
+    }
   }
 
   async _acaoRapida(e) {
@@ -426,20 +445,34 @@ export class ClientesView extends View {
   _loadIntoForm(row) {
     this.selectedId = row.id;
     this.selectedRevision = row.revisao;
-    this.fields.codigo.value = row.codigo;
-    this.fields.nome.value = row.nome;
-    this.fields.cidade.value = row.cidade;
+    this.fields.codigo.value = row.codigo || "";
+    this.fields.nome.value = row.nome || "";
+    this.fields.cidade.value = row.cidade || "";
     this.fields.grupo.value = row.grupo || "";
-    const ativos = new Set(row.sistemas);
+    const ativos = new Set(row.sistemas || []);
     for (const cb of this.sistemasGrid.querySelectorAll("input[type=checkbox]")) {
       cb.checked = ativos.has(cb.value);
     }
-    this.formTitle.textContent = `Editando Cliente #${row.id}`;
-    this.addBtn.hidden = true;
-    this.updateBtn.disabled = false;
-    this.deleteBtn.disabled = false;
-    this.acessosBtn.disabled = false;
-    if (!this.formVisible) this.toggleForm(true);
+    this._pintarModo();
+  }
+
+  _pintarModo() {
+    const isEdit = this.selectedId != null;
+    if (this.addBtn) this.addBtn.hidden = isEdit;
+    if (this.updateBtn) {
+      this.updateBtn.hidden = !isEdit;
+      this.updateBtn.disabled = !isEdit;
+    }
+    if (this.modalDeleteBtn) this.modalDeleteBtn.hidden = !isEdit || this.user?.role === "consulta";
+    if (this.deleteBtn) this.deleteBtn.disabled = !isEdit;
+    if (this.acessosBtn) this.acessosBtn.disabled = !isEdit;
+    if (this.drawer) {
+      if (isEdit) {
+        this.drawer.setTitulo(`Editar Cliente #${this.selectedId}`, "Altere os dados e sistemas cadastrados deste cliente.");
+      } else {
+        this.drawer.setTitulo("Novo Cliente", "Cadastre um novo cliente e selecione seus sistemas.");
+      }
+    }
   }
 
   /** Abre a janela de acessos remotos (AnyDesk / Suporte Bredas) do cliente selecionado. */
@@ -480,6 +513,8 @@ export class ClientesView extends View {
     try {
       await this.api.post("/clientes", data);
       this.clearForm();
+      this.drawer.marcarLimpa();
+      await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
       toast.success("Cliente adicionado.");
@@ -501,6 +536,8 @@ export class ClientesView extends View {
     try {
       await this.api.put(`/clientes/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
       this.clearForm();
+      this.drawer.marcarLimpa();
+      await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
       toast.success("Cliente atualizado.");
@@ -619,27 +656,27 @@ export class ClientesView extends View {
 
   clearForm({ comDesfazer = false } = {}) {
     const antes = {
-      codigo: this.fields.codigo.value,
-      nome: this.fields.nome.value,
-      cidade: this.fields.cidade.value,
-      grupo: this.fields.grupo.value,
-      sistemas: [...this.sistemasGrid.querySelectorAll("input:checked")].map((el) => el.value),
+      codigo: this.fields?.codigo?.value || "",
+      nome: this.fields?.nome?.value || "",
+      cidade: this.fields?.cidade?.value || "",
+      grupo: this.fields?.grupo?.value || "",
+      sistemas: this.sistemasGrid ? [...this.sistemasGrid.querySelectorAll("input:checked")].map((el) => el.value) : [],
     };
     const tinhaConteudo = Boolean(antes.nome.trim());
 
     this.selectedId = null;
     this.selectedRevision = null;
     this.table?.clearSelection();
-    this.formTitle.textContent = "Novo Cliente";
-    this.fields.codigo.value = "";
-    this.fields.nome.value = "";
-    this.fields.cidade.value = "";
-    this.fields.grupo.value = "";
-    for (const cb of this.sistemasGrid.querySelectorAll("input[type=checkbox]")) cb.checked = false;
-    this.addBtn.hidden = false;
-    this.updateBtn.disabled = true;
-    this.deleteBtn.disabled = true;
-    this.acessosBtn.disabled = true;
+    if (this.fields) {
+      this.fields.codigo.value = "";
+      this.fields.nome.value = "";
+      this.fields.cidade.value = "";
+      this.fields.grupo.value = "";
+    }
+    if (this.sistemasGrid) {
+      for (const cb of this.sistemasGrid.querySelectorAll("input[type=checkbox]")) cb.checked = false;
+    }
+    this._pintarModo();
 
     if (comDesfazer && tinhaConteudo) {
       toast.undo("Formulário limpo.", () => {
@@ -655,6 +692,7 @@ export class ClientesView extends View {
   }
 
   destroy() {
+    this.drawer?.destroy();
     this.grupoAutocomplete?.destroy();
     super.destroy();
   }
@@ -669,9 +707,14 @@ export class ClientesView extends View {
 
   _onGlobalKeydown(e) {
     if (!this.visivel) return;
-    if (e.key !== "Delete") return;
     if (isTypingTarget(e.target)) return;
-    if (this.selectedId != null) this.deleteClient();
+    if (e.key === "Delete" && this.selectedId != null) this.deleteClient();
+    else if (e.key.toLowerCase() === "n") { this.clearForm(); this.drawer.abrir({ foco: this.fields.nome }); }
+    else if (e.key === "/") { e.preventDefault(); this.searchInput.focus(); }
+    else if (e.key.toLowerCase() === "j") this.table.moverCursor(1);
+    else if (e.key.toLowerCase() === "k") this.table.moverCursor(-1);
+    else if (e.key.toLowerCase() === "e" || e.key === "Enter") { this.table.ativarCursor(); if (this.selectedId != null) this.drawer.abrir({ foco: this.fields.nome }); }
+    else if (e.key.toLowerCase() === "x" || e.key === " ") { e.preventDefault(); this.table.alternarMarcacaoCursor(); }
   }
 }
 

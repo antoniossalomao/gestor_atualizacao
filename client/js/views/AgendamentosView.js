@@ -50,13 +50,17 @@ export class AgendamentosView extends View {
         <button type="button" class="btn btn--accent" data-action="novo-agendamento">+ Novo Agendamento</button>
       </div>
       <form class="card" data-role="form" novalidate>
-        <h2 class="card__title">Nova Tarefa</h2>
-        <div class="form-grid form-grid--6" data-role="fields"></div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn--accent" data-action="add">Adicionar</button>
-          <button type="button" class="btn" data-action="update">Atualizar Selecionada</button>
-          <button type="button" class="btn btn--ghost" data-action="clear">Limpar</button>
-          <span class="form-actions__hint text-muted" data-role="modo"></span>
+        <div class="form-grid form-grid--2" data-role="fields"></div>
+        <div class="form-actions form-actions--modal">
+          <div class="form-actions__left">
+            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${icon("alerta")} Excluir</button>
+            <span class="form-actions__hint text-muted" data-role="modo"></span>
+          </div>
+          <div class="form-actions__right">
+            <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
+            <button type="submit" class="btn btn--accent" data-action="add">Adicionar Tarefa</button>
+            <button type="button" class="btn btn--accent" data-action="update" hidden>Salvar Alterações</button>
+          </div>
         </div>
       </form>
 
@@ -214,9 +218,17 @@ export class AgendamentosView extends View {
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
-    this.addBtn = this.container.querySelector('[data-action="add"]');
-    this.updateBtn = this.container.querySelector('[data-action="update"]');
+    this.addBtn = this.form.querySelector('[data-action="add"]');
+    this.updateBtn = this.form.querySelector('[data-action="update"]');
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
+    this.modalDeleteBtn = this.form.querySelector('[data-action="modal-delete"]');
+    if (this.modalDeleteBtn) {
+      this.modalDeleteBtn.addEventListener("click", async () => {
+        this.drawer.marcarLimpa();
+        await this.drawer.fechar({ forcar: true });
+        this.deleteTask();
+      });
+    }
     this.doneBtn = this.container.querySelector('[data-action="done"]');
     this.arquivarBtn = this.container.querySelector('[data-action="arquivar"]');
     this.converterBtn = this.container.querySelector('[data-action="converter"]');
@@ -237,12 +249,11 @@ export class AgendamentosView extends View {
       e.preventDefault();
       this._submit();
     });
-    this.updateBtn.addEventListener("click", () => this.updateTask());
-    this.container.querySelector('[data-action="clear"]').addEventListener("click", () => this.clearForm({ comDesfazer: true }));
-    this.deleteBtn.addEventListener("click", () => this.deleteTask());
-    this.doneBtn.addEventListener("click", () => this.markDone());
-    this.arquivarBtn.addEventListener("click", () => this.arquivar());
-    this.converterBtn.addEventListener("click", () => this.converterEmAtualizacao());
+    this.updateBtn?.addEventListener("click", () => this.updateTask());
+    this.deleteBtn?.addEventListener("click", () => this.deleteTask());
+    this.doneBtn?.addEventListener("click", () => this.markDone());
+    this.arquivarBtn?.addEventListener("click", () => this.arquivar());
+    this.converterBtn?.addEventListener("click", () => this.converterEmAtualizacao());
 
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
 
@@ -271,6 +282,7 @@ export class AgendamentosView extends View {
       const id = `age-${col.key}`;
       const field = document.createElement("div");
       field.className = "field";
+      if (["tarefa", "cliente", "obs"].includes(col.key)) field.classList.add("field--full");
       field.innerHTML = `<label class="field__label" for="${id}">${col.label}</label>`;
 
       let input;
@@ -470,13 +482,26 @@ export class AgendamentosView extends View {
 
   _pintarModo() {
     const modo = this.form.querySelector('[data-role="modo"]');
-    modo.textContent = this.selectedId == null ? "" : `Editando a tarefa #${this.selectedId}`;
-    this.updateBtn.disabled = this.selectedId == null;
-    this.deleteBtn.disabled = this.selectedId == null;
-    this.doneBtn.disabled = this.selectedId == null;
-    this.arquivarBtn.disabled = this.selectedId == null;
-    this.converterBtn.disabled = this.selectedId == null;
-    this.reabrirBtn.disabled = this.selectedId == null;
+    const isEdit = this.selectedId != null;
+    if (modo) modo.textContent = isEdit ? `Tarefa #${this.selectedId}` : "";
+    if (this.addBtn) this.addBtn.hidden = isEdit;
+    if (this.updateBtn) {
+      this.updateBtn.hidden = !isEdit;
+      this.updateBtn.disabled = !isEdit;
+    }
+    if (this.modalDeleteBtn) this.modalDeleteBtn.hidden = !isEdit || this.user?.role === "consulta";
+    this.deleteBtn.disabled = !isEdit;
+    this.doneBtn.disabled = !isEdit;
+    this.arquivarBtn.disabled = !isEdit;
+    this.converterBtn.disabled = !isEdit;
+    this.reabrirBtn.disabled = !isEdit;
+    if (this.drawer) {
+      if (isEdit) {
+        this.drawer.setTitulo(`Editar Tarefa #${this.selectedId}`, "Atualize os detalhes da tarefa agendada.");
+      } else {
+        this.drawer.setTitulo("Novo Agendamento", "Crie uma tarefa para a equipe.");
+      }
+    }
 
     // Olhando as arquivadas, "Marcar como Concluída" e "Arquivar" não têm o
     // que fazer (já estão concluídas/arquivadas) -- eles saem e o "Reabrir"

@@ -56,20 +56,17 @@ export class AtualizacoesView extends View {
     this.container.innerHTML = `
       <div class="view-actions"><button type="button" class="btn btn--accent" data-action="nova-atualizacao">+ Nova Atualização</button></div>
       <form class="card" data-role="form" novalidate>
-        <h2 class="card__title">Registro</h2>
-        <div class="form-grid form-grid--4" data-role="fields"></div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn--accent" data-action="add">Adicionar</button>
-          <button type="button" class="btn" data-action="update">Atualizar Selecionado</button>
-          <!--
-            "Gerar Relatório" fica aqui, e não lá embaixo junto de Importar /
-            Exportar: como "Atualizar Selecionado", ele age sobre a linha
-            selecionada na tabela, e é aqui que estão os botões que dependem
-            dessa seleção. Lá embaixo estão os que agem sobre a lista inteira.
-          -->
-          <button type="button" class="btn" data-action="relatorio">Gerar Relatório</button>
-          <button type="button" class="btn btn--ghost" data-action="clear">Limpar</button>
-          <span class="form-actions__hint text-muted" data-role="modo"></span>
+        <div class="form-grid form-grid--2" data-role="fields"></div>
+        <div class="form-actions form-actions--modal">
+          <div class="form-actions__left">
+            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${icon("alerta")} Excluir</button>
+            <span class="form-actions__hint text-muted" data-role="modo"></span>
+          </div>
+          <div class="form-actions__right">
+            <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
+            <button type="submit" class="btn btn--accent" data-action="add">Adicionar</button>
+            <button type="button" class="btn btn--accent" data-action="update" hidden>Salvar Alterações</button>
+          </div>
         </div>
       </form>
 
@@ -133,6 +130,7 @@ export class AtualizacoesView extends View {
         <div data-role="pagination"></div>
         <div class="form-actions" style="margin-top: var(--sp-4)">
           <button type="button" class="btn btn--danger" data-action="delete">Excluir Selecionado</button>
+          <button type="button" class="btn" data-action="relatorio">${icon("copiar")} Gerar Relatório</button>
           <button type="button" class="btn" data-action="import">${icon("upload")} Importar Planilha (.xlsx)</button>
           <button type="button" class="btn" data-action="export">${icon("download")} Exportar para .xlsx</button>
           <input type="file" accept=".xlsx,.xls" data-role="file-input" hidden />
@@ -270,10 +268,18 @@ export class AtualizacoesView extends View {
     this.container.querySelector('[data-action="bulk-limpar"]').addEventListener("click", () => this.table.limparMarcadas());
     this.bulkExcluir.addEventListener("click", () => this.excluirLote());
 
-    this.addBtn = this.container.querySelector('[data-action="add"]');
-    this.updateBtn = this.container.querySelector('[data-action="update"]');
+    this.addBtn = this.form.querySelector('[data-action="add"]');
+    this.updateBtn = this.form.querySelector('[data-action="update"]');
     this.relatorioBtn = this.container.querySelector('[data-action="relatorio"]');
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
+    this.modalDeleteBtn = this.form.querySelector('[data-action="modal-delete"]');
+    if (this.modalDeleteBtn) {
+      this.modalDeleteBtn.addEventListener("click", async () => {
+        this.drawer.marcarLimpa();
+        await this.drawer.fechar({ forcar: true });
+        this.deleteRecord();
+      });
+    }
     const exportBtn = this.container.querySelector('[data-action="export"]');
 
     // O submit nativo cobre o clique em "Adicionar" E o Enter em qualquer
@@ -282,10 +288,9 @@ export class AtualizacoesView extends View {
       e.preventDefault();
       this._submit();
     });
-    this.updateBtn.addEventListener("click", () => this.updateRecord());
-    this.relatorioBtn.addEventListener("click", () => this.abrirRelatorio());
-    this.container.querySelector('[data-action="clear"]').addEventListener("click", () => this.clearForm({ comDesfazer: true }));
-    this.deleteBtn.addEventListener("click", () => this.deleteRecord());
+    this.updateBtn?.addEventListener("click", () => this.updateRecord());
+    this.relatorioBtn?.addEventListener("click", () => this.abrirRelatorio());
+    this.deleteBtn?.addEventListener("click", () => this.deleteRecord());
     exportBtn.addEventListener("click", withBusyButton(exportBtn, () => this.exportXlsx()));
 
     const fileInput = this.container.querySelector('[data-role="file-input"]');
@@ -319,6 +324,7 @@ export class AtualizacoesView extends View {
       const id = `atu-${col.key}`;
       const field = document.createElement("div");
       field.className = "field";
+      if (col.key === "cliente" || col.key === "obs") field.classList.add("field--full");
       field.innerHTML = `<label class="field__label" for="${id}">${col.label}</label>`;
       const input = document.createElement("input");
       input.type = "text";
@@ -596,10 +602,23 @@ export class AtualizacoesView extends View {
   /** Mostra em qual modo o formulário está -- criando algo novo, ou editando. */
   _pintarModo() {
     const modo = this.form.querySelector('[data-role="modo"]');
-    modo.textContent = this.selectedId == null ? "" : `Editando o registro #${this.selectedId}`;
-    this.updateBtn.disabled = this.selectedId == null;
-    this.relatorioBtn.disabled = this.selectedId == null;
-    this.deleteBtn.disabled = this.selectedId == null;
+    const isEdit = this.selectedId != null;
+    if (modo) modo.textContent = isEdit ? `Registro #${this.selectedId}` : "";
+    if (this.addBtn) this.addBtn.hidden = isEdit;
+    if (this.updateBtn) {
+      this.updateBtn.hidden = !isEdit;
+      this.updateBtn.disabled = !isEdit;
+    }
+    if (this.modalDeleteBtn) this.modalDeleteBtn.hidden = !isEdit || this.user?.role === "consulta";
+    if (this.relatorioBtn) this.relatorioBtn.disabled = !isEdit;
+    if (this.deleteBtn) this.deleteBtn.disabled = !isEdit;
+    if (this.drawer) {
+      if (isEdit) {
+        this.drawer.setTitulo(`Editar Atualização #${this.selectedId}`, "Altere os dados deste atendimento.");
+      } else {
+        this.drawer.setTitulo("Nova Atualização", "Registre um atendimento no histórico de clientes.");
+      }
+    }
   }
 
   _readForm() {

@@ -15,6 +15,11 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Atualização automática da Distribuição concentrada em Configurações.** A
+  tela deixou de repetir estado, liga/desliga e contagem regressiva; também
+  removeu a barra de progresso contínua. A atualização manual permanece como
+  um botão compacto, somente com ícone e rótulo acessível.
+
 - **Roadmap UX/UI entregue em quatro frentes.** Atualizações e Agendamentos
   passaram a usar gavetas laterais, ações rápidas por linha, presets de data,
   atalhos `j/k/e/x/c` e busca por `/`; Agendamentos ganhou visão Kanban e

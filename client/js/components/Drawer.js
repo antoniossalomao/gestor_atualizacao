@@ -27,7 +27,7 @@ export class Drawer {
       <section class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="${tituloId}">
         <header class="drawer-header">
           <div><h2 id="${tituloId}">${titulo}</h2>${descricao ? `<p>${descricao}</p>` : ""}</div>
-          <button type="button" class="btn btn--icon btn--ghost" data-action="drawer-fechar" aria-label="Fechar gaveta">×</button>
+          <button type="button" class="btn btn--icon btn--ghost" data-action="drawer-fechar" aria-label="Fechar">×</button>
         </header>
         <div class="drawer-body" data-role="drawer-body"></div>
       </section>`;
@@ -35,7 +35,7 @@ export class Drawer {
     document.body.appendChild(this.overlay);
 
     this._aoClique = (e) => {
-      if (e.target === this.overlay || e.target.closest('[data-action="drawer-fechar"]')) this.fechar();
+      if (e.target === this.overlay || e.target.closest('[data-action="drawer-fechar"], [data-action="cancel"]')) this.fechar();
     };
     this._aoTecla = (e) => {
       if (e.key === "Escape" && this.aberta) {
@@ -45,6 +45,13 @@ export class Drawer {
     };
     this.overlay.addEventListener("click", this._aoClique);
     document.addEventListener("keydown", this._aoTecla);
+  }
+
+  setTitulo(titulo, descricao = "") {
+    const h2 = this.overlay.querySelector("header h2");
+    if (h2) h2.textContent = titulo;
+    const p = this.overlay.querySelector("header p");
+    if (p) p.textContent = descricao;
   }
 
   abrir({ foco } = {}) {
@@ -62,7 +69,7 @@ export class Drawer {
   async fechar({ forcar = false } = {}) {
     if (!this.aberta) return true;
     if (!forcar && this.suja) {
-      const ok = await Modal.confirm("Descartar alterações?", "Há dados não salvos nesta gaveta.", {
+      const ok = await Modal.confirm("Descartar alterações?", "Há dados não salvos no formulário.", {
         confirmLabel: "Descartar",
         danger: true,
       });
