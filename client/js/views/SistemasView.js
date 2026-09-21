@@ -1,7 +1,7 @@
 import { View } from "../app/View.js";
 import { SortableTable } from "../components/SortableTable.js";
 import { blendHex, tokenHex } from "../utils/color.js";
-import { isValidDateBR } from "../utils/date.js";
+import { isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { ApiError } from "../api/ApiClient.js";
 import { Modal } from "../components/Modal.js";
 import { debounce } from "../utils/debounce.js";
@@ -48,6 +48,7 @@ export class SistemasView extends View {
             <div class="field__hint" id="sis-corte-hint" data-role="data-hint"></div>
           </div>
           <div class="toolbar-spacer"></div>
+          <button type="button" class="btn btn--accent" data-action="gerar-agendamentos">Gerar Agendamentos em Lote</button>
           <span class="result-count" data-role="count" aria-live="polite"></span>
         </div>
         <div data-role="table"></div>
@@ -76,6 +77,9 @@ export class SistemasView extends View {
 
     this.sistemaFilter = this.container.querySelector('[data-role="sistema-filter"]');
     this.dataCorteInput = this.container.querySelector('[data-role="data-corte"]');
+    this.gerarBtn = this.container.querySelector('[data-action="gerar-agendamentos"]');
+    this.gerarBtn.hidden = this.user?.role === "consulta";
+    this.gerarBtn.addEventListener("click", () => this._gerarAgendamentos());
     this.dataHint = this.container.querySelector('[data-role="data-hint"]');
     this.dataCorteInput.value = this.dataCorte;
 
@@ -86,6 +90,7 @@ export class SistemasView extends View {
     });
     const reload = debounce(() => this._reloadList(), 250);
     this.dataCorteInput.addEventListener("input", () => {
+      this.dataCorteInput.value = mascaraDataBR(this.dataCorteInput.value);
       const valor = this.dataCorteInput.value.trim();
       const invalida = Boolean(valor) && !isValidDateBR(valor);
       this.dataHint.textContent = invalida ? "Formato esperado: dd/mm/aaaa" : "";
@@ -131,6 +136,7 @@ export class SistemasView extends View {
             { key: "sistemas:lista" }
           ),
         (rows) => {
+          this.rows = rows;
           this.table.setRows(rows);
           this.container.querySelector('[data-role="count"]').textContent = plural(rows.length, "cliente");
         }
@@ -144,6 +150,28 @@ export class SistemasView extends View {
 
   _salvarFiltros() {
     prefs.set("sistemas:filtros", { sistema: this.sistema, dataCorte: this.dataCorte });
+  }
+
+  async _gerarAgendamentos() {
+    const clientes = (this.rows || []).filter((row) => row.situacao !== "Em dia").map((row) => row.cliente);
+    if (clientes.length === 0) {
+      Modal.alert("Agendamentos", "Nenhum cliente defasado neste recorte.", "info");
+      return;
+    }
+    const ok = await Modal.confirm("Gerar agendamentos em lote", `Criar ${plural(clientes.length, "tarefa")} para os clientes defasados em ${this.sistema}?`, { confirmLabel: "Gerar", danger: false });
+    if (!ok) return;
+    try {
+      const resultado = await this.api.post("/agendamentos/gerar-lote", {
+        clientes,
+        sistema: this.sistema,
+        dataCorte: this.dataCorte,
+        responsavel: this.user?.nome || "",
+      });
+      this.cache?.invalidar("agendamentos:");
+      Modal.alert("Agendamentos criados", `${plural(resultado.criados, "tarefa")} criada para acompanhamento.`, "success");
+    } catch (err) {
+      Modal.alert("Erro", errorMessage(err), "error");
+    }
   }
 }
 

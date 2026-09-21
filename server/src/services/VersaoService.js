@@ -281,7 +281,7 @@ class VersaoService {
     if (!atual) throw new ValidationError("Versão não encontrada.");
     if (atual.status === "publicada") throw new ValidationError("Uma versão publicada não pode ser alterada.");
     const item = this.db.versoes.update(id, this._validate({ ...atual, ...input }));
-    this.historico.registrar(usuario, "atualizar", "versao", `Versão ${item.versao} de ${item.sistema} atualizada`);
+    this.historico.registrar(usuario, "atualizar", "versao", `Versão ${item.versao} de ${item.sistema} atualizada`, { antes: this._publicItem(atual), depois: this._publicItem(item) });
     return this._publicItem(item);
   }
 
@@ -296,7 +296,7 @@ class VersaoService {
     }
     const atual = this.db.versoes.find(id);
     if (!atual) throw new ValidationError("Versão não encontrada.");
-    if (atual.status === "publicada") throw new ValidationError("Esta versão já está publicada.");
+    if (atual.status !== "rascunho") throw new ValidationError("Somente uma versão em rascunho pode ser publicada.");
     if (!atual.sistema) throw new ValidationError("Esta versão não tem sistema definido e não pode ser publicada.");
 
     // Validação preventiva: os arquivos do pacote precisam existir no disco
@@ -312,6 +312,12 @@ class VersaoService {
     }
 
     const agora = new Date().toISOString();
+    if (atual.alcance === "piloto") {
+      const item = this.db.versoes.publicarPiloto(id, new Date().toISOString());
+      this.historico.registrar(usuario, "publicar", "versao", `Versão piloto ${item.versao} de ${item.sistema} publicada para ${JSON.parse(item.codigosClientesJson || "[]").length} clientes`);
+      return { versao: this._publicItem(item), substituidas: [] };
+    }
+
     const anteriores = this.db.versoes.publicadasDoSistemaExceto(atual.sistema, id);
     const item = this.db.versoes.publicarESubstituir(
       id,
@@ -330,6 +336,27 @@ class VersaoService {
       );
     }
     return { versao: this._publicItem(item), substituidas: anteriores.map((v) => this._publicItem(v)) };
+  }
+
+  promover(id, usuario) {
+    if (usuario?.role !== "admin") throw new ForbiddenError("Apenas administradores podem promover versões.");
+    const atual = this.db.versoes.find(id);
+    if (!atual || atual.status !== "piloto") throw new ValidationError("Esta versão não está em piloto.");
+    const anteriores = this.db.versoes.publicadasDoSistemaExceto(atual.sistema, id);
+    const item = this.db.versoes.promoverPiloto(id, new Date().toISOString(), anteriores.map((v) => v.id));
+    this.historico.registrar(usuario, "publicar", "versao", `Versão piloto ${item.versao} de ${item.sistema} promovida para produção geral`);
+    return { versao: this._publicItem(item), substituidas: anteriores.map((v) => this._publicItem(v)) };
+  }
+
+  rollback(id, usuario) {
+    if (usuario?.role !== "admin") throw new ForbiddenError("Apenas administradores podem executar rollback.");
+    const atual = this.db.versoes.find(id);
+    if (!atual || atual.status !== "publicada") throw new ValidationError("A versão informada não está em produção.");
+    const anterior = this.db.versoes.anteriorSubstituida(id, atual.sistema);
+    if (!anterior) throw new ValidationError("Não há versão anterior disponível para rollback.");
+    const restaurada = this.db.versoes.rollback(id, anterior.id, new Date().toISOString());
+    this.historico.registrar(usuario, "atualizar", "versao", `Rollback de ${atual.sistema}: ${atual.versao} para ${anterior.versao}`);
+    return { versao: this._publicItem(restaurada), substituida: this._publicItem(atual) };
   }
 
   /**
@@ -358,7 +385,8 @@ class VersaoService {
       usuario,
       "excluir",
       "versao",
-      `Versão ${atual.versao} de ${atual.sistema} excluída${eraPublicada ? " (estava publicada -- sistema fica sem versão-alvo)" : ""}`
+      `Versão ${atual.versao} de ${atual.sistema} excluída${eraPublicada ? " (estava publicada -- sistema fica sem versão-alvo)" : ""}`,
+      { antes: this._publicItem(atual), depois: null }
     );
     return { ok: true, eraPublicada };
   }
@@ -383,7 +411,11 @@ class VersaoService {
       return { update_available: false, sistema: alvo, pausado: true };
     }
 
-    const latest = this.db.versoes.latestPublished(alvo);
+    const normalizado = normalizarCodigoCliente(identificador);
+    const piloto = this.db.versoes.pilotosDoSistema(alvo).find((item) =>
+      JSON.parse(item.codigosClientesJson || "[]").some((valor) => normalizarCodigoCliente(valor) === normalizado)
+    );
+    const latest = piloto || this.db.versoes.latestPublished(alvo);
     if (!latest || compareVersions(latest.versao, versaoAtual || "0.0.0") <= 0) {
       return { update_available: false, sistema: alvo };
     }
@@ -441,6 +473,37 @@ class VersaoService {
       }
     }
 
+    const alcance = String(input.alcance || "geral") === "piloto" ? "piloto" : "geral";
+    const origemCodigos = input.codigosPiloto ?? input.codigosClientes ?? input.codigosClientesJson ?? [];
+    let valoresCodigos = origemCodigos;
+    if (typeof origemCodigos === "string") {
+      try {
+        valoresCodigos = origemCodigos.trim().startsWith("[") ? JSON.parse(origemCodigos) : origemCodigos.split(/[,;\n]+/);
+      } catch {
+        throw new ValidationError("A seleção de clientes do grupo piloto é inválida.");
+      }
+    }
+    const codigosInformados = (Array.isArray(valoresCodigos) ? valoresCodigos : [])
+      .map((valor) => String(valor).trim())
+      .filter(Boolean);
+    if (alcance === "piloto" && codigosInformados.length === 0) {
+      throw new ValidationError("Selecione ao menos um cliente para o grupo piloto.");
+    }
+    if (codigosInformados.some((codigo) => codigo.length > 80)) {
+      throw new ValidationError("Um código de cliente do grupo piloto é longo demais.");
+    }
+
+    const codigosCadastrados = this.db.clientes.codigosExistentes(codigosInformados);
+    const mapaCadastrados = new Map(codigosCadastrados.map((codigo) => [codigo.toUpperCase(), codigo]));
+    const desconhecidos = codigosInformados.filter((codigo) => !mapaCadastrados.has(codigo.toUpperCase()));
+    if (alcance === "piloto" && desconhecidos.length) {
+      throw new ValidationError(`Código de cliente não cadastrado: ${desconhecidos[0]}.`);
+    }
+    const codigosClientes = [...new Map(codigosInformados.map((codigo) => {
+      const canonico = mapaCadastrados.get(codigo.toUpperCase()) || codigo;
+      return [canonico.toUpperCase(), canonico];
+    })).values()];
+
     return {
       sistema,
       versao,
@@ -448,6 +511,8 @@ class VersaoService {
       pacotesJson: JSON.stringify(pacotes),
       observacoes: String(input.observacoes || "").trim(),
       tamanhoBytes: Number(input.tamanhoBytes) || null,
+      alcance,
+      codigosClientesJson: JSON.stringify(alcance === "piloto" ? codigosClientes : []),
     };
   }
 
@@ -459,7 +524,9 @@ class VersaoService {
   }
 
   _publicItem(item) {
-    return { ...item, pacotes: JSON.parse(item.pacotesJson || "[]") };
+    const codigosClientes = JSON.parse(item.codigosClientesJson || "[]");
+    const metricasPiloto = item.status === "piloto" ? this.db.versoes.adocaoPiloto(item.sistema, item.versao, codigosClientes) : null;
+    return { ...item, pacotes: JSON.parse(item.pacotesJson || "[]"), codigosClientes, metricasPiloto };
   }
 }
 
@@ -514,6 +581,10 @@ function compareVersions(left, right) {
     if ((a[index] || 0) !== (b[index] || 0)) return (a[index] || 0) - (b[index] || 0);
   }
   return 0;
+}
+
+function normalizarCodigoCliente(valor) {
+  return String(valor || "").trim().toUpperCase().replace(/[.\/\-\s]/g, "");
 }
 
 module.exports = { VersaoService, HORAS_ATE_OFFLINE, HORAS_ATE_PENDENTE_DEMORADO };

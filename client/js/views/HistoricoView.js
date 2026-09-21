@@ -7,6 +7,8 @@ import { plural } from "../utils/html.js";
 import { tempoRelativo, formatarDataHora } from "../utils/date.js";
 import { prefs } from "../app/prefs.js";
 import { aparencia } from "../app/appearance.js";
+import { Modal } from "../components/Modal.js";
+import { escapeHtml } from "../utils/html.js";
 
 const ACAO_LABEL = {
   criar: "Criou",
@@ -83,7 +85,8 @@ export class HistoricoView extends View {
         { key: "entidadeLabel", label: "Tipo" },
         { key: "descricao", label: "Descrição" },
       ],
-      selectable: false,
+      selectable: true,
+      onSelect: (row) => this._abrirDiff(row),
       caption: "Ações registradas no sistema",
       emptyNode: () =>
         this._temFiltro()
@@ -212,4 +215,26 @@ export class HistoricoView extends View {
       sortDir: this.sortDir,
     });
   }
+
+  _abrirDiff(row) {
+    if (!row.detalhes_json) return;
+    let detalhes;
+    try { detalhes = JSON.parse(row.detalhes_json); } catch { return; }
+    const antes = detalhes.antes || {};
+    const depois = detalhes.depois || {};
+    const chaves = [...new Set([...Object.keys(antes), ...Object.keys(depois)])].filter((chave) => !["id", "criadoEm", "atualizadoEm", "revisao"].includes(chave));
+    const linhas = chaves.filter((chave) => JSON.stringify(antes[chave] ?? null) !== JSON.stringify(depois[chave] ?? null));
+    const { box, close } = Modal.abrirCaixa({ largura: 680 });
+    box.innerHTML = `<h3 class="modal-box__title">Antes × Depois</h3><p class="modal-box__message">${escapeHtml(row.descricao)}</p>
+      <div class="audit-diff">${linhas.length ? linhas.map((chave) => `<div class="audit-diff__row"><strong>${escapeHtml(rotuloCampo(chave))}</strong><del>${escapeHtml(valorDiff(antes[chave]))}</del><span aria-hidden="true">→</span><ins>${escapeHtml(valorDiff(depois[chave]))}</ins></div>`).join("") : "<p>Nenhum campo comparável foi alterado.</p>"}</div>
+      <div class="modal-box__actions"><button type="button" class="btn btn--accent" data-action="fechar">Fechar</button></div>`;
+    box.querySelector('[data-action="fechar"]').addEventListener("click", close);
+  }
+}
+
+function rotuloCampo(chave) { return chave.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()); }
+function valorDiff(valor) {
+  if (valor == null || valor === "") return "—";
+  if (typeof valor === "object") return JSON.stringify(valor);
+  return String(valor);
 }

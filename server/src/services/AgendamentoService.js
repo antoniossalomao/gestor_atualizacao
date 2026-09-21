@@ -1,7 +1,7 @@
 const { STATUS_OPTIONS, AGENDAMENTO_ARQUIVAR_DIAS } = require("../config/constants");
 const { dataValida, horaValida } = require("../shared/validation");
 const { normalizarResponsavel } = require("./normalizacao");
-const { ValidationError, NotFoundError } = require("../shared/errors");
+const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
 
 /**
  * Regras de negocio da aba Agendamentos, em cima do AgendamentoRepository.
@@ -88,6 +88,27 @@ class AgendamentoService {
     return data;
   }
 
+  gerarLote(input, usuario) {
+    const clientes = [...new Set((input.clientes || []).map((nome) => String(nome || "").trim()).filter(Boolean))];
+    const sistema = String(input.sistema || "").trim();
+    if (!sistema) throw new ValidationError("Informe o sistema do lote.");
+    if (clientes.length === 0) throw new ValidationError("Nenhum cliente foi selecionado para o lote.");
+    if (clientes.length > 500) throw new ValidationError("O lote pode conter no máximo 500 clientes.");
+    const hoje = new Date();
+    const data = `${String(hoje.getDate()).padStart(2, "0")}/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
+    const itens = clientes.map((cliente) => this._validate({
+      tarefa: `Atualizar ${sistema}${input.dataCorte ? ` — defasado antes de ${input.dataCorte}` : ""}`,
+      cliente,
+      responsavel: input.responsavel || usuario?.nome || "",
+      data,
+      horario: "",
+      status: STATUS_OPTIONS[0],
+    }));
+    const criados = this.db.agendamentos.insertMany(itens);
+    this.historico.registrar(usuario, "criar", "agendamento", `${criados} tarefas geradas em lote para ${sistema}`);
+    return { criados };
+  }
+
   // Ver o comentario equivalente em AtualizacaoService: "zero linhas
   // afetadas" precisa virar 404, senao a tela confirma uma alteracao que
   // nao aconteceu numa tarefa que outra pessoa ja excluiu.
@@ -104,18 +125,22 @@ class AgendamentoService {
     if (data.status === statusConcluido) {
       concluidoEm = atual && atual.status === statusConcluido ? atual.concluidoEm : new Date().toISOString();
     }
-    if (this.db.agendamentos.update(id, { ...data, concluidoEm }) === 0) {
+    const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
+    if (this.db.agendamentos.update(id, { ...data, concluidoEm }, revisaoEsperada, usuario?.nome || "") === 0) {
+      const agora = this.db.agendamentos.find(id);
+      if (agora && revisaoEsperada != null) throw new ConflictError(`Este agendamento foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, agora);
       throw new NotFoundError("Esta tarefa não existe mais. Ela pode ter sido excluída por outra pessoa.");
     }
-    this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${data.tarefa}"`);
+    this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${data.tarefa}"`, { antes: atual, depois: data });
     return data;
   }
 
   delete(id, usuario) {
+    const atual = this.db.agendamentos.find(id);
     if (this.db.agendamentos.delete(id) === 0) {
       throw new NotFoundError("Esta tarefa não existe mais.");
     }
-    this.historico.registrar(usuario, "excluir", "agendamento", `Tarefa #${id}`);
+    this.historico.registrar(usuario, "excluir", "agendamento", `Tarefa #${id}`, { antes: atual, depois: null });
   }
 
   /** Atalho: marca a tarefa com o ultimo status da lista ("Concluído"). */

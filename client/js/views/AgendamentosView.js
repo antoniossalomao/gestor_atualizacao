@@ -7,13 +7,14 @@ import { Autocomplete } from "../components/Autocomplete.js";
 import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
 import { debounce } from "../utils/debounce.js";
-import { todayBR, isValidDateBR } from "../utils/date.js";
+import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { emptyState } from "../components/EmptyState.js";
-import { plural } from "../utils/html.js";
+import { plural, escapeHtml } from "../utils/html.js";
 import { icon } from "../utils/icons.js";
 import { marcarOcupado } from "../utils/guard.js";
 import { prefs } from "../app/prefs.js";
 import { aparencia } from "../app/appearance.js";
+import { Drawer } from "../components/Drawer.js";
 
 const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
 
@@ -41,6 +42,13 @@ export class AgendamentosView extends View {
 
   _buildDom() {
     this.container.innerHTML = `
+      <div class="view-actions">
+        <div class="segmented" role="group" aria-label="Visualização dos agendamentos">
+          <button type="button" class="btn is-active" data-view="lista">📋 Lista</button>
+          <button type="button" class="btn" data-view="kanban">▦ Kanban</button>
+        </div>
+        <button type="button" class="btn btn--accent" data-action="novo-agendamento">+ Novo Agendamento</button>
+      </div>
       <form class="card" data-role="form" novalidate>
         <h2 class="card__title">Nova Tarefa</h2>
         <div class="form-grid form-grid--6" data-role="fields"></div>
@@ -116,6 +124,7 @@ export class AgendamentosView extends View {
       columns: [
         { key: "id", label: "ID", type: "numeric", largura: "70px" },
         ...AGENDA_COLUMNS.map((c) => ({ key: c.key, label: c.label, type: c.key === "data" ? "date" : "text" })),
+        { key: "acoes", label: "Ações", largura: "136px", render: (row) => acoesAgendamento(row, this.user?.role) },
       ],
       onSelect: (row) => this._loadIntoForm(row),
       rowClass: (row) => {
@@ -163,6 +172,23 @@ export class AgendamentosView extends View {
     });
 
     this.form = this.container.querySelector('[data-role="form"]');
+    this.drawer = new Drawer(this.form, {
+      titulo: "Agendamento",
+      descricao: "Crie ou edite a tarefa mantendo o quadro visível.",
+    });
+    this.kanban = document.createElement("div");
+    this.kanban.className = "kanban-board";
+    this.kanban.hidden = true;
+    this.table.container.after(this.kanban);
+    this.container.querySelector('[data-action="novo-agendamento"]').addEventListener("click", () => {
+      this.clearForm();
+      this.drawer.abrir({ foco: this.fields.tarefa });
+    });
+    for (const botao of this.container.querySelectorAll("[data-view]")) {
+      botao.addEventListener("click", () => this._trocarVisao(botao.dataset.view));
+    }
+    this.table.container.addEventListener("click", (e) => this._acaoRapida(e));
+    this.kanban.addEventListener("click", (e) => this._acaoRapida(e));
     this.searchInput = this.container.querySelector('[data-role="search"]');
     this.statusFilter = this.container.querySelector('[data-role="status-filter"]');
     this.botaoLimparFiltros = this.container.querySelector('[data-action="limpar-filtros"]');
@@ -222,6 +248,7 @@ export class AgendamentosView extends View {
 
     if (this.user?.role === "consulta") {
       this.form.hidden = true;
+      this.container.querySelector('[data-action="novo-agendamento"]').hidden = true;
       this.deleteBtn.hidden = true;
       this.doneBtn.hidden = true;
       this.arquivarBtn.hidden = true;
@@ -277,6 +304,7 @@ export class AgendamentosView extends View {
       if (col.key === "data") {
         input.setAttribute("aria-describedby", hint.id);
         input.addEventListener("input", () => {
+          input.value = mascaraDataBR(input.value);
           const invalida = Boolean(input.value) && !isValidDateBR(input.value);
           hint.textContent = invalida ? "Formato esperado: dd/mm/aaaa" : "";
           input.setAttribute("aria-invalid", String(invalida));
@@ -322,6 +350,7 @@ export class AgendamentosView extends View {
           ),
         (resposta) => {
           this.table.setRows(resposta.rows);
+          this._renderKanban(resposta.rows);
           this.pagination.update(resposta);
           this.container.querySelector('[data-role="count"]').textContent = plural(resposta.total, "tarefa");
           this._pintarArquivadas(resposta);
@@ -387,12 +416,60 @@ export class AgendamentosView extends View {
 
   _loadIntoForm(row) {
     this.selectedId = row.id;
+    this.selectedRevision = row.revisao;
     for (const col of AGENDA_COLUMNS) this.fields[col.key].value = row[col.key] ?? "";
     this._pintarModo();
   }
 
+  _trocarVisao(visao) {
+    const kanban = visao === "kanban";
+    this.table.container.hidden = kanban;
+    this.container.querySelector('[data-role="pagination"]').hidden = kanban;
+    this.kanban.hidden = !kanban;
+    for (const botao of this.container.querySelectorAll("[data-view]")) botao.classList.toggle("is-active", botao.dataset.view === visao);
+  }
+
+  _renderKanban(rows) {
+    const grupos = [
+      ["A Fazer", "Pendentes"], ["Em Andamento", "Em andamento"],
+      ["Sem resposta", "Aguardando cliente / bloqueado"], ["Concluído", "Concluídos recentemente"],
+    ];
+    this.kanban.innerHTML = grupos.map(([status, titulo]) => {
+      const itens = rows.filter((row) => row.status === status);
+      return `<section class="kanban-column" data-status="${status}">
+        <header><h3>${titulo}</h3><span class="badge">${itens.length}</span></header>
+        <div class="kanban-column__cards">${itens.map((row) => cartaoKanban(row, this.user?.role)).join("") || '<p class="text-muted">Nenhuma tarefa</p>'}</div>
+      </section>`;
+    }).join("");
+  }
+
+  async _acaoRapida(e) {
+    const botao = e.target.closest("[data-row-action]");
+    if (!botao) return;
+    const row = this.table.rows.find((item) => String(item.id) === botao.dataset.id);
+    if (!row) return;
+    this._loadIntoForm(row);
+    if (botao.dataset.rowAction === "editar") this.drawer.abrir({ foco: this.fields.tarefa });
+    if (botao.dataset.rowAction === "converter") this.converterEmAtualizacao();
+    if (botao.dataset.rowAction === "concluir") await this.markDone();
+    if (botao.dataset.rowAction === "avancar") await this._avancar(row);
+  }
+
+  async _avancar(row) {
+    const indice = STATUS_OPTIONS.indexOf(row.status);
+    if (indice < 0 || indice >= STATUS_OPTIONS.length - 1) return;
+    try {
+      await this.api.put(`/agendamentos/${row.id}`, { ...row, status: STATUS_OPTIONS[indice + 1] });
+      this._invalidar();
+      await this._reloadList();
+      toast.success(`Tarefa avançou para “${STATUS_OPTIONS[indice + 1]}”.`);
+    } catch (err) {
+      Modal.alert("Erro", errorMessage(err), "error");
+    }
+  }
+
   _pintarModo() {
-    const modo = this.container.querySelector('[data-role="modo"]');
+    const modo = this.form.querySelector('[data-role="modo"]');
     modo.textContent = this.selectedId == null ? "" : `Editando a tarefa #${this.selectedId}`;
     this.updateBtn.disabled = this.selectedId == null;
     this.deleteBtn.disabled = this.selectedId == null;
@@ -452,12 +529,12 @@ export class AgendamentosView extends View {
     }
     if (novo) {
       this.clearForm();
-      if (this.fields.cliente) this.fields.cliente.focus();
+      this.drawer.abrir({ foco: this.fields.cliente });
     } else if (cliente) {
       this.clearForm();
       if (this.fields.cliente) {
         this.fields.cliente.value = cliente;
-        if (this.fields.tarefa) this.fields.tarefa.focus();
+        this.drawer.abrir({ foco: this.fields.tarefa });
       }
     }
   }
@@ -510,6 +587,8 @@ export class AgendamentosView extends View {
     try {
       await this.api.post("/agendamentos", data);
       this.clearForm();
+      this.drawer.marcarLimpa();
+      await this.drawer.fechar({ forcar: true });
       this.page = 1;
       this._invalidar();
       await this._reloadList();
@@ -530,8 +609,10 @@ export class AgendamentosView extends View {
     if (!data) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
-      await this.api.put(`/agendamentos/${this.selectedId}`, data);
+      await this.api.put(`/agendamentos/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
       this.clearForm();
+      this.drawer.marcarLimpa();
+      await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
       toast.success("Tarefa atualizada.");
@@ -733,12 +814,13 @@ export class AgendamentosView extends View {
     }
 
     this.selectedId = null;
+    this.selectedRevision = null;
     this.table?.clearSelection();
     for (const col of AGENDA_COLUMNS) this.fields[col.key].value = "";
     this.fields.data.value = todayBR();
     this.fields.status.value = STATUS_OPTIONS[0];
     if (this.user) this.fields.responsavel.value = this.user.nome;
-    for (const hint of this.container.querySelectorAll(".field__hint")) hint.textContent = "";
+    for (const hint of this.form.querySelectorAll(".field__hint")) hint.textContent = "";
     this._pintarModo();
 
     if (comDesfazer && tinhaConteudo) {
@@ -755,16 +837,58 @@ export class AgendamentosView extends View {
 
   _onGlobalKeydown(e) {
     if (!this.visivel) return;
-    if (e.key !== "Delete") return;
     if (isTypingTarget(e.target)) return;
-    if (this.selectedId != null) this.deleteTask();
+    if (e.key === "Delete" && this.selectedId != null) this.deleteTask();
+    else if (e.key.toLowerCase() === "n") this.container.querySelector('[data-action="novo-agendamento"]')?.click();
+    else if (e.key === "/") { e.preventDefault(); this.searchInput.focus(); }
+    else if (e.key.toLowerCase() === "j") this.table.moverCursor(1);
+    else if (e.key.toLowerCase() === "k") this.table.moverCursor(-1);
+    else if (e.key.toLowerCase() === "e" || e.key === "Enter") { this.table.ativarCursor(); if (this.selectedId != null) this.drawer.abrir(); }
+    else if (e.key.toLowerCase() === "x" || e.key === " ") { e.preventDefault(); this.table.alternarMarcacaoCursor(); }
   }
 
   destroy() {
+    this.drawer?.destroy();
     this.clienteAutocomplete?.destroy();
     this.responsavelAutocomplete?.destroy();
     super.destroy();
   }
+}
+
+function acoesAgendamento(row, role) {
+  const wrap = document.createElement("div");
+  wrap.className = "row-actions";
+  if (role === "consulta") return wrap;
+  const botoes = row.status === STATUS_CONCLUIDO
+    ? [["editar", "✏️", "Editar"]]
+    : [["concluir", "✓", "Marcar como concluída"], ["converter", "↗", "Converter em atualização"], ["editar", "✏️", "Editar"]];
+  for (const [acao, simbolo, titulo] of botoes) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "btn btn--icon btn--ghost";
+    botao.dataset.rowAction = acao;
+    botao.dataset.id = row.id;
+    botao.title = titulo;
+    botao.setAttribute("aria-label", titulo);
+    botao.textContent = simbolo;
+    wrap.appendChild(botao);
+  }
+  return wrap;
+}
+
+function cartaoKanban(row, role) {
+  const vencida = row.status !== STATUS_CONCLUIDO && estaAtrasada(row.data);
+  const acoes = role === "consulta" || row.status === STATUS_CONCLUIDO ? "" : `
+    <div class="kanban-card__actions">
+      <button type="button" class="btn btn--small" data-row-action="avancar" data-id="${row.id}">Avançar</button>
+      <button type="button" class="btn btn--small btn--ghost" data-row-action="editar" data-id="${row.id}">Editar</button>
+    </div>`;
+  return `<article class="kanban-card${vencida ? " is-overdue" : ""}">
+    <header><strong>${escapeHtml(row.cliente || "Sem cliente")}</strong>${vencida ? '<span class="badge badge--danger">Vencida</span>' : ""}</header>
+    <p>${escapeHtml(row.tarefa)}</p>
+    <dl><div><dt>Sistema</dt><dd>${escapeHtml(row.sistema || "—")}</dd></div><div><dt>Responsável</dt><dd>${escapeHtml(row.responsavel || "—")}</dd></div></dl>
+    <time>${escapeHtml([row.data, row.horario].filter(Boolean).join(" · ") || "Sem data")}</time>${acoes}
+  </article>`;
 }
 
 function isTypingTarget(el) {

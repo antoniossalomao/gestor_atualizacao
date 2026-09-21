@@ -30,7 +30,7 @@ export class SortableTable {
   /**
    * @param {HTMLElement} container onde a tabela é desenhada
    * @param {{
-   *   columns: Array<{key: string, label: string, type?: "text"|"date"|"numeric", largura?: string, title?: (row: any) => string}>,
+   *   columns: Array<{key: string, label: string, type?: "text"|"date"|"numeric", largura?: string, title?: (row: any) => string, render?: (row: any) => Node}>,
    *   rowKey?: (row: any) => string|number,
    *   onSelect?: (row: any) => void,
    *   rowClass?: (row: any, i: number) => string,
@@ -120,6 +120,9 @@ export class SortableTable {
       // vez de um listener por linha. Com 50 linhas isso é 1 listener em vez
       // de 50, e sobrevive à troca das linhas sem precisar reconectar nada.
       this.tbody.addEventListener("click", (e) => {
+        // Botões dentro de uma célula têm ação própria. Selecionar a linha
+        // junto faria um único clique executar duas intenções diferentes.
+        if (e.target.closest("button, a, input, select")) return;
         const tr = e.target.closest("tr[data-key]");
         if (tr) this._selecionarPorElemento(tr, e.shiftKey);
       });
@@ -181,6 +184,33 @@ export class SortableTable {
 
   clearSelection() {
     this._marcarSelecionada(null);
+  }
+
+  /** Move o cursor a partir de qualquer lugar da tela (atalhos j/k). */
+  moverCursor(passo) {
+    const linhas = [...this.tbody.querySelectorAll("tr[data-key]")];
+    if (linhas.length === 0) return;
+    this.cursor = Math.min(linhas.length - 1, Math.max(0, (this.cursor < 0 ? (passo > 0 ? -1 : linhas.length) : this.cursor) + passo));
+    this._moverCursor(linhas);
+  }
+
+  ativarCursor() {
+    const linhas = [...this.tbody.querySelectorAll("tr[data-key]")];
+    if (linhas.length === 0) return;
+    if (this.cursor < 0) this.cursor = 0;
+    this._selecionarPorElemento(linhas[this.cursor], false);
+  }
+
+  alternarMarcacaoCursor() {
+    if (!this.multiSelect) return;
+    const linhas = [...this.tbody.querySelectorAll("tr[data-key]")];
+    if (linhas.length === 0) return;
+    if (this.cursor < 0) this.cursor = 0;
+    const chave = linhas[this.cursor].dataset.key;
+    if (this.marcadas.has(chave)) this.marcadas.delete(chave);
+    else this.marcadas.add(chave);
+    this._pintarMarcadas();
+    this.onMultiSelect(this.selecionadas);
   }
 
   /** Chaves marcadas, como texto. */
@@ -331,7 +361,9 @@ export class SortableTable {
       this.columns.forEach((col, c) => {
         const td = tr.children[c];
         const valor = row[col.key] ?? "";
-        if (td.textContent !== String(valor)) td.textContent = valor;
+        if (col.render) {
+          td.replaceChildren(col.render(row));
+        } else if (td.textContent !== String(valor)) td.textContent = valor;
         // O `title` só entra quando o texto de fato não coube -- antes ele era
         // posto em toda célula não-vazia, e o tooltip nativo do navegador
         // aparecia atrasado e fora do tema em cima de qualquer coisa.

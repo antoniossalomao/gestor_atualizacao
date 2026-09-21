@@ -1,7 +1,7 @@
 import { View } from "../app/View.js";
 import { debounce } from "../utils/debounce.js";
 import { emptyState } from "../components/EmptyState.js";
-import { plural, escapeHtml } from "../utils/html.js";
+import { plural, escapeHtml, copyToClipboard } from "../utils/html.js";
 import { toast } from "../components/Toast.js";
 import { tempoRelativo, formatarDataHora } from "../utils/date.js";
 
@@ -166,16 +166,17 @@ export class ConsultaView extends View {
     this._filterMatches();
 
     try {
-      const [cliente, historico, painelVersoes] = await Promise.all([
-        this.api.get(`/clientes/by-nome/${encodeURIComponent(nome)}`, null, { key: "consulta:cliente" }),
-        this.api.get(`/atualizacoes/recent-by-client/${encodeURIComponent(nome)}`, { limit: 10 }, { key: "consulta:historico" }),
-        this.api.get("/versoes/painel", null, { key: "consulta:painel" }).catch(() => null),
-      ]);
+      const cliente = await this.api.get(`/clientes/by-nome/${encodeURIComponent(nome)}`, null, { key: "consulta:cliente" });
       if (!cliente) {
         toast.error("Cliente não encontrado.");
         return;
       }
-      this._renderDetail(cliente, historico, painelVersoes);
+      const [historico, painelVersoes, acessos] = await Promise.all([
+        this.api.get(`/atualizacoes/recent-by-client/${encodeURIComponent(nome)}`, { limit: 10 }, { key: "consulta:historico" }),
+        this.api.get("/versoes/painel", null, { key: "consulta:painel" }).catch(() => null),
+        this.api.get(`/clientes/${cliente.id}/acessos`, null, { key: "consulta:acessos" }).catch(() => []),
+      ]);
+      this._renderDetail(cliente, historico, painelVersoes, acessos);
     } catch (erro) {
       if (erro?.cancelled) return; // outra seleção, mais nova, tomou o lugar
       toast.error("Não foi possível carregar os dados deste cliente.");
@@ -192,16 +193,20 @@ export class ConsultaView extends View {
     );
   }
 
-  _renderDetail(cliente, historico, painelVersoes) {
+  _renderDetail(cliente, historico, painelVersoes, acessos = []) {
     this.detailBox.innerHTML = `
       <div class="consulta-detail__name"></div>
       <div class="consulta-detail__subtitle"></div>
-      <hr class="separator" />
-      <h2 class="card__title">Comparação de Versões</h2>
-      <div data-role="versao-matriz"></div>
-      <hr class="separator" />
-      <h2 class="card__title">Histórico Recente</h2>
-      <div data-role="ultima"></div>
+      <nav class="client-hub-tabs" role="tablist" aria-label="Ficha 360 graus">
+        <button type="button" class="btn is-active" data-client-tab="resumo">Resumo & Cadastro</button>
+        <button type="button" class="btn" data-client-tab="acessos">Acessos Remotos</button>
+        <button type="button" class="btn" data-client-tab="versoes">Matriz de Versões</button>
+        <button type="button" class="btn" data-client-tab="timeline">Linha do Tempo</button>
+      </nav>
+      <section class="client-hub-panel" data-client-panel="resumo"><div class="info-grid" data-role="cadastro"></div></section>
+      <section class="client-hub-panel" data-client-panel="acessos" hidden><div class="access-grid" data-role="acessos"></div></section>
+      <section class="client-hub-panel" data-client-panel="versoes" hidden><div data-role="versao-matriz"></div></section>
+      <section class="client-hub-panel" data-client-panel="timeline" hidden><div class="client-timeline" data-role="ultima"></div></section>
     `;
     this.detailBox.querySelector(".consulta-detail__name").textContent = cliente.nome;
 
@@ -211,6 +216,36 @@ export class ConsultaView extends View {
     if (cliente.cnpj) subtitulos.push(`CNPJ: ${cliente.cnpj}`);
     this.detailBox.querySelector(".consulta-detail__subtitle").textContent =
       subtitulos.length > 0 ? subtitulos.join("    ·    ") : "Sem informações cadastrais adicionais";
+
+    const cadastro = this.detailBox.querySelector('[data-role="cadastro"]');
+    cadastro.append(infoItem("Código", cliente.codigo), infoItem("Grupo / Rede", cliente.grupo), infoItem("Cidade", cliente.cidade),
+      infoItem("CNPJ", cliente.cnpj), infoItem("Sistemas contratados", (cliente.sistemas || []).join(", "), true));
+
+    const acessosBox = this.detailBox.querySelector('[data-role="acessos"]');
+    if (acessos.length === 0) acessosBox.appendChild(emptyState({ titulo: "Nenhum acesso remoto", descricao: "Cadastre os acessos na tela Clientes.", icone: "acessos" }));
+    for (const acesso of acessos) {
+      const card = document.createElement("article");
+      card.className = "access-card";
+      card.innerHTML = `<h3>${escapeHtml(acesso.maquina)}</h3>
+        <p><span>AnyDesk</span><strong>${escapeHtml(acesso.anydesk || "—")}</strong></p>
+        <p><span>Suporte Bredas</span><strong>${escapeHtml(acesso.suporte_bredas || acesso.suporteBredas || "—")}</strong></p>
+        <div class="form-actions"><button type="button" class="btn btn--small" data-copy="anydesk">Copiar AnyDesk</button>
+        <button type="button" class="btn btn--small" data-copy="bredas">Copiar Suporte</button></div>`;
+      card.addEventListener("click", async (e) => {
+        const tipo = e.target.closest("[data-copy]")?.dataset.copy;
+        if (!tipo) return;
+        const valor = tipo === "anydesk" ? acesso.anydesk : (acesso.suporte_bredas || acesso.suporteBredas);
+        if (valor && await copyToClipboard(valor)) toast.success("Acesso copiado.");
+      });
+      acessosBox.appendChild(card);
+    }
+
+    this.detailBox.querySelector(".client-hub-tabs").addEventListener("click", (e) => {
+      const botao = e.target.closest("[data-client-tab]");
+      if (!botao) return;
+      for (const item of this.detailBox.querySelectorAll("[data-client-tab]")) item.classList.toggle("is-active", item === botao);
+      for (const painel of this.detailBox.querySelectorAll("[data-client-panel]")) painel.hidden = painel.dataset.clientPanel !== botao.dataset.clientTab;
+    });
 
     // Matriz Comparativa de Versões (Feature 3.2): Sistema | Instalada | Publicada | Estado | Último contato
     this._renderMatrizVersoes(cliente, historico, painelVersoes);
@@ -234,7 +269,7 @@ export class ConsultaView extends View {
         separador.className = "separator";
         caixa.appendChild(separador);
       }
-      const grid = document.createElement("div");
+      const grid = document.createElement("article");
       grid.className = "info-grid";
       grid.appendChild(infoItem("Data", registro.data));
       grid.appendChild(infoItem("Sistema", registro.sistema));

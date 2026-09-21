@@ -11,6 +11,7 @@ const STATUS = {
   publicada: { texto: "No ar", classe: "badge--success" },
   rascunho: { texto: "Rascunho", classe: "badge--warning" },
   substituida: { texto: "Substituída", classe: "badge--muted" },
+  piloto: { texto: "Piloto", classe: "badge--info" },
 };
 
 /**
@@ -25,9 +26,16 @@ export class VersoesView extends View {
     super(container, api, ctx);
     this.versions = [];
     this.systems = [];
+    this.clients = [];
+    this.pilotCodes = new Set();
     this.busca = "";
     this.filtroStatus = "todos";
     this._buildDom();
+  }
+
+  aplicarParams({ novo } = {}) {
+    if (!novo || this.user?.role === "consulta") return;
+    this.container.querySelector('input, select, textarea')?.focus();
   }
 
   _buildDom() {
@@ -64,6 +72,37 @@ export class VersoesView extends View {
               <input class="input distribution-file" id="version-package" type="file" name="pacote" accept=".7z,.zip,.rar" required />
               <small class="field__help">O SHA-256 e a URL de download serão gerados automaticamente.</small>
             </div>
+
+            <fieldset class="release-scope-card">
+              <legend>Alcance da publicação</legend>
+              <div class="release-scope-options">
+                <label class="release-scope-option">
+                  <input type="radio" name="alcance" value="geral" checked />
+                  <span class="release-scope-option__marker" aria-hidden="true"></span>
+                  <span><strong>Publicação geral</strong><small>Disponível para todos os clientes aptos.</small></span>
+                </label>
+                <label class="release-scope-option">
+                  <input type="radio" name="alcance" value="piloto" />
+                  <span class="release-scope-option__marker" aria-hidden="true"></span>
+                  <span><strong>Grupo piloto</strong><small>Liberação restrita para clientes selecionados.</small></span>
+                </label>
+              </div>
+              <div class="pilot-picker" data-role="pilot-targets" hidden>
+                <div class="pilot-picker__heading">
+                  <div><label class="field__label" for="version-pilot-search">Clientes do piloto</label><small class="field__help">Busque pelo código ou nome cadastrado.</small></div>
+                  <span class="pilot-picker__count" data-role="pilot-count">Nenhum selecionado</span>
+                </div>
+                <input type="hidden" name="codigosPiloto" data-role="pilot-value" value="[]" />
+                <div class="pilot-picker__search-wrap">
+                  ${icon("busca")}
+                  <input class="input pilot-picker__search" id="version-pilot-search" type="search" autocomplete="off"
+                         placeholder="Digite o código ou nome do cliente" data-role="pilot-search" />
+                </div>
+                <div class="pilot-picker__selected" data-role="pilot-selected"></div>
+                <div class="pilot-picker__suggestions" data-role="pilot-suggestions" aria-live="polite"></div>
+                <small class="field__help">Somente os códigos selecionados receberão esta versão até a promoção para publicação geral.</small>
+              </div>
+            </fieldset>
 
             <div class="field">
               <span class="field__label" id="version-changelog-label">O que mudou nesta entrega</span>
@@ -120,6 +159,7 @@ export class VersoesView extends View {
               <option value="publicada">No ar</option>
               <option value="rascunho">Rascunhos</option>
               <option value="substituida">Substituídas</option>
+              <option value="piloto">Pilotos</option>
             </select>
           </div>
           <div class="toolbar-spacer"></div>
@@ -142,6 +182,7 @@ export class VersoesView extends View {
     this.changelogItems = this.container.querySelector('[data-role="changelog-items"]');
     this.changelogValue = this.container.querySelector('[data-role="changelog-value"]');
     this.uploadProgress = this.container.querySelector('[data-role="upload-progress"]');
+    this.pilotSearch = this.container.querySelector('[data-role="pilot-search"]');
 
     if (this.user?.role === "consulta") {
       this.form.hidden = true;
@@ -149,6 +190,12 @@ export class VersoesView extends View {
 
     this.form.addEventListener("submit", (event) => this._submit(event));
     this.systemSelect.addEventListener("change", () => this._updateReplacementWarning());
+    for (const campo of this.form.querySelectorAll('[name="alcance"]')) campo.addEventListener("change", () => {
+      this.form.querySelector('[data-role="pilot-targets"]').hidden = campo.value !== "piloto" || !campo.checked;
+      this._renderPilotPicker();
+      this._updateReplacementWarning();
+    });
+    this.pilotSearch.addEventListener("input", () => this._renderPilotPicker());
     this.container.querySelector('[data-action="add-changelog-item"]').addEventListener("click", () => this._addChangelogItem("", true));
     this._resetChangelog();
     this.container.querySelector('[data-action="refresh"]').addEventListener("click", () => this.refresh(true));
@@ -166,16 +213,19 @@ export class VersoesView extends View {
     const dados = await this.swr(
       "versoes:catalogo",
       async () => {
-        const [systems, versions] = await Promise.all([
+        const [systems, versions, clients] = await Promise.all([
           this.api.get("/sistemas", null, { key: "versoes:sistemas-cadastrados" }),
           this.api.get("/versoes", null, { key: "versoes:lista" }),
+          this.api.get("/clientes/opcoes-por-codigo", null, { key: "versoes:clientes-por-codigo" }),
         ]);
-        return { systems, versions };
+        return { systems, versions, clients };
       },
-      ({ systems, versions }) => {
+      ({ systems, versions, clients }) => {
         this.systems = systems || [];
         this.versions = versions || [];
+        this.clients = clients || [];
         this._populateSystems();
+        this._renderPilotPicker();
         this._render();
       }
     );
@@ -187,11 +237,12 @@ export class VersoesView extends View {
     const publicadas = this.versions.filter((v) => v.status === "publicada");
     const rascunhos = this.versions.filter((v) => v.status === "rascunho");
     const substituidas = this.versions.filter((v) => v.status === "substituida");
+    const pilotos = this.versions.filter((v) => v.status === "piloto");
     const sistemasPublicados = new Set(publicadas.map((v) => v.sistema));
     const semPublicacao = this.systems.filter((s) => !sistemasPublicados.has(s));
 
-    this._renderStats(publicadas.length, rascunhos.length, substituidas.length, semPublicacao);
-    this._renderPublished(publicadas);
+    this._renderStats(publicadas.length, rascunhos.length + pilotos.length, substituidas.length, semPublicacao);
+    this._renderPublished([...pilotos, ...publicadas]);
     this._renderHistory();
     this._updateReplacementWarning();
   }
@@ -252,7 +303,7 @@ export class VersoesView extends View {
             <span class="published-release__version">${escapeHtml(item.versao)}</span>
             <strong class="published-release__system">${escapeHtml(item.sistema || "Sistema não informado")}</strong>
           </div>
-          <span class="badge badge--success">No ar</span>
+          <span class="badge ${item.status === "piloto" ? "badge--info" : "badge--success"}">${item.status === "piloto" ? "Piloto" : "No ar"}</span>
         </div>
         <div class="published-release__meta" data-role="meta"></div>
         <div class="published-release__changelog" data-role="changelog"></div>
@@ -281,6 +332,10 @@ export class VersoesView extends View {
       const meta = article.querySelector('[data-role="meta"]');
       const pacotes = Array.isArray(item.pacotes) ? item.pacotes : [];
       meta.textContent = `${formatarDataHora(item.publicadoEm)} · ${plural(pacotes.length, "pacote")} · ${formatarBytes(item.tamanhoBytes)}`;
+      if (item.status === "piloto") meta.textContent += ` · ${plural(item.codigosClientes?.length || 0, "cliente piloto")}`;
+      if (item.status === "piloto" && item.metricasPiloto) {
+        meta.textContent += ` · ${item.metricasPiloto.rodando} rodando · ${item.metricasPiloto.semErros} sem erros`;
+      }
       meta.title = `Publicada ${tempoRelativo(item.publicadoEm)}`;
       article.querySelector('[data-role="changelog"]').appendChild(renderChangelog(item.observacoes));
       list.appendChild(article);
@@ -343,7 +398,15 @@ export class VersoesView extends View {
       const actions = row.querySelector('[data-role="actions"]');
       const isAdmin = this.user?.role === "admin";
 
-      if (item.status !== "publicada") {
+      if (item.status === "piloto") {
+        const promote = document.createElement("button");
+        promote.type = "button";
+        promote.className = "btn btn--small btn--accent";
+        promote.textContent = "Promover para geral";
+        promote.disabled = !isAdmin;
+        promote.addEventListener("click", () => this._promote(item, promote));
+        actions.appendChild(promote);
+      } else if (item.status !== "publicada") {
         if (isAdmin) {
           const publish = document.createElement("button");
           publish.type = "button";
@@ -362,6 +425,14 @@ export class VersoesView extends View {
         active.className = "text-muted";
         active.textContent = "No ar";
         actions.appendChild(active);
+        if (isAdmin) {
+          const rollback = document.createElement("button");
+          rollback.type = "button";
+          rollback.className = "btn btn--small btn--danger";
+          rollback.textContent = "Rollback";
+          rollback.addEventListener("click", () => this._rollback(item, rollback));
+          actions.appendChild(rollback);
+        }
       }
 
       if (isAdmin) {
@@ -396,10 +467,68 @@ export class VersoesView extends View {
       return;
     }
     const active = this.versions.find((item) => item.status === "publicada" && item.sistema === system);
+    const piloto = this.form.querySelector('[name="alcance"]:checked')?.value === "piloto";
     warning.hidden = false;
-    text.textContent = active
+    text.textContent = piloto
+      ? `O envio cria um rascunho restrito. Ao publicar, apenas os códigos de cliente selecionados receberão ${system}; a produção atual não será substituída.`
+      : active
       ? `O envio cria um rascunho. Quando ele for publicado, a versão ${active.versao} sairá do ar.`
       : `O envio cria um rascunho. Esta será a primeira versão publicada de ${system}.`;
+  }
+
+  _renderPilotPicker() {
+    const selected = this.container.querySelector('[data-role="pilot-selected"]');
+    const suggestions = this.container.querySelector('[data-role="pilot-suggestions"]');
+    const count = this.container.querySelector('[data-role="pilot-count"]');
+    const value = this.container.querySelector('[data-role="pilot-value"]');
+    if (!selected || !suggestions || !count || !value) return;
+
+    value.value = JSON.stringify([...this.pilotCodes]);
+    count.textContent = this.pilotCodes.size ? plural(this.pilotCodes.size, "cliente selecionado", "clientes selecionados") : "Nenhum selecionado";
+    selected.replaceChildren();
+    for (const codigo of this.pilotCodes) {
+      const cliente = this.clients.find((item) => item.codigo === codigo);
+      const chip = document.createElement("span");
+      chip.className = "pilot-chip";
+      chip.innerHTML = `<strong>${escapeHtml(codigo)}</strong><span>${escapeHtml(cliente?.nome || "Cliente")}</span>`;
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.setAttribute("aria-label", `Remover ${cliente?.nome || codigo} do grupo piloto`);
+      remove.textContent = "×";
+      remove.addEventListener("click", () => {
+        this.pilotCodes.delete(codigo);
+        this._renderPilotPicker();
+      });
+      chip.appendChild(remove);
+      selected.appendChild(chip);
+    }
+
+    suggestions.replaceChildren();
+    const query = this.pilotSearch?.value.trim().toLocaleLowerCase("pt-BR") || "";
+    const disponiveis = this.clients
+      .filter((item) => !this.pilotCodes.has(item.codigo))
+      .filter((item) => !query || `${item.codigo} ${item.nome} ${item.cidade || ""}`.toLocaleLowerCase("pt-BR").includes(query))
+      .slice(0, 6);
+    if (!disponiveis.length) {
+      const empty = document.createElement("span");
+      empty.className = "pilot-picker__empty";
+      empty.textContent = this.clients.length ? "Nenhum cliente encontrado com essa busca." : "Cadastre clientes com código para montar um grupo piloto.";
+      suggestions.appendChild(empty);
+      return;
+    }
+    for (const cliente of disponiveis) {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "pilot-picker__option";
+      option.innerHTML = `<span><strong>${escapeHtml(cliente.codigo)}</strong><small>${escapeHtml(cliente.nome)}</small></span>${cliente.cidade ? `<em>${escapeHtml(cliente.cidade)}</em>` : ""}<b aria-hidden="true">+</b>`;
+      option.addEventListener("click", () => {
+        this.pilotCodes.add(cliente.codigo);
+        this.pilotSearch.value = "";
+        this._renderPilotPicker();
+        this.pilotSearch.focus();
+      });
+      suggestions.appendChild(option);
+    }
   }
 
   _resetChangelog() {
@@ -450,6 +579,11 @@ export class VersoesView extends View {
       this.systemSelect.focus();
       return;
     }
+    if (formData.get("alcance") === "piloto" && this.pilotCodes.size === 0) {
+      await Modal.alert("Validação", "Selecione ao menos um cliente para o grupo piloto.", "warning");
+      this.pilotSearch.focus();
+      return;
+    }
 
     const button = this.form.querySelector('button[type="submit"]');
     button.disabled = true;
@@ -457,6 +591,10 @@ export class VersoesView extends View {
     try {
       await this.api.postForm("/versoes", formData, { onProgress: (percent) => this._showProgress(percent) });
       this.form.reset();
+      this.pilotCodes.clear();
+      this.pilotSearch.value = "";
+      this.form.querySelector('[data-role="pilot-targets"]').hidden = true;
+      this._renderPilotPicker();
       this._resetChangelog();
       this._updateReplacementWarning();
       toast.success("Versão enviada como rascunho. Revise e publique no histórico abaixo.");
@@ -536,6 +674,36 @@ export class VersoesView extends View {
       await this.refresh();
     } catch (error) {
       await Modal.alert("Não foi possível excluir", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      button.disabled = false;
+    }
+  }
+
+  async _promote(item, button) {
+    const ok = await Modal.confirm("Promover versão piloto", `Liberar ${item.sistema} ${item.versao} para todos os clientes e substituir a produção atual?`, { confirmLabel: "Promover", danger: false });
+    if (!ok) return;
+    button.disabled = true;
+    try {
+      await this.api.post(`/versoes/${item.id}/promover`);
+      toast.success("Versão promovida para produção geral.");
+      this._invalidateVersions();
+      await this.refresh();
+    } catch (error) {
+      await Modal.alert("Não foi possível promover", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      button.disabled = false;
+    }
+  }
+
+  async _rollback(item, button) {
+    const ok = await Modal.confirm("Rollback de emergência", `Retirar ${item.versao} do ar e restaurar imediatamente a versão anterior de ${item.sistema}?`, { confirmLabel: "Executar rollback", danger: true });
+    if (!ok) return;
+    button.disabled = true;
+    try {
+      const resultado = await this.api.post(`/versoes/${item.id}/rollback`);
+      toast.success(`Rollback concluído. ${resultado.versao.versao} voltou ao ar.`);
+      this._invalidateVersions();
+      await this.refresh();
+    } catch (error) {
+      await Modal.alert("Não foi possível reverter", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
       button.disabled = false;
     }
   }

@@ -12,6 +12,7 @@ código mora na raiz do repositório (`README.md`, `CONTRIBUTING.md`,
 | [`adr/`](adr/) | Decisões de arquitetura, uma por arquivo | *"Por que foi feito assim, e não do jeito óbvio?"* |
 | [`DOCUMENTACAO_CONSOLIDADA.md`](DOCUMENTACAO_CONSOLIDADA.md) | Visão completa dos dois lados num arquivo só | Você chegou agora e quer ler tudo de uma vez |
 | [`APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md`](APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md) | O projeto sem detalhe técnico | Você vai apresentar para a diretoria |
+| [`PLANEJAMENTO_MELHORIAS_UX_UI.md`](PLANEJAMENTO_MELHORIAS_UX_UI.md) | Planejamento de evolução visual (UI), intuitividade (UX) e funções | Você quer evoluir o design e a experiência do sistema |
 | `gerar-pdf.js`, `gerar-apresentacao-pdf.js` | Geradores dos PDFs ao lado dos `.md` | Você mudou um `.md` e precisa atualizar o PDF |
 
 ## Os PDFs

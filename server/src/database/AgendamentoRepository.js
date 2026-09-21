@@ -72,7 +72,7 @@ class AgendamentoRepository extends BaseRepository {
       `${STATUS_ORDER_EXPR}, ${DATE_SORT_EXPR} ASC, ${HORARIO_SORT_EXPR}, id DESC`
     );
     const sql = `
-      SELECT id, ${COLUMNS.join(", ")}, arquivado_em AS arquivadoEm FROM ${this.table}
+      SELECT id, ${COLUMNS.join(", ")}, arquivado_em AS arquivadoEm, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table}
       ${where}
       ORDER BY ${orderBy}
       LIMIT @limit OFFSET @offset
@@ -84,7 +84,7 @@ class AgendamentoRepository extends BaseRepository {
   /** Uma tarefa por id, incluindo criado_em/concluido_em (que list() nao devolve). */
   find(id) {
     return this.conn
-      .prepare(`SELECT id, ${COLUMNS.join(", ")}, criado_em AS criadoEm, concluido_em AS concluidoEm FROM ${this.table} WHERE id = ?`)
+      .prepare(`SELECT id, ${COLUMNS.join(", ")}, criado_em AS criadoEm, concluido_em AS concluidoEm, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table} WHERE id = ?`)
       .get(id);
   }
 
@@ -94,6 +94,18 @@ class AgendamentoRepository extends BaseRepository {
     this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`).run({ ...data, criadoEm: new Date().toISOString() });
   }
 
+  insertMany(lista) {
+    const columns = [...COLUMNS, "criado_em"].join(", ");
+    const placeholders = [...COLUMNS.map((c) => `@${c}`), "@criadoEm"].join(", ");
+    const stmt = this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`);
+    const agora = new Date().toISOString();
+    return this.conn.transaction((itens) => {
+      let criados = 0;
+      for (const item of itens) criados += stmt.run({ ...item, criadoEm: agora }).changes;
+      return criados;
+    })(lista);
+  }
+
   /**
    * Devolve quantas linhas mudaram -- 0 quer dizer que o id nao existe
    * (mais). "concluidoEm" e decidido por AgendamentoService (que sabe o
@@ -101,11 +113,11 @@ class AgendamentoRepository extends BaseRepository {
    * quando a tarefa acabou de ser concluida, ou null quando nao esta (mais)
    * concluida ou nunca esteve.
    */
-  update(id, data) {
-    const assignments = [...COLUMNS.map((c) => `${c} = @${c}`), "concluido_em = @concluidoEm"].join(", ");
+  update(id, data, revisaoEsperada = null, usuarioNome = "") {
+    const assignments = [...COLUMNS.map((c) => `${c} = @${c}`), "concluido_em = @concluidoEm", "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
     return this.conn
-      .prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id`)
-      .run({ ...data, id, concluidoEm: data.concluidoEm ?? null }).changes;
+      .prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)`)
+      .run({ ...data, id, concluidoEm: data.concluidoEm ?? null, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome }).changes;
   }
 
   /** Atalho para marcar rapidamente uma tarefa como concluida agora. */

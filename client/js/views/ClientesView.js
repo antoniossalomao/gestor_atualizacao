@@ -7,7 +7,7 @@ import { toast } from "../components/Toast.js";
 import { debounce } from "../utils/debounce.js";
 import { icon } from "../utils/icons.js";
 import { emptyState } from "../components/EmptyState.js";
-import { escapeAttr, plural } from "../utils/html.js";
+import { escapeAttr, plural, copyToClipboard } from "../utils/html.js";
 import { marcarOcupado } from "../utils/guard.js";
 import { prefs } from "../app/prefs.js";
 import { aparencia } from "../app/appearance.js";
@@ -31,6 +31,12 @@ export class ClientesView extends View {
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "asc";
     this._buildDom();
+  }
+
+  aplicarParams({ novo } = {}) {
+    if (!novo || this.user?.role === "consulta") return;
+    this.clearForm();
+    this.fields.nome?.focus();
   }
 
   _buildDom() {
@@ -141,6 +147,7 @@ export class ClientesView extends View {
         { key: "grupo", label: "Grupo/Rede" },
         { key: "sistemasTexto", label: "Sistemas" },
         { key: "maquinas", label: "Máquinas", type: "numeric" },
+        { key: "acoes", label: "Ações", largura: "136px", render: (row) => acoesCliente(row, this.user?.role) },
       ],
       onSelect: (row) => this._loadIntoForm(row),
       // Seleção múltipla: marcar um sistema em vários clientes de uma vez
@@ -177,6 +184,7 @@ export class ClientesView extends View {
       this.page = page;
       this._reloadList();
     });
+    this.table.container.addEventListener("click", (e) => this._acaoRapida(e));
 
     this.searchInput = this.container.querySelector('[data-role="search"]');
     this.botaoLimparFiltros = this.container.querySelector('[data-action="limpar-filtros"]');
@@ -245,6 +253,24 @@ export class ClientesView extends View {
       ? `${icon("minus")} Ocultar Formulário`
       : `${icon("plus")} Novo Cliente`;
     if (this.formVisible) this.fields.nome.focus();
+  }
+
+  async _acaoRapida(e) {
+    const botao = e.target.closest("[data-row-action]");
+    if (!botao) return;
+    const row = this.table.rows.find((item) => String(item.id) === botao.dataset.id);
+    if (!row) return;
+    this._loadIntoForm(row);
+    if (botao.dataset.rowAction === "editar") this.toggleForm(true);
+    if (botao.dataset.rowAction === "ficha") this.navigate("consulta", { cliente: row.nome });
+    if (botao.dataset.rowAction === "acesso") {
+      try {
+        const acessos = await this.api.get(`/clientes/${row.id}/acessos`);
+        const texto = acessos.flatMap((a) => [a.anydesk, a.suporte_bredas || a.suporteBredas]).filter(Boolean).join("\n");
+        if (!texto) return Modal.alert("Acessos", "Este cliente ainda não possui acesso remoto cadastrado.", "info");
+        if (await copyToClipboard(texto)) toast.success("Acessos remotos copiados.");
+      } catch { toast.error("Não foi possível copiar os acessos."); }
+    }
   }
 
   _toggleNovoSistema() {
@@ -399,6 +425,7 @@ export class ClientesView extends View {
 
   _loadIntoForm(row) {
     this.selectedId = row.id;
+    this.selectedRevision = row.revisao;
     this.fields.codigo.value = row.codigo;
     this.fields.nome.value = row.nome;
     this.fields.cidade.value = row.cidade;
@@ -472,7 +499,7 @@ export class ClientesView extends View {
     if (!data) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
-      await this.api.put(`/clientes/${this.selectedId}`, data);
+      await this.api.put(`/clientes/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
       this.clearForm();
       this._invalidar();
       await this._reloadList();
@@ -601,6 +628,7 @@ export class ClientesView extends View {
     const tinhaConteudo = Boolean(antes.nome.trim());
 
     this.selectedId = null;
+    this.selectedRevision = null;
     this.table?.clearSelection();
     this.formTitle.textContent = "Novo Cliente";
     this.fields.codigo.value = "";
@@ -645,6 +673,24 @@ export class ClientesView extends View {
     if (isTypingTarget(e.target)) return;
     if (this.selectedId != null) this.deleteClient();
   }
+}
+
+function acoesCliente(row, role) {
+  const wrap = document.createElement("div");
+  wrap.className = "row-actions";
+  const botoes = [["acesso", "🔑", "Copiar acessos"], ["ficha", "🔍", "Abrir Ficha 360°"], ...(role === "consulta" ? [] : [["editar", "✏️", "Editar"]])];
+  for (const [acao, simbolo, titulo] of botoes) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "btn btn--icon btn--ghost";
+    botao.dataset.rowAction = acao;
+    botao.dataset.id = row.id;
+    botao.title = titulo;
+    botao.setAttribute("aria-label", titulo);
+    botao.textContent = simbolo;
+    wrap.appendChild(botao);
+  }
+  return wrap;
 }
 
 function isTypingTarget(el) {

@@ -95,6 +95,22 @@ test("AgendamentoService - validação de entrada", async (t) => {
   }
 });
 
+test("AgendamentoService - concorrência otimista e geração em lote", () => {
+  const env = ambiente();
+  try {
+    const tarefa = criar(env.service, env.db, { cliente: "Loja 1" });
+    env.service.update(tarefa.id, { ...tarefa, tarefa: "Primeira edição", revisao: tarefa.revisao }, { id: 2, nome: "Camila" });
+    assert.throws(
+      () => env.service.update(tarefa.id, { ...tarefa, tarefa: "Edição atrasada", revisao: tarefa.revisao }, USUARIO),
+      (erro) => erro.statusCode === 409 && /Camila/.test(erro.message)
+    );
+
+    const lote = env.service.gerarLote({ clientes: ["Loja 1", "Loja 2", "Loja 1"], sistema: "B_Vendas", responsavel: "Teste" }, USUARIO);
+    assert.equal(lote.criados, 2, "remove clientes duplicados antes da transação");
+    assert.equal(env.db.agendamentos.list("Atualizar B_Vendas").total, 2);
+  } finally { env.cleanup(); }
+});
+
 test("AgendamentoService - concluido_em", async (t) => {
   const env = ambiente();
   try {

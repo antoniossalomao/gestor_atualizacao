@@ -17,6 +17,7 @@ uma escolha deliberada — e reintroduz o problema que ela evitava.
 | [0004](0004-injecao-de-dependencia-manual.md) | Injeção de dependência na mão, sem container | Aceita |
 | [0005](0005-organizacao-do-client-por-responsabilidade.md) | `client/js/` dividido por responsabilidade | Aceita |
 | [0006](0006-verificacao-de-tipos-sem-build.md) | Verificação de tipos sem build, escopada ao código puro | Aceita |
+| [0007](0007-piloto-rollback-e-concorrencia-otimista.md) | Piloto, rollback e concorrência otimista | Aceita |
 
 ## Como escrever um novo
 

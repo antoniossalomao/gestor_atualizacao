@@ -269,6 +269,8 @@ export class App {
                     aria-label="Buscar telas, clientes e ações (Ctrl+K)">
               ${icon("busca")}<span>Buscar…</span><kbd>Ctrl</kbd><kbd>K</kbd>
             </button>
+            <button type="button" class="btn btn--accent btn--small app-header__quick" data-action="acao-rapida"
+                    aria-label="Abrir ações rápidas (Alt+N)">+ <span>Ação rápida</span><kbd>Alt+N</kbd></button>
             <!--
               Nome, tema, configurações, atalhos e sair, num alvo só (ver
               MenuConta). Aqui havia um bloco de texto que não fazia nada e
@@ -311,6 +313,7 @@ export class App {
     this._ligarSombraDoCabecalho();
 
     this.root.querySelector('[data-action="buscar"]').addEventListener("click", () => this.palette.abrir());
+    this.root.querySelector('[data-action="acao-rapida"]').addEventListener("click", () => this._abrirAcoesRapidas());
 
     // Vive fora das abas e fora do cabeçalho: a queda do servidor não é
     // assunto de uma tela, é do app inteiro. Quando ele volta, os dados da aba
@@ -323,6 +326,7 @@ export class App {
     this._cleanups.push(this._ligarAtalhosNumericos());
     this._cleanups.push(this._ligarAtalhoConfiguracoes());
     this._cleanups.push(this._ligarAtalhoSidebar());
+    this._cleanups.push(this._ligarAtalhoAcaoRapida());
 
     // Trocar de tema muda cores que algumas telas calculam em JavaScript (o
     // fundo tingido das linhas em Resumo e Sistemas). Redesenhar a aba atual
@@ -393,6 +397,36 @@ export class App {
     // Setas percorrem as abas sem sair do teclado, como manda o padrão ARIA
     // de tablist -- antes, Tab passava por cada uma das nove abas.
     tabsNav.addEventListener("keydown", (e) => this._navegarAbas(e));
+  }
+
+  _abrirAcoesRapidas() {
+    const { box, close } = Modal.abrirCaixa({ largura: 460 });
+    const permitida = ["operador", "admin"].includes(this.user?.role);
+    const itens = [
+      ["atualizacoes", "Nova Atualização", "atualizacoes"],
+      ["agendamentos", "Novo Agendamento", "agendamentos"],
+      ["clientes", "Novo Cliente", "clientes"],
+      ["versoes", "Publicar Nova Versão", "versoes"],
+    ];
+    box.innerHTML = `<h3 class="modal-box__title">Ação rápida</h3><p class="modal-box__message">Comece uma tarefa sem perder tempo procurando a tela.</p>
+      <div class="quick-action-list">${itens.map(([aba, label, icone]) => `<button type="button" class="btn" data-tab="${aba}" ${permitida ? "" : "disabled"}>${icon(icone)}<span>${label}</span></button>`).join("")}</div>`;
+    box.addEventListener("click", (e) => {
+      const botao = e.target.closest("[data-tab]");
+      if (!botao) return;
+      close();
+      this.switchTab(botao.dataset.tab, { novo: true });
+    });
+    box.querySelector("button:not([disabled])")?.focus();
+  }
+
+  _ligarAtalhoAcaoRapida() {
+    const handler = (e) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey || e.key.toLowerCase() !== "n") return;
+      e.preventDefault();
+      this._abrirAcoesRapidas();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }
 
   _navegarAbas(e) {

@@ -29,7 +29,7 @@ class ClienteRepository extends BaseRepository {
     const offset = Math.max(0, (page - 1) * pageSize);
     const orderBy = buildOrderBy(SORT_MAP, sortBy, sortDir, "nome COLLATE NOCASE ASC");
     const rows = this.conn
-      .prepare(`SELECT id, codigo, nome, cidade, sistemas, grupo FROM clientes ${where} ORDER BY ${orderBy} LIMIT @limit OFFSET @offset`)
+      .prepare(`SELECT id, codigo, nome, cidade, sistemas, grupo, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM clientes ${where} ORDER BY ${orderBy} LIMIT @limit OFFSET @offset`)
       .all({ ...params, limit: pageSize, offset });
     return { rows, total, page, pageSize };
   }
@@ -37,6 +37,23 @@ class ClienteRepository extends BaseRepository {
   /** Lista simples de nomes, usada para preencher sugestoes de autocompletar. */
   names() {
     return this.conn.prepare("SELECT nome FROM clientes ORDER BY nome").all().map((r) => r.nome);
+  }
+
+  /** Opções enxutas para seletores que identificam o cliente pelo código. */
+  opcoesPorCodigo() {
+    return this.conn
+      .prepare("SELECT codigo, nome, cidade FROM clientes WHERE codigo IS NOT NULL AND trim(codigo) != '' ORDER BY nome COLLATE NOCASE")
+      .all();
+  }
+
+  codigosExistentes(codigos = []) {
+    const lista = [...new Set(codigos.map((codigo) => String(codigo).trim()).filter(Boolean))];
+    if (!lista.length) return [];
+    const marcadores = lista.map(() => "?").join(", ");
+    return this.conn
+      .prepare(`SELECT codigo FROM clientes WHERE upper(codigo) IN (${marcadores})`)
+      .all(...lista.map((codigo) => codigo.toUpperCase()))
+      .map((row) => row.codigo);
   }
 
   /** Nomes de grupo/rede já usados, para sugestão de autocompletar (mesmo padrão de "names"). */
@@ -59,13 +76,13 @@ class ClienteRepository extends BaseRepository {
 
   getByNome(nome) {
     return (
-      this.conn.prepare("SELECT id, codigo, nome, cidade, sistemas, grupo FROM clientes WHERE nome = ?").get(nome) || null
+      this.conn.prepare("SELECT id, codigo, nome, cidade, sistemas, grupo, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM clientes WHERE nome = ?").get(nome) || null
     );
   }
 
   getById(id) {
     return (
-      this.conn.prepare("SELECT id, codigo, nome, cidade, sistemas, grupo FROM clientes WHERE id = ?").get(id) || null
+      this.conn.prepare("SELECT id, codigo, nome, cidade, sistemas, grupo, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM clientes WHERE id = ?").get(id) || null
     );
   }
 
@@ -111,15 +128,17 @@ class ClienteRepository extends BaseRepository {
    * ligacao" com o cliente renomeado e somem da Consulta e das contagens
    * do Resumo.
    */
-  update(id, codigo, nome, cidade, sistemas, grupo) {
+  update(id, codigo, nome, cidade, sistemas, grupo, revisaoEsperada = null, usuarioNome = "") {
     const antigo = this.conn.prepare("SELECT nome FROM clientes WHERE id = ?").get(id);
-    this.conn
-      .prepare("UPDATE clientes SET codigo = ?, nome = ?, cidade = ?, sistemas = ?, grupo = ? WHERE id = ?")
-      .run(codigo, nome, cidade, sistemas, grupo, id);
-    if (antigo && antigo.nome !== nome) {
-      this.conn.prepare("UPDATE atualizacoes SET cliente = ? WHERE cliente = ?").run(nome, antigo.nome);
-      this.conn.prepare("UPDATE agendamentos SET cliente = ? WHERE cliente = ?").run(nome, antigo.nome);
-    }
+    return this.conn.transaction(() => {
+      const resultado = this.conn.prepare("UPDATE clientes SET codigo = @codigo, nome = @nome, cidade = @cidade, sistemas = @sistemas, grupo = @grupo, revisao = revisao + 1, atualizado_em = @atualizadoEm, atualizado_por = @atualizadoPor WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)")
+        .run({ codigo, nome, cidade, sistemas, grupo, id, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome });
+      if (resultado.changes && antigo && antigo.nome !== nome) {
+        this.conn.prepare("UPDATE atualizacoes SET cliente = ? WHERE cliente = ?").run(nome, antigo.nome);
+        this.conn.prepare("UPDATE agendamentos SET cliente = ? WHERE cliente = ?").run(nome, antigo.nome);
+      }
+      return resultado.changes;
+    })();
   }
 
   /**

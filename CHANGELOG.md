@@ -15,6 +15,16 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Roadmap UX/UI entregue em quatro frentes.** Atualizações e Agendamentos
+  passaram a usar gavetas laterais, ações rápidas por linha, presets de data,
+  atalhos `j/k/e/x/c` e busca por `/`; Agendamentos ganhou visão Kanban e
+  Sistemas gera tarefas em lote. A consulta virou Ficha 360° com cadastro,
+  acessos, matriz de versões e linha do tempo. Distribuição ganhou live pulse
+  opcional, e o catálogo passou a aceitar piloto por código de cliente, promoção
+  e rollback transacional. A escolha do grupo ganhou busca por código/nome e
+  seleção visual por chips. A auditoria guarda snapshots para exibir Antes × Depois, e
+  Agendamentos usa revisão otimista para impedir sobrescrita silenciosa.
+
 - **`*/` dentro de um comentário derrubou o CSS inteiro.** Numa correção de
   comentário em `components.css`, o texto `client/js/**` seguido de `/*.js`
   formou um `*/` — que **fecha o comentário de cabeçalho ali**. Da quinta linha

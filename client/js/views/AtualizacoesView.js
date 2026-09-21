@@ -7,7 +7,7 @@ import { Autocomplete } from "../components/Autocomplete.js";
 import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
 import { debounce } from "../utils/debounce.js";
-import { todayBR, isValidDateBR } from "../utils/date.js";
+import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { icon } from "../utils/icons.js";
 import { escapeHtml, plural, copyToClipboard } from "../utils/html.js";
 import { relatorioDeAtualizacao, relatorioDoCliente } from "../domain/relatorio.js";
@@ -16,6 +16,8 @@ import { withBusyButton, marcarOcupado } from "../utils/guard.js";
 import { baixarBlob } from "../utils/arquivo.js";
 import { prefs } from "../app/prefs.js";
 import { aparencia } from "../app/appearance.js";
+import { Drawer } from "../components/Drawer.js";
+import { montarPresets } from "../components/DatePresets.js";
 
 /**
  * Aba Atualizações: histórico de atualizações de sistemas por cliente.
@@ -52,6 +54,7 @@ export class AtualizacoesView extends View {
 
   _buildDom() {
     this.container.innerHTML = `
+      <div class="view-actions"><button type="button" class="btn btn--accent" data-action="nova-atualizacao">+ Nova Atualização</button></div>
       <form class="card" data-role="form" novalidate>
         <h2 class="card__title">Registro</h2>
         <div class="form-grid form-grid--4" data-role="fields"></div>
@@ -94,10 +97,7 @@ export class AtualizacoesView extends View {
             <input type="text" class="input" id="atu-ate" data-role="ate"
                    placeholder="dd/mm/aaaa" inputmode="numeric" />
           </div>
-          <div class="toolbar__clear">
-            <button type="button" class="btn btn--small" data-action="mes-atual"
-                    title="Filtra do dia 1º até hoje">Este mês</button>
-          </div>
+          <div class="date-presets" data-role="date-presets" role="group" aria-label="Filtro rápido de período"></div>
           <div class="toolbar__clear">
             <button type="button" class="btn btn--small btn--ghost" data-action="limpar-filtros" hidden>Limpar filtros</button>
           </div>
@@ -146,6 +146,7 @@ export class AtualizacoesView extends View {
       columns: [
         { key: "id", label: "ID", type: "numeric", largura: "70px" },
         ...COLUMNS.map((c) => ({ key: c.key, label: c.label, type: c.key === "data" ? "date" : "text" })),
+        { key: "acoes", label: "Ações", largura: "136px", render: (row) => acoesAtualizacao(row, this.user?.role) },
       ],
       onSelect: (row) => this._loadIntoForm(row),
       // Seleção múltipla: esta é a tabela onde faz sentido: importar uma
@@ -182,6 +183,14 @@ export class AtualizacoesView extends View {
     });
 
     this.form = this.container.querySelector('[data-role="form"]');
+    this.drawer = new Drawer(this.form, {
+      titulo: "Atualização",
+      descricao: "Registre um atendimento sem perder a lista de vista.",
+    });
+    this.container.querySelector('[data-action="nova-atualizacao"]').addEventListener("click", () => {
+      this.clearForm();
+      this.drawer.abrir({ foco: this.fields.cliente });
+    });
     this.searchInput = this.container.querySelector('[data-role="search"]');
     this.responsavelFilter = this.container.querySelector('[data-role="responsavel-filter"]');
     this.botaoLimparFiltros = this.container.querySelector('[data-action="limpar-filtros"]');
@@ -225,6 +234,7 @@ export class AtualizacoesView extends View {
     }, 300);
     for (const campo of [this.desdeInput, this.ateInput]) {
       campo.addEventListener("input", () => {
+        campo.value = mascaraDataBR(campo.value);
         const vazio = !campo.value.trim();
         const invalido = !vazio && !isValidDateBR(campo.value);
         campo.setAttribute("aria-invalid", String(invalido));
@@ -232,8 +242,25 @@ export class AtualizacoesView extends View {
       });
     }
 
-    this.container.querySelector('[data-action="mes-atual"]').addEventListener("click", () => {
-      this._aplicarPeriodo(primeiroDiaDoMes(), todayBR());
+    this.pintarPreset = montarPresets(this.container.querySelector('[data-role="date-presets"]'), (chave, intervalo) => {
+      if (chave === "custom") {
+        this.desdeInput.focus();
+        this.pintarPreset("custom");
+        return;
+      }
+      this.pintarPreset(chave);
+      this._aplicarPeriodo(intervalo.desde, intervalo.ate);
+    });
+
+    this.table.container.addEventListener("click", (e) => {
+      const botao = e.target.closest("[data-row-action]");
+      if (!botao) return;
+      const row = this.table.rows.find((item) => String(item.id) === botao.dataset.id);
+      if (!row) return;
+      this._loadIntoForm(row);
+      if (botao.dataset.rowAction === "editar") this.drawer.abrir({ foco: this.fields.cliente });
+      if (botao.dataset.rowAction === "relatorio") this.abrirRelatorio();
+      if (botao.dataset.rowAction === "cliente") this.navigate("consulta", { cliente: row.cliente });
     });
 
     // -- lote --
@@ -272,6 +299,7 @@ export class AtualizacoesView extends View {
 
     if (this.user?.role === "consulta") {
       this.form.hidden = true;
+      this.container.querySelector('[data-action="nova-atualizacao"]').hidden = true;
       this.deleteBtn.hidden = true;
       this.bulkExcluir.hidden = true;
       const importBtn = this.container.querySelector('[data-action="import"]');
@@ -312,6 +340,7 @@ export class AtualizacoesView extends View {
       if (col.key === "data") {
         input.setAttribute("aria-describedby", hint.id);
         input.addEventListener("input", () => {
+          input.value = mascaraDataBR(input.value);
           const invalida = Boolean(input.value) && !isValidDateBR(input.value);
           hint.textContent = invalida ? "Formato esperado: dd/mm/aaaa" : "";
           input.setAttribute("aria-invalid", String(invalida));
@@ -531,6 +560,7 @@ export class AtualizacoesView extends View {
     // mexeu num campo e não salvou continua recebendo o relatório do que de
     // fato está gravado, que é o que ele vai colar no chamado.
     this.selectedRow = row;
+    this.selectedRevision = row.revisao;
     for (const col of COLUMNS) this.fields[col.key].value = row[col.key] ?? "";
     this._pintarModo();
   }
@@ -550,7 +580,7 @@ export class AtualizacoesView extends View {
     }
     if (novo) {
       this.clearForm();
-      this.fields.cliente.focus();
+      this.drawer.abrir({ foco: this.fields.cliente });
       return;
     }
     if (!cliente) return;
@@ -560,12 +590,12 @@ export class AtualizacoesView extends View {
     if (data) this.fields.data.value = data;
     if (motivo) this.fields.motivo.value = motivo;
     if (obs) this.fields.obs.value = obs;
-    this.fields.maquinas.focus();
+    this.drawer.abrir({ foco: this.fields.maquinas });
   }
 
   /** Mostra em qual modo o formulário está -- criando algo novo, ou editando. */
   _pintarModo() {
-    const modo = this.container.querySelector('[data-role="modo"]');
+    const modo = this.form.querySelector('[data-role="modo"]');
     modo.textContent = this.selectedId == null ? "" : `Editando o registro #${this.selectedId}`;
     this.updateBtn.disabled = this.selectedId == null;
     this.relatorioBtn.disabled = this.selectedId == null;
@@ -600,6 +630,8 @@ export class AtualizacoesView extends View {
     try {
       await this.api.post("/atualizacoes", data);
       this.clearForm();
+      this.drawer.marcarLimpa();
+      await this.drawer.fechar({ forcar: true });
       // Volta pra 1ª página: com a ordenação padrão (mais recente primeiro),
       // é onde o registro recém-criado aparece.
       this.page = 1;
@@ -622,8 +654,10 @@ export class AtualizacoesView extends View {
     if (!data) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
-      await this.api.put(`/atualizacoes/${this.selectedId}`, data);
+      await this.api.put(`/atualizacoes/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
       this.clearForm();
+      this.drawer.marcarLimpa();
+      await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
       toast.success("Registro atualizado.");
@@ -764,6 +798,7 @@ export class AtualizacoesView extends View {
 
     this.selectedId = null;
     this.selectedRow = null;
+    this.selectedRevision = null;
     this.table?.clearSelection();
     for (const col of COLUMNS) this.fields[col.key].value = "";
     this.fields.data.value = todayBR();
@@ -771,7 +806,7 @@ export class AtualizacoesView extends View {
     // logado (continua editável, caso outra pessoa tenha feito a atualização
     // em nome dela).
     if (this.user) this.fields.responsavel.value = this.user.nome;
-    for (const hint of this.container.querySelectorAll(".field__hint")) hint.textContent = "";
+    for (const hint of this.form.querySelectorAll(".field__hint")) hint.textContent = "";
     this._pintarModo();
 
     if (comDesfazer && tinhaConteudo) {
@@ -947,16 +982,45 @@ export class AtualizacoesView extends View {
 
   _onGlobalKeydown(e) {
     if (!this.visivel) return;
-    if (e.key !== "Delete") return;
     if (isTypingTarget(e.target)) return;
-    if (this.selectedId != null) this.deleteRecord();
+    if (e.key === "Delete" && this.selectedId != null) this.deleteRecord();
+    else if (e.key.toLowerCase() === "n") this.container.querySelector('[data-action="nova-atualizacao"]')?.click();
+    else if (e.key === "/") { e.preventDefault(); this.searchInput.focus(); }
+    else if (e.key.toLowerCase() === "j") this.table.moverCursor(1);
+    else if (e.key.toLowerCase() === "k") this.table.moverCursor(-1);
+    else if (e.key.toLowerCase() === "e" || e.key === "Enter") { this.table.ativarCursor(); if (this.selectedId != null) this.drawer.abrir(); }
+    else if (e.key.toLowerCase() === "x" || e.key === " ") { e.preventDefault(); this.table.alternarMarcacaoCursor(); }
+    else if (e.key.toLowerCase() === "c" && this.selectedId != null) this.abrirRelatorio();
   }
 
   destroy() {
+    this.drawer?.destroy();
     this.clienteAutocomplete?.destroy();
     this.responsavelAutocomplete?.destroy();
     super.destroy();
   }
+}
+
+function acoesAtualizacao(row, role) {
+  const wrap = document.createElement("div");
+  wrap.className = "row-actions";
+  const botoes = [
+    ["relatorio", "📋", "Copiar relatório"],
+    ["cliente", "👤", "Abrir ficha do cliente"],
+    ...(role === "consulta" ? [] : [["editar", "✏️", "Editar"]]),
+  ];
+  for (const [acao, simbolo, titulo] of botoes) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "btn btn--icon btn--ghost";
+    botao.dataset.rowAction = acao;
+    botao.dataset.id = row.id;
+    botao.title = titulo;
+    botao.setAttribute("aria-label", titulo);
+    botao.textContent = simbolo;
+    wrap.appendChild(botao);
+  }
+  return wrap;
 }
 
 /** Primeiro dia do mês corrente em dd/mm/aaaa -- o "de" do botão "Este mês". */

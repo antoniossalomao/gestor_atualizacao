@@ -30,11 +30,14 @@ export class BarChart {
     }
 
     const max = Math.max(1, ...bars.map((b) => b.total));
+    const total = Math.max(1, bars.reduce((soma, b) => soma + b.total, 0));
     const fills = [];
     for (const bar of bars) {
       const pct = Math.round((bar.total / max) * 100);
       const row = document.createElement("div");
       row.className = "bar-chart__row";
+      row.tabIndex = 0;
+      row.dataset.tooltip = `${bar.label}: ${bar.total} (${Math.round((bar.total / total) * 100)}% do total)`;
       row.innerHTML = `
         <span class="bar-chart__label" title="${escapeHtml(bar.label)}">${escapeHtml(bar.label)}</span>
         <span class="bar-chart__track">

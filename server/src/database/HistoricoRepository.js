@@ -31,13 +31,13 @@ class HistoricoRepository {
    * Registra uma ação. `usuarioId` pode ser null (ex.: ação automática do
    * próprio sistema, sem usuário associado).
    */
-  registrar({ usuarioId, usuarioNome, acao, entidade, descricao }) {
+  registrar({ usuarioId, usuarioNome, acao, entidade, descricao, detalhesJson = null }) {
     this.conn
       .prepare(
-        `INSERT INTO historico (usuario_id, usuario_nome, acao, entidade, descricao, criado_em)
-         VALUES (@usuarioId, @usuarioNome, @acao, @entidade, @descricao, @criadoEm)`
+        `INSERT INTO historico (usuario_id, usuario_nome, acao, entidade, descricao, detalhes_json, criado_em)
+         VALUES (@usuarioId, @usuarioNome, @acao, @entidade, @descricao, @detalhesJson, @criadoEm)`
       )
-      .run({ usuarioId: usuarioId ?? null, usuarioNome, acao, entidade, descricao, criadoEm: new Date().toISOString() });
+      .run({ usuarioId: usuarioId ?? null, usuarioNome, acao, entidade, descricao, detalhesJson, criadoEm: new Date().toISOString() });
   }
 
   /**

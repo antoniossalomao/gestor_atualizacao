@@ -66,7 +66,7 @@ class AtualizacaoRepository extends BaseRepository {
     const offset = Math.max(0, (page - 1) * pageSize);
     const orderBy = buildOrderBy(SORT_MAP, sortBy, sortDir, `${DATE_SORT_EXPR} DESC, id DESC`);
     const sql = `
-      SELECT id, ${COLUMNS.join(", ")} FROM ${this.table}
+      SELECT id, ${COLUMNS.join(", ")}, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table}
       ${where}
       ORDER BY ${orderBy}
       LIMIT @limit OFFSET @offset
@@ -101,10 +101,15 @@ class AtualizacaoRepository extends BaseRepository {
     this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`).run(data);
   }
 
+  find(id) {
+    return this.conn.prepare(`SELECT id, ${COLUMNS.join(", ")}, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table} WHERE id = ?`).get(id);
+  }
+
   /** Devolve quantas linhas mudaram -- 0 quer dizer que o id nao existe (mais). */
-  update(id, data) {
-    const assignments = COLUMNS.map((c) => `${c} = @${c}`).join(", ");
-    return this.conn.prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id`).run({ ...data, id }).changes;
+  update(id, data, revisaoEsperada = null, usuarioNome = "") {
+    const assignments = [...COLUMNS.map((c) => `${c} = @${c}`), "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
+    return this.conn.prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)`)
+      .run({ ...data, id, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome }).changes;
   }
 
   /** Todos os registros, na ordem de exportacao (botao Exportar .xlsx). */

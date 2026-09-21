@@ -16,6 +16,7 @@ import {
   tempoRelativo,
   formatarBytes,
   formatarDuracao,
+  mascaraDataBR,
 } from "../js/utils/date.js";
 import { escapeAttr, plural } from "../js/utils/html.js";
 import { blendHex } from "../js/utils/color.js";
@@ -27,6 +28,12 @@ test("utils/date - todayBR", async (t) => {
     // E o que ela devolve tem que ser aceito pela própria validação.
     assert.equal(isValidDateBR(hoje), true);
   });
+});
+
+test("utils/date - mascaraDataBR", () => {
+  assert.equal(mascaraDataBR("21092026"), "21/09/2026");
+  assert.equal(mascaraDataBR("21/09/2026"), "21/09/2026");
+  assert.equal(mascaraDataBR("2109"), "21/09");
 });
 
 test("utils/date - isValidDateBR", async (t) => {

@@ -1,4 +1,4 @@
-const { ValidationError, NotFoundError } = require("../shared/errors");
+const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
 
 /**
  * Regras de negocio da aba Clientes, em cima do ClienteRepository /
@@ -29,6 +29,10 @@ class ClienteService {
 
   names() {
     return this.db.clientes.names();
+  }
+
+  opcoesPorCodigo() {
+    return this.db.clientes.opcoesPorCodigo();
   }
 
   /** Grupos/redes já cadastrados, para autocompletar do campo "Grupo/rede". */
@@ -74,10 +78,16 @@ class ClienteService {
     }
     // A propagacao do rename para atualizacoes/agendamentos acontece
     // dentro de ClienteRepository.update (regra critica de integridade).
-    this.db.clientes.update(id, codigo, nome, cidade, sistemasTexto, grupo);
+    const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
+    if (this.db.clientes.update(id, codigo, nome, cidade, sistemasTexto, grupo, revisaoEsperada, usuario?.nome || "") === 0) {
+      const agora = this.db.clientes.getById(id);
+      if (agora && revisaoEsperada != null) throw new ConflictError(`Este cliente foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, toClienteDTO(agora));
+      throw new NotFoundError("Cliente não encontrado.");
+    }
     const descricao =
       existente.nome !== nome ? `Cliente "${existente.nome}" renomeado para "${nome}"` : `Cliente "${nome}"`;
-    this.historico.registrar(usuario, "atualizar", "cliente", descricao);
+    const depois = this.db.clientes.getById(id);
+    this.historico.registrar(usuario, "atualizar", "cliente", descricao, { antes: toClienteDTO(existente), depois: toClienteDTO(depois) });
     return toClienteDTO(this.db.clientes.getById(id), this.db.atualizacoes.lastMaquinasForClient(nome));
   }
 
@@ -85,7 +95,7 @@ class ClienteService {
     const existente = this.db.clientes.getById(id);
     if (!existente) throw new NotFoundError("Cliente não encontrado.");
     this.db.clientes.delete(id);
-    this.historico.registrar(usuario, "excluir", "cliente", `Cliente "${existente.nome}"`);
+    this.historico.registrar(usuario, "excluir", "cliente", `Cliente "${existente.nome}"`, { antes: toClienteDTO(existente), depois: null });
   }
 
   /**
@@ -249,6 +259,9 @@ function toClienteDTO(row, maquinas = 0) {
     cidade: row.cidade || "",
     sistemas: row.sistemas ? row.sistemas.split(",").map((s) => s.trim()).filter(Boolean) : [],
     grupo: row.grupo || "",
+    revisao: row.revisao,
+    atualizadoEm: row.atualizadoEm || null,
+    atualizadoPor: row.atualizadoPor || "",
     maquinas,
   };
 }

@@ -25,6 +25,14 @@ class AgendamentosController {
     }
   };
 
+  gerarLote = (req, res, next) => {
+    try {
+      res.status(201).json(this.agendamentoService.gerarLote(req.body || {}, req.session.user));
+    } catch (err) {
+      next(err);
+    }
+  };
+
   update = (req, res, next) => {
     try {
       res.json(this.agendamentoService.update(Number(req.params.id), req.body || {}, req.session.user));

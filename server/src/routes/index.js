@@ -98,6 +98,7 @@ class ApiRouter {
     // Clientes: leitura aberta a Consulta; escrita a Operador/Admin; exclusão em lote a Admin
     api.get("/clientes", clientes.list);
     api.get("/clientes/names", clientes.names);
+    api.get("/clientes/opcoes-por-codigo", clientes.opcoesPorCodigo);
     api.get("/clientes/grupos", clientes.grupos);
     api.get("/clientes/by-nome/:nome", clientes.getByNome);
     api.post("/clientes", requireRole("operador", "admin"), clientes.create);
@@ -137,6 +138,7 @@ class ApiRouter {
     api.post("/agendamentos/excluir-lote", requireRole("admin"), agendamentos.removeMany);
     api.post("/agendamentos/concluir-lote", requireRole("operador", "admin"), agendamentos.markDoneMany);
     api.post("/agendamentos", requireRole("operador", "admin"), agendamentos.create);
+    api.post("/agendamentos/gerar-lote", requireRole("operador", "admin"), agendamentos.gerarLote);
     api.put("/agendamentos/:id", requireRole("operador", "admin"), agendamentos.update);
     api.patch("/agendamentos/:id/done", requireRole("operador", "admin"), agendamentos.markDone);
     api.patch("/agendamentos/:id/reabrir", requireRole("operador", "admin"), agendamentos.reabrir);
@@ -173,6 +175,8 @@ class ApiRouter {
     api.post("/versoes", requireRole("operador", "admin"), pacoteUpload.single("pacote"), versoes.create);
     api.put("/versoes/:id", requireRole("operador", "admin"), versoes.update);
     api.post("/versoes/:id/publicar", requireRole("admin"), versoes.publish);
+    api.post("/versoes/:id/promover", requireRole("admin"), versoes.promover);
+    api.post("/versoes/:id/rollback", requireRole("admin"), versoes.rollback);
     api.delete("/versoes/:id", requireRole("admin"), versoes.remove);
 
     this.router.use(api);

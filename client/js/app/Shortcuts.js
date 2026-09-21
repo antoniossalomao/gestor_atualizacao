@@ -15,6 +15,7 @@ const TABELA = [
   ["Ctrl + B", "Recolher ou abrir o menu lateral", "Global"],
   ["?", "Mostrar esta lista de atalhos", "Global"],
   ["Alt + 1 … 9", "Ir direto para a aba de mesmo número", "Global"],
+  ["Alt + N", "Abrir o menu de ação rápida", "Global"],
   ["Esc", "Fechar a janela ou a lista de sugestões aberta", "Global"],
   ["Enter", "Salvar o formulário (adicionar, ou atualizar o selecionado)", "Formulários"],
   ["Esc", "Cancelar a edição e limpar o formulário", "Formulários"],
@@ -24,6 +25,10 @@ const TABELA = [
   ["Delete", "Excluir o registro selecionado", "Tabelas"],
   ["Shift + clique", "Selecionar um intervalo de linhas, para excluir em lote (Atualizações)", "Tabelas"],
   ["Shift + ↑ ↓", "O mesmo intervalo, sem tirar a mão do teclado", "Tabelas"],
+  ["J / K", "Mover o cursor pela tabela", "Tabelas"],
+  ["E", "Editar a linha em foco", "Tabelas"],
+  ["X / Espaço", "Marcar ou desmarcar a linha para ações em lote", "Tabelas"],
+  ["/", "Focar a busca da tela atual", "Tabelas"],
 ];
 
 export function mostrarAtalhos() {

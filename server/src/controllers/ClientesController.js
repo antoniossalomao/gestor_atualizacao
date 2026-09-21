@@ -16,6 +16,10 @@ class ClientesController {
     res.json(this.clienteService.names());
   };
 
+  opcoesPorCodigo = (req, res) => {
+    res.json(this.clienteService.opcoesPorCodigo());
+  };
+
   grupos = (req, res) => {
     res.json(this.clienteService.grupos());
   };

@@ -98,6 +98,14 @@ class VersoesController {
     }
   };
 
+  promover = (req, res, next) => {
+    try { res.json(this.service.promover(Number(req.params.id), req.session.user)); } catch (err) { next(err); }
+  };
+
+  rollback = (req, res, next) => {
+    try { res.json(this.service.rollback(Number(req.params.id), req.session.user)); } catch (err) { next(err); }
+  };
+
   remove = (req, res, next) => {
     try {
       res.json(this.service.remove(Number(req.params.id), req.session.user));

@@ -45,6 +45,8 @@ export class DistribuicaoView extends View {
     this.buscaRetorno = "";
     this._timer = null;
     this._ultimaAtualizacao = null;
+    this.autoAtivo = Boolean(aparencia.ritmoPainel());
+    this._proximaAtualizacao = null;
     this._buildDom();
   }
 
@@ -58,9 +60,11 @@ export class DistribuicaoView extends View {
           <span class="distribution-live__dot"></span>
           <span data-role="freshness-text"></span>
         </span>
+        <button type="button" class="btn btn--small btn--ghost" data-action="auto-refresh" aria-pressed="${this.autoAtivo}">Auto-refresh: ${this.autoAtivo ? "ligado" : "desligado"}</button>
         <button type="button" class="btn btn--small btn--ghost" data-action="refresh">${icon("atualizar")} Atualizar</button>
         </div>
       </div>
+      <div class="live-pulse" data-role="live-pulse" ${this.autoAtivo ? "" : "hidden"}><span data-role="live-progress"></span><small data-role="live-countdown"></small></div>
 
       <div class="distribution-metrics" data-role="indicators"></div>
 
@@ -148,6 +152,16 @@ export class DistribuicaoView extends View {
     this.logSearch = this.container.querySelector('[data-role="log-search"]');
     this.logStatus = this.container.querySelector('[data-role="log-status"]');
     this.logSystem = this.container.querySelector('[data-role="log-system"]');
+    this.autoButton = this.container.querySelector('[data-action="auto-refresh"]');
+    this.livePulse = this.container.querySelector('[data-role="live-pulse"]');
+    this.liveCountdown = this.container.querySelector('[data-role="live-countdown"]');
+    this.autoButton.addEventListener("click", () => {
+      this.autoAtivo = !this.autoAtivo;
+      this.autoButton.setAttribute("aria-pressed", String(this.autoAtivo));
+      this.autoButton.textContent = `Auto-refresh: ${this.autoAtivo ? "ligado" : "desligado"}`;
+      this.livePulse.hidden = !this.autoAtivo;
+      this._startPolling();
+    });
 
     this.container.querySelector('[data-action="refresh"]').addEventListener("click", async (event) => {
       const button = event.currentTarget;
@@ -219,6 +233,7 @@ export class DistribuicaoView extends View {
       "distribuicao:painel",
       () => this.api.get("/versoes/painel", null, { key: "dist:painel" }),
       (data, { doCache }) => {
+        if (!doCache && this.painel) this._avisarRecuperados(this.painel.agentes || [], data.agentes || []);
         this.painel = data;
         this._renderIndicators();
         this._renderAgents();
@@ -546,10 +561,20 @@ export class DistribuicaoView extends View {
 
   _startPolling() {
     this._stopPolling();
-    const interval = aparencia.ritmoPainel();
-    if (!interval) return;
+    if (!this.autoAtivo) return;
+    const interval = aparencia.ritmoPainel() || 30000;
+    this._proximaAtualizacao = Date.now() + interval;
+    this.livePulse.style.setProperty("--live-duration", `${interval}ms`);
+    this.livePulse.querySelector('[data-role="live-progress"]').classList.remove("is-running");
+    requestAnimationFrame(() => this.livePulse.querySelector('[data-role="live-progress"]').classList.add("is-running"));
+    this._countdownTimer = setInterval(() => this._renderCountdown(), 1000);
+    this._renderCountdown();
     this._timer = setInterval(() => {
       if (!this.visivel || document.visibilityState !== "visible") return;
+      this._proximaAtualizacao = Date.now() + interval;
+      const barra = this.livePulse.querySelector('[data-role="live-progress"]');
+      barra.classList.remove("is-running");
+      requestAnimationFrame(() => barra.classList.add("is-running"));
       this.cache?.invalidar("distribuicao:painel");
       this.cache?.invalidar("distribuicao:logs");
       this.refresh().catch(() => {});
@@ -559,6 +584,21 @@ export class DistribuicaoView extends View {
   _stopPolling() {
     if (this._timer) clearInterval(this._timer);
     this._timer = null;
+    if (this._countdownTimer) clearInterval(this._countdownTimer);
+    this._countdownTimer = null;
+  }
+
+  _renderCountdown() {
+    if (!this._proximaAtualizacao || !this.liveCountdown) return;
+    const segundos = Math.max(0, Math.ceil((this._proximaAtualizacao - Date.now()) / 1000));
+    this.liveCountdown.textContent = `Atualizando em ${segundos}s…`;
+  }
+
+  _avisarRecuperados(antes, depois) {
+    const falhas = new Map(antes.filter((a) => ["erro", "offline", "pendencias"].includes(a.situacao)).map((a) => [a.cnpj, a]));
+    for (const agente of depois) {
+      if (agente.situacao === "ok" && falhas.has(agente.cnpj)) toast.success(`${agente.empresa || agente.cnpj} voltou a ficar em dia.`);
+    }
   }
 
   destroy() {

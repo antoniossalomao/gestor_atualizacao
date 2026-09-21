@@ -101,6 +101,13 @@ test("VersaoService - validação da versão publicada", async (t) => {
       assert.throws(() => env.service._validate({ sistema: "B_Vendas", versao: "1.0", pacotes: [] }), /pelo menos um pacote/);
     });
 
+    await t.test("grupo piloto exige códigos de clientes cadastrados", () => {
+      env.db.clientes.insert("CLI-001", "Cliente piloto", "Recife", "B_Vendas", null);
+      assert.throws(() => env.service._validate({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto" }), /ao menos um cliente/);
+      assert.throws(() => env.service._validate({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto", codigosPiloto: '["INEXISTENTE"]' }), /não cadastrado/);
+      assert.deepEqual(JSON.parse(env.service._validate({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto", codigosPiloto: '["cli-001", "CLI-001"]' }).codigosClientesJson), ["CLI-001"]);
+    });
+
     await t.test("exige arquivo, URL e SHA-256 em CADA pacote", () => {
       // O SHA-256 é a única defesa do agente contra um download truncado: em
       // HTTP, um pacote pela metade chega "com sucesso" e só quebraria lá na
@@ -124,6 +131,29 @@ test("VersaoService - validação da versão publicada", async (t) => {
   } finally {
     env.cleanup();
   }
+});
+
+test("VersaoService - piloto, promoção e rollback", async (t) => {
+  const env = ambiente();
+  try {
+    env.db.clientes.insert("CLI-001", "Cliente piloto", "Recife", "B_Vendas", null);
+    const producaoId = publicar(env, "B_Vendas", "1.0.0");
+    const piloto = env.db.versoes.insert({ ...cadastro(env, "B_Vendas", "2.0.0"), alcance: "piloto", codigosClientesJson: JSON.stringify(["CLI-001"]) });
+    env.service.publish(piloto.id, ADMIN);
+
+    assert.equal(env.service.check("cli001", "1.0.0", "B_Vendas").version, "2.0.0");
+    assert.equal(env.service.check("OUTRO-CLIENTE", "0.9.0", "B_Vendas").version, "1.0.0");
+    assert.equal(env.db.versoes.find(producaoId).status, "publicada", "piloto não substitui produção");
+
+    env.service.promover(piloto.id, ADMIN);
+    assert.equal(env.db.versoes.find(producaoId).status, "substituida");
+    assert.equal(env.db.versoes.find(piloto.id).status, "publicada");
+
+    const resultado = env.service.rollback(piloto.id, ADMIN);
+    assert.equal(resultado.versao.versao, "1.0.0");
+    assert.equal(env.db.versoes.find(producaoId).status, "publicada");
+    assert.equal(env.db.versoes.find(piloto.id).status, "substituida");
+  } finally { env.cleanup(); }
 });
 
 test("VersaoService - check(): o que o agente recebe", async (t) => {

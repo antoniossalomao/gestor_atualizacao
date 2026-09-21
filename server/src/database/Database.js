@@ -275,6 +275,8 @@ class Database {
       ["versoes_atualizador", "substituido_em", "TEXT"],
       ["versoes_atualizador", "substituido_por", "INTEGER"],
       ["versoes_atualizador", "tamanho_bytes", "INTEGER"],
+      ["versoes_atualizador", "alcance", "TEXT NOT NULL DEFAULT 'geral'"],
+      ["versoes_atualizador", "codigos_clientes_json", "TEXT NOT NULL DEFAULT '[]'"],
       // O agente passou a informar contexto junto do status: sem isso o
       // painel so sabia "deu erro", nunca "deu erro subindo a 2026.08.10 do
       // B_VENDAS, saindo da 2026.07.02, depois de 4 minutos".
@@ -308,12 +310,31 @@ class Database {
       // no tempo medio de resolucao por responsavel do Resumo -- apagar a
       // linha limparia a tela e estragaria a metrica no mesmo gesto.
       ["agendamentos", "arquivado_em", "TEXT"],
+      ["agendamentos", "revisao", "INTEGER NOT NULL DEFAULT 1"],
+      ["agendamentos", "atualizado_em", "TEXT"],
+      ["agendamentos", "atualizado_por", "TEXT"],
+      ["atualizacoes", "revisao", "INTEGER NOT NULL DEFAULT 1"],
+      ["atualizacoes", "atualizado_em", "TEXT"],
+      ["atualizacoes", "atualizado_por", "TEXT"],
+      ["clientes", "revisao", "INTEGER NOT NULL DEFAULT 1"],
+      ["clientes", "atualizado_em", "TEXT"],
+      ["clientes", "atualizado_por", "TEXT"],
+      ["historico", "detalhes_json", "TEXT"],
     ]) {
       try {
         conn.exec(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${tipo}`);
       } catch (e) {
         if (!String(e.message).includes("duplicate column")) throw e;
       }
+    }
+
+    // Migração compatível com a implementação inicial do piloto, que chamava
+    // CODIGO_CLIENTE de CNPJ. Bancos novos nunca recebem a coluna antiga.
+    const colunasVersao = conn.prepare("PRAGMA table_info(versoes_atualizador)").all().map((coluna) => coluna.name);
+    if (colunasVersao.includes("cnpjs_json")) {
+      conn.exec(`UPDATE versoes_atualizador
+        SET codigos_clientes_json = cnpjs_json
+        WHERE codigos_clientes_json = '[]' AND cnpjs_json IS NOT NULL AND cnpjs_json != '[]'`);
     }
 
     conn.exec(`CREATE INDEX IF NOT EXISTS idx_versoes_status ON versoes_atualizador (status, id DESC)`);

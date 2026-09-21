@@ -6,6 +6,7 @@ const CAMPOS = `
   id, sistema, versao, status,
   script_url AS scriptUrl, pacotes_json AS pacotesJson, observacoes,
   tamanho_bytes AS tamanhoBytes,
+  alcance, codigos_clientes_json AS codigosClientesJson,
   criado_em AS criadoEm, publicado_em AS publicadoEm,
   substituido_em AS substituidoEm, substituido_por AS substituidoPor
 `;
@@ -59,8 +60,8 @@ class VersaoRepository extends BaseRepository {
   insert(data) {
     const result = this.conn
       .prepare(
-        `INSERT INTO ${this.table} (sistema, versao, status, script_url, pacotes_json, observacoes, tamanho_bytes, criado_em, criado_por)
-         VALUES (@sistema, @versao, 'rascunho', @scriptUrl, @pacotesJson, @observacoes, @tamanhoBytes, @criadoEm, @criadoPor)`
+        `INSERT INTO ${this.table} (sistema, versao, status, script_url, pacotes_json, observacoes, tamanho_bytes, alcance, codigos_clientes_json, criado_em, criado_por)
+         VALUES (@sistema, @versao, 'rascunho', @scriptUrl, @pacotesJson, @observacoes, @tamanhoBytes, @alcance, @codigosClientesJson, @criadoEm, @criadoPor)`
       )
       .run(data);
     return this.find(result.lastInsertRowid);
@@ -71,7 +72,8 @@ class VersaoRepository extends BaseRepository {
       .prepare(
         `UPDATE ${this.table}
          SET sistema = @sistema, versao = @versao, script_url = @scriptUrl,
-             pacotes_json = @pacotesJson, observacoes = @observacoes
+             pacotes_json = @pacotesJson, observacoes = @observacoes,
+             alcance = @alcance, codigos_clientes_json = @codigosClientesJson
          WHERE id = @id`
       )
       .run({ ...data, id });
@@ -92,7 +94,7 @@ class VersaoRepository extends BaseRepository {
   publicarESubstituir(id, publicadoEm, anterioresIds = []) {
     const transacao = this.conn.transaction(() => {
       this.conn
-        .prepare(`UPDATE ${this.table} SET status = 'publicada', publicado_em = @publicadoEm, substituido_em = NULL, substituido_por = NULL WHERE id = @id`)
+        .prepare(`UPDATE ${this.table} SET status = 'publicada', alcance = 'geral', codigos_clientes_json = '[]', publicado_em = @publicadoEm, substituido_em = NULL, substituido_por = NULL WHERE id = @id`)
         .run({ id, publicadoEm });
 
       if (anterioresIds.length > 0) {
@@ -106,6 +108,46 @@ class VersaoRepository extends BaseRepository {
     });
     transacao();
     return this.find(id);
+  }
+
+  publicarPiloto(id, publicadoEm) {
+    this.conn.prepare(`UPDATE ${this.table} SET status = 'piloto', publicado_em = @publicadoEm WHERE id = @id`).run({ id, publicadoEm });
+    return this.find(id);
+  }
+
+  pilotosDoSistema(sistema) {
+    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'piloto' AND sistema = ? ORDER BY id DESC`).all(sistema);
+  }
+
+  adocaoPiloto(sistema, versao, codigosClientes) {
+    if (!Array.isArray(codigosClientes) || codigosClientes.length === 0) return { rodando: 0, semErros: 0 };
+    const marcadores = codigosClientes.map(() => "?").join(", ");
+    const normalizado = "UPPER(REPLACE(REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', ''), ' ', ''))";
+    const linhas = this.conn.prepare(
+      `SELECT ${normalizado} AS cnpj,
+              MAX(CASE WHEN UPPER(status) IN ('ERRO', 'FALHA') THEN 1 ELSE 0 END) AS teveErro
+       FROM atualizador_logs
+       WHERE sistema = ? AND versao = ? AND ${normalizado} IN (${marcadores})
+       GROUP BY ${normalizado}`
+    ).all(sistema, versao, ...codigosClientes.map(normalizarCodigoCliente));
+    return { rodando: linhas.length, semErros: linhas.filter((linha) => !linha.teveErro).length };
+  }
+
+  promoverPiloto(id, publicadoEm, anterioresIds = []) {
+    return this.publicarESubstituir(id, publicadoEm, anterioresIds);
+  }
+
+  anteriorSubstituida(atualId, sistema) {
+    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE sistema = ? AND status = 'substituida' AND substituido_por = ? ORDER BY substituido_em DESC LIMIT 1`).get(sistema, atualId);
+  }
+
+  rollback(atualId, anteriorId, quando) {
+    const tx = this.conn.transaction(() => {
+      this.conn.prepare(`UPDATE ${this.table} SET status = 'substituida', substituido_em = @quando, substituido_por = NULL WHERE id = @atualId`).run({ atualId, quando });
+      this.conn.prepare(`UPDATE ${this.table} SET status = 'publicada', publicado_em = @quando, substituido_em = NULL, substituido_por = NULL WHERE id = @anteriorId`).run({ anteriorId, quando });
+    });
+    tx();
+    return this.find(anteriorId);
   }
 
   /**
@@ -328,3 +370,7 @@ class VersaoRepository extends BaseRepository {
 }
 
 module.exports = { VersaoRepository };
+
+function normalizarCodigoCliente(valor) {
+  return String(valor || "").trim().toUpperCase().replace(/[.\/\-\s]/g, "");
+}

@@ -15,13 +15,14 @@ class HistoricoService {
    * @param {"cliente"|"atualizacao"|"agendamento"|"sistema"|"backup"|"agente"} entidade
    * @param {string} descricao texto curto e legível (ex.: "Cliente 'Acme Corp'")
    */
-  registrar(usuario, acao, entidade, descricao) {
+  registrar(usuario, acao, entidade, descricao, detalhes = null) {
     this.db.historico.registrar({
       usuarioId: usuario ? usuario.id : null,
       usuarioNome: usuario ? usuario.nome : "Sistema",
       acao,
       entidade,
       descricao,
+      detalhesJson: detalhes ? JSON.stringify(detalhes) : null,
     });
   }
 

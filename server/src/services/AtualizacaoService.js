@@ -3,7 +3,7 @@ const ExcelJS = require("exceljs");
 const { COLUMNS, DESATUALIZADO_DIAS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
 const { dataValida, parseData } = require("../shared/validation");
 const { normalizarSistemas, normalizarResponsavel } = require("./normalizacao");
-const { ValidationError, NotFoundError } = require("../shared/errors");
+const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
 
 // Sentinela: cliente nunca atualizado, sempre no topo da lista de
 // pendencias (ninguem esta "mais atrasado" do que quem nunca foi atualizado).
@@ -55,10 +55,14 @@ class AtualizacaoService {
   // pessoa esta com ele aberto. Mesma regra que ClienteService ja seguia.
   update(id, input, usuario) {
     const data = this._validate(input);
-    if (this.db.atualizacoes.update(id, data) === 0) {
+    const antes = this.db.atualizacoes.find(id);
+    const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
+    if (this.db.atualizacoes.update(id, data, revisaoEsperada, usuario?.nome || "") === 0) {
+      const agora = this.db.atualizacoes.find(id);
+      if (agora && revisaoEsperada != null) throw new ConflictError(`Esta atualização foi alterada por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, agora);
       throw new NotFoundError("Esta atualização não existe mais. Ela pode ter sido excluída por outra pessoa.");
     }
-    this.historico.registrar(usuario, "atualizar", "atualizacao", `Atualização #${id} de "${data.cliente}"`);
+    this.historico.registrar(usuario, "atualizar", "atualizacao", `Atualização #${id} de "${data.cliente}"`, { antes, depois: data });
     this._marcarSuporteBredasSeNecessario(data, usuario);
     return data;
   }
@@ -87,10 +91,11 @@ class AtualizacaoService {
   }
 
   delete(id, usuario) {
+    const existente = this.db.atualizacoes.find(id);
     if (this.db.atualizacoes.delete(id) === 0) {
       throw new NotFoundError("Esta atualização não existe mais.");
     }
-    this.historico.registrar(usuario, "excluir", "atualizacao", `Atualização #${id}`);
+    this.historico.registrar(usuario, "excluir", "atualizacao", `Atualização #${id}`, { antes: existente, depois: null });
   }
 
   /**

@@ -118,6 +118,10 @@ export class PieChart {
       circle.setAttribute("stroke-dashoffset", String(-acumulado));
       circle.setAttribute("stroke-linecap", visiveis.length > 1 ? "butt" : "round");
       circle.dataset.label = slice.label;
+      circle.setAttribute("tabindex", "0");
+      const titulo = document.createElementNS(SVG_NS, "title");
+      titulo.textContent = `${slice.label}: ${slice.value} (${Math.round((slice.value / total) * 100)}%)`;
+      circle.appendChild(titulo);
       group.appendChild(circle);
       acumulado += fatia;
     }

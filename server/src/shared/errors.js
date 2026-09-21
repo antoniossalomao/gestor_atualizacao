@@ -31,4 +31,14 @@ class ForbiddenError extends Error {
   }
 }
 
-module.exports = { ValidationError, NotFoundError, ForbiddenError };
+/** Edição otimista: o registro mudou desde que a pessoa abriu o formulário. */
+class ConflictError extends Error {
+  constructor(message, atual = null) {
+    super(message);
+    this.name = "ConflictError";
+    this.statusCode = 409;
+    this.atual = atual;
+  }
+}
+
+module.exports = { ValidationError, NotFoundError, ForbiddenError, ConflictError };
