@@ -43,10 +43,13 @@ export class ClientesView extends View {
   _buildDom() {
     this.container.innerHTML = `
       <div class="view-actions">
-        <button type="button" class="btn btn--accent" data-action="toggle-form">
-          + Novo Cliente
-        </button>
-        <button type="button" class="btn" data-action="acessos" disabled>${icon("acessos")} Acessos</button>
+        <div class="view-actions__left">
+          <button type="button" class="btn" data-action="acessos" disabled>${icon("acessos")} Acessos</button>
+          <button type="button" class="btn btn--danger btn--ghost" data-action="delete" disabled>${icon("alerta")} Excluir</button>
+        </div>
+        <div class="view-actions__right">
+          <button type="button" class="btn btn--accent" data-action="toggle-form">+ Novo Cliente</button>
+        </div>
       </div>
 
       <form class="card" id="clientes-form" data-role="form-card" hidden novalidate>
@@ -109,9 +112,6 @@ export class ClientesView extends View {
         </div>
         <div data-role="table"></div>
         <div data-role="pagination"></div>
-        <div class="form-actions" style="margin-top: var(--sp-4)">
-          <button type="button" class="btn btn--danger" data-action="delete">Excluir Selecionado</button>
-        </div>
       </div>
     `;
 

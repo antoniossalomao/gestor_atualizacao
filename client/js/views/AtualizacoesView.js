@@ -54,7 +54,18 @@ export class AtualizacoesView extends View {
 
   _buildDom() {
     this.container.innerHTML = `
-      <div class="view-actions"><button type="button" class="btn btn--accent" data-action="nova-atualizacao">+ Nova Atualização</button></div>
+      <div class="view-actions">
+        <div class="view-actions__left">
+          <button type="button" class="btn" data-action="import">${icon("upload")} Importar (.xlsx)</button>
+          <button type="button" class="btn" data-action="export">${icon("download")} Exportar (.xlsx)</button>
+          <button type="button" class="btn btn--ghost" data-action="relatorio" disabled>${icon("copiar")} Relatório do Cliente</button>
+          <button type="button" class="btn btn--danger btn--ghost" data-action="delete" disabled>${icon("alerta")} Excluir</button>
+          <input type="file" accept=".xlsx,.xls" data-role="file-input" hidden />
+        </div>
+        <div class="view-actions__right">
+          <button type="button" class="btn btn--accent" data-action="nova-atualizacao">+ Nova Atualização</button>
+        </div>
+      </div>
       <form class="card" data-role="form" novalidate>
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
@@ -128,23 +139,34 @@ export class AtualizacoesView extends View {
 
         <div data-role="table"></div>
         <div data-role="pagination"></div>
-        <div class="form-actions" style="margin-top: var(--sp-4)">
-          <button type="button" class="btn btn--danger" data-action="delete">Excluir Selecionado</button>
-          <button type="button" class="btn" data-action="relatorio">${icon("copiar")} Gerar Relatório</button>
-          <button type="button" class="btn" data-action="import">${icon("upload")} Importar Planilha (.xlsx)</button>
-          <button type="button" class="btn" data-action="export">${icon("download")} Exportar para .xlsx</button>
-          <input type="file" accept=".xlsx,.xls" data-role="file-input" hidden />
-        </div>
       </div>
     `;
 
     this._buildFields();
 
+    const LARGURAS_ATUALIZACAO = {
+      id: "45px",
+      cliente: "21%",
+      sistema: "18%",
+      versao: "85px",
+      responsavel: "125px",
+      data: "85px",
+      motivo: "115px",
+      maquinas: "58px",
+      obs: "22%",
+      acoes: "86px",
+    };
+
     this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
       columns: [
-        { key: "id", label: "ID", type: "numeric", largura: "70px" },
-        ...COLUMNS.map((c) => ({ key: c.key, label: c.label, type: c.key === "data" ? "date" : "text" })),
-        { key: "acoes", label: "Ações", largura: "136px", render: (row) => acoesAtualizacao(row, this.user?.role) },
+        { key: "id", label: "ID", type: "numeric", largura: LARGURAS_ATUALIZACAO.id },
+        ...COLUMNS.map((c) => ({
+          key: c.key,
+          label: c.label,
+          type: c.key === "data" ? "date" : "text",
+          largura: LARGURAS_ATUALIZACAO[c.key],
+        })),
+        { key: "acoes", label: "Ações", largura: LARGURAS_ATUALIZACAO.acoes, render: (row) => acoesAtualizacao(row, this.user?.role) },
       ],
       onSelect: (row) => this._loadIntoForm(row),
       // Seleção múltipla: esta é a tabela onde faz sentido: importar uma

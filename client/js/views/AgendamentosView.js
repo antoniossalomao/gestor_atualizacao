@@ -1,8 +1,6 @@
 import { AGENDA_COLUMNS, STATUS_OPTIONS, FILTRO_ARQUIVADAS } from "../config.js";
 import { ApiError } from "../api/ApiClient.js";
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
-import { Pagination } from "../components/Pagination.js";
 import { Autocomplete } from "../components/Autocomplete.js";
 import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
@@ -13,42 +11,70 @@ import { plural, escapeHtml } from "../utils/html.js";
 import { icon } from "../utils/icons.js";
 import { marcarOcupado } from "../utils/guard.js";
 import { prefs } from "../app/prefs.js";
-import { aparencia } from "../app/appearance.js";
 import { Drawer } from "../components/Drawer.js";
 
 const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
 
+const META_COLUNAS = {
+  "A Fazer": { titulo: "A Fazer" },
+  "Em Andamento": { titulo: "Em Andamento" },
+  "Sem resposta": { titulo: "Sem resposta" },
+  "Concluído": { titulo: "Concluído" },
+};
+
 /**
- * Aba Agendamentos: agenda interna de tarefas. Equivalente de
- * gestor/views/agendamentos.py.
- *
- * Mesmas correções aplicadas em Atualizações: `<form>` de verdade, `Escape`
- * com desfazer, exclusão reversível em vez de modal de confirmação, filtros
- * que sobrevivem à troca de aba, e o listener global de `Delete` registrado
- * por `this.on(...)` para não vazar quando a view é descartada.
+ * Aba Agendamentos: quadro Kanban interativo com drag-and-drop de tarefas e colunas.
  */
 export class AgendamentosView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
     this.selectedId = null;
+    this.selectedRevision = null;
+    this.rows = [];
+    this._draggedCardId = null;
+    this._draggedColStatus = null;
+    this._isDragging = false;
     const salvo = prefs.get("agendamentos:filtros", {});
-    this.page = 1;
     this.busca = salvo.busca || "";
     this.status = salvo.status || "Todos";
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "asc";
+    this.ordemColunas = this._carregarOrdemColunas();
     this._buildDom();
+  }
+
+  _carregarOrdemColunas() {
+    const salva = prefs.get("agendamentos:colunas", STATUS_OPTIONS);
+    if (Array.isArray(salva)) {
+      const validas = salva.filter((s) => STATUS_OPTIONS.includes(s));
+      for (const s of STATUS_OPTIONS) {
+        if (!validas.includes(s)) validas.push(s);
+      }
+      return validas;
+    }
+    return [...STATUS_OPTIONS];
+  }
+
+  _reordenarColunas(origemStatus, destinoStatus) {
+    const de = this.ordemColunas.indexOf(origemStatus);
+    const para = this.ordemColunas.indexOf(destinoStatus);
+    if (de < 0 || para < 0 || de === para) return;
+    const nova = [...this.ordemColunas];
+    const [removido] = nova.splice(de, 1);
+    nova.splice(para, 0, removido);
+    this.ordemColunas = nova;
+    prefs.set("agendamentos:colunas", nova);
+    this._renderKanban(this.rows);
   }
 
   _buildDom() {
     this.container.innerHTML = `
       <div class="view-actions">
-        <div class="segmented" role="group" aria-label="Visualização dos agendamentos">
-          <button type="button" class="btn is-active" data-view="lista">📋 Lista</button>
-          <button type="button" class="btn" data-view="kanban">▦ Kanban</button>
+        <div class="view-actions__right">
+          <button type="button" class="btn btn--accent" data-action="novo-agendamento">+ Novo Agendamento</button>
         </div>
-        <button type="button" class="btn btn--accent" data-action="novo-agendamento">+ Novo Agendamento</button>
       </div>
+
       <form class="card" data-role="form" novalidate>
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
@@ -58,13 +84,16 @@ export class AgendamentosView extends View {
           </div>
           <div class="form-actions__right">
             <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
+            <button type="button" class="btn btn--ghost" data-action="modal-converter" hidden>${icon("converter")} Converter</button>
+            <button type="button" class="btn btn--ghost" data-action="modal-reabrir" hidden>${icon("atualizar")} Reabrir</button>
+            <button type="button" class="btn btn--ghost" data-action="modal-done" hidden>${icon("check")} Concluir</button>
             <button type="submit" class="btn btn--accent" data-action="add">Adicionar Tarefa</button>
             <button type="button" class="btn btn--accent" data-action="update" hidden>Salvar Alterações</button>
           </div>
         </div>
       </form>
 
-      <div class="card">
+      <div class="card agendamentos-board-card">
         <div class="toolbar">
           <div class="field">
             <label class="field__label" for="age-busca">Buscar</label>
@@ -75,10 +104,6 @@ export class AgendamentosView extends View {
             <select class="input" id="age-status" data-role="status-filter">
               <option>Todos</option>
               ${STATUS_OPTIONS.map((s) => `<option>${s}</option>`).join("")}
-              <!-- Fica no MESMO select dos status, e não num botão à parte,
-                   porque é aqui que a pessoa vem quando quer recortar a
-                   lista -- e "arquivada" é, na prática, mais um recorte. O
-                   rótulo ganha a contagem em _pintarArquivadas(). -->
               <option value="${FILTRO_ARQUIVADAS}">${FILTRO_ARQUIVADAS}</option>
             </select>
           </div>
@@ -88,140 +113,59 @@ export class AgendamentosView extends View {
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
         </div>
-        <p class="text-muted bulk-hint">
-          Dica: segure <kbd>Shift</kbd> e clique em duas linhas para selecionar tudo entre elas.
-        </p>
-        <!-- Uma lista que esvazia sozinha sem dizer por quê parece perda de
-             dado. Esta linha só aparece quando a pessoa está OLHANDO as
-             arquivadas, que é quando a pergunta surge. -->
         <p class="text-muted bulk-hint" data-role="aviso-arquivadas" hidden></p>
-        <div class="bulk-bar" data-role="bulk" hidden>
-          <span class="bulk-bar__count" data-role="bulk-count" aria-live="polite"></span>
-          <button type="button" class="btn btn--small btn--ghost" data-action="bulk-limpar">Desmarcar</button>
-          <div class="toolbar-spacer"></div>
-          <button type="button" class="btn btn--small" data-action="bulk-concluir">
-            ${icon("check")} Concluir selecionadas
-          </button>
-          <button type="button" class="btn btn--small btn--danger" data-action="bulk-excluir">
-            ${icon("alerta")} Excluir selecionadas
-          </button>
-        </div>
-
-        <div data-role="table"></div>
-        <div data-role="pagination"></div>
-        <div class="form-actions" style="margin-top: var(--sp-4)">
-          <button type="button" class="btn btn--danger" data-action="delete">Excluir Selecionada</button>
-          <button type="button" class="btn" data-action="arquivar">Arquivar</button>
-          <button type="button" class="btn" data-action="done">Marcar como Concluída</button>
-          <button type="button" class="btn" data-action="converter">Converter em Atualização</button>
-          <!-- Só existe enquanto o filtro é "Arquivadas": em qualquer outra
-               lista não há o que reabrir, e um botão desligado o tempo todo
-               é ruído. -->
-          <button type="button" class="btn btn--accent" data-action="reabrir" hidden>Reabrir</button>
-        </div>
+        <div class="kanban-board" data-role="kanban"></div>
       </div>
     `;
 
     this._buildFields();
-
-    this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
-      columns: [
-        { key: "id", label: "ID", type: "numeric", largura: "70px" },
-        ...AGENDA_COLUMNS.map((c) => ({ key: c.key, label: c.label, type: c.key === "data" ? "date" : "text" })),
-        { key: "acoes", label: "Ações", largura: "136px", render: (row) => acoesAgendamento(row, this.user?.role) },
-      ],
-      onSelect: (row) => this._loadIntoForm(row),
-      rowClass: (row) => {
-        if (row.status === STATUS_CONCLUIDO) return "is-muted";
-        if (estaAtrasada(row.data)) return "is-atrasada";
-        return "";
-      },
-      // Seleção múltipla: limpar uma fila de tarefas velhas ou concluir
-      // várias de uma vez era um ciclo de "clicar na linha, clicar no botão"
-      // por tarefa -- mesma ideia já usada em Atualizações.
-      multiSelect: true,
-      onMultiSelect: (chaves) => this._pintarBulk(chaves),
-      caption: "Tarefas agendadas",
-      emptyNode: () =>
-        this.status === FILTRO_ARQUIVADAS
-          ? emptyState({
-              titulo: "Nenhuma tarefa arquivada",
-              descricao: "Tarefas concluídas saem da lista sozinhas depois de um tempo. Ainda não houve nenhuma.",
-              icone: "agendamentos",
-            })
-          : this._temFiltro()
-          ? emptyState({
-              titulo: "Nenhuma tarefa com esse filtro",
-              descricao: "Tente outro termo, ou limpe os filtros para ver tudo.",
-              icone: "busca",
-              acao: { label: "Limpar filtros", onClick: () => this._limparFiltros() },
-            })
-          : emptyState({
-              titulo: "Nenhuma tarefa agendada",
-              descricao: "Use o formulário acima para agendar a primeira.",
-              icone: "agendamentos",
-            }),
-      serverSort: true,
-      onSortChange: (key, dir) => {
-        this.sortBy = key;
-        this.sortDir = dir;
-        this.page = 1;
-        this._salvarFiltros();
-        this._reloadList();
-      },
-    });
-    this.pagination = new Pagination(this.container.querySelector('[data-role="pagination"]'), (page) => {
-      this.page = page;
-      this._reloadList();
-    });
 
     this.form = this.container.querySelector('[data-role="form"]');
     this.drawer = new Drawer(this.form, {
       titulo: "Agendamento",
       descricao: "Crie ou edite a tarefa mantendo o quadro visível.",
     });
-    this.kanban = document.createElement("div");
-    this.kanban.className = "kanban-board";
-    this.kanban.hidden = true;
-    this.table.container.after(this.kanban);
+
+    this.kanban = this.container.querySelector('[data-role="kanban"]');
     this.container.querySelector('[data-action="novo-agendamento"]').addEventListener("click", () => {
       this.clearForm();
       this.drawer.abrir({ foco: this.fields.tarefa });
     });
-    for (const botao of this.container.querySelectorAll("[data-view]")) {
-      botao.addEventListener("click", () => this._trocarVisao(botao.dataset.view));
-    }
-    this.table.container.addEventListener("click", (e) => this._acaoRapida(e));
-    this.kanban.addEventListener("click", (e) => this._acaoRapida(e));
+
     this.searchInput = this.container.querySelector('[data-role="search"]');
     this.statusFilter = this.container.querySelector('[data-role="status-filter"]');
     this.botaoLimparFiltros = this.container.querySelector('[data-action="limpar-filtros"]');
+    this.avisoArquivadas = this.container.querySelector('[data-role="aviso-arquivadas"]');
     this.searchInput.value = this.busca;
     this.statusFilter.value = this.status;
 
     const reload = debounce(() => {
-      this.page = 1;
       this._salvarFiltros();
       this._reloadList();
     }, 200);
+
     this.searchInput.addEventListener("input", () => {
       this.busca = this.searchInput.value.trim();
       this._pintarLimparFiltros();
       reload();
     });
+
     this.statusFilter.addEventListener("change", () => {
       this.status = this.statusFilter.value;
-      this.page = 1;
       this._pintarLimparFiltros();
       this._salvarFiltros();
       this._reloadList();
     });
+
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
     this.addBtn = this.form.querySelector('[data-action="add"]');
     this.updateBtn = this.form.querySelector('[data-action="update"]');
-    this.deleteBtn = this.container.querySelector('[data-action="delete"]');
     this.modalDeleteBtn = this.form.querySelector('[data-action="modal-delete"]');
+    this.modalConverterBtn = this.form.querySelector('[data-action="modal-converter"]');
+    this.modalDoneBtn = this.form.querySelector('[data-action="modal-done"]');
+    this.modalReabrirBtn = this.form.querySelector('[data-action="modal-reabrir"]');
+
     if (this.modalDeleteBtn) {
       this.modalDeleteBtn.addEventListener("click", async () => {
         this.drawer.marcarLimpa();
@@ -229,46 +173,43 @@ export class AgendamentosView extends View {
         this.deleteTask();
       });
     }
-    this.doneBtn = this.container.querySelector('[data-action="done"]');
-    this.arquivarBtn = this.container.querySelector('[data-action="arquivar"]');
-    this.converterBtn = this.container.querySelector('[data-action="converter"]');
-    this.reabrirBtn = this.container.querySelector('[data-action="reabrir"]');
-    this.avisoArquivadas = this.container.querySelector('[data-role="aviso-arquivadas"]');
-    this.reabrirBtn.addEventListener("click", () => this.reabrir());
 
-    // -- lote --
-    this.bulkBar = this.container.querySelector('[data-role="bulk"]');
-    this.bulkCount = this.container.querySelector('[data-role="bulk-count"]');
-    this.bulkConcluir = this.container.querySelector('[data-action="bulk-concluir"]');
-    this.bulkExcluir = this.container.querySelector('[data-action="bulk-excluir"]');
-    this.container.querySelector('[data-action="bulk-limpar"]').addEventListener("click", () => this.table.limparMarcadas());
-    this.bulkConcluir.addEventListener("click", () => this.concluirLote());
-    this.bulkExcluir.addEventListener("click", () => this.excluirLote());
+    if (this.modalConverterBtn) {
+      this.modalConverterBtn.addEventListener("click", () => {
+        this.drawer.fechar({ forcar: true });
+        this.converterEmAtualizacao();
+      });
+    }
+
+    if (this.modalDoneBtn) {
+      this.modalDoneBtn.addEventListener("click", async () => {
+        this.drawer.fechar({ forcar: true });
+        await this.markDone();
+      });
+    }
+
+    if (this.modalReabrirBtn) {
+      this.modalReabrirBtn.addEventListener("click", async () => {
+        this.drawer.fechar({ forcar: true });
+        await this.reabrir();
+      });
+    }
 
     this.form.addEventListener("submit", (e) => {
       e.preventDefault();
       this._submit();
     });
     this.updateBtn?.addEventListener("click", () => this.updateTask());
-    this.deleteBtn?.addEventListener("click", () => this.deleteTask());
-    this.doneBtn?.addEventListener("click", () => this.markDone());
-    this.arquivarBtn?.addEventListener("click", () => this.arquivar());
-    this.converterBtn?.addEventListener("click", () => this.converterEmAtualizacao());
+
+    // Ações rápidas e drag-and-drop no quadro Kanban
+    this.kanban.addEventListener("click", (e) => this._acaoRapida(e));
+    this._bindKanbanDragDrop();
 
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
 
     if (this.user?.role === "consulta") {
       this.form.hidden = true;
       this.container.querySelector('[data-action="novo-agendamento"]').hidden = true;
-      this.deleteBtn.hidden = true;
-      this.doneBtn.hidden = true;
-      this.arquivarBtn.hidden = true;
-      this.converterBtn.hidden = true;
-      this.reabrirBtn.hidden = true;
-      this.bulkConcluir.hidden = true;
-      this.bulkExcluir.hidden = true;
-      const hint = this.container.querySelector(".bulk-hint");
-      if (hint) hint.hidden = true;
     }
 
     this._pintarLimparFiltros();
@@ -292,10 +233,6 @@ export class AgendamentosView extends View {
         input.innerHTML = STATUS_OPTIONS.map((s) => `<option>${s}</option>`).join("");
       } else {
         input = document.createElement("input");
-        // "horario" usa o seletor nativo do navegador (sempre devolve
-        // "HH:MM" ou vazio) -- diferente de "data", que é texto livre com
-        // validação manual porque precisa aceitar o formato dd/mm/aaaa já
-        // usado no resto do app.
         input.type = col.key === "horario" ? "time" : "text";
         input.className = "input";
         if (col.key === "tarefa") input.required = true;
@@ -325,10 +262,109 @@ export class AgendamentosView extends View {
       this.fields[col.key] = input;
     }
     this.clienteAutocomplete = new Autocomplete(this.fields.cliente, { values: [] });
-    // Mesma lista de nomes já usados no campo Responsável da aba Atualizações
-    // -- continua texto livre, só sugere para não escrever o mesmo nome de
-    // jeitos diferentes.
     this.responsavelAutocomplete = new Autocomplete(this.fields.responsavel, { values: [] });
+  }
+
+  _bindKanbanDragDrop() {
+    this.kanban.addEventListener("dragstart", (e) => {
+      const card = e.target.closest(".kanban-card");
+      if (card) {
+        if (this.user?.role === "consulta") {
+          e.preventDefault();
+          return;
+        }
+        e.stopPropagation();
+        this._isDragging = true;
+        this._draggedCardId = card.dataset.id;
+        card.classList.add("is-dragging");
+        e.dataTransfer.setData("text/plain", card.dataset.id);
+        e.dataTransfer.setData("application/x-kanban-card", card.dataset.id);
+        e.dataTransfer.effectAllowed = "move";
+        return;
+      }
+
+      const colHeader = e.target.closest('[data-col-drag="true"]');
+      if (colHeader) {
+        if (this.user?.role === "consulta") {
+          e.preventDefault();
+          return;
+        }
+        const col = colHeader.closest(".kanban-column");
+        if (col) {
+          this._draggedColStatus = col.dataset.status;
+          col.classList.add("is-col-dragging");
+          e.dataTransfer.setData("application/x-kanban-column", col.dataset.status);
+          e.dataTransfer.effectAllowed = "move";
+        }
+      }
+    });
+
+    this.kanban.addEventListener("dragend", () => {
+      for (const c of this.kanban.querySelectorAll(".kanban-card.is-dragging")) {
+        c.classList.remove("is-dragging");
+      }
+      for (const col of this.kanban.querySelectorAll(".kanban-column")) {
+        col.classList.remove("is-drop-target");
+        col.classList.remove("is-col-dragging");
+        col.classList.remove("is-col-target");
+      }
+      setTimeout(() => {
+        this._isDragging = false;
+        this._draggedCardId = null;
+        this._draggedColStatus = null;
+      }, 80);
+    });
+
+    this.kanban.addEventListener("dragover", (e) => {
+      const col = e.target.closest(".kanban-column");
+      if (!col) return;
+
+      if (this._draggedCardId || e.dataTransfer.types.includes("application/x-kanban-card")) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        for (const other of this.kanban.querySelectorAll(".kanban-column")) {
+          if (other !== col) other.classList.remove("is-drop-target");
+        }
+        col.classList.add("is-drop-target");
+      } else if (this._draggedColStatus || e.dataTransfer.types.includes("application/x-kanban-column")) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        for (const other of this.kanban.querySelectorAll(".kanban-column")) {
+          if (other !== col) other.classList.remove("is-col-target");
+        }
+        col.classList.add("is-col-target");
+      }
+    });
+
+    this.kanban.addEventListener("dragleave", (e) => {
+      const col = e.target.closest(".kanban-column");
+      if (col && !col.contains(e.relatedTarget)) {
+        col.classList.remove("is-drop-target");
+        col.classList.remove("is-col-target");
+      }
+    });
+
+    this.kanban.addEventListener("drop", (e) => {
+      const col = e.target.closest(".kanban-column");
+      if (!col) return;
+      e.preventDefault();
+      col.classList.remove("is-drop-target");
+      col.classList.remove("is-col-target");
+
+      if (this._draggedCardId || e.dataTransfer.types.includes("application/x-kanban-card")) {
+        const cardId = e.dataTransfer.getData("application/x-kanban-card") || e.dataTransfer.getData("text/plain") || this._draggedCardId;
+        const novoStatus = col.dataset.status;
+        if (cardId && novoStatus && novoStatus !== FILTRO_ARQUIVADAS) {
+          this._moverCard(cardId, novoStatus);
+        }
+      } else if (this._draggedColStatus || e.dataTransfer.types.includes("application/x-kanban-column")) {
+        const origemStatus = e.dataTransfer.getData("application/x-kanban-column") || this._draggedColStatus;
+        const destinoStatus = col.dataset.status;
+        if (origemStatus && destinoStatus && origemStatus !== destinoStatus) {
+          this._reordenarColunas(origemStatus, destinoStatus);
+        }
+      }
+    });
   }
 
   async refresh() {
@@ -350,51 +386,199 @@ export class AgendamentosView extends View {
   }
 
   async _reloadList() {
-    this.table.setRefreshing(true);
+    this.kanban.classList.add("is-refreshing");
     try {
-      const resposta = await this.swr(
-        `agendamentos:lista:${this.busca}|${this.status}|${this.page}|${this.sortBy}|${this.sortDir}`,
+      await this.swr(
+        `agendamentos:lista:${this.busca}|${this.status}|200|${this.sortBy}|${this.sortDir}`,
         () =>
           this.api.get(
             "/agendamentos",
-            { search: this.busca, status: this.status, page: this.page, pageSize: aparencia.linhasPorPagina(), sortBy: this.sortBy, sortDir: this.sortDir },
+            { search: this.busca, status: this.status, page: 1, pageSize: 200, sortBy: this.sortBy, sortDir: this.sortDir },
             { key: "agendamentos:lista" }
           ),
         (resposta) => {
-          this.table.setRows(resposta.rows);
-          this._renderKanban(resposta.rows);
-          this.pagination.update(resposta);
-          this.container.querySelector('[data-role="count"]').textContent = plural(resposta.total, "tarefa");
+          this.rows = resposta.rows || [];
+          this._renderKanban(this.rows);
+          const countEl = this.container.querySelector('[data-role="count"]');
+          if (countEl) countEl.textContent = plural(resposta.total, "tarefa");
           this._pintarArquivadas(resposta);
         }
       );
-
-      if (resposta && resposta.rows.length === 0 && this.page > 1 && resposta.total > 0) {
-        this.page -= 1;
-        return this._reloadList();
-      }
     } finally {
-      this.table.setRefreshing(false);
+      this.kanban.classList.remove("is-refreshing");
     }
   }
 
-  /**
-   * A contagem no rótulo do filtro e o aviso que explica a regra.
-   *
-   * Os dois números vêm do servidor (`arquivadas`, `arquivarDias`) em vez de
-   * estarem escritos aqui: o prazo mora no .env, e um texto de tela com "30
-   * dias" fixo passaria a mentir no dia em que alguém mudasse para 60.
-   */
+  _renderKanban(rows) {
+    if (this.status === FILTRO_ARQUIVADAS) {
+      const colunas = [
+        {
+          status: FILTRO_ARQUIVADAS,
+          titulo: "Tarefas Arquivadas",
+          subtitulo: "Concluídas há mais tempo",
+          pip: "var(--cor-texto-fraco)",
+          itens: rows,
+        },
+      ];
+      this.kanban.dataset.colunas = "1";
+      this.kanban.style.setProperty("--kanban-colunas", "1");
+      this.kanban.innerHTML = this._gerarHtmlColunas(colunas);
+      return;
+    }
+
+    if (this.status !== "Todos") {
+      const colunas = [
+        {
+          status: this.status,
+          titulo: META_COLUNAS[this.status]?.titulo || this.status,
+          subtitulo: META_COLUNAS[this.status]?.subtitulo || "",
+          pip: META_COLUNAS[this.status]?.pip || "var(--cor-accent)",
+          itens: rows,
+        },
+      ];
+      this.kanban.dataset.colunas = "1";
+      this.kanban.style.setProperty("--kanban-colunas", "1");
+      this.kanban.innerHTML = this._gerarHtmlColunas(colunas);
+      return;
+    }
+
+    this.kanban.dataset.colunas = String(this.ordemColunas.length);
+    this.kanban.style.setProperty("--kanban-colunas", String(this.ordemColunas.length));
+
+    const colunas = this.ordemColunas.map((st) => ({
+      status: st,
+      titulo: META_COLUNAS[st]?.titulo || st,
+      subtitulo: META_COLUNAS[st]?.subtitulo || "",
+      pip: META_COLUNAS[st]?.pip || "var(--cor-accent)",
+      itens: rows.filter((r) => r.status === st),
+    }));
+
+    if (rows.length === 0) {
+      const wrap = document.createElement("div");
+      wrap.style.gridColumn = "1 / -1";
+      wrap.style.padding = "var(--sp-6) 0";
+
+      if (this._temFiltro()) {
+        wrap.appendChild(
+          emptyState({
+            titulo: "Nenhuma tarefa com esse filtro",
+            descricao: "Tente outro termo ou limpe os filtros para ver o quadro completo.",
+            icone: "busca",
+            acao: { label: "Limpar filtros", onClick: () => this._limparFiltros() },
+          })
+        );
+      } else {
+        wrap.appendChild(
+          emptyState({
+            titulo: "Nenhuma tarefa agendada",
+            descricao: "Crie a primeira tarefa para organizar o fluxo da equipe.",
+            icone: "agendamentos",
+            acao: {
+              label: "+ Novo Agendamento",
+              onClick: () => {
+                this.clearForm();
+                this.drawer.abrir({ foco: this.fields.tarefa });
+              },
+            },
+          })
+        );
+      }
+      this.kanban.replaceChildren(wrap);
+      return;
+    }
+
+    this.kanban.innerHTML = this._gerarHtmlColunas(colunas);
+  }
+
+  _gerarHtmlColunas(colunas) {
+    const podeArrastarCol = this.user?.role !== "consulta" && colunas.length > 1;
+    return colunas
+      .map((col) => {
+        const cardsHtml = col.itens.map((r) => cartaoKanban(r, this.user?.role)).join("");
+        const emptyHtml = `<div class="kanban-empty-placeholder"><span>Nenhuma tarefa aqui</span></div>`;
+        const slug = col.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-");
+        return `
+          <section class="kanban-column kanban-column--${slug}" data-status="${col.status}">
+            <header class="kanban-column__header" ${podeArrastarCol ? 'draggable="true" data-col-drag="true" title="Arraste para reordenar coluna"' : ""}>
+              <div class="kanban-column__header-top">
+                <h3 class="kanban-column__title">${escapeHtml(col.titulo)}</h3>
+                <span class="kanban-column__count">${col.itens.length}</span>
+              </div>
+            </header>
+            <div class="kanban-column__cards">${cardsHtml || emptyHtml}</div>
+          </section>
+        `;
+      })
+      .join("");
+  }
+
+  async _moverCard(id, novoStatus) {
+    const row = this.rows?.find((r) => String(r.id) === String(id));
+    if (!row) return;
+    if (row.status === novoStatus) return;
+
+    const statusAnterior = row.status;
+    // Atualização otimista imediata na UI
+    row.status = novoStatus;
+    this._renderKanban(this.rows);
+
+    try {
+      const atualizado = await this.api.put(`/agendamentos/${row.id}`, { ...row, status: novoStatus });
+      if (atualizado) Object.assign(row, atualizado);
+      this._invalidar();
+      toast.success(`Tarefa movida para "${novoStatus}".`);
+    } catch (err) {
+      // Reverte em caso de erro
+      row.status = statusAnterior;
+      this._renderKanban(this.rows);
+      Modal.alert("Erro ao mover tarefa", errorMessage(err), "error");
+    }
+  }
+
+  async _acaoRapida(e) {
+    const botao = e.target.closest("[data-row-action]");
+    if (botao) {
+      e.stopPropagation();
+      const row = this.rows?.find((item) => String(item.id) === botao.dataset.id);
+      if (!row) return;
+      this._loadIntoForm(row);
+      if (botao.dataset.rowAction === "editar") this.drawer.abrir({ foco: this.fields.tarefa });
+      if (botao.dataset.rowAction === "converter") this.converterEmAtualizacao();
+      if (botao.dataset.rowAction === "concluir") await this._moverCard(row.id, STATUS_CONCLUIDO);
+      if (botao.dataset.rowAction === "avancar") await this._avancar(row);
+      if (botao.dataset.rowAction === "reabrir") await this.reabrir();
+      return;
+    }
+
+    const card = e.target.closest(".kanban-card");
+    if (card && !this._isDragging) {
+      const row = this.rows?.find((item) => String(item.id) === card.dataset.id);
+      if (row) {
+        this._loadIntoForm(row);
+        this.drawer.abrir({ foco: this.fields.tarefa });
+      }
+    }
+  }
+
+  async _avancar(row) {
+    const indice = STATUS_OPTIONS.indexOf(row.status);
+    if (indice < 0 || indice >= STATUS_OPTIONS.length - 1) return;
+    const proximo = STATUS_OPTIONS[indice + 1];
+    await this._moverCard(row.id, proximo);
+  }
+
   _pintarArquivadas({ arquivadas = 0, arquivarDias = 0 } = {}) {
-    const opcao = this.statusFilter.querySelector(`option[value="${FILTRO_ARQUIVADAS}"]`);
+    const opcao = this.statusFilter?.querySelector(`option[value="${FILTRO_ARQUIVADAS}"]`);
     if (opcao) opcao.textContent = arquivadas > 0 ? `${FILTRO_ARQUIVADAS} (${arquivadas})` : FILTRO_ARQUIVADAS;
 
     const vendo = this.status === FILTRO_ARQUIVADAS;
-    this.avisoArquivadas.hidden = !vendo;
-    if (vendo) {
-      this.avisoArquivadas.textContent =
-        `Tarefas concluídas há mais de ${plural(arquivarDias, "dia")} saem da lista sozinhas. ` +
-        `"Reabrir" traz a selecionada de volta como "${STATUS_OPTIONS[0]}".`;
+    if (this.avisoArquivadas) {
+      this.avisoArquivadas.hidden = !vendo;
+      if (vendo) {
+        this.avisoArquivadas.textContent =
+          `Tarefas concluídas há mais de ${plural(arquivarDias, "dia")} saem da lista ativa. ` +
+          `Clique em "Reabrir" em qualquer cartão para trazê-lo de volta como "${STATUS_OPTIONS[0]}".`;
+      }
     }
   }
 
@@ -403,15 +587,14 @@ export class AgendamentosView extends View {
   }
 
   _pintarLimparFiltros() {
-    this.botaoLimparFiltros.hidden = !this._temFiltro();
+    if (this.botaoLimparFiltros) this.botaoLimparFiltros.hidden = !this._temFiltro();
   }
 
   _limparFiltros() {
     this.busca = "";
     this.status = "Todos";
-    this.searchInput.value = "";
-    this.statusFilter.value = "Todos";
-    this.page = 1;
+    if (this.searchInput) this.searchInput.value = "";
+    if (this.statusFilter) this.statusFilter.value = "Todos";
     this._pintarLimparFiltros();
     this._salvarFiltros();
     this._reloadList();
@@ -429,59 +612,14 @@ export class AgendamentosView extends View {
   _loadIntoForm(row) {
     this.selectedId = row.id;
     this.selectedRevision = row.revisao;
-    for (const col of AGENDA_COLUMNS) this.fields[col.key].value = row[col.key] ?? "";
+    for (const col of AGENDA_COLUMNS) {
+      if (this.fields?.[col.key]) this.fields[col.key].value = row[col.key] ?? "";
+    }
     this._pintarModo();
   }
 
-  _trocarVisao(visao) {
-    const kanban = visao === "kanban";
-    this.table.container.hidden = kanban;
-    this.container.querySelector('[data-role="pagination"]').hidden = kanban;
-    this.kanban.hidden = !kanban;
-    for (const botao of this.container.querySelectorAll("[data-view]")) botao.classList.toggle("is-active", botao.dataset.view === visao);
-  }
-
-  _renderKanban(rows) {
-    const grupos = [
-      ["A Fazer", "Pendentes"], ["Em Andamento", "Em andamento"],
-      ["Sem resposta", "Aguardando cliente / bloqueado"], ["Concluído", "Concluídos recentemente"],
-    ];
-    this.kanban.innerHTML = grupos.map(([status, titulo]) => {
-      const itens = rows.filter((row) => row.status === status);
-      return `<section class="kanban-column" data-status="${status}">
-        <header><h3>${titulo}</h3><span class="badge">${itens.length}</span></header>
-        <div class="kanban-column__cards">${itens.map((row) => cartaoKanban(row, this.user?.role)).join("") || '<p class="text-muted">Nenhuma tarefa</p>'}</div>
-      </section>`;
-    }).join("");
-  }
-
-  async _acaoRapida(e) {
-    const botao = e.target.closest("[data-row-action]");
-    if (!botao) return;
-    const row = this.table.rows.find((item) => String(item.id) === botao.dataset.id);
-    if (!row) return;
-    this._loadIntoForm(row);
-    if (botao.dataset.rowAction === "editar") this.drawer.abrir({ foco: this.fields.tarefa });
-    if (botao.dataset.rowAction === "converter") this.converterEmAtualizacao();
-    if (botao.dataset.rowAction === "concluir") await this.markDone();
-    if (botao.dataset.rowAction === "avancar") await this._avancar(row);
-  }
-
-  async _avancar(row) {
-    const indice = STATUS_OPTIONS.indexOf(row.status);
-    if (indice < 0 || indice >= STATUS_OPTIONS.length - 1) return;
-    try {
-      await this.api.put(`/agendamentos/${row.id}`, { ...row, status: STATUS_OPTIONS[indice + 1] });
-      this._invalidar();
-      await this._reloadList();
-      toast.success(`Tarefa avançou para “${STATUS_OPTIONS[indice + 1]}”.`);
-    } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
-    }
-  }
-
   _pintarModo() {
-    const modo = this.form.querySelector('[data-role="modo"]');
+    const modo = this.form?.querySelector('[data-role="modo"]');
     const isEdit = this.selectedId != null;
     if (modo) modo.textContent = isEdit ? `Tarefa #${this.selectedId}` : "";
     if (this.addBtn) this.addBtn.hidden = isEdit;
@@ -490,11 +628,13 @@ export class AgendamentosView extends View {
       this.updateBtn.disabled = !isEdit;
     }
     if (this.modalDeleteBtn) this.modalDeleteBtn.hidden = !isEdit || this.user?.role === "consulta";
-    this.deleteBtn.disabled = !isEdit;
-    this.doneBtn.disabled = !isEdit;
-    this.arquivarBtn.disabled = !isEdit;
-    this.converterBtn.disabled = !isEdit;
-    this.reabrirBtn.disabled = !isEdit;
+    if (this.modalConverterBtn) this.modalConverterBtn.hidden = !isEdit || this.user?.role === "consulta";
+    if (this.modalDoneBtn) {
+      this.modalDoneBtn.hidden =
+        !isEdit || this.user?.role === "consulta" || this.fields?.status?.value === STATUS_CONCLUIDO || this.status === FILTRO_ARQUIVADAS;
+    }
+    if (this.modalReabrirBtn) this.modalReabrirBtn.hidden = !isEdit || this.status !== FILTRO_ARQUIVADAS;
+
     if (this.drawer) {
       if (isEdit) {
         this.drawer.setTitulo(`Editar Tarefa #${this.selectedId}`, "Atualize os detalhes da tarefa agendada.");
@@ -502,30 +642,11 @@ export class AgendamentosView extends View {
         this.drawer.setTitulo("Novo Agendamento", "Crie uma tarefa para a equipe.");
       }
     }
-
-    // Olhando as arquivadas, "Marcar como Concluída" e "Arquivar" não têm o
-    // que fazer (já estão concluídas/arquivadas) -- eles saem e o "Reabrir"
-    // toma o lugar.
-    const vendoArquivadas = this.status === FILTRO_ARQUIVADAS;
-    this.reabrirBtn.hidden = !vendoArquivadas;
-    this.doneBtn.hidden = vendoArquivadas;
-    this.arquivarBtn.hidden = vendoArquivadas;
   }
 
-  /**
-   * Traz a tarefa selecionada de volta para a lista.
-   *
-   * Reabrir e desarquivar são a mesma ação de propósito: a varredura roda a
-   * cada listagem, então uma tarefa que só saísse do arquivo continuando
-   * "Concluído" seria arquivada de novo no mesmo segundo. Quem traz uma
-   * tarefa de volta quer fazer algo com ela.
-   */
   async reabrir() {
-    if (this.selectedId == null) {
-      Modal.alert("Seleção", "Selecione uma tarefa na tabela primeiro.", "warning");
-      return;
-    }
-    const liberar = marcarOcupado(this.reabrirBtn);
+    if (this.selectedId == null) return;
+    const liberar = marcarOcupado(this.modalReabrirBtn);
     try {
       const tarefa = await this.api.patch(`/agendamentos/${this.selectedId}/reabrir`);
       this.clearForm();
@@ -543,13 +664,11 @@ export class AgendamentosView extends View {
     if (status !== undefined) {
       this.status = status;
       if (this.statusFilter) this.statusFilter.value = status;
-      this.page = 1;
       this._reloadList();
     }
     if (filtro !== undefined) {
       this.busca = filtro;
       if (this.searchInput) this.searchInput.value = filtro;
-      this.page = 1;
       this._reloadList();
     }
     if (novo) {
@@ -564,17 +683,8 @@ export class AgendamentosView extends View {
     }
   }
 
-  /**
-   * Manda os dados da tarefa selecionada pra aba Atualizações, já num
-   * registro novo pré-preenchido (ver AtualizacoesView.aplicarParams) --
-   * evita digitar cliente/responsável/data de novo pra registrar a
-   * atualização que essa tarefa gerou.
-   */
   converterEmAtualizacao() {
-    if (this.selectedId == null) {
-      Modal.alert("Seleção", "Selecione uma tarefa na tabela primeiro.", "warning");
-      return;
-    }
+    if (this.selectedId == null) return;
     this.navigate("atualizacoes", {
       cliente: this.fields.cliente.value,
       responsavel: this.fields.responsavel.value,
@@ -614,7 +724,6 @@ export class AgendamentosView extends View {
       this.clearForm();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
-      this.page = 1;
       this._invalidar();
       await this._reloadList();
       toast.success("Tarefa adicionada.");
@@ -626,10 +735,7 @@ export class AgendamentosView extends View {
   }
 
   async updateTask() {
-    if (this.selectedId == null) {
-      Modal.alert("Seleção", "Selecione uma tarefa na tabela primeiro.", "warning");
-      return;
-    }
+    if (this.selectedId == null) return;
     const data = this._readForm();
     if (!data) return;
     const liberar = marcarOcupado(this.updateBtn);
@@ -648,17 +754,12 @@ export class AgendamentosView extends View {
     }
   }
 
-  /** Exclui e oferece "Desfazer" -- ver o comentário em AtualizacoesView. */
   async deleteTask() {
-    if (this.selectedId == null) {
-      Modal.alert("Seleção", "Selecione uma tarefa na tabela primeiro.", "warning");
-      return;
-    }
+    if (this.selectedId == null) return;
     const id = this.selectedId;
     const dadosAntes = {};
     for (const col of AGENDA_COLUMNS) dadosAntes[col.key] = this.fields[col.key].value.trim();
 
-    const liberar = marcarOcupado(this.deleteBtn);
     try {
       await this.api.delete(`/agendamentos/${id}`);
       this.clearForm();
@@ -676,46 +777,20 @@ export class AgendamentosView extends View {
       });
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
-    } finally {
-      liberar();
     }
   }
 
   async markDone() {
-    if (this.selectedId == null) {
-      Modal.alert("Seleção", "Selecione uma tarefa na tabela primeiro.", "warning");
-      return;
-    }
-    const liberar = marcarOcupado(this.doneBtn);
-    try {
-      await this.api.patch(`/agendamentos/${this.selectedId}/done`);
-      this.clearForm();
-      this._invalidar();
-      await this._reloadList();
-      toast.success("Tarefa marcada como concluída.");
-    } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
-    } finally {
-      liberar();
-    }
+    if (this.selectedId == null) return;
+    await this._moverCard(this.selectedId, STATUS_CONCLUIDO);
   }
 
-  /**
-   * Arquiva a tarefa selecionada na hora, sem esperar o prazo automático do
-   * .env. Só concluídas podem ser arquivadas (mesma regra da varredura
-   * automática) -- validado aqui para não gastar uma ida ao servidor com um
-   * erro que a tela já sabe de antemão.
-   */
   async arquivar() {
-    if (this.selectedId == null) {
-      Modal.alert("Seleção", "Selecione uma tarefa na tabela primeiro.", "warning");
-      return;
-    }
+    if (this.selectedId == null) return;
     if (this.fields.status.value !== STATUS_CONCLUIDO) {
       Modal.alert("Arquivar", `Só é possível arquivar tarefas "${STATUS_CONCLUIDO}".`, "warning");
       return;
     }
-    const liberar = marcarOcupado(this.arquivarBtn);
     try {
       await this.api.patch(`/agendamentos/${this.selectedId}/arquivar`);
       this.clearForm();
@@ -724,107 +799,6 @@ export class AgendamentosView extends View {
       toast.success("Tarefa arquivada.");
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
-    } finally {
-      liberar();
-    }
-  }
-
-  _pintarBulk(chaves) {
-    const n = chaves.length;
-    this.bulkBar.hidden = n === 0;
-    this.bulkCount.textContent = n === 0 ? "" : `${plural(n, "tarefa")} ${n === 1 ? "selecionada" : "selecionadas"}`;
-    // Um clique normal continua carregando a tarefa no formulário mesmo com
-    // um lote marcado ao lado -- sem isto, "Excluir Selecionada"/"Marcar
-    // como Concluída" (avulsos) ficavam visíveis junto dos equivalentes de
-    // lote, quase iguais. "Converter em Atualização" não tem par de lote,
-    // continua sempre disponível.
-    this.deleteBtn.hidden = n > 0;
-    this.doneBtn.hidden = n > 0;
-    this.arquivarBtn.hidden = n > 0;
-  }
-
-  /**
-   * Marca todas as marcadas como concluídas de uma vez. Sem confirmação
-   * (igual a conclusão de uma tarefa só) -- "Desfazer" cobre o engano, e
-   * concluir não tem o mesmo peso de excluir.
-   */
-  async concluirLote() {
-    const ids = this.table.selecionadas.map(Number).filter(Number.isInteger);
-    if (ids.length === 0) return;
-
-    const liberar = marcarOcupado(this.bulkConcluir);
-    try {
-      const { concluidos, registros } = await this.api.post("/agendamentos/concluir-lote", { ids });
-      this.table.limparMarcadas();
-      this.clearForm();
-      this._invalidar();
-      await this._reloadList();
-
-      if (concluidos === 0) {
-        toast.info("As tarefas selecionadas já estavam concluídas.");
-        return;
-      }
-      toast.undo(`${plural(concluidos, "tarefa")} ${concluidos === 1 ? "concluída" : "concluídas"}.`, async () => {
-        try {
-          // Os ids continuam os mesmos (foi UPDATE, não recriação) -- um PUT
-          // por tarefa, com os dados de ANTES, basta pra restaurar o status
-          // (e a data de conclusão) exatos que cada uma tinha.
-          for (const registro of registros) {
-            const { id, ...dados } = registro;
-            await this.api.put(`/agendamentos/${id}`, dados);
-          }
-          this._invalidar();
-          await this._reloadList();
-          toast.success("Conclusão desfeita.");
-        } catch {
-          toast.error("Não foi possível desfazer tudo. Confira a lista.");
-        }
-      });
-    } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
-    } finally {
-      liberar();
-    }
-  }
-
-  /** Exclui todas as marcadas de uma vez -- ver o comentário equivalente em AtualizacoesView.excluirLote. */
-  async excluirLote() {
-    const ids = this.table.selecionadas.map(Number).filter(Number.isInteger);
-    if (ids.length === 0) return;
-
-    const ok = await Modal.confirm(
-      "Excluir selecionadas",
-      `${plural(ids.length, "tarefa")} ${ids.length === 1 ? "será excluída" : "serão excluídas"}.\n\n` +
-        "Você ainda poderá desfazer nos segundos seguintes.",
-      { confirmLabel: "Excluir", danger: true }
-    );
-    if (!ok) return;
-
-    const liberar = marcarOcupado(this.bulkExcluir);
-    try {
-      const { excluidos, registros } = await this.api.post("/agendamentos/excluir-lote", { ids });
-      this.table.limparMarcadas();
-      this.clearForm();
-      this._invalidar();
-      await this._reloadList();
-
-      toast.undo(`${plural(excluidos, "tarefa")} ${excluidos === 1 ? "excluída" : "excluídas"}.`, async () => {
-        try {
-          for (const registro of registros) {
-            const { id, ...dados } = registro;
-            await this.api.post("/agendamentos", dados);
-          }
-          this._invalidar();
-          await this._reloadList();
-          toast.success("Exclusão desfeita.");
-        } catch {
-          toast.error("Não foi possível desfazer tudo. Confira a lista.");
-        }
-      });
-    } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
-    } finally {
-      liberar();
     }
   }
 
@@ -833,26 +807,35 @@ export class AgendamentosView extends View {
     let tinhaConteudo = false;
     if (this.fields) {
       for (const col of AGENDA_COLUMNS) {
-        antes[col.key] = this.fields[col.key].value;
+        antes[col.key] = this.fields[col.key]?.value || "";
         if (["tarefa", "cliente"].includes(col.key) && antes[col.key].trim()) tinhaConteudo = true;
       }
     }
 
     this.selectedId = null;
     this.selectedRevision = null;
-    this.table?.clearSelection();
-    for (const col of AGENDA_COLUMNS) this.fields[col.key].value = "";
-    this.fields.data.value = todayBR();
-    this.fields.status.value = STATUS_OPTIONS[0];
-    if (this.user) this.fields.responsavel.value = this.user.nome;
-    for (const hint of this.form.querySelectorAll(".field__hint")) hint.textContent = "";
+    if (this.fields) {
+      for (const col of AGENDA_COLUMNS) {
+        if (this.fields[col.key]) this.fields[col.key].value = "";
+      }
+      if (this.fields.data) this.fields.data.value = todayBR();
+      if (this.fields.status) this.fields.status.value = STATUS_OPTIONS[0];
+      if (this.user && this.fields.responsavel) this.fields.responsavel.value = this.user.nome || "";
+    }
+    if (this.form) {
+      for (const hint of this.form.querySelectorAll(".field__hint")) hint.textContent = "";
+    }
     this._pintarModo();
 
     if (comDesfazer && tinhaConteudo) {
-      toast.undo("Formulário limpo.", () => {
-        for (const col of AGENDA_COLUMNS) this.fields[col.key].value = antes[col.key];
-        this.fields.tarefa.focus();
-      }, "Restaurar");
+      toast.undo(
+        "Formulário limpo.",
+        () => {
+          for (const col of AGENDA_COLUMNS) this.fields[col.key].value = antes[col.key];
+          this.fields.tarefa.focus();
+        },
+        "Restaurar"
+      );
     }
   }
 
@@ -865,11 +848,20 @@ export class AgendamentosView extends View {
     if (isTypingTarget(e.target)) return;
     if (e.key === "Delete" && this.selectedId != null) this.deleteTask();
     else if (e.key.toLowerCase() === "n") this.container.querySelector('[data-action="novo-agendamento"]')?.click();
-    else if (e.key === "/") { e.preventDefault(); this.searchInput.focus(); }
-    else if (e.key.toLowerCase() === "j") this.table.moverCursor(1);
-    else if (e.key.toLowerCase() === "k") this.table.moverCursor(-1);
-    else if (e.key.toLowerCase() === "e" || e.key === "Enter") { this.table.ativarCursor(); if (this.selectedId != null) this.drawer.abrir(); }
-    else if (e.key.toLowerCase() === "x" || e.key === " ") { e.preventDefault(); this.table.alternarMarcacaoCursor(); }
+    else if (e.key === "/") {
+      e.preventDefault();
+      this.searchInput.focus();
+    } else if (e.key === "Enter" || e.key === " ") {
+      const card = e.target.closest(".kanban-card");
+      if (card) {
+        e.preventDefault();
+        const row = this.rows?.find((item) => String(item.id) === card.dataset.id);
+        if (row) {
+          this._loadIntoForm(row);
+          this.drawer.abrir({ foco: this.fields.tarefa });
+        }
+      }
+    }
   }
 
   destroy() {
@@ -880,39 +872,35 @@ export class AgendamentosView extends View {
   }
 }
 
-function acoesAgendamento(row, role) {
-  const wrap = document.createElement("div");
-  wrap.className = "row-actions";
-  if (role === "consulta") return wrap;
-  const botoes = row.status === STATUS_CONCLUIDO
-    ? [["editar", "editar", "Editar"]]
-    : [["concluir", "check", "Marcar como concluída"], ["converter", "converter", "Converter em atualização"], ["editar", "editar", "Editar"]];
-  for (const [acao, nomeIcone, titulo] of botoes) {
-    const botao = document.createElement("button");
-    botao.type = "button";
-    botao.className = "btn btn--icon btn--ghost";
-    botao.dataset.rowAction = acao;
-    botao.dataset.id = row.id;
-    botao.title = titulo;
-    botao.setAttribute("aria-label", titulo);
-    botao.innerHTML = icon(nomeIcone);
-    wrap.appendChild(botao);
-  }
-  return wrap;
-}
-
 function cartaoKanban(row, role) {
   const vencida = row.status !== STATUS_CONCLUIDO && estaAtrasada(row.data);
-  const acoes = role === "consulta" || row.status === STATUS_CONCLUIDO ? "" : `
-    <div class="kanban-card__actions">
-      <button type="button" class="btn btn--small" data-row-action="avancar" data-id="${row.id}">Avançar</button>
-      <button type="button" class="btn btn--small btn--ghost" data-row-action="editar" data-id="${row.id}">Editar</button>
-    </div>`;
-  return `<article class="kanban-card${vencida ? " is-overdue" : ""}">
-    <header><strong>${escapeHtml(row.cliente || "Sem cliente")}</strong>${vencida ? '<span class="badge badge--danger">Vencida</span>' : ""}</header>
-    <p>${escapeHtml(row.tarefa)}</p>
-    <dl><div><dt>Sistema</dt><dd>${escapeHtml(row.sistema || "—")}</dd></div><div><dt>Responsável</dt><dd>${escapeHtml(row.responsavel || "—")}</dd></div></dl>
-    <time>${escapeHtml([row.data, row.horario].filter(Boolean).join(" · ") || "Sem data")}</time>${acoes}
+  const hoje = row.status !== STATUS_CONCLUIDO && row.data === todayBR();
+  const podeArrastar = role !== "consulta" && !row.arquivadoEm;
+  const dataHora = [row.data, row.horario].filter(Boolean).join(" · ");
+  const meta = [row.sistema, row.responsavel].filter(Boolean).join(" · ");
+
+  return `<article class="kanban-card${vencida ? " is-overdue" : ""}" ${
+    podeArrastar ? 'draggable="true"' : ""
+  } data-id="${row.id}" data-status="${row.status}" tabindex="0" role="button" aria-label="Tarefa ${escapeHtml(row.tarefa)}">
+    <div class="kanban-card__header">
+      <strong class="kanban-card__client" title="${escapeHtml(row.cliente || "Sem cliente")}">${escapeHtml(row.cliente || "Sem cliente")}</strong>
+      ${vencida ? '<span class="badge badge--danger">Vencida</span>' : hoje ? '<span class="badge badge--accent">Hoje</span>' : ""}
+    </div>
+    <p class="kanban-card__title">${escapeHtml(row.tarefa)}</p>
+    <div class="kanban-card__footer">
+      <span class="kanban-card__meta">${escapeHtml(meta || "—")}</span>
+      ${dataHora ? `<time class="kanban-card__time${vencida ? " is-vencida" : hoje ? " is-today" : ""}">${escapeHtml(dataHora)}</time>` : ""}
+    </div>
+    ${
+      row.arquivadoEm && role !== "consulta"
+        ? `
+      <div class="kanban-card__actions">
+        <button type="button" class="btn btn--small btn--ghost" data-row-action="reabrir" data-id="${row.id}">
+          ${icon("atualizar")} Reabrir
+        </button>
+      </div>`
+        : ""
+    }
   </article>`;
 }
 

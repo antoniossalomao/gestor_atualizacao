@@ -15,6 +15,32 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **As notificações viraram um sino no cabeçalho.** Havia duas coisas grandes
+  dizendo pedaços do mesmo assunto ("o que está pendente agora"): a faixa
+  amarela de lembretes, que ficava entre o cabeçalho e o conteúdo de **toda**
+  aba, e o bloco "Precisa de Atenção", que abria o Resumo com uma grade de
+  cards de 220px. Somadas, custavam a primeira dobra da tela inicial para
+  informação que cabe num número de dois dígitos. As duas saíram e viraram um
+  sino ao lado do nome de usuário (`components/MenuNotificacoes.js`), com
+  contador e um painel que lista agendamentos atrasados, agendamentos de hoje
+  e agentes com falha, com pendências, esperando autorização há tempo demais
+  ou sem contato. Cada linha leva à tela do assunto **já filtrada** — o bloco
+  antigo tinha o `data-filter` no HTML mas o descartava no clique, entregando
+  a lista inteira de Distribuição para quem tinha clicado em "1 agente com
+  falha". O que se perde é o "não dá para não ver"; o que compensa é o `(2)`
+  no título da aba do navegador, que passou a contar tudo isso e é o único
+  canal que alcança quem está com o Gestor atrás do ERP. "Marcar como vistas"
+  apaga o contador e não a lista, pela mesma regra de antes (vale até o dia
+  seguinte ou até uma sessão nova).
+
+- **O card "Agendamento atrasado" do Resumo nunca apareceu.** `ResumoView` lia
+  `lembretes.atrasados`, mas `/agendamentos/lembretes` devolve um **array**
+  puro (ver `AgendamentoRepository.dueSoon`). `undefined || []` virava lista
+  vazia, o card não era montado, e nada disso produzia erro no console: um
+  aviso que não avisava, desde que foi escrito. A contagem saiu da tela e foi
+  para `domain/notificacoes.js`, que não toca no DOM e por isso tem teste —
+  que é o que impede a próxima versão do mesmo silêncio.
+
 - **Botões de ação por linha (Atualizações, Clientes, Agendamentos) trocaram
   emoji colorido por ícone SVG monocromático.** Os botões usavam glifos de
   emoji (📋 👤 ✏️ 🔑 🔍) como conteúdo do `<button>`; cada sistema operacional
@@ -387,3 +413,16 @@ Para o agente C#, o equivalente é
   só para este navegador" desde antes de as preferências passarem a ser
   gravadas na conta (11/09). Agora diz o que acontece de verdade —
   "acompanham a sua conta em qualquer máquina".
+
+### 22/09/2026
+
+- **Dois ajustes no gráfico de "Tendência Mensal de Atualizações"
+  (`LineChart`).** O `cursor: crosshair` no SVG duplicava o crosshair que o
+  componente já desenha (linha vertical + ponto + tooltip): em telas de
+  alto DPI o cursor nativo do SO aparecia como uma cruz grande e sem
+  relação com a escala do gráfico. Removido — o overlay próprio já basta.
+  Também o rótulo do valor do último ponto (`line-chart__valor-fim`)
+  ficava perto demais do halo desse ponto (r:14) com o offset antigo de
+  10px, sobrepondo o número e lendo como "número cortado"; o offset subiu
+  para 22px, com um piso (`padT + 10`) para não colidir com o topo do
+  gráfico quando esse ponto está perto do máximo do eixo Y.

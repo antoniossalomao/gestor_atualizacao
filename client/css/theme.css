@@ -21,107 +21,84 @@
      ========================================================================== */
 
   /* -- fundo e superfícies (do mais escuro para o mais claro) --
-     Paleta navy/azul: base quase preta com viés azul, superfícies subindo
-     em azul-ardósia. */
-  --cor-fundo: #080b11;
-  --cor-fundo-alt: #0d1219;
-  --cor-superficie: #121a26;
-  --cor-superficie-alta: #1a2432;
-  --cor-superficie-hover: #223045;
-  --cor-borda: #24314a;
-  --cor-borda-forte: #37496b;
-
-  /* Borda exclusiva de campos preenchíveis (input, select, textarea).
-     As duas acima ficam em 1.37:1 e 1.93:1 -- abaixo dos 3:1 que o WCAG pede
-     para o contorno de um controle de interface, o que deixava os campos
-     quase sem limite visível.
-     O 3:1 é medido contra --cor-superficie-alta, que é o fundo do PRÓPRIO
-     campo (.input), e não contra a superfície do card atrás dele: o contraste
-     que importa é entre a borda e o que ela contorna. Medindo contra o card
-     (mais escuro) o valor parece melhor do que é na prática.
-     As divisórias e molduras decorativas continuam usando as discretas: o
-     critério de 3:1 vale para o que o usuário precisa enxergar para operar,
-     não para todo tracinho da tela. */
-  --cor-borda-campo: #5a7095;
+     Paleta chumbo/grafite executiva: elegante, neutra e sem saturação artificial de IA. */
+  --cor-fundo: #0e1117;
+  --cor-fundo-alt: #13171f;
+  --cor-superficie: #181c24;
+  --cor-superficie-alta: #202631;
+  --cor-superficie-hover: #272e3b;
+  --cor-borda: #262c38;
+  --cor-borda-forte: #384152;
+  --cor-borda-campo: #4a5568;
 
   /* -- texto -- */
-  --cor-texto: #e9eff7;
-  --cor-texto-sub: #a3b2c8;
-  /* Cor dos textos de apoio (.field__help, legendas). Escolhida para passar em
-     WCAG AA (4.5:1) sobre as três superfícies do tema: 6.56 sobre --cor-fundo,
-     5.88 sobre --cor-superficie e 5.29 sobre --cor-superficie-alta. */
-  --cor-texto-fraco: #8496b0;
+  --cor-texto: #f0f3f8;
+  --cor-texto-sub: #9aa5b8;
+  --cor-texto-fraco: #6f7b8f;
 
-  /* -- destaque e estados --
-     O par accent/accent-forte não é escrito aqui: vem de `--realce-escuro*`,
-     que o bloco `[data-realce=...]` lá embaixo define (Configurações >
-     Aparência > Cor de destaque). O valor depois da vírgula é o azul de
-     sempre, usado quando nenhuma variante foi escolhida -- é assim que a
-     preferência nova não precisou de um `[data-realce="azul"]` só para
-     repetir o padrão. */
-  --cor-accent: var(--realce-escuro, #4a9eff);
-  --cor-accent-forte: var(--realce-escuro-forte, #6fb4ff);
-  --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 15%, transparent);
-  --cor-verde: #4ade80;
-  --cor-verde-fraco: rgba(74, 222, 128, 0.14);
+  /* -- destaque e estados -- */
+  --cor-accent: var(--realce-escuro, #3b82f6);
+  --cor-accent-forte: var(--realce-escuro-forte, #60a5fa);
+  --cor-accent-fraco: rgba(59, 130, 246, 0.12);
+  --cor-verde: #34d399;
+  --cor-verde-fraco: rgba(52, 211, 153, 0.12);
   --cor-vermelho: #f87171;
-  --cor-vermelho-forte: #ef5350;
-  --cor-vermelho-fraco: rgba(248, 113, 113, 0.14);
+  --cor-vermelho-forte: #ef4444;
+  --cor-vermelho-fraco: rgba(248, 113, 113, 0.12);
   --cor-amarelo: #fbbf24;
-  --cor-amarelo-fraco: rgba(251, 191, 36, 0.14);
-  --cor-sobre-accent: #06101f;
+  --cor-amarelo-fraco: rgba(251, 191, 36, 0.12);
+  --cor-sobre-accent: #ffffff;
   --cor-sobre-alerta: #1a1406;
-  --cor-sobre-perigo: #1a0d0d;
+  --cor-sobre-perigo: #ffffff;
 
   /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
-  --status-ok-bg: rgba(74, 222, 128, 0.12);
-  --status-ok-borda: rgba(74, 222, 128, 0.28);
-  --status-ok-solido: #4ade80;
-  --status-ok-texto: #86efac;
+  --status-ok-bg: rgba(52, 211, 153, 0.10);
+  --status-ok-borda: rgba(52, 211, 153, 0.25);
+  --status-ok-solido: #34d399;
+  --status-ok-texto: #a7f3d0;
 
-  --status-alerta-bg: rgba(251, 191, 36, 0.12);
-  --status-alerta-borda: rgba(251, 191, 36, 0.28);
+  --status-alerta-bg: rgba(251, 191, 36, 0.10);
+  --status-alerta-borda: rgba(251, 191, 36, 0.25);
   --status-alerta-solido: #fbbf24;
   --status-alerta-texto: #fde68a;
 
-  --status-erro-bg: rgba(248, 113, 113, 0.12);
-  --status-erro-borda: rgba(248, 113, 113, 0.30);
+  --status-erro-bg: rgba(248, 113, 113, 0.10);
+  --status-erro-borda: rgba(248, 113, 113, 0.25);
   --status-erro-solido: #f87171;
   --status-erro-texto: #fca5a5;
 
-  --status-info-bg: rgba(74, 158, 255, 0.12);
-  --status-info-borda: rgba(74, 158, 255, 0.28);
-  --status-info-solido: #4a9eff;
-  --status-info-texto: #93c5fd;
+  --status-info-bg: rgba(59, 130, 246, 0.10);
+  --status-info-borda: rgba(59, 130, 246, 0.25);
+  --status-info-solido: #3b82f6;
+  --status-info-texto: #bfdbfe;
 
-  --status-neutro-bg: rgba(148, 163, 184, 0.12);
-  --status-neutro-borda: rgba(148, 163, 184, 0.25);
+  --status-neutro-bg: rgba(148, 163, 184, 0.10);
+  --status-neutro-borda: rgba(148, 163, 184, 0.20);
   --status-neutro-solido: #94a3b8;
   --status-neutro-texto: #cbd5e1;
 
   /* Fundos usados pelas tabelas com linha tingida por severidade (Resumo,
-     Sistemas). Como o cálculo é feito em JavaScript (blendHex), estes
-     precisam ser hex de 6 dígitos -- rgba() não serve para a conta. */
-  --zebra-a: #101218;
-  --zebra-b: #15171f;
+     Sistemas). */
+  --zebra-a: #13161d;
+  --zebra-b: #181c24;
   --severidade-alta: #ef6f6f;
   --severidade-boa: #6fcf97;
 
-  /* Gradientes e véus -- também mudam entre os temas. */
-  --card-gradiente: linear-gradient(135deg, var(--cor-superficie) 0%, #16263f 100%);
-  --card-borda-hover: #3d5580;
-  --veu-tabela: rgba(10, 14, 21, 0.38);
-  --veu-linha: rgba(15, 21, 31, 0.55);
-  --veu-overlay: rgba(5, 6, 9, 0.62);
-  --sidebar-fundo: rgba(13, 18, 25, 0.94);
-  --halo-topo: color-mix(in srgb, var(--cor-accent) 16%, transparent);
-  --grade: rgba(120, 170, 255, 0.02);
+  /* Superfícies limpas e elegantes */
+  --card-gradiente: var(--cor-superficie);
+  --card-borda-hover: #3d495d;
+  --veu-tabela: rgba(14, 17, 23, 0.45);
+  --veu-linha: rgba(24, 28, 36, 0.55);
+  --veu-overlay: rgba(8, 10, 14, 0.65);
+  --sidebar-fundo: #12151c;
+  --halo-topo: transparent;
+  --grade: transparent;
 
   /* ==========================================================================
      TIPOGRAFIA
      ========================================================================== */
-  --fonte: "DM Sans", "Segoe UI", system-ui, sans-serif;
-  --fonte-display: "Space Grotesk", "DM Sans", system-ui, sans-serif;
+  --fonte: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --fonte-display: "Sora", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --fonte-mono: ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, monospace;
 
   /* Escala tipográfica.
@@ -167,7 +144,7 @@
   /* Respiro horizontal da área de conteúdo -- um token só, para o cabeçalho e
      o miolo nunca saírem de alinhamento como acontecia antes (o header usava
      38px e o main 24px em regras escritas em momentos diferentes). */
-  --pad-tela: 38px;
+  --pad-tela: 24px;
 
   /* ==========================================================================
      FORMA, ELEVAÇÃO E MOVIMENTO
@@ -180,7 +157,7 @@
   --sombra-card: 0 1px 1px rgba(0, 0, 0, 0.25), 0 12px 30px -18px rgba(0, 0, 0, 0.7);
   --sombra-flutuante: 0 12px 32px -8px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
   --sombra-card-hover: 0 12px 28px -18px rgba(0, 0, 0, 0.9),
-    0 0 24px -8px color-mix(in srgb, var(--cor-accent) 18%, transparent);
+    0 4px 16px -4px rgba(0, 0, 0, 0.45);
 
   /* Duas durações e duas curvas, em vez de "150ms ease" para tudo. O
      `--saida` mais curto que a `--entrada` é o padrão do Material/iOS: sair
@@ -204,19 +181,19 @@
      outro pior (não ler). Estes são os valores do modo "padrão".
      ========================================================================== */
   --linha-pad-y: 9px;
-  --linha-pad-x: 12px;
+  --linha-pad-x: 8px;
   --cabecalho-pad-y: 10px;
 }
 
 :root[data-densidade="compacta"] {
   --linha-pad-y: 5px;
-  --linha-pad-x: 10px;
+  --linha-pad-x: 6px;
   --cabecalho-pad-y: 7px;
 }
 
 :root[data-densidade="confortavel"] {
   --linha-pad-y: 14px;
-  --linha-pad-x: 14px;
+  --linha-pad-x: 10px;
   --cabecalho-pad-y: 12px;
 }
 
@@ -384,19 +361,18 @@
   --severidade-alta: #e05252;
   --severidade-boa: #2f9e63;
 
-  --card-gradiente: linear-gradient(135deg, #ffffff 0%, #f7faff 100%);
+  --card-gradiente: var(--cor-superficie);
   --card-borda-hover: #9db6dd;
   --veu-tabela: rgba(255, 255, 255, 0.7);
   --veu-linha: rgba(245, 247, 252, 0.9);
   --veu-overlay: rgba(16, 25, 42, 0.35);
-  --sidebar-fundo: rgba(255, 255, 255, 0.92);
-  --halo-topo: color-mix(in srgb, var(--cor-accent) 9%, transparent);
-  --grade: rgba(30, 70, 140, 0.035);
+  --sidebar-fundo: rgba(255, 255, 255, 0.96);
+  --halo-topo: transparent;
+  --grade: transparent;
 
-  --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 10px 24px -18px rgba(16, 25, 42, 0.35);
-  --sombra-flutuante: 0 12px 32px -8px rgba(16, 25, 42, 0.22), 0 4px 12px rgba(16, 25, 42, 0.1);
-  --sombra-card-hover: 0 12px 28px -18px rgba(16, 25, 42, 0.4),
-    0 0 24px -10px color-mix(in srgb, var(--cor-accent) 25%, transparent);
+  --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 8px 20px -16px rgba(16, 25, 42, 0.2);
+  --sombra-flutuante: 0 12px 32px -8px rgba(16, 25, 42, 0.16), 0 4px 12px rgba(16, 25, 42, 0.08);
+  --sombra-card-hover: 0 10px 24px -16px rgba(16, 25, 42, 0.25), 0 2px 8px rgba(16, 25, 42, 0.08);
 }
 
 @media (prefers-color-scheme: light) {
@@ -462,19 +438,18 @@
     --severidade-alta: #e05252;
     --severidade-boa: #2f9e63;
 
-    --card-gradiente: linear-gradient(135deg, #ffffff 0%, #f7faff 100%);
+    --card-gradiente: var(--cor-superficie);
     --card-borda-hover: #9db6dd;
     --veu-tabela: rgba(255, 255, 255, 0.7);
     --veu-linha: rgba(245, 247, 252, 0.9);
     --veu-overlay: rgba(16, 25, 42, 0.35);
-    --sidebar-fundo: rgba(255, 255, 255, 0.92);
-    --halo-topo: color-mix(in srgb, var(--cor-accent) 9%, transparent);
-    --grade: rgba(30, 70, 140, 0.035);
+    --sidebar-fundo: rgba(255, 255, 255, 0.96);
+    --halo-topo: transparent;
+    --grade: transparent;
 
-    --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 10px 24px -18px rgba(16, 25, 42, 0.35);
-    --sombra-flutuante: 0 12px 32px -8px rgba(16, 25, 42, 0.22), 0 4px 12px rgba(16, 25, 42, 0.1);
-    --sombra-card-hover: 0 12px 28px -18px rgba(16, 25, 42, 0.4),
-    0 0 24px -10px color-mix(in srgb, var(--cor-accent) 25%, transparent);
+    --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 8px 20px -16px rgba(16, 25, 42, 0.2);
+    --sombra-flutuante: 0 12px 32px -8px rgba(16, 25, 42, 0.16), 0 4px 12px rgba(16, 25, 42, 0.08);
+    --sombra-card-hover: 0 10px 24px -16px rgba(16, 25, 42, 0.25), 0 2px 8px rgba(16, 25, 42, 0.08);
   }
 }
 
@@ -597,19 +572,13 @@ html {
 
 body {
   margin: 0;
-  background: var(--cor-fundo);
+  background-color: var(--cor-fundo);
+  background-image: none;
   color: var(--cor-texto);
   font-family: var(--fonte);
   font-size: var(--txt-md);
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
-  /* Grade discreta + halo difuso no topo: o brilho fica fixo
-     (background-attachment) para não "descolar" ao rolar. */
-  background-image: radial-gradient(ellipse 90% 55% at 50% -10%, var(--halo-topo), transparent 70%),
-    linear-gradient(var(--grade) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grade) 1px, transparent 1px);
-  background-size: 100% 100%, 32px 32px, 32px 32px;
-  background-attachment: fixed, scroll, scroll;
   transition: background-color var(--dur-media) var(--curva-padrao), color var(--dur-media) var(--curva-padrao);
 }
 

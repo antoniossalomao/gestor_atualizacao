@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 
 import { relatorioDeAtualizacao, relatorioDoCliente } from "../js/domain/relatorio.js";
 import { iniciais, rotuloPapel } from "../js/domain/pessoa.js";
+import { montarNotificacoes, totalDe } from "../js/domain/notificacoes.js";
 
 /** Data dd/mm/aaaa de `dias` atrás -- para exercitar o "há quanto tempo". */
 function diasAtras(dias) {
@@ -220,5 +221,157 @@ test("domain/pessoa - rotuloPapel", async (t) => {
     assert.equal(rotuloPapel("user"), "Operador");
     assert.equal(rotuloPapel(""), "Operador");
     assert.equal(rotuloPapel(undefined), "Operador");
+  });
+});
+
+test("domain/notificacoes - montarNotificacoes", async (t) => {
+  /** dd/mm/aaaa de `dias` atrás (negativo = futuro). */
+  const dataDe = (dias) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - dias);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  };
+  const achar = (lista, chave) => lista.find((n) => n.chave === chave);
+
+  await t.test("sem nada pendente, a lista é vazia -- e não um monte de zeros", () => {
+    // Linha "0 agentes com falha" é exatamente o ruído que treina todo mundo a
+    // ignorar o sino.
+    assert.deepEqual(montarNotificacoes({ lembretes: [], painel: { agentes: [] } }), []);
+    assert.deepEqual(montarNotificacoes({}), []);
+    assert.deepEqual(montarNotificacoes(), []);
+  });
+
+  await t.test("separa agendamento atrasado de agendamento de hoje", () => {
+    // O motivo deste teste existir: a versão anterior disto lia
+    // `lembretes.atrasados` de um endpoint que devolve um ARRAY. O card de
+    // atrasados nunca apareceu na tela, sem erro nenhum no console -- só um
+    // aviso que não avisava.
+    const lista = montarNotificacoes({
+      lembretes: [
+        { cliente: "Mercado Central", data: dataDe(3) },
+        { cliente: "Padaria do Zé", data: dataDe(1) },
+        { cliente: "Auto Peças Silva", data: dataDe(0) },
+      ],
+    });
+    assert.equal(achar(lista, "agendamentos-atrasados").quantidade, 2);
+    assert.equal(achar(lista, "agendamentos-hoje").quantidade, 1);
+    assert.equal(achar(lista, "agendamentos-hoje").detalhe, "Auto Peças Silva");
+  });
+
+  await t.test("data ilegível não vira atraso -- ela não prova nada", () => {
+    const lista = montarNotificacoes({
+      lembretes: [{ cliente: "Sem Data", data: "" }, { cliente: "Torta", data: "31/31/2026" }],
+    });
+    assert.equal(achar(lista, "agendamentos-atrasados"), undefined);
+    assert.equal(achar(lista, "agendamentos-hoje").quantidade, 2);
+  });
+
+  await t.test("cada situação de agente vira uma linha com o filtro que a abre", () => {
+    const lista = montarNotificacoes({
+      painel: {
+        agentes: [
+          { empresa: "Alfa", situacao: "erro" },
+          { empresa: "Beta", situacao: "offline" },
+          { empresa: "Gama", situacao: "offline" },
+          { empresa: "Delta", situacao: "pendencias" },
+          { empresa: "Épsilon", situacao: "aguardando_autorizacao_demorada" },
+          { empresa: "Zeta", situacao: "ok" },
+          { empresa: "Eta", situacao: "desatualizado" },
+        ],
+      },
+    });
+    assert.equal(achar(lista, "agentes-erro").quantidade, 1);
+    assert.equal(achar(lista, "agentes-offline").quantidade, 2);
+    assert.deepEqual(achar(lista, "agentes-offline").params, { situacao: "offline" });
+    // "Em dia" e "desatualizado" não são notícia: um está certo, o outro é o
+    // estado normal de quem ainda não recebeu a versão nova.
+    assert.equal(achar(lista, "agentes-ok"), undefined);
+    assert.equal(achar(lista, "agentes-desatualizado"), undefined);
+  });
+
+  await t.test("autorização demorada não é somada às pendências", () => {
+    // São coisas diferentes (uma espera humano, a outra espera revisão) e o
+    // seletor de Distribuição as separa -- juntá-las mandaria a pessoa para um
+    // filtro que não mostra metade do que ela clicou.
+    const lista = montarNotificacoes({
+      painel: {
+        agentes: [
+          { empresa: "Alfa", situacao: "pendencias" },
+          { empresa: "Beta", situacao: "aguardando_autorizacao_demorada" },
+        ],
+      },
+    });
+    assert.deepEqual(achar(lista, "agentes-pendencias").params, { situacao: "pendencias" });
+    assert.deepEqual(achar(lista, "agentes-aguardando_autorizacao_demorada").params, {
+      situacao: "aguardando_autorizacao_demorada",
+    });
+  });
+
+  await t.test("o singular não sai com 's'", () => {
+    const [aviso] = montarNotificacoes({ painel: { agentes: [{ empresa: "Alfa", situacao: "erro" }] } });
+    assert.equal(aviso.titulo, "1 agente com falha");
+    const lista = montarNotificacoes({ lembretes: [{ cliente: "X", data: dataDe(5) }] });
+    assert.equal(lista[0].titulo, "1 agendamento atrasado");
+  });
+
+  await t.test("mostra dois nomes e conta o resto", () => {
+    const lista = montarNotificacoes({
+      painel: {
+        agentes: ["Alfa", "Beta", "Gama", "Delta"].map((empresa) => ({ empresa, situacao: "offline" })),
+      },
+    });
+    assert.equal(achar(lista, "agentes-offline").detalhe, "Alfa, Beta e mais 2");
+  });
+
+  await t.test("agente sem nome cai no CNPJ, e sem nenhum dos dois não vira nome vazio", () => {
+    const lista = montarNotificacoes({
+      painel: {
+        agentes: [
+          { cnpj: "12.345.678/0001-90", situacao: "erro" },
+          { situacao: "erro" },
+        ],
+      },
+    });
+    assert.equal(achar(lista, "agentes-erro").quantidade, 2);
+    assert.equal(achar(lista, "agentes-erro").detalhe, "12.345.678/0001-90");
+  });
+
+  await t.test("resposta ausente ou malformada não derruba o sino", () => {
+    // `/versoes/painel` responde 403 com o Atualizador desativado, e o App
+    // transforma isso em `null`. Um sino que quebra aí levaria junto o
+    // contador do título da aba.
+    assert.deepEqual(montarNotificacoes({ lembretes: null, painel: null }), []);
+    assert.deepEqual(montarNotificacoes({ lembretes: { atrasados: [] }, painel: {} }), []);
+  });
+
+  await t.test("a pior notícia vem primeiro", () => {
+    const lista = montarNotificacoes({
+      lembretes: [{ cliente: "X", data: dataDe(2) }, { cliente: "Y", data: dataDe(0) }],
+      painel: { agentes: [{ empresa: "Alfa", situacao: "erro" }] },
+    });
+    assert.deepEqual(
+      lista.map((n) => n.chave),
+      ["agendamentos-atrasados", "agentes-erro", "agendamentos-hoje"]
+    );
+  });
+});
+
+test("domain/notificacoes - totalDe", async (t) => {
+  await t.test("soma as quantidades, que é o que o contador mostra", () => {
+    const lista = montarNotificacoes({
+      lembretes: [{ cliente: "X", data: "01/01/2020" }],
+      painel: { agentes: [{ empresa: "Alfa", situacao: "erro" }, { empresa: "Beta", situacao: "offline" }] },
+    });
+    // Três avisos em três linhas: o contador conta ITENS, não linhas.
+    assert.equal(lista.length, 3);
+    assert.equal(totalDe(lista), 3);
+  });
+
+  await t.test("lista vazia, nula ou indefinida vale zero", () => {
+    assert.equal(totalDe([]), 0);
+    assert.equal(totalDe(null), 0);
+    assert.equal(totalDe(undefined), 0);
   });
 });

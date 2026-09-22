@@ -25,8 +25,9 @@ import { AtualizadorConfigPanel } from "../views/AtualizadorConfigPanel.js";
 import { SaudeSistemaPanel } from "../views/SaudeSistemaPanel.js";
 import { DistribuicaoView } from "../views/DistribuicaoView.js";
 import { VersoesView } from "../views/VersoesView.js";
-import { ReminderBanner } from "../components/ReminderBanner.js";
+import { MenuNotificacoes } from "../components/MenuNotificacoes.js";
 import { MenuConta } from "../components/MenuConta.js";
+import { montarNotificacoes } from "../domain/notificacoes.js";
 import { ConexaoBanner } from "../components/ConexaoBanner.js";
 
 /**
@@ -98,8 +99,6 @@ export class App {
     this._jaMostradas = new Set();
     /** @type {Map<string, number>} onde cada aba estava rolada quando foi deixada. */
     this._rolagemPorAba = new Map();
-    /** Quantos lembretes de agendamento estão em aberto -- vai para o título da aba. */
-    this._qtdLembretes = 0;
 
     // Um 401 em QUALQUER chamada -- não só no carregamento de aba -- leva de
     // volta ao login. Antes, a sessão expirar durante um "Adicionar" só
@@ -186,33 +185,77 @@ export class App {
       ? aparencia.abaInicial()
       : this.tabsAtivas[0].key;
     this.router.iniciar(inicial);
-    this._checkLembretes();
+    this._carregarNotificacoes();
   }
 
-  async _checkLembretes() {
-    let itens;
-    try {
-      itens = await this.api.get("/agendamentos/lembretes");
-    } catch {
-      return; // sem lembrete é melhor que travar o app inteiro por causa disso
-    }
-    this.reminderBanner.show(itens);
-    this._qtdLembretes = itens.length;
+  /**
+   * Busca o que alimenta o sino: agendamentos vencidos/de hoje e o painel dos
+   * agentes. As duas chamadas juntas, e cada uma com o seu próprio `catch`:
+   * com o Atualizador desativado `/versoes/painel` responde 403 (ver
+   * `requireAtualizadorHabilitado`), e uma falha de rede numa delas não pode
+   * apagar o que a outra tinha a dizer.
+   */
+  async _carregarNotificacoes() {
+    const [lembretes, painel] = await Promise.all([
+      this.api.get("/agendamentos/lembretes").catch(() => null),
+      this.atualizadorHabilitado ? this.api.get("/versoes/painel").catch(() => null) : Promise.resolve(null),
+    ]);
+    // Os dois fora do ar é o único caso em que nada se pode afirmar: zerar o
+    // sino aí apagaria avisos que continuam valendo, só que invisíveis.
+    if (lembretes === null && painel === null) return;
+    this.menuNotificacoes.atualizar(montarNotificacoes({ lembretes, painel }));
     this._atualizarTitulo();
+  }
+
+  /**
+   * De quanto em quanto tempo o sino se pergunta de novo, e por que não é um
+   * `setInterval` solto: com a aba escondida o navegador já estrangula o
+   * temporizador, mas continua acordando o servidor para uma resposta que
+   * ninguém vai ver. Ao voltar à aba, uma busca imediata -- é justamente o
+   * momento em que o número precisa estar certo.
+   */
+  _ligarRitmoDasNotificacoes() {
+    const INTERVALO_MS = 5 * 60 * 1000;
+    let timer = null;
+    const parar = () => {
+      clearInterval(timer);
+      timer = null;
+    };
+    const comecar = () => {
+      if (timer === null) timer = setInterval(() => this._carregarNotificacoes(), INTERVALO_MS);
+    };
+    const aoMudarVisibilidade = () => {
+      if (document.visibilityState === "visible") {
+        this._carregarNotificacoes();
+        comecar();
+      } else {
+        parar();
+      }
+    };
+    document.addEventListener("visibilitychange", aoMudarVisibilidade);
+    comecar();
+    return () => {
+      parar();
+      document.removeEventListener("visibilitychange", aoMudarVisibilidade);
+    };
   }
 
   /**
    * O título da aba do navegador: `(2) Clientes · Gestor de Atualizações`.
    *
    * O Gestor passa boa parte do dia numa aba de fundo, atrás do ERP e do
-   * WhatsApp. A faixa de lembretes só existe para quem está OLHANDO a tela --
-   * e quem está olhando a tela é justamente quem menos precisa ser lembrado. O
-   * número no título é a única parte deste app que alcança quem está em outro
-   * lugar, porque é o que o Windows mostra na barra de tarefas.
+   * WhatsApp. O sino só existe para quem está OLHANDO a tela -- e quem está
+   * olhando a tela é justamente quem menos precisa ser lembrado. O número no
+   * título é a única parte deste app que alcança quem está em outro lugar,
+   * porque é o que o Windows mostra na barra de tarefas.
+   *
+   * Ele segue o MESMO contador do sino, inclusive o "marcar como vistas": dois
+   * números do mesmo assunto discordando entre si é pior que um número só.
    */
   _atualizarTitulo() {
     const nome = this.views.get(this.activeTab)?.tab.label || "Resumo";
-    const prefixo = this._qtdLembretes > 0 ? `(${this._qtdLembretes}) ` : "";
+    const pendentes = this.menuNotificacoes?.pendentesNaoVistas() || 0;
+    const prefixo = pendentes > 0 ? `(${pendentes}) ` : "";
     document.title = `${prefixo}${nome} · Gestor de Atualizações`;
   }
 
@@ -292,6 +335,14 @@ export class App {
             <button type="button" class="btn btn--accent btn--small app-header__quick" data-action="acao-rapida"
                     aria-label="Abrir ações rápidas (Alt+N)">+ <span>Ação rápida</span><kbd>Alt+N</kbd></button>
             <!--
+              O sino, ao lado da conta (ver MenuNotificacoes). Tudo o que o app
+              tem a dizer sem ter sido perguntado passou a morar aqui: antes
+              eram duas coisas grandes e desconexas -- a faixa amarela que
+              ficava logo abaixo deste cabeçalho em TODA aba, e o bloco
+              "Precisa de Atenção" que abria o Resumo com uma grade de cards.
+            -->
+            <div data-role="notificacoes"></div>
+            <!--
               Nome, tema, configurações, atalhos e sair, num alvo só (ver
               MenuConta). Aqui havia um bloco de texto que não fazia nada e
               dois ícones sem rótulo colados um no outro -- um deles encerrando
@@ -300,7 +351,6 @@ export class App {
             <div data-role="conta"></div>
           </div>
         </header>
-        <div data-role="reminder-banner"></div>
         <main class="app-main" id="conteudo" tabindex="-1"></main>
       </section>
     `;
@@ -308,9 +358,15 @@ export class App {
     this.tituloEl = this.root.querySelector('[data-role="titulo"]');
     this.descricaoEl = this.root.querySelector('[data-role="descricao"]');
 
-    this.reminderBanner = new ReminderBanner(this.root.querySelector('[data-role="reminder-banner"]'), () =>
-      this.switchTab("agendamentos")
-    );
+    this.menuNotificacoes = new MenuNotificacoes(this.root.querySelector('[data-role="notificacoes"]'), {
+      // Abrir o sino é a deixa para perguntar de novo: quem clica ali quer o
+      // estado de agora, e sem isto a lista seria sempre a do último ciclo.
+      aoAbrir: () => this._carregarNotificacoes(),
+      aoMarcarVistas: () => this._atualizarTitulo(),
+      aoIr: (destino, params) => this.switchTab(destino, params || undefined),
+    });
+    this._cleanups.push(() => this.menuNotificacoes.destroy());
+    this._cleanups.push(this._ligarRitmoDasNotificacoes());
 
     this.menuConta = new MenuConta(this.root.querySelector('[data-role="conta"]'), this.user, {
       aoConfigurar: () => this._abrirConfiguracoes(),
@@ -563,6 +619,10 @@ export class App {
   async recarregarAba({ avisar = false } = {}) {
     if (!this.activeTab) return;
     this.cache.invalidar();
+    // O sino junto: ele vive fora das abas, então "atualizar os dados desta
+    // tela" o deixaria para trás -- e é o caminho por onde a volta da conexão
+    // também passa, justamente quando o que ele mostra está mais velho.
+    this._carregarNotificacoes();
     await this._mostrarAba(this.activeTab);
     if (avisar) toast.success("Dados atualizados.");
   }

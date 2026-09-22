@@ -146,9 +146,13 @@ export class LineChart {
       svg.appendChild(ponto);
     }
 
+    // Halo externo tem r:14 (ver loop acima) -- offset de 10px colocava o
+    // texto encostando/atrás do halo (lia como "número cortado"). 22px limpa
+    // o halo com folga; o clamp evita colidir com o topo do viewBox quando o
+    // último ponto está perto do máximo do eixo Y.
     const valorFim = document.createElementNS(SVG_NS, "text");
-    valorFim.setAttribute("x", String(xAt(n - 1) - 10));
-    valorFim.setAttribute("y", String(yAt(pontos[n - 1].total) - 10));
+    valorFim.setAttribute("x", String(xAt(n - 1) - 6));
+    valorFim.setAttribute("y", String(Math.max(padT + 10, yAt(pontos[n - 1].total) - 22)));
     valorFim.setAttribute("text-anchor", "end");
     valorFim.setAttribute("class", "line-chart__valor-fim");
     valorFim.textContent = String(pontos[n - 1].total);

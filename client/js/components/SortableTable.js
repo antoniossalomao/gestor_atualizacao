@@ -373,7 +373,7 @@ export class SortableTable {
         // de "12/08/2026 03:14") mas ainda merece um tooltip com a versão
         // completa -- ver HistoricoView, que já pareava as duas no comentário
         // antes de esta coluna ter como cumprir a promessa.
-        const dica = col.title ? col.title(row) : valor && String(valor).length > 28 ? valor : "";
+        const dica = col.title ? col.title(row) : valor && String(valor).length > 18 ? valor : "";
         if (dica) td.title = dica;
         else td.removeAttribute("title");
       });

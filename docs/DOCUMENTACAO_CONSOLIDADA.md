@@ -378,11 +378,12 @@ app/View.js       -- classe base: listeners rastreados (removidos no destroy()) 
                      stale-while-revalidate
 app/*.js          -- o esqueleto: router, prefs, SwrCache, theme, appearance, notify, Shortcuts
 components/*.js   -- peças de UI reaproveitáveis: SortableTable, Pagination, Autocomplete, Modal,
-                     Toast, CommandPalette (Ctrl+K), EmptyState, ConexaoBanner, ReminderBanner,
-                     MenuConta
+                     Toast, CommandPalette (Ctrl+K), EmptyState, ConexaoBanner, MenuConta,
+                     MenuNotificacoes (o sino do cabeçalho)
 components/charts -- PieChart, BarChart, LineChart (SVG escrito à mão)
 domain/*.js       -- vocabulário do negócio, SEM tocar no DOM: agenteStatus, agenteReport,
-                     agenteLabels, relatorio, pessoa. É o que dá para testar fora do navegador
+                     agenteLabels, relatorio, pessoa, notificacoes. É o que dá para testar fora
+                     do navegador
 utils/*.js        -- utilidades genéricas: date, html, color, icons, debounce, guard, arquivo
 views/*.js        -- uma classe por tela (Resumo, Atualizações, Agendamentos, Clientes, Consultar
                      Cliente, Distribuição, Versões, Sistemas, Histórico, Login) e os painéis
