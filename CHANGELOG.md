@@ -15,6 +15,67 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **O painel passou a ter imagem Docker** (`Dockerfile`, `.dockerignore`,
+  `docker-compose.yml`). Não substitui o serviço do Windows via NSSM: é a
+  opção para quando o app vai para uma máquina Linux, ou para isolá-lo do
+  resto do que roda no PC. Quatro coisas tiveram que ser resolvidas, e todas
+  as quatro falhariam **em silêncio** se tivessem sido ignoradas:
+
+  - **Fuso.** O container roda em UTC por padrão, e `AgendamentoRepository.dueSoon`
+    monta "hoje" com `getFullYear/getMonth/getDate` — relógio **local**. Das
+    21h à meia-noite, horário de Brasília, o servidor já estaria no dia
+    seguinte e os agendamentos de amanhã apareceriam como atrasados no sino
+    de notificações. Daí o `TZ=America/Sao_Paulo` fixado na imagem.
+  - **O `.env` tem que ser gravável.** A tela *Configurações → Sistema →
+    "Configuração da API"* escreve no arquivo (`ConfiguracaoApiService`), o
+    que descarta passar tudo por `environment:` no compose. Pior: o `dotenv`
+    não sobrescreve variável que já veio do ambiente, então qualquer variável
+    declarada no compose venceria o `.env` e faria aquela tela salvar sem
+    efeito nenhum, sem erro. Só `PORT` ficou no compose — não é editável por
+    lá, e fixá-la é o que mantém o mapeamento de portas sempre válido.
+  - **Dados em volume nomeado, não em pasta do Windows.** O SQLite em modo
+    WAL depende de travas de arquivo que não funcionam de forma confiável
+    através da tradução de sistema de arquivos do Docker Desktop. O caminho
+    para tirar cópia para fora continua sendo o download de backup do próprio
+    painel.
+  - **Base Debian, e contexto de build em `web/`.** `better-sqlite3` é módulo
+    nativo: em glibc baixa binário pronto, em Alpine (musl) compilaria do
+    zero a cada build. E `server/package.json` depende de `file:..`, o pacote
+    da raiz — construir a partir de `web/server/` quebra o `npm ci` antes de
+    começar. É também por isso que os caminhos são `/app` e `/app/server` nos
+    dois estágios: o vínculo `file:..` é um link simbólico relativo, e só
+    continua apontando para o lugar certo se a estrutura de pastas for
+    idêntica na imagem final.
+
+  A verificação de saúde bate em `/api/auth/status` — rota pública que
+  responde do banco —, e não numa rota que só provaria que o processo está
+  de pé. É feita com `node -e` em vez de `curl` porque a imagem slim não tem
+  curl, e instalar um só para isso seria uma camada a mais à toa.
+
+  Testado de ponta a ponta (build, subida, healthcheck, importação do
+  `gestao.db` real) num Docker Desktop de verdade, e a receita de "trazer um
+  banco que já existe" do README mudou por causa disso: `docker compose cp`
+  recusa copiar para um container parado ("no container found for
+  service"), e qualquer cópia para dentro do container chega dona de
+  `root` -- sem corrigir isso o servidor sobe e cai na hora com
+  `SqliteError: attempt to write a readonly database` (o processo roda como
+  `node`, uid 1000). A receita final usa `docker cp` simples (funciona
+  parado) seguido de `docker run --volumes-from` para o `chown` -- essa
+  última parte evita depender do nome do volume nomeado, que o Docker deriva
+  do nome da pasta do projeto e muda se ela for renomeada.
+
+  O Docker Scout apontou 70 vulnerabilidades na imagem (3 críticas), e as
+  duas mais graves com correção disponível -- CVE em `tar` e em
+  `brace-expansion`, severidade 9.2 e 8.7 -- não vinham de dependência
+  nenhuma do projeto: são internas ao próprio CLI do npm, que a imagem base
+  carrega em `/usr/local/lib/node_modules/npm/`. Como o CMD final roda
+  `node server.js` direto e nada em tempo de execução chama `npm`/`npx`
+  (só o build, no `RUN npm ci` do primeiro estágio, usa), o runtime final
+  apaga os dois (`npm`, `corepack`) com um `rm -rf`. Resultado: as críticas
+  fixáveis foram para zero, e o total caiu de 70 para ~47 -- o que sobra é
+  todo pacote de sistema (perl, util-linux, zlib) ainda sem correção
+  publicada pela Debian, fora do nosso controle.
+
 - **As notificações viraram um sino no cabeçalho.** Havia duas coisas grandes
   dizendo pedaços do mesmo assunto ("o que está pendente agora"): a faixa
   amarela de lembretes, que ficava entre o cabeçalho e o conteúdo de **toda**

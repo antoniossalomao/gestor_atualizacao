@@ -1,0 +1,40 @@
+# O que NÃO deve entrar no contexto de build. Vale a pena manter enxuto por
+# dois motivos: cada arquivo aqui é um arquivo que o Docker copia antes de
+# começar (server/data/ sozinho pode ter centenas de MB de pacotes de
+# instalação), e o que não entra no contexto não pode vazar para dentro de
+# uma imagem por descuido.
+
+# Dependências: são reinstaladas dentro da imagem, para o Linux dela. As da
+# máquina de desenvolvimento são binários de Windows e NÃO funcionariam lá
+# (better-sqlite3 é um módulo nativo).
+node_modules/
+**/node_modules/
+
+# Segredos. O .env é montado em tempo de execução pelo docker-compose, nunca
+# embutido na imagem -- imagem é algo que se copia e se publica; se o
+# SESSION_SECRET e o AGENT_API_TOKEN estivessem dentro dela, vazariam junto.
+.env
+.env.*
+!.env.example
+
+# Dados reais (banco, backups, sessões, pacotes enviados). Moram em volume,
+# fora da imagem, e é o que permite trocar a imagem sem perder nada.
+server/data/
+server/logs/
+*.log
+
+.git/
+.github/
+.vscode/
+.claude/
+_backup/
+
+# Testes e documentação não são executados nem servidos em produção.
+server/tests/
+client/tests/
+docs/
+*.md
+
+# Scripts de instalação do serviço do Windows -- o equivalente em Docker é
+# a política de restart do compose.
+*.ps1

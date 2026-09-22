@@ -1,0 +1,79 @@
+# Sobe o painel com "docker compose up -d", a partir desta pasta (web/).
+# Instruções completas -- inclusive o passo obrigatório do .env antes do
+# primeiro "up" -- na seção "Rodar em Docker" do README.md.
+
+services:
+  gestor:
+    build:
+      # "." é a pasta web/ inteira, e não server/, porque o
+      # server/package.json depende do package.json da raiz (ver o
+      # comentário no topo do Dockerfile).
+      context: .
+    image: gestor-de-atualizacoes:local
+    container_name: gestor-de-atualizacoes
+
+    # Equivalente em Docker ao serviço do Windows descrito no README: o
+    # container volta sozinho depois de um travamento e depois de a máquina
+    # reiniciar. "unless-stopped" (e não "always") para que um "docker
+    # compose stop" feito de propósito continue valendo depois do reboot.
+    restart: unless-stopped
+
+    # Um init de verdade como PID 1. O server.js já trata SIGTERM para
+    # fechar o SQLite de forma organizada (ver o final de server.js), e isto
+    # garante que o sinal do "docker compose stop" chegue nele, além de
+    # recolher processos filhos órfãos.
+    init: true
+
+    ports:
+      # <porta no Windows>:<porta dentro do container>. Para atender noutra
+      # porta, mude SÓ o número da esquerda -- a da direita é fixada pelo
+      # PORT logo abaixo.
+      - "3000:3000"
+
+    environment:
+      # ATENÇÃO: o dotenv NÃO sobrescreve variável que já veio do ambiente,
+      # então tudo que for declarado aqui VENCE o .env e deixa de poder ser
+      # editado pela tela Configurações → Sistema → "Configuração da API".
+      # Por isso só PORT mora aqui: ela não é editável por aquela tela, e
+      # fixá-la é o que mantém o mapeamento de portas acima sempre válido.
+      # Não acrescente AGENT_API_TOKEN, PUBLIC_URL, DISCORD_WEBHOOK_URL nem
+      # ALERTA_AGENTES_INTERVALO_MINUTOS aqui: a tela continuaria gravando
+      # no .env, e nada mudaria -- um ajuste que "não pega", sem mensagem
+      # de erro.
+      PORT: 3000
+
+    volumes:
+      # Dados reais, o que não pode se perder ao trocar a imagem: gestao.db,
+      # sessions.sqlite, backups/ e os pacotes de instalação enviados pelo
+      # painel. Volume NOMEADO, e não uma pasta do Windows: o SQLite em modo
+      # WAL depende de travas de arquivo que não funcionam de forma
+      # confiável através da tradução de sistema de arquivos do Docker
+      # Desktop (e muito menos sobre pasta de rede). Para tirar uma cópia de
+      # fora, use o download de backup do próprio painel -- ele existe
+      # justamente para isso.
+      - gestor-data:/app/server/data
+      - gestor-logs:/app/server/logs
+
+      # O .env é montado como ARQUIVO, e gravável, porque a tela
+      # "Configuração da API" escreve nele (ConfiguracaoApiService). Se
+      # fosse só embutido na imagem ou passado por "environment", salvar
+      # naquela tela falharia ou não teria efeito.
+      #
+      # Ele PRECISA existir antes do primeiro "up": quando o caminho de
+      # origem não existe, o Docker cria uma PASTA vazia com esse nome, e aí
+      # o servidor sobe com os valores padrão -- inclusive o
+      # SESSION_SECRET de exemplo. Ver o README.
+      - ./server/.env:/app/server/.env
+
+    healthcheck:
+      # Definido no Dockerfile (bate em /api/auth/status). Repetido aqui só
+      # para o "docker compose ps" mostrar o estado como "healthy".
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/auth/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  gestor-data:
+  gestor-logs:
