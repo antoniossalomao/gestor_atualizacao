@@ -26,10 +26,12 @@ function requireRole(...rolesPermitidas) {
 
     const papelAtual = user.role || "consulta";
     if (!permitidos.has(papelAtual)) {
+      // Não expõe papelAtual nem papeisPermitidos na resposta: em produção
+      // essa informação diz ao atacante exatamente o que ele tem e o que
+      // precisa para passar. A mensagem genérica é suficiente para o
+      // usuário legítimo entender que não tem a permissão necessária.
       res.status(403).json({
         error: "Acesso não autorizado: seu perfil não tem permissão para executar esta operação.",
-        papelAtual,
-        papeisPermitidos: rolesPermitidas,
       });
       return;
     }

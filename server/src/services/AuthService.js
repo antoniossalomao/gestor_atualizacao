@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const { ValidationError, ForbiddenError } = require("../shared/errors");
 
 const SALT_ROUNDS = 10;
-const SENHA_MIN_LENGTH = 6;
+const SENHA_MIN_LENGTH = 8;
 
 /**
  * Login multiusuario -- novidade em relacao ao app Python original, que
@@ -18,7 +18,20 @@ class AuthService {
   constructor(db, historico) {
     this.db = db;
     this.historico = historico;
+    /** @type {import('../database/SqliteSessionStore').SqliteSessionStore|null} */
+    this.sessionStore = null;
   }
+
+  /**
+   * Injeta o store de sessões após a construção (o store só existe depois de
+   * _configureExpress, que roda após _buildServices -- mesmo padrão do
+   * BackupService.setSessionStore).
+   * @param {import('../database/SqliteSessionStore').SqliteSessionStore} store
+   */
+  setSessionStore(store) {
+    this.sessionStore = store;
+  }
+
 
   /** True quando ainda nao existe nenhuma conta -- o front-end mostra a tela de "criar administrador" nesse caso. */
   needsSetup() {
@@ -200,6 +213,12 @@ class AuthService {
     }
     this.db.usuarios.updateSenhaHash(linha.id, bcrypt.hashSync(senhaNova, SALT_ROUNDS));
     this.historico.registrar(usuarioLogado, "atualizar", "usuario", `Senha de "${linha.nome}" (@${linha.usuario}) alterada`);
+    // Revoga todas as sessões ativas deste usuário em outros navegadores /
+    // dispositivos: a sessão comprometida não sobrevive à troca de senha.
+    // Sem isto, um atacante com o cookie roubado continuaria com acesso mesmo
+    // depois de a vítima trocar a senha -- exatamente o cenário que motivou
+    // o requisito de confirmar a senha atual antes de trocar.
+    this.sessionStore?.clearByUserId(linha.id);
   }
 }
 

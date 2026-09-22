@@ -21,6 +21,7 @@ import { SistemasView } from "../views/SistemasView.js";
 import { BackupsPanel } from "../views/BackupsPanel.js";
 import { UsersPanel } from "../views/UsersPanel.js";
 import { ConfiguracaoApiPanel } from "../views/ConfiguracaoApiPanel.js";
+import { AtualizadorConfigPanel } from "../views/AtualizadorConfigPanel.js";
 import { SaudeSistemaPanel } from "../views/SaudeSistemaPanel.js";
 import { DistribuicaoView } from "../views/DistribuicaoView.js";
 import { VersoesView } from "../views/VersoesView.js";
@@ -36,6 +37,11 @@ import { ConexaoBanner } from "../components/ConexaoBanner.js";
  * O `descricao` é novo e existe porque o cabeçalho tinha uma frase fixa
  * ("Monitore clientes, versões e a saúde das atualizações") que valia para o
  * app inteiro e portanto não dizia nada sobre a tela aberta.
+ *
+ * `requerAtualizador: true` marca as abas que só fazem sentido com o
+ * Atualizador (agente C#) em uso -- somem da navegação, da paleta de
+ * comandos e dos atalhos quando ele está desativado em Configurações (ver
+ * `this.tabsAtivas`, calculado em `_onAuthenticated`).
  */
 const TABS = [
   { key: "resumo", label: "Resumo", icon: "resumo", View: ResumoView, grupo: "Visão Geral",
@@ -49,9 +55,9 @@ const TABS = [
   { key: "consulta", label: "Consultar Cliente", icon: "consulta", View: ConsultaView, grupo: "Operação",
     descricao: "Ficha completa de um cliente específico." },
   { key: "distribuicao", label: "Distribuição", icon: "distribuicao", View: DistribuicaoView, grupo: "Distribuição",
-    descricao: "Acompanhe os agentes e os relatórios das atualizações." },
+    descricao: "Acompanhe os agentes e os relatórios das atualizações.", requerAtualizador: true },
   { key: "versoes", label: "Versões", icon: "versoes", View: VersoesView, grupo: "Distribuição",
-    descricao: "Envie, publique e administre as versões distribuídas." },
+    descricao: "Envie, publique e administre as versões distribuídas.", requerAtualizador: true },
   { key: "sistemas", label: "Sistemas", icon: "sistemas", View: SistemasView, grupo: "Distribuição",
     descricao: "Relatório por sistema, com data de corte opcional." },
   { key: "historico", label: "Histórico", icon: "historico", View: HistoricoView, grupo: "Administração",
@@ -110,6 +116,11 @@ export class App {
       this._renderFalhaConexao();
       return;
     }
+    // Vem do "/auth/status" (não de uma segunda chamada) porque é a
+    // primeira resposta que o app recebe, antes até de saber se há sessão --
+    // ver AuthController.status no servidor. `!== false` para o app não
+    // esconder nada se o servidor for antigo e não mandar este campo.
+    this.atualizadorHabilitado = status.atualizadorHabilitado !== false;
     if (status.needsSetup) {
       new LoginView(this.root, this.api, "setup", (user) => this._onAuthenticated(user));
       return;
@@ -143,6 +154,11 @@ export class App {
   _onAuthenticated(user) {
     this.user = user;
     this.api.resetUnauthorized();
+    // Calculado uma vez por sessão (não a cada troca de aba): as abas do
+    // Atualizador só desaparecem/reaparecem de fato num boot novo do app
+    // (login, F5) ou já vêm corretas se o admin tiver acabado de mudar --
+    // ver AtualizadorConfigPanel, que avisa para recarregar.
+    this.tabsAtivas = TABS.filter((t) => !t.requerAtualizador || this.atualizadorHabilitado);
 
     // As preferências de apresentação são da CONTA, não do navegador. O
     // localStorage já pintou a tela (theme-init.js, no <head>, antes do
@@ -157,14 +173,18 @@ export class App {
 
     this._buildShell();
     this.router = new Router(
-      TABS.map((t) => t.key),
+      this.tabsAtivas.map((t) => t.key),
       (rota) => this._mostrarAba(rota)
     );
     this._cleanups.push(() => this.router.destroy());
     // A tela inicial é escolha do usuário (Configurações). Quem passa o dia em
     // Distribuição não quer o Resumo toda manhã. Só vale quando a URL não traz
     // rota: um link para `#/clientes` continua mandando mais que a preferência.
-    const inicial = TABS.some((t) => t.key === aparencia.abaInicial()) ? aparencia.abaInicial() : TABS[0].key;
+    // Se a preferência salva era uma aba do Atualizador e ele foi desativado
+    // depois, cai no primeiro item de `tabsAtivas` como qualquer aba inexistente.
+    const inicial = this.tabsAtivas.some((t) => t.key === aparencia.abaInicial())
+      ? aparencia.abaInicial()
+      : this.tabsAtivas[0].key;
     this.router.iniciar(inicial);
     this._checkLembretes();
   }
@@ -341,7 +361,7 @@ export class App {
     const main = this.root.querySelector(".app-main");
 
     let ultimoGrupo = null;
-    for (const [i, tab] of TABS.entries()) {
+    for (const [i, tab] of this.tabsAtivas.entries()) {
       if (tab.grupo && tab.grupo !== ultimoGrupo) {
         ultimoGrupo = tab.grupo;
         const grupoEl = document.createElement("div");
@@ -386,6 +406,7 @@ export class App {
           user: this.user,
           cache: this.cache,
           navigate: (destino, opcoes) => this.switchTab(destino, opcoes),
+          atualizadorHabilitado: this.atualizadorHabilitado,
         }),
       });
     }
@@ -406,7 +427,7 @@ export class App {
       ["atualizacoes", "Nova Atualização", "atualizacoes"],
       ["agendamentos", "Novo Agendamento", "agendamentos"],
       ["clientes", "Novo Cliente", "clientes"],
-      ["versoes", "Publicar Nova Versão", "versoes"],
+      ...(this.atualizadorHabilitado ? [["versoes", "Publicar Nova Versão", "versoes"]] : []),
     ];
     box.innerHTML = `<h3 class="modal-box__title">Ação rápida</h3><p class="modal-box__message">Comece uma tarefa sem perder tempo procurando a tela.</p>
       <div class="quick-action-list">${itens.map(([aba, label, icone]) => `<button type="button" class="btn" data-tab="${aba}" ${permitida ? "" : "disabled"}>${icon(icone)}<span>${label}</span></button>`).join("")}</div>`;
@@ -434,13 +455,13 @@ export class App {
     const passo = teclas[e.key];
     if (!passo && e.key !== "Home" && e.key !== "End") return;
     e.preventDefault();
-    const indiceAtual = TABS.findIndex((t) => t.key === this.activeTab);
+    const indiceAtual = this.tabsAtivas.findIndex((t) => t.key === this.activeTab);
     let alvo;
     if (e.key === "Home") alvo = 0;
-    else if (e.key === "End") alvo = TABS.length - 1;
-    else alvo = (indiceAtual + passo + TABS.length) % TABS.length;
-    this.switchTab(TABS[alvo].key);
-    this.root.querySelector(`#aba-${TABS[alvo].key}`)?.focus();
+    else if (e.key === "End") alvo = this.tabsAtivas.length - 1;
+    else alvo = (indiceAtual + passo + this.tabsAtivas.length) % this.tabsAtivas.length;
+    this.switchTab(this.tabsAtivas[alvo].key);
+    this.root.querySelector(`#aba-${this.tabsAtivas[alvo].key}`)?.focus();
   }
 
   /** `Alt+1` … `Alt+9` levam direto à aba de mesmo número. */
@@ -448,9 +469,9 @@ export class App {
     const handler = (e) => {
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
       const n = Number(e.key);
-      if (!Number.isInteger(n) || n < 1 || n > TABS.length) return;
+      if (!Number.isInteger(n) || n < 1 || n > this.tabsAtivas.length) return;
       e.preventDefault();
-      this.switchTab(TABS[n - 1].key);
+      this.switchTab(this.tabsAtivas[n - 1].key);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -546,10 +567,27 @@ export class App {
     if (avisar) toast.success("Dados atualizados.");
   }
 
+  /**
+   * Reconstrói o app inteiro (abas, sidebar, paleta) a partir de um novo
+   * `/auth/status` -- o que `recarregarAba()` NÃO cobre, porque só troca os
+   * dados da aba aberta, não a lista de abas que existem. Precisa disto
+   * quando `atualizadorHabilitado` muda (ver AtualizadorConfigPanel): a
+   * navegação inteira depende de `this.tabsAtivas`, calculado uma vez em
+   * `_onAuthenticated`.
+   *
+   * Mesmo caminho de `_logout()` (desmontar + `start()`), só que sem de fato
+   * encerrar a sessão -- o cookie continua válido, então `start()` volta
+   * direto para `_onAuthenticated`.
+   */
+  async recarregarApp() {
+    this._desmontar();
+    await this.start();
+  }
+
   _montarPaleta() {
     // Telas e ações: montadas na hora, sem rede.
     const comandosBase = () => [
-      ...TABS.map((tab) => ({
+      ...this.tabsAtivas.map((tab) => ({
         id: `aba:${tab.key}`,
         titulo: tab.label,
         subtitulo: tab.descricao,
@@ -583,6 +621,17 @@ export class App {
               icone: "acessos",
               executar: () => new ConfiguracaoApiPanel(this.api).open(),
             },
+            {
+              id: "acao:atualizador",
+              titulo: "Ligar/desligar o Atualizador",
+              subtitulo: this.atualizadorHabilitado
+                ? "Hoje HABILITADO -- Distribuição, Versões e alerta de agentes visíveis"
+                : "Hoje DESATIVADO -- Distribuição, Versões e alerta de agentes escondidos",
+              grupo: "Ações",
+              icone: "distribuicao",
+              // Sempre disponível a Admin, mesmo desativado: é o único caminho de volta.
+              executar: () => new AtualizadorConfigPanel(this.api, () => this.recarregarApp()).open(),
+            },
           ]
         : []),
       ...(["operador", "admin"].includes(this.user?.role)
@@ -605,14 +654,18 @@ export class App {
             },
           ]
         : []),
-      {
-        id: "acao:incidentes-distribuicao",
-        titulo: "Ver Incidentes da Distribuição",
-        subtitulo: "Filtrar agentes com erros, pendências ou sem contato",
-        grupo: "Ações",
-        icone: "alerta",
-        executar: () => this.switchTab("distribuicao", { situacao: "erro" }),
-      },
+      ...(this.atualizadorHabilitado
+        ? [
+            {
+              id: "acao:incidentes-distribuicao",
+              titulo: "Ver Incidentes da Distribuição",
+              subtitulo: "Filtrar agentes com erros, pendências ou sem contato",
+              grupo: "Ações",
+              icone: "alerta",
+              executar: () => this.switchTab("distribuicao", { situacao: "erro" }),
+            },
+          ]
+        : []),
       { id: "acao:usuarios", titulo: "Abrir Usuários", grupo: "Ações", icone: "users",
         executar: () => new UsersPanel(this.api, this.user).open() },
       { id: "acao:config", titulo: "Abrir Configurações", subtitulo: "Tema, densidade, segurança, preferências",
@@ -651,8 +704,14 @@ export class App {
     const carregarExtras = async () => {
       const [resClientes, resAtivas, resPainel] = await Promise.allSettled([
         this.api.get("/clientes/names", null, { key: "clientes:names" }),
-        this.api.get("/versoes/ativas", null, { key: "cmd:ativas" }),
-        this.api.get("/versoes/painel", null, { key: "cmd:painel" }),
+        // Com o Atualizador desativado, "/versoes/*" responde 403 (ver
+        // requireAtualizadorHabilitado no servidor) -- nem vale chamar.
+        this.atualizadorHabilitado
+          ? this.api.get("/versoes/ativas", null, { key: "cmd:ativas" })
+          : Promise.resolve([]),
+        this.atualizadorHabilitado
+          ? this.api.get("/versoes/painel", null, { key: "cmd:painel" })
+          : Promise.resolve(null),
       ]);
 
       const itens = [];
@@ -719,11 +778,13 @@ export class App {
       aoMudarLinhas: () => this.recarregarAba(),
       aoMudarSidebar: (recolhida) => this._definirSidebar(recolhida),
       aoMudarVarias: () => this._sincronizarComPreferencias(),
-      abas: TABS.map((t) => ({ key: t.key, label: t.label })),
+      abas: this.tabsAtivas.map((t) => ({ key: t.key, label: t.label })),
       usuario: this.user,
       abrirBackups: this.user?.role === "admin" ? () => new BackupsPanel(this.api).open() : undefined,
       abrirUsuarios: () => new UsersPanel(this.api, this.user).open(),
       abrirConfiguracaoApi: this.user?.role === "admin" ? () => new ConfiguracaoApiPanel(this.api).open() : undefined,
+      abrirAtualizadorConfig:
+        this.user?.role === "admin" ? () => new AtualizadorConfigPanel(this.api, () => this.recarregarApp()).open() : undefined,
       abrirSaude: this.user?.role === "admin" ? () => new SaudeSistemaPanel(this.api).open() : undefined,
     });
   }

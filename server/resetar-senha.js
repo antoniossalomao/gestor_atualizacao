@@ -15,7 +15,7 @@
  *   node resetar-senha.js <usuario> "<nova senha>"
  *
  * Exemplo:
- *   node resetar-senha.js admin "uma-senha-nova-com-pelo-menos-6-chars"
+ *   node resetar-senha.js admin "uma-senha-nova-com-pelo-menos-8-chars"
  */
 require("dotenv").config({ quiet: true });
 const path = require("path");
@@ -23,7 +23,10 @@ const Sqlite3 = require("better-sqlite3");
 const bcrypt = require("bcryptjs");
 
 const SALT_ROUNDS = 10;
-const SENHA_MIN_LENGTH = 6;
+// Mantido em sincronia com AuthService.js -- ambos precisam refletir o mesmo
+// mínimo para que o script de recuperação de emergência não aceite senhas que
+// a API rejeitaria de qualquer forma.
+const SENHA_MIN_LENGTH = 8;
 
 const [, , usuarioArg, senhaArg] = process.argv;
 

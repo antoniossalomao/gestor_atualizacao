@@ -50,6 +50,12 @@ export class View {
     this.user = ctx.user || null;
     this.cache = ctx.cache;
     this.navigate = ctx.navigate || (() => {});
+    // Distribuição/Versões/alerta de agentes podem estar desativados
+    // temporariamente em Configurações (ver App.js/ConfiguracaoSistemaService
+    // no servidor) -- default `true` porque uma View construída sem
+    // contexto (teste, primeiro desenho do login) não deve se comportar
+    // como se o Atualizador estivesse desligado.
+    this.atualizadorHabilitado = ctx.atualizadorHabilitado !== false;
     /** @type {Array<{alvo: EventTarget, evento: string, fn: Function, opts: any}>} */
     this._listeners = [];
     this._destruido = false;

@@ -6,6 +6,7 @@ const path = require("path");
 const { requireAuth } = require("../middlewares/requireAuth");
 const { requireRole } = require("../middlewares/requireRole");
 const { requireAgent } = require("../middlewares/requireAgent");
+const { requireAtualizadorHabilitado } = require("../middlewares/requireAtualizadorHabilitado");
 
 // Planilhas de import: limite de 15 MB e validação rigorosa de extensão (.xlsx / .xls)
 const upload = multer({
@@ -50,9 +51,11 @@ const pacoteUpload = multer({
  * instanciados. Aplica middlewares de segurança e controle de papéis (RBAC).
  */
 class ApiRouter {
-  constructor(controllers, loginLimiter) {
+  /** @param {import('../services/ConfiguracaoSistemaService').ConfiguracaoSistemaService} configuracaoSistemaService */
+  constructor(controllers, loginLimiter, configuracaoSistemaService) {
     this.controllers = controllers;
     this.loginLimiter = loginLimiter;
+    this.configuracaoSistemaService = configuracaoSistemaService;
     this.router = express.Router();
     this._registerAuthRoutes();
     this._registerProtectedRoutes();
@@ -66,9 +69,11 @@ class ApiRouter {
     this.router.post("/auth/login", this.loginLimiter.middleware, auth.login);
     this.router.post("/auth/logout", auth.logout);
 
-    // Rotas consumidas pelo Worker C# (protegidas por token do agente)
+    // Rotas consumidas pelo Worker C# (protegidas por token do agente e,
+    // enquanto o Atualizador estiver desativado em Configurações, bloqueadas
+    // também aqui -- ver requireAtualizadorHabilitado).
     const agent = express.Router();
-    agent.use("/update", requireAgent);
+    agent.use("/update", requireAgent, requireAtualizadorHabilitado(this.configuracaoSistemaService));
     agent.get("/update/check/:cnpj", this.controllers.versoes.check);
     agent.post("/update/log", this.controllers.versoes.log);
     agent.get("/update/packages/:filename", this.controllers.versoes.download);
@@ -78,8 +83,21 @@ class ApiRouter {
 
   // Rotas autenticadas e controladas por papéis (RBAC)
   _registerProtectedRoutes() {
-    const { clientes, sistemas, atualizacoes, agendamentos, resumo, backups, historico, usuarios, versoes, preferencias, configuracaoApi, saude } =
-      this.controllers;
+    const {
+      clientes,
+      sistemas,
+      atualizacoes,
+      agendamentos,
+      resumo,
+      backups,
+      historico,
+      usuarios,
+      versoes,
+      preferencias,
+      configuracaoApi,
+      configuracaoSistema,
+      saude,
+    } = this.controllers;
     const api = express.Router();
     api.use(requireAuth);
 
@@ -94,6 +112,12 @@ class ApiRouter {
     api.get("/configuracao-api", requireRole("admin"), configuracaoApi.get);
     api.put("/configuracao-api", requireRole("admin"), configuracaoApi.put);
     api.post("/configuracao-api/gerar-token", requireRole("admin"), configuracaoApi.gerarToken);
+
+    // Liga/desliga o Atualizador (Distribuição, Versões e alerta de
+    // agentes) para o painel inteiro -- leitura para qualquer autenticado
+    // (o front-end usa isso para decidir o que mostrar), escrita só Admin.
+    api.get("/configuracao-sistema", configuracaoSistema.get);
+    api.put("/configuracao-sistema", requireRole("admin"), configuracaoSistema.put);
 
     // Clientes: leitura aberta a Consulta; escrita a Operador/Admin; exclusão em lote a Admin
     api.get("/clientes", clientes.list);
@@ -162,7 +186,10 @@ class ApiRouter {
     api.put("/usuarios/me/senha", usuarios.changeOwnPassword);
     api.delete("/usuarios/:id", requireRole("admin"), usuarios.remove);
 
-    // Versões e Distribuição
+    // Versões e Distribuição -- bloqueadas enquanto o Atualizador estiver
+    // desativado em Configurações (ver requireAtualizadorHabilitado); sem
+    // isto, desligar a tela não impediria chamar a API direto.
+    api.use("/versoes", requireAtualizadorHabilitado(this.configuracaoSistemaService));
     api.get("/versoes", versoes.list);
     api.get("/versoes/ativas", versoes.ativas);
     api.get("/versoes/painel", versoes.painel);

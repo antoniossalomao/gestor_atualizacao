@@ -25,6 +25,7 @@ const os = require("node:os");
 
 const { Database } = require("../src/database/Database");
 const { AlertaAgenteService } = require("../src/services/AlertaAgenteService");
+const { ConfiguracaoSistemaService } = require("../src/services/ConfiguracaoSistemaService");
 
 function ambiente(situacaoInicial = "ok") {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-alerta-"));
@@ -38,7 +39,8 @@ function ambiente(situacaoInicial = "ok") {
     notifyAgenteSituacao: async (payload) => void avisos.push(payload),
   };
 
-  const service = new AlertaAgenteService(db, versoes, notifications);
+  const configuracaoSistema = new ConfiguracaoSistemaService(db);
+  const service = new AlertaAgenteService(db, versoes, notifications, configuracaoSistema);
   const cleanup = () => {
     try {
       service.stop();
@@ -155,6 +157,42 @@ test("AlertaAgenteService - resistência a falha", async (t) => {
         },
       };
       await assert.doesNotReject(() => env.service.verificar());
+    } finally {
+      env.cleanup();
+    }
+  });
+});
+
+test("AlertaAgenteService - respeita o Atualizador desativado", async (t) => {
+  await t.test("desativado, verificar() não avisa nem lê o painel", async () => {
+    const env = ambiente("erro");
+    try {
+      let painelChamado = false;
+      env.service.versaoService = {
+        painel() {
+          painelChamado = true;
+          return { agentes: [env.agente] };
+        },
+      };
+      env.service.configuracaoSistema.definir(null, false);
+      await env.service.verificar();
+      assert.equal(painelChamado, false, "nem chega a montar o painel enquanto desativado");
+      assert.equal(env.avisos.length, 0);
+    } finally {
+      env.cleanup();
+    }
+  });
+
+  await t.test("reativado, volta a avisar no ciclo seguinte", async () => {
+    const env = ambiente("erro");
+    try {
+      env.service.configuracaoSistema.definir(null, false);
+      await env.service.verificar();
+      assert.equal(env.avisos.length, 0);
+
+      env.service.configuracaoSistema.definir(null, true);
+      await env.service.verificar();
+      assert.equal(env.avisos.length, 1, "sem precisar recriar o serviço nem reiniciar nada");
     } finally {
       env.cleanup();
     }

@@ -10,15 +10,24 @@
  * a rota.
  */
 class AuthController {
-  /** @param {import('../services/AuthService').AuthService} authService */
-  constructor(authService) {
+  /**
+   * @param {import('../services/AuthService').AuthService} authService
+   * @param {import('../services/ConfiguracaoSistemaService').ConfiguracaoSistemaService} configuracaoSistemaService
+   */
+  constructor(authService, configuracaoSistemaService) {
     this.authService = authService;
+    this.configuracaoSistemaService = configuracaoSistemaService;
   }
 
+  // "/auth/status" já é a primeira chamada que o front-end faz ao abrir a
+  // página (antes até de saber se há sessão) -- por isso é o lugar mais
+  // barato para o cliente descobrir se o Atualizador está habilitado, sem
+  // uma segunda requisição só para isso (ver App.js).
   status = (req, res) => {
     res.json({
       needsSetup: this.authService.needsSetup(),
       user: req.session.user || null,
+      atualizadorHabilitado: this.configuracaoSistemaService.atualizadorHabilitado(),
     });
   };
 

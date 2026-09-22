@@ -17,6 +17,7 @@ const { VersaoService } = require("./services/VersaoService");
 const { PreferenciaService } = require("./services/PreferenciaService");
 const { AlertaAgenteService } = require("./services/AlertaAgenteService");
 const { ConfiguracaoApiService } = require("./services/ConfiguracaoApiService");
+const { ConfiguracaoSistemaService } = require("./services/ConfiguracaoSistemaService");
 const { AuthController } = require("./controllers/AuthController");
 const { ClientesController } = require("./controllers/ClientesController");
 const { SistemasController } = require("./controllers/SistemasController");
@@ -29,6 +30,7 @@ const { UsersController } = require("./controllers/UsersController");
 const { VersoesController } = require("./controllers/VersoesController");
 const { PreferenciasController } = require("./controllers/PreferenciasController");
 const { ConfiguracaoApiController } = require("./controllers/ConfiguracaoApiController");
+const { ConfiguracaoSistemaController } = require("./controllers/ConfiguracaoSistemaController");
 const { SaudeService } = require("./services/SaudeService");
 const { SaudeController } = require("./controllers/SaudeController");
 const { LoginRateLimiter } = require("./middlewares/LoginRateLimiter");
@@ -78,6 +80,7 @@ class Server {
     const historico = new HistoricoService(this.db);
     const notifications = new NotificationService(this.config);
     const versoes = new VersaoService(this.db, historico);
+    const configuracaoSistema = new ConfiguracaoSistemaService(this.db, historico);
     this.services = {
       historico,
       notifications,
@@ -88,10 +91,13 @@ class Server {
       agendamentos: new AgendamentoService(this.db, historico),
       backups: new BackupService(this.db, historico),
       versoes,
+      configuracaoSistema,
       // Verifica a situação dos agentes C# periodicamente e avisa o
       // Discord quando um fica offline/com erro -- ver start()/stop()
       // abaixo, que ligam e desligam o timer junto com o servidor HTTP.
-      alertaAgentes: new AlertaAgenteService(this.db, versoes, notifications),
+      // Recebe "configuracaoSistema" para não rodar nenhuma checagem
+      // (nem gerar alarme falso) enquanto o Atualizador estiver desativado.
+      alertaAgentes: new AlertaAgenteService(this.db, versoes, notifications, configuracaoSistema),
       configuracaoApi: new ConfiguracaoApiService({ historico }),
       saude: new SaudeService({ db: this.db, backups: new BackupService(this.db, historico), versoes }),
     };
@@ -100,7 +106,7 @@ class Server {
   _buildControllers() {
     const s = this.services;
     this.controllers = {
-      auth: new AuthController(s.auth),
+      auth: new AuthController(s.auth, s.configuracaoSistema),
       clientes: new ClientesController(s.clientes),
       sistemas: new SistemasController(s.clientes),
       atualizacoes: new AtualizacoesController(s.atualizacoes),
@@ -112,6 +118,7 @@ class Server {
       versoes: new VersoesController(s.versoes),
       preferencias: new PreferenciasController(s.preferencias),
       configuracaoApi: new ConfiguracaoApiController(s.configuracaoApi),
+      configuracaoSistema: new ConfiguracaoSistemaController(s.configuracaoSistema),
       saude: new SaudeController(s.saude),
     };
     this.loginLimiter = new LoginRateLimiter();
@@ -127,9 +134,11 @@ class Server {
     // consegue entrar", sem erro nenhum aparecendo. Tambem e o que faz
     // `req.get("host")` devolver o dominio publico em vez do host interno,
     // usado pelo VersoesController para montar a URL dos pacotes.
-    // "1" = confia em um unico proxy na frente (o nosso), nao numa cadeia
-    // qualquer que o cliente possa forjar por cabecalho.
-    this.app.set("trust proxy", 1);
+    // Configuravel via TRUST_PROXY=true no .env: falso por padrao (rede
+    // local sem proxy) para que o IP real do cliente nunca venha de um
+    // cabecalho X-Forwarded-For que o cliente possa forjar e usar para
+    // burlar o rate limiter do login.
+    this.app.set("trust proxy", this.config.trustProxy ? 1 : false);
 
     // Cabeçalhos HTTP de segurança padrão (X-Content-Type-Options,
     // desativa X-Powered-By, política básica de referrer, etc.) --
@@ -171,9 +180,13 @@ class Server {
       })
     );
 
-    this.app.use(express.json());
+    this.app.use(express.json({ limit: "1mb" }));
     this.sessionStore = new SqliteSessionStore({ filePath: path.join(dbDir, "sessions.sqlite") });
     this.services.backups.setSessionStore(this.sessionStore);
+    // Permite que AuthService.changePassword invalide as sessões ativas do
+    // usuário após a troca de senha -- mesmo padrão de injeção pós-construção
+    // usado por BackupService acima (o store só existe aqui, depois de _buildServices).
+    this.services.auth.setSessionStore(this.sessionStore);
     this.app.use(
       session({
         store: this.sessionStore,
@@ -193,7 +206,7 @@ class Server {
     // API primeiro, depois os arquivos estaticos do front-end -- assim uma
     // rota de API mal digitada nunca cai silenciosamente no fallback do
     // index.html.
-    this.app.use("/api", new ApiRouter(this.controllers, this.loginLimiter).router);
+    this.app.use("/api", new ApiRouter(this.controllers, this.loginLimiter, this.services.configuracaoSistema).router);
 
     // A pasta client/ e' servida inteira, mas nem tudo que mora nela e' do
     // navegador: "package.json" (so declara o script de teste) e "tests/"

@@ -12,6 +12,7 @@ const { SistemaRepository } = require("./SistemaRepository");
 const { UsuarioRepository } = require("./UsuarioRepository");
 const { HistoricoRepository } = require("./HistoricoRepository");
 const { VersaoRepository } = require("./VersaoRepository");
+const { ConfiguracaoSistemaRepository } = require("./ConfiguracaoSistemaRepository");
 
 /**
  * Abre a conexao SQLite, garante o schema (criando/migrando tabelas) e
@@ -65,6 +66,7 @@ class Database {
     this.usuarios = new UsuarioRepository(this.conn);
     this.historico = new HistoricoRepository(this.conn);
     this.versoes = new VersaoRepository(this.conn);
+    this.configuracoesSistema = new ConfiguracaoSistemaRepository(this.conn);
   }
 
   /** Cria as tabelas se nao existirem; adiciona colunas/tabelas novas de forma idempotente. */
@@ -176,12 +178,14 @@ class Database {
     } catch (e) {
       if (!String(e.message).includes("duplicate column")) throw e;
     }
-    // Migração de papéis: antoniosalomao é o admin principal; contas legadas com
-    // papel 'user' viram 'operador', e outras contas existentes sem ser o admin viram 'operador'.
+    // Migração de papéis: contas legadas com papel 'user' viram 'operador';
+    // quaisquer outros papéis desconhecidos também viram 'operador'.
+    // (Antes havia aqui uma linha que promovia um usuário específico pelo nome
+    // de login -- removida: a promoção já rodou em todos os bancos existentes
+    // e manter o nome no código-fonte expõe informação desnecessária.)
     try {
       conn.exec("UPDATE usuarios SET role = 'operador' WHERE role = 'user'");
-      conn.exec("UPDATE usuarios SET role = 'admin' WHERE usuario = 'antoniosalomao'");
-      conn.exec("UPDATE usuarios SET role = 'operador' WHERE usuario <> 'antoniosalomao' AND role NOT IN ('admin', 'operador', 'consulta')");
+      conn.exec("UPDATE usuarios SET role = 'operador' WHERE role NOT IN ('admin', 'operador', 'consulta')");
     } catch {
       /* tabela pode ainda estar sendo criada */
     }
@@ -369,6 +373,19 @@ class Database {
         motivo TEXT,
         pausado_em TEXT NOT NULL,
         pausado_por INTEGER
+      )
+    `);
+
+    // Chave-valor para configurações do sistema como um todo (não da conta
+    // de quem está logado) -- ver ConfiguracaoSistemaRepository. Hoje só
+    // guarda "atualizador_habilitado", que liga/desliga as telas de
+    // Distribuição/Versões e o alerta de agente offline sem precisar
+    // reiniciar o servidor nem editar o .env.
+    conn.exec(`
+      CREATE TABLE IF NOT EXISTS configuracoes_sistema (
+        chave TEXT PRIMARY KEY,
+        valor TEXT NOT NULL,
+        atualizado_em TEXT NOT NULL
       )
     `);
 

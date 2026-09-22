@@ -83,6 +83,25 @@ class SqliteSessionStore extends session.Store {
     }
   }
 
+  /** Invalida todas as sessões ativas de um usuário específico.
+   *
+   * Usa `json_extract` do SQLite para filtrar pelo `user.id` gravado dentro
+   * do JSON de cada sessão -- mais cirúrgico que `clearAll` (que derruba
+   * todos os usuários) e correto porque a estrutura do JSON é controlada por
+   * nós (ver `set` acima e `AuthController._iniciarSessao`).
+   * Chamado por `AuthService.changePassword` para revogar sessões abertas em
+   * outros navegadores/dispositivos após uma troca de senha.
+   * @param {number} userId
+   */
+  clearByUserId(userId) {
+    try {
+      this.conn.prepare("DELETE FROM sessoes WHERE json_extract(dados, '$.user.id') = ?").run(userId);
+    } catch {
+      // Não impede a troca de senha se a limpeza falhar -- o pior caso é uma
+      // sessão antiga sobreviver até expirar naturalmente (maxAge de 7 dias).
+    }
+  }
+
   /** Invalida todas as sessões ativas (usado após restauração do banco de dados). */
   clearAll(callback) {
     try {

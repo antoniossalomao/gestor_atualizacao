@@ -25,6 +25,12 @@ const config = {
   publicUrl: process.env.PUBLIC_URL || "",
   discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL || "",
   alertaAgentesIntervaloMinutos: Number(process.env.ALERTA_AGENTES_INTERVALO_MINUTOS) || 15,
+  // "true" quando há exatamente um proxy reverso confiável na frente (Caddy,
+  // nginx...) terminando o HTTPS. Ligado: o Express confia no X-Forwarded-For
+  // para descobrir o IP real do cliente (usado pelo rate limiter do login).
+  // Desligado (padrão): sem proxy, qualquer cliente poderia forjar esse
+  // cabeçalho e burlar o rate limiter usando IPs diferentes a cada tentativa.
+  trustProxy: process.env.TRUST_PROXY === "true",
 };
 
 const server = new Server(config);

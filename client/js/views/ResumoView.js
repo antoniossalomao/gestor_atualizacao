@@ -155,8 +155,11 @@ export class ResumoView extends View {
       this.swr(
         "resumo-atencao",
         async () => {
+          // Com o Atualizador desativado, "/versoes/painel" responde 403
+          // (ver requireAtualizadorHabilitado no servidor) -- nem vale
+          // chamar, e o card de incidentes de agente não deveria aparecer.
           const [painel, lembretes] = await Promise.all([
-            this.api.get("/versoes/painel").catch(() => null),
+            this.atualizadorHabilitado ? this.api.get("/versoes/painel").catch(() => null) : Promise.resolve(null),
             this.api.get("/agendamentos/lembretes").catch(() => null),
           ]);
           return { painel, lembretes };

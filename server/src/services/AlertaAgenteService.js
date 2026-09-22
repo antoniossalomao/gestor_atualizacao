@@ -18,16 +18,25 @@ class AlertaAgenteService {
    * @param {import('../database/Database').Database} db
    * @param {import('./VersaoService').VersaoService} versaoService
    * @param {import('./NotificationService').NotificationService} notifications
+   * @param {import('./ConfiguracaoSistemaService').ConfiguracaoSistemaService} configuracaoSistema
    */
-  constructor(db, versaoService, notifications) {
+  constructor(db, versaoService, notifications, configuracaoSistema) {
     this.db = db;
     this.versaoService = versaoService;
     this.notifications = notifications;
+    this.configuracaoSistema = configuracaoSistema;
     this.timer = null;
   }
 
-  /** Roda uma verificação agora. Nunca lança -- uma falha aqui não pode derrubar o servidor. */
+  /**
+   * Roda uma verificação agora. Nunca lança -- uma falha aqui não pode derrubar o servidor.
+   *
+   * A checagem do flag é lida de novo A CADA ciclo (não só em `start()`):
+   * é o que permite desativar o Atualizador em Configurações e o alarme
+   * falso parar no ciclo seguinte, sem precisar reiniciar o servidor.
+   */
   async verificar() {
+    if (!this.configuracaoSistema.atualizadorHabilitado()) return;
     try {
       const { agentes } = this.versaoService.painel();
       for (const agente of agentes) {

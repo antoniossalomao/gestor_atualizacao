@@ -85,6 +85,7 @@ export class ConfiguracoesPanel {
    *   abrirBackups?: () => void,
    *   abrirUsuarios?: () => void,
    *   abrirConfiguracaoApi?: () => void,
+   *   abrirAtualizadorConfig?: () => void,
    *   abrirSaude?: () => void,
    * }} [acoes]
    *   O painel não mexe no shell por conta própria: quem sabe atualizar o
@@ -98,7 +99,18 @@ export class ConfiguracoesPanel {
    *   cada preferência criada, e o esquecimento apareceria como "o perfil
    *   mudou tudo, menos o menu lateral".
    */
-  constructor({ aoMudarLinhas, aoMudarSidebar, aoMudarVarias, abas, usuario, abrirBackups, abrirUsuarios, abrirConfiguracaoApi, abrirSaude } = {}) {
+  constructor({
+    aoMudarLinhas,
+    aoMudarSidebar,
+    aoMudarVarias,
+    abas,
+    usuario,
+    abrirBackups,
+    abrirUsuarios,
+    abrirConfiguracaoApi,
+    abrirAtualizadorConfig,
+    abrirSaude,
+  } = {}) {
     this.aoMudarLinhas = aoMudarLinhas || (() => {});
     this.aoMudarSidebar = aoMudarSidebar || (() => {});
     this.aoMudarVarias = aoMudarVarias || (() => {});
@@ -108,6 +120,7 @@ export class ConfiguracoesPanel {
     this.abrirBackups = abrirBackups || null;
     this.abrirUsuarios = abrirUsuarios || null;
     this.abrirConfiguracaoApi = abrirConfiguracaoApi || null;
+    this.abrirAtualizadorConfig = abrirAtualizadorConfig || null;
     this.abrirSaude = abrirSaude || null;
     /** @type {Map<string, HTMLElement>} id da seção -> painel montado */
     this.secoes = new Map();
@@ -520,6 +533,15 @@ export class ConfiguracoesPanel {
             busca: "saúde integridade diagnóstico servidor banco memória uptime status operacional",
             acao: () => this.abrirSaude?.(),
             oculto: () => typeof this.abrirSaude !== "function",
+          },
+          {
+            tipo: "link",
+            titulo: "Atualizador (Distribuição e Agentes)",
+            ajuda: "Liga ou desliga, para a equipe inteira, as abas Distribuição/Versões e o alerta de agente offline",
+            icone: "distribuicao",
+            busca: "atualizador desativar distribuição versões agentes agente offline desligar temporário piloto",
+            acao: () => this.abrirAtualizadorConfig?.(),
+            oculto: () => typeof this.abrirAtualizadorConfig !== "function",
           },
         ],
       },
@@ -1201,6 +1223,7 @@ export function abrirConfiguracoes({
   abrirBackups,
   abrirUsuarios,
   abrirConfiguracaoApi,
+  abrirAtualizadorConfig,
   abrirSaude,
 } = {}) {
   new ConfiguracoesPanel({
@@ -1211,6 +1234,7 @@ export function abrirConfiguracoes({
     abrirBackups,
     abrirUsuarios,
     abrirConfiguracaoApi,
+    abrirAtualizadorConfig,
     abrirSaude,
     aoMudarLinhas: () => {
       aoMudarLinhas?.();
