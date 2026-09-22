@@ -1,4 +1,4 @@
-import { escapeHtml } from "../../utils/html.js";
+import { escapeHtml, escapeAttr } from "../../utils/html.js";
 
 /**
  * Gráfico de barras horizontais simples, em HTML/CSS puro (sem SVG) -- cada
@@ -39,7 +39,7 @@ export class BarChart {
       row.tabIndex = 0;
       row.dataset.tooltip = `${bar.label}: ${bar.total} (${Math.round((bar.total / total) * 100)}% do total)`;
       row.innerHTML = `
-        <span class="bar-chart__label" title="${escapeHtml(bar.label)}">${escapeHtml(bar.label)}</span>
+        <span class="bar-chart__label" title="${escapeAttr(bar.label)}">${escapeHtml(bar.label)}</span>
         <span class="bar-chart__track">
           <span class="bar-chart__fill" style="width:0%; background:${bar.color || this.color}"></span>
         </span>

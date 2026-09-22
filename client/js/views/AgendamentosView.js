@@ -7,7 +7,7 @@ import { toast } from "../components/Toast.js";
 import { debounce } from "../utils/debounce.js";
 import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { emptyState } from "../components/EmptyState.js";
-import { plural, escapeHtml } from "../utils/html.js";
+import { plural, escapeHtml, escapeAttr } from "../utils/html.js";
 import { icon } from "../utils/icons.js";
 import { marcarOcupado } from "../utils/guard.js";
 import { prefs } from "../app/prefs.js";
@@ -883,7 +883,7 @@ function cartaoKanban(row, role) {
     podeArrastar ? 'draggable="true"' : ""
   } data-id="${row.id}" data-status="${row.status}" tabindex="0" role="button" aria-label="Tarefa ${escapeHtml(row.tarefa)}">
     <div class="kanban-card__header">
-      <strong class="kanban-card__client" title="${escapeHtml(row.cliente || "Sem cliente")}">${escapeHtml(row.cliente || "Sem cliente")}</strong>
+      <strong class="kanban-card__client" title="${escapeAttr(row.cliente || "Sem cliente")}">${escapeHtml(row.cliente || "Sem cliente")}</strong>
       ${vencida ? '<span class="badge badge--danger">Vencida</span>' : hoje ? '<span class="badge badge--accent">Hoje</span>' : ""}
     </div>
     <p class="kanban-card__title">${escapeHtml(row.tarefa)}</p>

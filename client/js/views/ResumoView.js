@@ -5,7 +5,7 @@ import { BarChart } from "../components/charts/BarChart.js";
 import { LineChart } from "../components/charts/LineChart.js";
 import { tokenHex } from "../utils/color.js";
 import { icon } from "../utils/icons.js";
-import { escapeHtml } from "../utils/html.js";
+import { escapeHtml, escapeAttr } from "../utils/html.js";
 import { DESATUALIZADO_DIAS } from "../config.js";
 
 /**
@@ -19,7 +19,7 @@ import { DESATUALIZADO_DIAS } from "../config.js";
  */
 function statTile(chave, nomeIcone, rotulo, destino) {
   return `
-    <button type="button" class="card stat-tile" data-stat="${chave}" data-destino="${escapeHtml(destino)}">
+    <button type="button" class="card stat-tile" data-stat="${chave}" data-destino="${escapeAttr(destino)}">
       <div class="stat-tile__label">
         <span class="stat-tile__icon">${icon(nomeIcone)}</span>
         ${escapeHtml(rotulo)}

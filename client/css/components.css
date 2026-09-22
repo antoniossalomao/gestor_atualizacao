@@ -140,8 +140,7 @@
   opacity: 1;
   transform: translateY(-50%) translateX(0);
 }
-#app.is-sidebar-collapsed .app-sidebar__group-title,
-#app.is-sidebar-collapsed .app-sidebar__label {
+#app.is-sidebar-collapsed .app-sidebar__group-title {
   display: block;
   height: 1px;
   margin: 10px 4px;
@@ -198,9 +197,7 @@
   white-space: nowrap;
 }
 
-
-.app-sidebar__group-title,
-.app-sidebar__label {
+.app-sidebar__group-title {
   padding: 16px 12px 6px;
   color: var(--cor-texto-fraco);
   font-size: 11px;
@@ -1141,26 +1138,6 @@ kbd {
   color: var(--cor-vermelho);
 }
 
-.metric-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px 18px;
-}
-.metric-card span {
-  color: var(--cor-texto-sub);
-  font-size: var(--txt-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.metric-card strong {
-  font: var(--peso-forte) 26px/1.1 var(--fonte-display);
-  color: var(--cor-accent);
-}
-.metric-card--danger strong {
-  color: var(--cor-vermelho);
-}
-
 /* ==========================================================================
    3. BOTÕES E SPINNER
    ========================================================================== */
@@ -1984,14 +1961,6 @@ table.data-table {
   background: var(--cor-superficie-hover);
 }
 
-.data-atrasada {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--status-erro-solido);
-  font-weight: var(--peso-forte);
-}
-
 .data-table .badge {
   padding: 2px 7px;
   font-size: 11px;
@@ -2084,12 +2053,6 @@ table.data-table {
   border-color: var(--cor-borda);
   background: transparent;
   color: var(--cor-texto-fraco);
-}
-
-.badge-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .version-chip {
@@ -3840,12 +3803,6 @@ hr.separator {
 
 /* -- Distribuição -- */
 
-.distribution-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
-  gap: var(--sp-5);
-}
-
 .distribution-form {
   position: relative;
   display: flex;
@@ -3873,11 +3830,6 @@ hr.separator {
   color: var(--cor-sobre-accent);
   font: var(--peso-forte) var(--txt-sm) var(--fonte);
   cursor: pointer;
-}
-
-.distribution-notes {
-  min-height: 64px;
-  resize: vertical;
 }
 
 /* Alcance da publicação e seleção assistida do grupo piloto. */
@@ -4357,41 +4309,6 @@ hr.separator {
 
 /* -- "no ar agora": uma linha por sistema com a versão publicada -- */
 
-.active-versions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.active-version {
-  padding: 10px 12px;
-  border: 1px solid var(--cor-borda);
-  border-left: 3px solid var(--cor-verde);
-  border-radius: var(--raio-pequeno);
-  background: var(--veu-tabela);
-}
-
-.active-version__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.active-version__head strong {
-  font-family: var(--fonte);
-  font-size: var(--txt-base);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.active-version__meta {
-  display: block;
-  margin-top: 4px;
-  color: var(--cor-texto-fraco);
-  font-size: var(--txt-xs);
-}
-
 /* -- Linha do tempo visual do ciclo de vida da versão (Linear style) -- */
 .version-timeline {
   display: flex;
@@ -4480,12 +4397,6 @@ hr.separator {
   color: var(--cor-texto-fraco) !important;
   font-family: var(--fonte-mono);
   font-size: var(--txt-xs) !important;
-}
-
-.distribution-side {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-5);
 }
 
 .agent-log-list {
@@ -4917,10 +4828,9 @@ hr.separator {
   color: var(--cor-accent);
   font: var(--peso-forte) 25px/1.1 var(--fonte-display);
 }
-/* "Sem versão publicada" > 0 é, estruturalmente, o mesmo tipo de contagem que
-   `.metric-card--danger` já pinta de vermelho na Distribuição -- aqui ficava
-   na mesma cor neutra dos outros dois indicadores da linha, como se fosse só
-   mais uma estatística e não um aviso. */
+/* "Sem versão publicada" > 0 é uma contagem que precisa ser lida como aviso:
+   ficava na mesma cor neutra dos outros dois indicadores da linha, como se
+   fosse só mais uma estatística. */
 .version-stat--alerta strong {
   color: var(--cor-vermelho);
 }
@@ -5600,7 +5510,6 @@ h1, h2, h3, strong {
   .tab-button__atalho {
     display: none;
   }
-  .app-sidebar__label,
   .app-sidebar__footer {
     display: none;
   }
@@ -5735,9 +5644,6 @@ h1, h2, h3, strong {
   .app-header__actions {
     gap: 8px;
   }
-  .app-header__user {
-    display: none;
-  }
   .app-main {
     padding: 20px var(--pad-tela) 32px;
   }
@@ -5757,7 +5663,6 @@ h1, h2, h3, strong {
     flex-direction: column;
     align-items: flex-start;
   }
-  .distribution-layout,
   .version-management-layout,
   .distribution-metrics,
   .version-stats,

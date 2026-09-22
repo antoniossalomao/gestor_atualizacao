@@ -1,7 +1,7 @@
 import { View } from "../app/View.js";
 import { debounce } from "../utils/debounce.js";
 import { emptyState } from "../components/EmptyState.js";
-import { plural, escapeHtml, copyToClipboard } from "../utils/html.js";
+import { plural, escapeHtml, escapeAttr, copyToClipboard } from "../utils/html.js";
 import { toast } from "../components/Toast.js";
 import { tempoRelativo, formatarDataHora } from "../utils/date.js";
 
@@ -414,7 +414,7 @@ export class ConsultaView extends View {
         <td data-label="Estado">
           <span class="badge ${estadoBadge}">${escapeHtml(estadoLabel)}</span>
         </td>
-        <td data-label="Último contato" title="${escapeHtml(contatoTitle)}">
+        <td data-label="Último contato" title="${escapeAttr(contatoTitle)}">
           ${escapeHtml(contatoTexto)}
         </td>
       `;
