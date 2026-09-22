@@ -240,6 +240,8 @@ vai ficar disponível:
   apontá-lo para a porta do Node. Nesse caso, defina `SESSION_SECURE=true`
   no `.env`. Sem HTTPS, o login trafega sem criptografia — não exponha
   a porta do Node direto na internet sem isso.
+- **Em container:** há um `Dockerfile` e um `docker-compose.yml` prontos —
+  ver [Rodar em Docker](#rodar-em-docker-alternativa-ao-serviço-do-windows).
 
 ## Rodar como serviço do Windows (recomendado)
 
@@ -306,6 +308,124 @@ correção numa próxima passada pelo script:
   pequeno (bytes por dia), então isso não vira problema por muito tempo,
   mas seria bom ter uma tarefa agendada apagando rotações com mais de
   ~90 dias.
+
+## Rodar em Docker (alternativa ao serviço do Windows)
+
+Mesmo painel, empacotado. Faz sentido quando o app vai para uma máquina
+Linux, ou quando se quer o servidor isolado do resto do que roda no PC —
+não substitui o serviço do Windows acima, é a outra opção. Requer o
+[Docker Desktop](https://www.docker.com/products/docker-desktop/) (no
+Windows, ele usa o WSL 2).
+
+### Primeira vez
+
+**O `.env` precisa existir antes do primeiro `up`.** Isso não é preciosismo
+de documentação: o `docker-compose.yml` monta `server/.env` como arquivo, e
+quando o caminho de origem não existe o Docker cria uma **pasta** vazia com
+esse nome. O servidor sobe assim mesmo, com os valores padrão — inclusive o
+`SESSION_SECRET` de exemplo, que é público — e nada nos logs diz que foi
+isso que aconteceu.
+
+```powershell
+cd web
+Copy-Item server\.env.example server\.env
+# Gere um segredo de verdade e cole no SESSION_SECRET do .env:
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+docker compose up -d --build
+```
+
+Abra `http://localhost:3000`. A tela de criação do administrador aparece
+igual, e as migrações rodam sozinhas no primeiro início.
+
+### O dia a dia
+
+```powershell
+docker compose ps          # estado (procure "healthy")
+docker compose logs -f     # acompanhar o log
+docker compose restart     # aplicar mudança feita no .env
+docker compose up -d --build   # depois de atualizar o código
+docker compose stop        # parar sem apagar nada
+```
+
+O container tem `restart: unless-stopped`: volta sozinho depois de travar e
+depois de a máquina reiniciar — é o que o serviço do Windows faz, pelo
+outro caminho.
+
+A verificação de saúde bate em `/api/auth/status` a cada 30 segundos. Ela
+responde do banco, então `healthy` significa "o SQLite abriu e respondeu", e
+não só "o processo está de pé".
+
+### Onde ficam os dados
+
+Em dois volumes do Docker (`gestor-data` e `gestor-logs`), **não** numa
+pasta do Windows. É de propósito: o SQLite em modo WAL depende de travas de
+arquivo que não funcionam de forma confiável através da tradução de sistema
+de arquivos do Docker Desktop. Trocar a imagem (`up -d --build`) não mexe
+nos volumes; os dados ficam.
+
+Para tirar uma cópia para fora, use o **download de backup do próprio
+painel** (Configurações → Backup), que é o caminho pensado para isso. Os
+backups automáticos continuam acontecendo a cada início, dentro do volume.
+
+### Trazer um `gestao.db` que já existe
+
+O volume nasce vazio. Para começar com o banco que já está em uso, pare o
+container e copie o arquivo para dentro dele:
+
+```powershell
+docker compose stop
+docker cp server\data\gestao.db gestor-de-atualizacoes:/app/server/data/gestao.db
+docker run --rm --user root --volumes-from gestor-de-atualizacoes alpine chown -R 1000:1000 /app/server/data
+docker compose start
+```
+
+Copie **só** o `gestao.db`. Os arquivos `-wal` e `-shm` ao lado dele são
+estado temporário de uma conexão aberta; se o servidor de origem foi parado
+de forma organizada, o que importa já está no `.db`, e levar junto um `-wal`
+de outra máquina só cria chance de inconsistência. O `sessions.sqlite`
+também não vai: ele só guarda quem estava logado, e todo mundo entra de
+novo.
+
+Duas pegadinhas testadas na prática, e é por isso que a receita acima não é
+a primeira que vem à cabeça:
+
+- **`docker compose cp` recusa container parado** ("no container found for
+  service") — por isso é `docker cp` simples, direto pelo nome do container
+  (`gestor-de-atualizacoes`, fixado em `container_name` no compose), que
+  funciona com o container parado ou rodando.
+- **Toda cópia para dentro do container chega dona de `root`.** O processo
+  roda como `node` (uid 1000) — sem o `chown` acima, o servidor sobe e cai
+  na hora com `SqliteError: attempt to write a readonly database`. O
+  `docker run --volumes-from` resolve isso sem precisar saber o nome do
+  volume nomeado (que o Docker deriva do nome da pasta do projeto e muda se
+  ela for renomeada).
+
+### Atrás de um proxy reverso (HTTPS)
+
+Com Caddy/Nginx na frente terminando o HTTPS, ajuste no `server/.env` —
+não no `docker-compose.yml`, pelo motivo explicado no item seguinte:
+
+| Variável | Valor | Por quê |
+|---|---|---|
+| `SESSION_SECURE` | `true` | Sem isso o cookie de login trafega sem exigir HTTPS. |
+| `TRUST_PROXY` | `true` | Sem isso o Express enxerga só o IP do proxy, e com `SESSION_SECURE=true` ninguém consegue entrar. |
+| `PUBLIC_URL` | `https://seu-dominio` | É o que monta os links de download enviados aos agentes. |
+
+E troque o mapeamento de portas para `"127.0.0.1:3000:3000"`, de modo que
+só o proxy alcance o Node.
+
+### Duas armadilhas
+
+- **Não mova variável do `.env` para `environment:` no compose.** O `dotenv`
+  não sobrescreve variável que já veio do ambiente, então o que estiver no
+  compose vence — e a tela *Configurações → Sistema → "Configuração da API"*,
+  que grava no `.env`, passa a não ter efeito nenhum, sem mensagem de erro.
+  `PORT` é a única exceção (não é editável por aquela tela, e fixá-la é o que
+  mantém o mapeamento de portas válido).
+- **O fuso está fixado em `America/Sao_Paulo`** (`TZ` no `Dockerfile`).
+  Container sem fuso roda em UTC, e o app usa o relógio local para decidir o
+  que é "hoje": das 21h à meia-noite, os agendamentos de amanhã apareceriam
+  como atrasados. Se a equipe não estiver em São Paulo, mude ali.
 
 ## Limitações conhecidas
 
