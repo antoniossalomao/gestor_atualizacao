@@ -5,23 +5,22 @@
 Documento único que reúne, atualiza e substitui todos os relatórios, auditorias, especificações e
 apresentações que existiam soltos em `web/docs/`. Cada afirmação técnica abaixo foi conferida
 contra o código-fonte real em setembro de 2026 — onde um documento antigo dizia uma coisa e o
-código dizia outra, o código venceu, e a divergência está registrada na [seção 5](#5-auditoria-de-agostoset2026-o-que-mudou-desde-então).
+código dizia outra, o código venceu, e a divergência está registrada na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então).
 
 | | |
 |---|---|
-| **Versão deste documento** | 1.3 |
-| **Data** | 18 de setembro de 2026 |
+| **Versão deste documento** | 1.4 |
+| **Data** | 22 de setembro de 2026 |
 | **Autor** | Antonio Salomão |
-| **Nesta revisão** | Reorganização do `client/js` por responsabilidade (seção 2.2), verificação de tipos e testes na seção 4 |
-| **Substitui** | Ver [seção 6 — histórico deste documento](#6-histórico-deste-documento-o-que-foi-consolidado) |
-| **PDF** | Gerado do `.md` por `npm run pdf` nesta pasta — nunca editado à mão |
+| **Nesta revisão** | Incorporados o resumo executivo (seção 0) e as decisões de arquitetura — ADRs (seção 4), que existiam como arquivos separados em `web/docs/` |
+| **Substitui** | Ver [seção 7 — histórico deste documento](#7-histórico-deste-documento-o-que-foi-consolidado) |
 
 > ### Este documento é uma fotografia, não a fonte da verdade
 >
-> Ele existe para ser **lido inteiro, de uma vez** — por alguém que chega ao projeto, ou por quem
-> precisa de uma visão completa dos dois lados num arquivo só (daí o PDF). Isso o torna útil, e
-> também o torna o documento que **envelhece mais rápido**: tudo que ele descreve está descrito
-> também em algum lugar que muda junto com o código.
+> Ele existe para ser **lido inteiro, de uma vez** — por alguém que chega ao projeto, por quem vai
+> apresentar o projeto para a diretoria (seção 0), ou por quem precisa de uma visão completa dos
+> dois lados num arquivo só. Isso o torna útil, e também o torna o documento que **envelhece mais
+> rápido**: tudo que ele descreve está descrito também em algum lugar que muda junto com o código.
 >
 > **Quando este documento e outro discordarem, o outro está certo.** A ordem de precedência:
 >
@@ -29,28 +28,225 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 > |---|---|
 > | Como rodar, instalar, o que o sistema faz | `web/README.md`, `atualizador/README.md` |
 > | Onde colocar cada coisa, como testar | `CONTRIBUTING.md` de cada metade |
-> | **Por que** foi feito assim | `docs/adr/` de cada metade |
-> | O que mudou e quando | [`web/CHANGELOG.md`](../CHANGELOG.md) |
+> | **Por que** foi feito assim | Seção 4 deste documento (painel web); `atualizador/docs/adr/` (agente C#) |
+> | O que mudou e quando | [`web/CHANGELOG.md`](CHANGELOG.md) |
+> | O que ainda falta fazer | [`docs/MELHORIAS.md`](MELHORIAS.md) |
 > | O que fazer quando quebra | [`docs/OPERACAO.md`](OPERACAO.md) |
 > | O que ainda pode dar errado no agente | [`atualizador/RISCOS-CONHECIDOS.md`](../../atualizador/RISCOS-CONHECIDOS.md) |
 >
 > Ao alterar o código, atualize **aquele** documento. Este aqui é revisado de tempos em tempos,
 > comparando com o código — como foi feito em set/2026, quando as seções 2.2 e 4 tinham ficado
-> para trás.
+> para trás, e novamente em 22/09/2026, quando o resumo executivo e os ADRs foram incorporados.
 
 ---
 
 ## Sumário
 
+0. [Resumo executivo](#0-resumo-executivo) — para quem vai apresentar o projeto sem entrar em
+   detalhe técnico
 1. [Visão geral do projeto](#1-visão-geral-do-projeto)
 2. [Painel web — Gestor de Atualizações](#2-painel-web--gestor-de-atualizações)
    — inclui [2.7 Mudanças de 11/09/2026](#27-mudanças-de-11092026),
    [2.8 Mudanças de 15/09/2026](#28-mudanças-de-15092026) e
    [2.9 Revisão de interface e Configurações](#29-revisão-de-interface-e-configurações--15092026)
 3. [Atualizador Inteligente de ERP — agente local (C#)](#3-atualizador-inteligente-de-erp--agente-local-c)
-4. [Como verificar](#4-como-verificar)
-5. [Auditoria de agosto/set 2026 — o que mudou desde então](#5-auditoria-de-agostoset2026-o-que-mudou-desde-então)
-6. [Histórico deste documento](#6-histórico-deste-documento-o-que-foi-consolidado)
+4. [Decisões de arquitetura — ADRs do painel web](#4-decisões-de-arquitetura--adrs-do-painel-web)
+5. [Como verificar](#5-como-verificar)
+6. [Auditoria de agosto/set 2026 — o que mudou desde então](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então)
+7. [Histórico deste documento](#7-histórico-deste-documento-o-que-foi-consolidado)
+
+---
+
+## 0. Resumo executivo
+
+> Esta seção é o conteúdo que antes vivia em
+> `APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md`, um arquivo à parte pensado para quem vai apresentar
+> o projeto para a diretoria sem entrar em detalhe técnico. Incorporado aqui em 22/09/2026 — ver
+> [seção 7](#7-histórico-deste-documento-o-que-foi-consolidado). Quem só precisa desta parte pode
+> copiá-la para um documento à parte sem perda: ela não depende do resto do arquivo.
+
+**Gestor de Atualizações + Agente Atualizador ERP** · Bredas Sistemas
+
+Transformação do processo de atualização de ERP de um modelo 100% manual, demorado e arriscado
+(via AnyDesk máquina por máquina) em uma esteira segura, automatizada, padronizada e monitorada em
+tempo real por um painel central de comando.
+
+### 0.1 O problema que motivou o projeto
+
+Hoje, cada nova versão do ERP (com melhorias fiscais, novas telas ou correções) exige da equipe de
+suporte um procedimento manual e repetitivo para cada cliente da carteira.
+
+**Como funciona o modelo manual atual (gargalo operacional):**
+
+1. O suporte agenda um horário com o cliente.
+2. Conecta no servidor do cliente via AnyDesk ou TeamViewer.
+3. Executa manualmente uma sequência de 8 passos delicados: solicitar a saída de todos os usuários
+   do sistema; fazer backup de segurança do banco Firebird; renomear os executáveis legados;
+   copiar manualmente os novos executáveis baixados; abrir ferramenta de banco e rodar scripts SQL
+   de atualização; conferir manualmente logs e integridade de tabelas/colunas; gerar um novo backup
+   pós-atualização; abrir o sistema numa estação para testar o login.
+4. Repete exatamente esse processo em cada um dos clientes da carteira.
+
+**As dores e custos desse modelo:**
+
+- **Tempo e custo excessivo de suporte** — cada cliente consome de 30 a 60 minutos de um técnico;
+  atualizar 50 clientes consome de 30 a 50 horas só com cópia de arquivos e espera de telas.
+- **Risco humano no banco de dados** — queda de conexão no AnyDesk, ordem trocada de scripts SQL
+  ou passo esquecido pode corromper o banco Firebird do cliente e paralisar a operação dele.
+- **Falta de visibilidade central** — sem lugar centralizado para responder rápido a "quantos
+  clientes já estão na versão nova?", "quem ainda está desatualizado?", "quando foi a última
+  atualização do cliente X?".
+- **Gargalo para expansão** — a carteira de clientes não escala sem aumentar a equipe de suporte só
+  para atualizações.
+
+### 0.2 Visão geral da solução: os dois pilares
+
+O projeto ataca o problema em duas frentes complementares, conectadas por uma API central segura:
+
+```
+[ BREDAS SISTEMAS ]                               [ SERVIDOR DO CLIENTE ]
+ ┌───────────────────────────┐                     ┌─────────────────────────────┐
+ │   GESTOR DE ATUALIZAÇÕES  │◄──── Conexão ──────►│   AGENTE ATUALIZADOR ERP    │
+ │       (Painel Web)        │      Segura (API)   │      (Serviço Windows C#)   │
+ └───────────────────────────┘                     └─────────────────────────────┘
+  • Central de comando da equipe                    • Robô local silencioso
+  • Publica versões e scripts                       • Baixa, valida e aplica
+  • Monitora incidentes e telemetria                • Isola banco e roda scripts
+  • Controle de acessos e auditoria                 • Atualiza terminais sozinho
+```
+
+| Componente | O que é | Onde roda | Papel no negócio |
+|---|---|---|---|
+| **Gestor de Atualizações** (Central de Comando) | Painel web corporativo em Node.js + Express + SQLite, acessível pelo navegador | Servidor interno da Bredas | Onde a equipe publica versões, gerencia clientes, controla acessos, acompanha status de agentes em tempo real e visualiza métricas |
+| **Agente Atualizador ERP** (Assistente Local) | Serviço Windows nativo e silencioso em C# (.NET 8) | Servidor local de cada cliente (ao lado do Firebird) | Executa sozinho todo o processo: consulta a API, baixa versão, valida integridade, aplica scripts SQL, atualiza executáveis e reporta o status |
+
+**Como os dois conversam (segurança e arquitetura):**
+
+- **Conexão segura de dentro para fora (outbound polling)** — o agente consulta a API da Bredas via
+  internet com token compartilhado seguro. Não há portas abertas nem necessidade de IP fixo no
+  servidor do cliente, operando normalmente atrás de roteadores e firewalls (NAT).
+- **Operação silenciosa** — sem versão nova, o agente volta a dormir sem consumir memória ou CPU.
+- **Telemetria e alertas imediatos** — o agente reporta logs detalhados e tempos de execução; se
+  houver falha ou um agente ficar sem contato por mais de 24 horas, o painel acende alerta visual
+  imediato e notifica a equipe via Discord.
+
+### 0.3 O fluxo das 4 fases: segurança em primeiro lugar
+
+Para garantir risco zero de parada na operação do cliente, o agente foi projetado com uma esteira
+estrita de 4 fases sequenciais blindadas (detalhe técnico completo na [seção 3.2](#32-como-funciona--máquina-de-estados)):
+
+- **Fase 1 — Preparo silencioso (download e validação).** O agente baixa o pacote da versão nova
+  em segundo plano. Validação criptográfica (SHA-256): se a conexão oscilar ou o arquivo
+  corromper, o pacote é descartado imediatamente. O cliente continua trabalhando sem perceber
+  nenhuma lentidão.
+- **Fase 2 — Permissão e respeito ao cliente (autorização).** O sistema nunca derruba o cliente de
+  surpresa: quando o pacote está pronto, o ERP Delphi avisa o usuário ("Uma nova versão está
+  pronta. Deseja aplicar agora?"). O cliente escolhe a melhor hora; ao confirmar, o ERP grava a
+  autorização e o agente assume o processo. **Esta fase ainda não foi escrita no ERP Delphi** — ver
+  [seção 3.4](#34-estado-atual-pré-piloto).
+- **Fase 3 — Execução crítica com escudo total (banco Firebird e scripts).** O agente desconecta os
+  usuários externos do banco (`gfix -shut`), gera um backup completo via `gbak` antes de tocar em
+  qualquer dado, aplica os scripts SQL em duas passadas, e devolve o banco ao ar. Rollback
+  automático garantido: se qualquer comando SQL falhar ou faltar energia, o agente interrompe,
+  restaura o backup inicial e devolve o banco ao estado funcional anterior. O cliente nunca
+  amanhece com o sistema quebrado.
+- **Fase 4 — Distribuição automática para os terminais.** O agente grava os novos executáveis na
+  tabela central (`BEXE.fdb`); as estações e caixas da rede local baixam os executáveis atualizados
+  ao abrirem o ERP, sem precisar atualizar máquina por máquina. O agente envia o relatório de
+  sucesso para o Gestor Web.
+
+### 0.4 O que já está pronto e em funcionamento hoje
+
+O projeto atingiu maturidade técnica elevada em ambos os repositórios. Detalhe técnico completo nas
+seções [2](#2-painel-web--gestor-de-atualizações) e [3](#3-atualizador-inteligente-de-erp--agente-local-c);
+resumo aqui:
+
+**Gestor de Atualizações (painel web) — em uso operacional:**
+
+- Canais de distribuição e versões piloto, com promoção para geral e rollback transacional.
+- Controle de concorrência otimista (OCC) — revisões atômicas, impedindo que edições simultâneas
+  entre técnicos sobrescrevam dados sem aviso.
+- Ficha 360° do cliente — histórico completo de atendimentos, cópia rápida de acessos remotos,
+  linha do tempo de eventos e matriz comparativa de versões (instalada vs. publicada).
+- Trilha de auditoria visual — log completo (quem criou, editou ou excluiu) com diff visual
+  antes/depois campo a campo.
+- Telemetria de agentes ao vivo — monitoramento em tempo real do parque de clientes.
+- Gestão de agendamentos em lista e quadro Kanban interativo.
+- Paleta de comandos universal (`Ctrl+K`) e navegação completa por atalhos de teclado.
+- Suporte a temas claro, escuro e sistema, com cache inteligente (stale-while-revalidate).
+- Suíte de testes automatizados e verificação estrita de tipos — ver [seção 5](#5-como-verificar)
+  para o número atual (a contagem muda com frequência; não fixada aqui de propósito).
+
+**Agente Atualizador ERP (serviço C#/.NET 8) — pré-piloto homologado:**
+
+- Assistente gráfico de configuração (`SetupForm`) para instalar e configurar o agente no servidor
+  do cliente em poucos minutos, com botão de testar conexão.
+- Validação de ambiente no boot — confere se os utilitários do Firebird e o banco estão acessíveis
+  antes de iniciar o loop de trabalho.
+- Auto-recuperação de interrupções — reinício ou falta de energia no meio de uma atualização é
+  detectado e o banco é recuperado automaticamente para o estado seguro.
+- Motor robusto de scripts Firebird — tratamento automático de triggers e stored procedures,
+  execução em 2 passadas para dependências cíclicas.
+- Pausa remota da atuação do agente via painel web.
+- Homologado com banco real — ciclo completo testado repetidamente contra cópia real do banco
+  Firebird do `B_Vendas` (366 tabelas, mais de 1.000 scripts SQL reais).
+- Testes automatizados de integração cobrindo os fluxos do Worker e de rollback.
+
+### 0.5 Riscos mapeados e como cada um foi blindado
+
+| Risco mapeado | O que poderia acontecer | Como o sistema foi blindado | Situação |
+|---|---|---|---|
+| Queda de energia ou reinício durante atualização | Banco Firebird ficar bloqueado ou inacessível | O agente detecta no boot interrupções não finalizadas e restaura o banco automaticamente a partir do backup inicial | Resolvido e testado |
+| Falha em script SQL do banco | Cliente ficar com schema incompleto ou dados corrompidos | O motor interrompe na hora, executa rollback, restaura o backup prévio e devolve o banco ao ar funcional | Resolvido e testado |
+| Arquivo corrompido no download | Executável danificado ser gravado na pasta do cliente | Validação estrita de hash SHA-256 antes da extração; se 1 byte diferir, o pacote é descartado | Resolvido e testado |
+| Operador publicar versão errada para todos | Pacote não testado ser enviado a toda a base de clientes | Canal de versões piloto com transação atômica e permissão restrita a administradores | Resolvido e testado |
+| Conflito de edição simultânea no painel | Um operador sobrescrever alterações de outro | Controle de concorrência otimista (OCC) com verificação de revisão atômica | Resolvido e testado |
+| Scripts antigos serem reaplicados | Erro de "tabela ou coluna já existente" no banco | O agente consulta o histórico da tabela `SCRIPTS` e pula arquivos já executados | Mitigado — requer triagem no piloto |
+| Atualização ocorrer durante venda no caixa | Caixa travar na frente do consumidor | O agente só inicia a execução após autorização explícita do usuário no ERP (Fase 2) | Pendente de tela no Delphi |
+| Processo externo travar o servidor do cliente | `gfix` ou `gbak` ficarem travados indefinidamente | Timeout obrigatório com encerramento forçado em qualquer chamada de processo externo | Resolvido e testado |
+
+### 0.6 Ganhos do negócio
+
+- **Eficiência máxima da equipe de suporte** — elimina horas de conexão remota repetitiva via
+  AnyDesk; a equipe fica livre para suporte consultivo, novos recursos e relacionamento com cliente.
+- **Agilidade de distribuição em massa** — atualizações críticas (notas técnicas urgentes da SEFAZ)
+  que levavam dias ou semanas para cobrir a base agora podem ser aplicadas em minutos, coordenadas.
+- **Fim das falhas humanas e padronização** — o mesmo procedimento auditado roda em 100% dos
+  clientes; alertas preventivos avisam a equipe antes mesmo do cliente notar.
+- **Escalabilidade real da empresa** — a carteira pode dobrar ou triplicar sem contratação
+  proporcional só para sustentar atualizações.
+
+### 0.7 O que falta para o piloto e próximos passos
+
+O projeto está tecnicamente pronto para iniciar a operação supervisionada. Restam etapas práticas
+de campo:
+
+```
+ETAPA 1                    ETAPA 2                   ETAPA 3                    ETAPA 4
+Ajuste Delphi (Fase 2)     Triagem do Piloto         Piloto Supervisionado      Liberação Gradual
+┌──────────────────┐       ┌──────────────────┐      ┌──────────────────┐       ┌──────────────────┐
+│ Janela simples   │  ──►  │ Alinhar tabela   │  ──► │ Instalar agente  │  ──►  │ Liberar para     │
+│ de confirmação   │       │ SCRIPTS do       │      │ no Cliente 01 e  │       │ grupos de 5, 10, │
+│ no ERP existente │       │ cliente piloto   │      │ acompanhar ao vivo│      │ 20 clientes      │
+└──────────────────┘       └──────────────────┘      └──────────────────┘       └──────────────────┘
+```
+
+1. **Janela de confirmação no ERP Delphi (Fase 2).** No código Delphi do ERP, adicionar uma
+   checagem simples na abertura: se houver registro com status `PENDENTE` na tabela
+   `SYS_ATUALIZACAO`, exibe a pergunta ao usuário. Ao clicar em Sim, o ERP grava `AUTORIZADO` e
+   fecha o sistema para o agente assumir.
+2. **Triagem de scripts do cliente piloto 01.** Selecionar um cliente parceiro de baixo risco;
+   conferir os scripts que esse cliente já possui aplicados, garantindo que a tabela `SCRIPTS`
+   reflita o estado inicial correto.
+3. **Execução supervisionada do piloto.** Usar o `SetupForm` para instalar e configurar o agente no
+   servidor do Cliente Piloto 01; publicar uma versão no canal piloto e acompanhar o ciclo completo
+   em tempo real pelo painel e pelos alertas do Discord.
+4. **Expansão gradual da base.** Validado o primeiro ciclo em produção real, iniciar implantação em
+   lotes controlados (5, 10, 20 clientes) até cobrir toda a base.
+
+**Repositórios:** código-fonte estruturado em dois repositórios independentes com versionamento
+Git completo — `github.com/antoniossalomao/gestor_atualizacao` (painel web + API central) e
+`github.com/antoniossalomao/atualizador_automatico` (agente Windows C# .NET 8).
 
 ---
 
@@ -989,7 +1185,311 @@ sem timeout deixaria o cliente inteiro parado até alguém perceber.
 
 ---
 
-## 4. Como verificar
+## 4. Decisões de arquitetura — ADRs do painel web
+
+> Esta seção reúne os Registros de Decisão de Arquitetura (ADR) que antes existiam como arquivos
+> separados em `web/docs/adr/`. Incorporados aqui em 22/09/2026 — ver
+> [seção 7](#7-histórico-deste-documento-o-que-foi-consolidado). O agente C# (`atualizador/`) tem
+> seus próprios ADRs, em `atualizador/docs/adr/` — não fazem parte deste documento.
+
+Um ADR é um documento curto que registra **uma** decisão de arquitetura: o que foi decidido, em
+que contexto, o que se ganhou e o que se perdeu. Existem porque o código mostra o resultado de uma
+decisão, nunca as alternativas que foram descartadas. Sem isso, meses depois alguém "conserta" uma
+escolha deliberada — e reintroduz o problema que ela evitava.
+
+| # | Decisão | Situação |
+|---|---|---|
+| [4.1](#41-adr-0001--front-end-sem-framework-e-sem-etapa-de-build) | Front-end sem framework e sem etapa de build | Aceita |
+| [4.2](#42-adr-0002--sqlite-embarcado-com-driver-síncrono) | SQLite embarcado, com driver síncrono | Aceita |
+| [4.3](#43-adr-0003--armazenamento-de-sessão-escrito-à-mão) | Armazenamento de sessão escrito à mão | Aceita |
+| [4.4](#44-adr-0004--injeção-de-dependência-na-mão-sem-container) | Injeção de dependência na mão, sem container | Aceita |
+| [4.5](#45-adr-0005--clientjs-dividido-por-responsabilidade) | `client/js/` dividido por responsabilidade | Aceita |
+| [4.6](#46-adr-0006--verificação-de-tipos-sem-etapa-de-build-escopada-ao-código-puro) | Verificação de tipos sem build, escopada ao código puro | Aceita |
+| [4.7](#47-adr-0007--piloto-rollback-e-concorrência-otimista) | Piloto, rollback e concorrência otimista | Aceita |
+
+**Como escrever um novo:** copie a estrutura de qualquer um — Contexto → Decisão → Consequências →
+Alternativas consideradas — como uma nova subseção `4.N` no fim desta lista. Um ADR não se edita
+depois de aceito: se a decisão mudar, escreva um novo que o substitua e marque o antigo como
+"Substituída pelo ADR 4.N". Registre uma decisão aqui quando ela for **cara de reverter** ou quando
+a escolha óbvia tiver sido descartada por um motivo não óbvio — escolha de nome de variável não é
+ADR.
+
+### 4.1 ADR-0001 — Front-end sem framework e sem etapa de build
+
+**Situação:** Aceita
+
+**Contexto.** O painel tem ~15 telas com tabelas, formulários, modais e alguns gráficos. O caminho
+padrão da indústria seria React (ou Vue/Svelte) com Vite, resultando em `npm run build` gerando um
+bundle. Duas restrições pesaram mais que o padrão: (1) quem mantém é uma equipe pequena, sem
+especialista em front-end — o sistema precisa ser corrigível por quem abre o arquivo, vê o erro e
+conserta, eventualmente no servidor, às pressas, com o cliente esperando; (2) o ciclo de vida
+esperado é longo e de manutenção baixa — um projeto com build parado por dois anos não compila
+mais (as versões das ferramentas saíram de baixo), enquanto HTML/CSS/JS servido direto continua
+rodando.
+
+**Decisão.** O front-end é HTML, CSS e JavaScript puro, com módulos ES nativos do navegador. O que
+está em `client/` é exatamente o que o navegador executa. Sem bundler, sem transpilação, sem
+`node_modules` no front-end. Componentização é feita com classes de JavaScript manipulando o DOM
+diretamente (`components/`, `views/`), e `ApiClient.js` é o único ponto que fala HTTP.
+
+**Consequências.**
+
+*Ganhos:* depurar no navegador mostra o arquivo real, com os nomes reais, sem source map; nenhuma
+dependência de front-end para auditar, atualizar ou quebrar; alterar uma tela é editar um arquivo e
+recarregar a página; não há classe inteira de problemas de configuração de build.
+
+*Custos aceitos:* nada de JSX, reatividade automática ou gerenciamento de estado pronto — cada tela
+atualiza o DOM explicitamente; mais código repetido do que um framework exigiria; sem checagem de
+tipos, mitigado com JSDoc nas assinaturas públicas e, desde o [ADR 4.6](#46-adr-0006--verificação-de-tipos-sem-etapa-de-build-escopada-ao-código-puro),
+com verificação estática desse JSDoc nas camadas sem DOM, ainda sem etapa de build; sem
+*tree-shaking* nem minificação — irrelevante em rede local.
+
+**Obrigação que isso cria:** como não há compilador para pegar erro, o que dá para testar sem
+navegador tem que ser testável — daí a regra de que `domain/` não toca no DOM (ver
+[ADR 4.5](#45-adr-0005--clientjs-dividido-por-responsabilidade)).
+
+**Alternativas consideradas.** React + Vite — descartado: acrescenta uma cadeia de dependências e
+um passo de build que a equipe não tem como manter, para resolver um problema de complexidade de
+UI que este painel não tem. Web Components nativos — descartado por pouca margem: dariam
+encapsulamento melhor, mas o Shadow DOM complicaria o tema global por variáveis CSS, que é o
+mecanismo central da aparência do app.
+
+### 4.2 ADR-0002 — SQLite embarcado, com driver síncrono
+
+**Situação:** Aceita
+
+**Contexto.** O painel substituiu um aplicativo Python/Tkinter que já guardava tudo num
+`gestao.db` SQLite; os dados precisavam continuar funcionando sem migração. O uso é de uma equipe
+pequena: dezenas de milhares de linhas, poucos usuários simultâneos, escrita esporádica — sem
+requisito de alta concorrência de escrita nem de replicação.
+
+**Decisão.** Continuar com SQLite, acessado por `better-sqlite3` — um driver **síncrono**. O
+schema é criado e evoluído em código, por `src/database/Database.js`, na subida do servidor. Não
+há ferramenta de migração externa.
+
+**Consequências.**
+
+*Ganhos:* o banco do app antigo continuou valendo (zero migração de dados); `better-sqlite3`
+distribui binário pré-compilado, então `npm install` no Windows não precisa de compilador C++ (ao
+contrário do driver `sqlite3`); sendo síncrono, o código de repositório é linear, sem `async`/
+`await` nem callback para ler uma linha — elimina uma classe inteira de bugs de ordem de execução,
+e é o que torna o `SqliteSessionStore` seguro (ver [ADR 4.3](#43-adr-0003--armazenamento-de-sessão-escrito-à-mão));
+backup é copiar um arquivo — é literalmente o que `BackupService` faz.
+
+*Custos aceitos:* uma consulta lenta trava o event loop do Node inteiro (com este volume, cada
+consulta custa menos de um milissegundo; se o volume crescer muito, esta é a primeira premissa a
+revisar); um servidor só, não dá para escalar horizontalmente sem trocar o banco; escrita é
+serializada pelo SQLite, irrelevante para este padrão de uso. **Mitigação em uso:**
+`journal_mode = WAL`, que permite leituras concorrentes durante uma escrita.
+
+**Alternativas consideradas.** PostgreSQL — descartado: exigiria migrar os dados existentes,
+instalar e manter um serviço a mais no servidor da empresa, e resolver um problema de concorrência
+que não existe aqui. Driver `sqlite3` (assíncrono) — descartado: depende de compilação via
+node-gyp no Windows, e sua cadeia de dependências de build tinha vulnerabilidades conhecidas à
+época; o ganho (não bloquear o event loop) não se paga neste volume.
+
+### 4.3 ADR-0003 — Armazenamento de sessão escrito à mão
+
+**Situação:** Aceita
+
+**Contexto.** `express-session` guarda sessões em memória por padrão, o que significa que todo
+mundo é deslogado a cada reinício do servidor — inaceitável para um app que roda como serviço do
+Windows e reinicia em toda atualização. A escolha natural seria `connect-sqlite3`, que faz
+exatamente isso.
+
+**Decisão.** Escrever `src/database/SqliteSessionStore.js`: uma classe que estende `session.Store`
+e implementa `get`, `set`, `destroy`, `touch` e `clearAll` sobre um `sessions.sqlite` próprio,
+usando o `better-sqlite3` que o app já usa.
+
+**Consequências.**
+
+*Ganhos:* nenhuma dependência nova — `connect-sqlite3` traria de volta o driver `sqlite3` (e sua
+cadeia de build via node-gyp), justamente o que o [ADR 4.2](#42-adr-0002--sqlite-embarcado-com-driver-síncrono)
+evitou; sendo síncrono, `set()` termina de gravar antes de responder, eliminando a corrida clássica
+de "logar e a requisição seguinte chegar antes da sessão ser persistida"; `clearAll()` —
+invalidar todas as sessões após restaurar um backup do banco — é uma necessidade específica deste
+app que um pacote genérico não teria; arquivo separado do `gestao.db`, então restaurar um backup de
+dados não restaura sessões antigas junto.
+
+*Custos aceitos:* é código nosso para manter, mitigado por ser pequeno (~110 linhas) e pela
+interface de `session.Store` ser mínima e estável; limpeza de sessões expiradas roda na subida do
+servidor, não por um timer — num servidor que fica meses no ar, o arquivo cresce com sessões
+vencidas até o próximo reinício (aceito: são linhas de texto curtas).
+
+**Alternativas consideradas.** `connect-sqlite3` — descartado pela cadeia de dependências. Redis
+(`connect-redis`) — descartado: exigiria instalar e manter um Redis para guardar algumas dezenas de
+sessões. Sessão em JWT, sem estado no servidor — descartado: deixaria de existir a capacidade de
+invalidar sessão do lado do servidor, que é justamente o que `clearAll()` precisa fazer depois de
+restaurar um backup.
+
+### 4.4 ADR-0004 — Injeção de dependência na mão, sem container
+
+**Situação:** Aceita
+
+**Contexto.** O servidor tem ~13 serviços e ~13 controllers, com dependências reais entre eles:
+quase todo serviço recebe o banco e o `HistoricoService`; o `AlertaAgenteService` recebe
+`VersaoService` e `NotificationService`; o `SaudeService` recebe banco, backups e versões. Esse é o
+ponto em que projetos Node costumam adotar um container de DI (`awilix`, `tsyringe`,
+`InversifyJS`) ou partir para singletons importados diretamente.
+
+**Decisão.** A classe `Server` monta tudo à mão, em ordem explícita, em dois métodos:
+`_buildServices()` e `_buildControllers()`. Cada dependência é passada pelo construtor. Nenhum
+serviço importa outro diretamente. Nenhum módulo exporta instância pronta — só classes.
+
+**Consequências.**
+
+*Ganhos:* existe um arquivo que mostra o sistema inteiro — ler `Server.js` de cima a baixo revela
+todos os componentes e quem depende de quem, o que nenhum container oferece; testar é instanciar
+com o que se quiser no lugar (os testes sobem um `Server` completo com banco temporário justamente
+porque montar é barato); ciclo de dependência vira erro na hora de escrever, não em tempo de
+execução; zero mágica — nenhuma resolução por nome, nenhum decorator, nenhum `reflect-metadata`.
+
+*Custos aceitos:* acrescentar um serviço exige editar `Server.js` (é uma linha, e o incômodo é
+proporcional ao custo real de acrescentar um serviço, o que é saudável); a ordem de construção
+dentro de `_buildServices()` importa (está explícito no código); uma instância de `BackupService`
+acaba criada duas vezes — inofensivo, mas é o tipo de duplicação que um container evitaria de graça.
+
+**Alternativas consideradas.** Container de DI (`awilix` etc.) — descartado: resolve acoplamento em
+sistemas com dezenas de módulos e múltiplos escopos de vida; aqui, com um único escopo (o processo)
+e ~26 objetos, o custo de entendimento supera o ganho. Singletons via `module.exports = new
+Service()` — descartado: é o padrão que mais atrapalha teste em Node — uma vez que um módulo abre
+o banco no `require`, não há mais como testá-lo com outro banco sem truque de cache de módulo.
+
+### 4.5 ADR-0005 — `client/js/` dividido por responsabilidade
+
+**Situação:** Aceita
+
+**Contexto.** O front-end cresceu com duas pastas: `js/views/` (uma tela por arquivo) e `js/core/`
+("o resto"). `core/` chegou a 35 arquivos misturando cinco coisas diferentes: utilidades genéricas,
+vocabulário do negócio, componentes de UI, gráficos em SVG, o esqueleto do app, e uma tela inteira
+de 1222 linhas (`ConfiguracoesPanel.js`) que, por tamanho e função, era uma `view`. A pasta
+funcionava, mas não respondia à pergunta que mais importa no dia a dia: "onde eu ponho este arquivo
+novo?" — a resposta era sempre "em `core/`", que é o mesmo que não ter resposta.
+
+**Decisão.** Substituir `core/` por quatro pastas com um critério verificável cada, e mover
+`ConfiguracoesPanel.js` para `views/`, onde estão os outros painéis:
+
+| Pasta | Critério | Pode importar |
+|---|---|---|
+| `utils/` | não conhece o negócio | nada do projeto |
+| `domain/` | conhece o negócio, **não toca no DOM** | `utils/` |
+| `components/` | UI que não sabe em que tela está | `utils/`, `domain/` |
+| `views/` | uma tela | tudo |
+| `app/` | o esqueleto que segura o resto | tudo |
+
+`components/charts/` agrupa os três gráficos SVG, que são componentes de uma família só.
+
+**Consequências.**
+
+*Ganhos:* a pergunta "onde ponho isso?" tem resposta mecânica (precisa do DOM? fala de
+cliente/atualização/agente? é reaproveitável entre telas?); `domain/` não tocar no DOM é o que
+permite testá-lo no Node sem navegador — e é exatamente onde mora a lógica que erra em silêncio
+(classificação de retorno de agente, montagem de relatório), a contrapartida direta de não ter
+compilador ([ADR 4.1](#41-adr-0001--front-end-sem-framework-e-sem-etapa-de-build)); a direção das
+importações vira uma regra legível (`utils → domain → components → views`), e uma violação salta
+aos olhos na revisão.
+
+*Custos aceitos:* a migração reescreveu 175 caminhos de importação em 32 arquivos, feita por
+script, com o grafo de módulos inteiro (55 módulos) linkado depois para garantir que todo import
+resolvesse e todo nome importado existisse de fato; caminhos ficaram um pouco mais longos; links
+para arquivos antigos, em anotações fora do repositório, quebraram.
+
+**Efeito colateral valioso:** a migração revelou um bug real — um caminho de asset inexistente
+respondia 200 com o `index.html`, porque o fallback de SPA capturava qualquer caminho fora de
+`/api`; o navegador só reclamava depois, com uma mensagem de MIME type que manda procurar no lugar
+errado. Corrigido em `Server.js` e `middlewares/notFoundHandler.js`, com teste de regressão em
+`tests/routing.test.js`.
+
+**Alternativas consideradas.** Manter `core/` e só criar subpastas dentro dela — descartado:
+manteria o nome que não significa nada, só empurrando o problema um nível abaixo. Organizar por
+funcionalidade (`clientes/`, `atualizacoes/`, cada uma com sua view, seus componentes e seus
+helpers) — descartado: é a divisão certa quando os módulos são independentes, mas aqui quase todo
+componente é usado por quase toda tela; levaria a uma pasta `compartilhado/` que seria a `core/` de
+volta, com outro nome.
+
+### 4.6 ADR-0006 — Verificação de tipos sem etapa de build, escopada ao código puro
+
+**Situação:** Aceita
+
+**Contexto.** O [ADR 4.1](#41-adr-0001--front-end-sem-framework-e-sem-etapa-de-build) aceitou
+explicitamente um custo: "sem checagem de tipos, mitigado com JSDoc nas assinaturas públicas". Na
+prática, a mitigação valia menos do que parecia — o JSDoc existia, mas ninguém o verificava, então
+envelhecia sem que nada reclamasse. Uma auditoria encontrou quatro anotações desatualizadas em
+produção, todas do mesmo tipo: o código estava certo, a documentação é que ficara para trás. A
+pior delas: `View.js` declarava uma assinatura que dizia não dar para passar filtros ao trocar de
+aba — exatamente o que `ResumoView` e `AgendamentosView` fazem, e precisam fazer. O caminho óbvio
+(migrar para TypeScript) reintroduziria o passo de build que o ADR 4.1 rejeitou por razões que
+continuam válidas.
+
+**Decisão.** Usar o TypeScript apenas como conferente, com `checkJs` e `noEmit`, sobre o
+JavaScript que já existe e o JSDoc que ele já tem. Nada é compilado, nada é gerado. A verificação é
+escopada ao código puro dos dois lados:
+
+| Config | Cobre | Critério |
+|---|---|---|
+| `client/tsconfig.json` | `js/domain/`, `js/utils/` | não tocam no DOM ([ADR 4.5](#45-adr-0005--clientjs-dividido-por-responsabilidade)) |
+| `server/tsconfig.json` | `src/shared/`, `services/normalizacao.js` | não falam com o Node nem com o banco |
+
+Nos dois casos a `lib` do TypeScript é só `es2022` — sem `dom`, sem `node`; é essa ausência que
+torna o critério automático: um arquivo novo que precise do `document` ou do `fs` está na pasta
+errada, e o erro é o aviso. Execução por `npm run check`, também no CI. Modo estrito ligado, exceto
+`noImplicitAny`.
+
+**Consequências.**
+
+*Ganhos:* JSDoc passa a ter consequência — uma anotação que mente vira erro no CI, em vez de virar
+armadilha para quem lê; nessas pastas o resultado é binário (zero erros, ou achou algo real);
+editores que leem `tsconfig.json` marcam o erro enquanto se digita; custo zero em tempo de execução
+e nenhuma dependência nova no navegador.
+
+*Custos aceitos:* a maior parte do front-end fica de fora — `views/`, `components/` e `app/` não
+são verificados (ali o mesmo comando produz ~350 erros de manipulação de DOM sem tipos, ruído que
+ninguém leria); `noImplicitAny` desligado deixa passar parâmetro sem anotação (~80 casos); mais uma
+ferramenta para manter atualizada.
+
+**O que isso já encontrou na primeira execução:** um bug de verdade em produção — `SaudeService`
+lia uma propriedade que `VersaoService` nunca teve, e como `fs.existsSync(undefined)` devolve
+`false` em vez de lançar, o painel de Saúde reportava "0 pacotes, 0 bytes" para sempre, sem erro no
+log (o teste que existia não pegava, porque o dublê de `versoes` declarava a propriedade que o
+objeto real não implementava); quatro anotações JSDoc desatualizadas (`View.js`, `Toast.js`,
+`SortableTable.js`, `ConfiguracoesPanel.js`); uma subtração de datas que só funcionava por coerção
+implícita, e duas comparações que dependiam do mesmo tipo de regra tácita.
+
+**Alternativas consideradas.** Migrar para TypeScript de verdade — descartado: reintroduz o passo
+de build que o ADR 4.1 comprou ao abrir mão de tipos. Rodar `checkJs` no projeto inteiro e conviver
+com os erros — descartado: 350 avisos falsos treinam a equipe a ignorar a saída da ferramenta.
+Adicionar *casts* JSDoc em massa para calar o ruído de DOM — descartado: centenas de anotações
+escritas para agradar a ferramenta, não para comunicar algo a quem lê. ESLint em vez de verificação
+de tipos — descartado para este problema: pega estilo e erros sintáticos, não pegaria nenhum dos
+achados acima (todos de tipo); continua sendo uma adição possível, ortogonal a esta.
+
+### 4.7 ADR-0007 — Piloto, rollback e concorrência otimista
+
+**Situação:** Aceita em setembro de 2026.
+
+**Contexto.** Uma publicação geral alcança automaticamente todos os agentes de um sistema. Ao mesmo
+tempo, duas pessoas podem abrir o mesmo agendamento e salvar versões diferentes sem perceber a
+edição concorrente.
+
+**Decisão.**
+
+- Versões restritas usam `alcance = piloto` e uma lista de códigos de clientes vindos do cadastro.
+  O endpoint do agente escolhe primeiro um piloto destinado àquele código (mantendo `cnpj` apenas
+  como nome legado no contrato do Worker) e, para os demais, mantém a publicação geral.
+- Promover um piloto reutiliza a mesma transação atômica de publicação geral.
+- Rollback restaura a versão que foi diretamente substituída pela versão ativa e tira a versão
+  problemática de circulação na mesma transação SQLite.
+- Registros editáveis recebem um número de revisão. O cliente envia a revisão que abriu e o
+  servidor responde `409 Conflict` quando outra gravação já a incrementou.
+
+**Consequências.** O agente continua usando o contrato existente de `update/check`; a seleção do
+alcance fica inteiramente no servidor. O histórico de versões permanece auditável, pois promoção e
+rollback mudam estados em vez de apagar linhas. Interfaces de edição precisam conservar e reenviar
+a revisão recebida.
+
+---
+
+## 5. Como verificar
 
 **Painel web:**
 
@@ -1048,7 +1548,7 @@ teste, ver o passo a passo em `atualizador/README.md` (Fase 2 precisa ser simula
 
 ---
 
-## 5. Auditoria de agosto/set 2026 — o que mudou desde então
+## 6. Auditoria de agosto/set 2026 — o que mudou desde então
 
 Em 27/08/2026, uma auditoria técnica comparou três documentos de arquitetura anteriores —
 `Planejamento_Tecnico_Atualizador_ERP_v4` (especificação técnica completa, propondo MD5 e um
@@ -1094,7 +1594,7 @@ listados como pendências ativas na [seção 3.4](#34-estado-atual-pré-piloto).
 
 ---
 
-## 6. Histórico deste documento — o que foi consolidado
+## 7. Histórico deste documento — o que foi consolidado
 
 Este documento substitui os seguintes arquivos, que existiam separadamente em `web/docs/` e foram
 removidos após terem seu conteúdo relevante incorporado acima (o histórico completo de cada um
@@ -1103,14 +1603,14 @@ continua disponível no `git log`, se for preciso consultar o texto original):
 | Arquivo removido | Natureza | Para onde foi |
 |---|---|---|
 | `ARCHITECTURE.md` | Arquitetura do código do painel web | [Seção 2.2](#22-arquitetura-do-código) |
-| `RELATORIO_IMPLEMENTACAO.md` | Relatório de implementação do agente C#, 26–27/08 | Superado pelo estado real de 03/09 — [seção 3](#3-atualizador-inteligente-de-erp--agente-local-c) e [seção 5](#5-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
+| `RELATORIO_IMPLEMENTACAO.md` | Relatório de implementação do agente C#, 26–27/08 | Superado pelo estado real de 03/09 — [seção 3](#3-atualizador-inteligente-de-erp--agente-local-c) e [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
 | `REVISAO_INTERFACE.md` | Revisão de interface/distribuição do painel, set/2026 | [Seção 2.3](#23-revisão-de-interface-e-distribuição--set2026) |
-| `Planejamento_Tecnico_Atualizador_ERP_v4.pdf` | Especificação técnica original (MD5, sem estado `PROCESSANDO`) | Contexto histórico na [seção 5](#5-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
-| `Projeto_Arquitetura_Atualizador_ERP.pdf` | Apresentação executiva da mesma arquitetura | Contexto histórico na [seção 5](#5-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
+| `Planejamento_Tecnico_Atualizador_ERP_v4.pdf` | Especificação técnica original (MD5, sem estado `PROCESSANDO`) | Contexto histórico na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
+| `Projeto_Arquitetura_Atualizador_ERP.pdf` | Apresentação executiva da mesma arquitetura | Contexto histórico na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
 | `Documento_Tecnico_Atualizador_ERP.html`/`.pdf` | Documento técnico v1.0 (26/08) | Substituído pela [seção 3](#3-atualizador-inteligente-de-erp--agente-local-c), que reflete o estado atual |
-| `documento-oficial-atualizador-erp.pdf`/`.docx` | Auditoria técnica completa (27/08) | Resumida na [seção 5](#5-auditoria-de-agostoset2026-o-que-mudou-desde-então); achados individuais na [tabela da seção 3.9](#39-histórico-de-correções-críticas) |
+| `documento-oficial-atualizador-erp.pdf`/`.docx` | Auditoria técnica completa (27/08) | Resumida na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então); achados individuais na [tabela da seção 3.9](#39-histórico-de-correções-críticas) |
 | `auditoria_atualizador_erp.html` | Mesma auditoria, versão HTML estilizada | Idem acima |
-| `relatorio-atualizador-erp.docx` | Revisão técnica complementar (27/08), comparando contra um desenho anterior descartado | Resumida no último parágrafo da [seção 5](#5-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
+| `relatorio-atualizador-erp.docx` | Revisão técnica complementar (27/08), comparando contra um desenho anterior descartado | Resumida no último parágrafo da [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
 | `apresentacao-atualizador-erp.docx` | Proposta de projeto em linguagem executiva | Conteúdo condensado na [seção 1](#1-visão-geral-do-projeto) |
 | `Apresentacao_Atualizador_Inteligente_ERP.pptx` | Slides gerados a partir do documento técnico e das capturas de tela | Conteúdo coberto pelas seções 1–3; os slides em si não têm informação que não esteja aqui |
 | `tela-distribuicao.png`, `tela-resumo.png` | Capturas de tela usadas nos slides acima | Removidas junto com a apresentação — ilustravam a mesma interface descrita na seção 2 |
@@ -1123,5 +1623,31 @@ relatório de implementação (27/08) e a revisão mais recente do agente (03/09
 suficiente para tornar boa parte do conteúdo desatualizado (o `BScript.exe` que o relatório
 descrevia como corrigido com timeout foi, na verdade, **substituído por completo** dias depois).
 Manter nove documentos derivados uns dos outros, sem um único dono, é como a divergência entre
-"Documento Técnico v1.0" e o código real aconteceu em primeiro lugar. Este arquivo é, a partir de
+"Documento Técnico v1.0" e o código real aconteceu em primeiro lugar. Este arquivo foi, a partir de
 09/09/2026, a única fonte para este assunto em `web/docs/`.
+
+### 7.1 Segunda rodada de consolidação — 22/09/2026
+
+`web/docs/` tinha voltado a acumular arquivos: dois relatórios de melhorias que discordavam entre
+si sobre o que já tinha sido entregue, uma apresentação executiva separada, sete ADRs soltos e um
+índice próprio para eles, além de `CLAUDE.md`/`CONTRIBUTING.md`/`SECURITY.md`/`CHANGELOG.md`
+movidos para dentro da pasta junto com o resto. A pasta foi reorganizada em dois passos:
+
+**Passo 1 (mais cedo, mesmo dia).** `ANALISE_MELHORIAS_WEB.md` (auditoria técnica, 18/09) e
+`PLANEJAMENTO_MELHORIAS_UX_UI.md` (planejamento de UX/UI, também 18/09) foram fundidos em
+[`MELHORIAS.md`](MELHORIAS.md). Achado na reconciliação: quase todo o roadmap do segundo já tinha
+sido entregue — confirmado no código e na entrada "Roadmap UX/UI entregue em quatro frentes" do
+[`CHANGELOG.md`](CHANGELOG.md) — mas o documento continuava descrevendo esses itens como proposta
+futura. `MELHORIAS.md` ficou com o que sobrou de genuinamente pendente.
+
+**Passo 2 (este).** `APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md` virou a [seção 0](#0-resumo-executivo)
+deste documento, e os sete ADRs (mais `adr/README.md`) viraram a [seção 4](#4-decisões-de-arquitetura--adrs-do-painel-web).
+`CLAUDE.md`, `CONTRIBUTING.md` e `SECURITY.md` voltaram para a raiz de `web/` — são arquivos com
+significado especial para ferramentas (GitHub reconhece `CONTRIBUTING`/`SECURITY` por nome e local;
+o Claude Code carrega `CLAUDE.md` automaticamente), então fundi-los aqui dentro quebraria essas
+integrações. `CHANGELOG.md` também voltou para a raiz — é o `../CHANGELOG.md` referenciado em todo
+este documento.
+
+Resultado: `web/docs/` ficou com quatro arquivos de conteúdo — este (`DOCUMENTACAO_CONSOLIDADA.md`),
+[`OPERACAO.md`](OPERACAO.md), [`MELHORIAS.md`](MELHORIAS.md) e o [`README.md`](README.md) índice —
+mais o `atualizador/docs/adr/` do outro repositório, que não foi tocado por esta reorganização.

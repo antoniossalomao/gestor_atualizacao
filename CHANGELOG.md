@@ -15,6 +15,14 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Botões de ação por linha (Atualizações, Clientes, Agendamentos) trocaram
+  emoji colorido por ícone SVG monocromático.** Os botões usavam glifos de
+  emoji (📋 👤 ✏️ 🔑 🔍) como conteúdo do `<button>`; cada sistema operacional
+  renderiza emoji com sua própria fonte colorida, destoando do resto da
+  interface, que usa só os ícones de linha de `utils/icons.js`
+  (`stroke="currentColor"`). Trocado por `icon()`, acrescentando os ícones
+  `editar`, `chave` e `converter` ao conjunto existente.
+
 - **Atualização automática da Distribuição concentrada em Configurações.** A
   tela deixou de repetir estado, liga/desliga e contagem regressiva; também
   removeu a barra de progresso contínua. A atualização manual permanece como

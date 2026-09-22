@@ -1,37 +1,20 @@
 # Documentação do painel
 
-Esta pasta guarda os documentos **longos**. O que é curto e muda junto com o
-código mora na raiz do repositório (`README.md`, `CONTRIBUTING.md`,
-`SECURITY.md`, `CHANGELOG.md`).
+Esta pasta guarda os quatro documentos **longos e detalhados** do painel web.
+O que é curto e muda junto com o código mora na raiz do repositório
+(`README.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`) —
+inclusive porque GitHub e o Claude Code reconhecem esses nomes e locais
+automaticamente; misturá-los aqui dentro quebraria essa integração.
 
 ## O que tem aqui
 
 | Arquivo | O que é | Quando você quer isto |
 |---|---|---|
+| [`DOCUMENTACAO_CONSOLIDADA.md`](DOCUMENTACAO_CONSOLIDADA.md) | Documento único: resumo executivo, arquitetura do painel web, arquitetura do agente C#, decisões de arquitetura (ADRs) e como verificar tudo | Você chegou agora e quer ler (ou apresentar) o projeto inteiro, de qualquer ângulo |
+| [`MELHORIAS.md`](MELHORIAS.md) | O que já foi entregue e o que ainda falta, reconciliado contra o código | Você quer saber o que priorizar a seguir |
 | [`OPERACAO.md`](OPERACAO.md) | Runbook, organizado **por sintoma** | Deu problema **agora** e você precisa resolver |
-| [`adr/`](adr/) | Decisões de arquitetura, uma por arquivo | *"Por que foi feito assim, e não do jeito óbvio?"* |
-| [`DOCUMENTACAO_CONSOLIDADA.md`](DOCUMENTACAO_CONSOLIDADA.md) | Visão completa dos dois lados num arquivo só | Você chegou agora e quer ler tudo de uma vez |
-| [`APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md`](APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md) | O projeto sem detalhe técnico | Você vai apresentar para a diretoria |
-| [`PLANEJAMENTO_MELHORIAS_UX_UI.md`](PLANEJAMENTO_MELHORIAS_UX_UI.md) | Planejamento de evolução visual (UI), intuitividade (UX) e funções | Você quer evoluir o design e a experiência do sistema |
-| `gerar-pdf.js`, `gerar-apresentacao-pdf.js` | Geradores dos PDFs ao lado dos `.md` | Você mudou um `.md` e precisa atualizar o PDF |
 
-## Os PDFs
-
-São **gerados**, nunca editados à mão:
-
-```bash
-cd web/docs
-npm install
-npm run pdf          # DOCUMENTACAO_CONSOLIDADA.pdf
-```
-
-Não usam Puppeteer: o Edge (ou Chrome) que já existe em qualquer Windows
-imprime PDF pela linha de comando. Uma dependência de ~300 MB para converter um
-arquivo de texto seria desproporcional.
-
-> Mudou o `.md` e não regerou o PDF? Em dois dias os dois se contradizem em
-> silêncio — foi exatamente o que aconteceu em set/2026, quando o gerador
-> anterior foi apagado e o PDF virou uma foto que ninguém conseguia atualizar.
+Três arquivos, não quatro — o índice que você está lendo é o quarto.
 
 ## Qual documento responde o quê
 
@@ -43,12 +26,25 @@ precedência, quando dois documentos divergirem:
 | Como rodar, instalar, o que o sistema faz | [`../README.md`](../README.md) |
 | Onde colocar cada coisa, como testar, o que não quebrar | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
 | O que protege o quê, e os limites assumidos | [`../SECURITY.md`](../SECURITY.md) |
-| **Por que** foi feito assim | [`adr/`](adr/) |
+| **Por que** foi feito assim (painel web) | [Seção 4 de `DOCUMENTACAO_CONSOLIDADA.md`](DOCUMENTACAO_CONSOLIDADA.md#4-decisões-de-arquitetura--adrs-do-painel-web) |
 | O que mudou, e quando | [`../CHANGELOG.md`](../CHANGELOG.md) |
+| O que ainda falta fazer | [`MELHORIAS.md`](MELHORIAS.md) |
 | O que fazer quando quebra | [`OPERACAO.md`](OPERACAO.md) |
 | O que ainda pode dar errado no agente | [`../../atualizador/RISCOS-CONHECIDOS.md`](../../atualizador/RISCOS-CONHECIDOS.md) |
+| Por que o agente C# foi feito assim | `atualizador/docs/adr/` (repositório do agente, não coberto por este índice) |
 
-`DOCUMENTACAO_CONSOLIDADA.md` é uma **fotografia**: útil para ler inteiro, mas
-é o documento que envelhece mais rápido, porque tudo nele está descrito também
-em algum lugar que muda junto com o código. Ele perde de qualquer um da tabela
-acima.
+`DOCUMENTACAO_CONSOLIDADA.md` tem uma seção 0 (resumo executivo) que é uma
+**fotografia**, útil para ler ou copiar inteira, mas que envelhece mais
+rápido que o resto — porque descreve, em linguagem de negócio, o que as
+seções técnicas abaixo dela também descrevem. Em caso de dúvida, a seção
+técnica vence.
+
+## Histórico desta pasta
+
+Já passou por duas rodadas de consolidação: 09/09/2026 (nove documentos
+soltos viraram `DOCUMENTACAO_CONSOLIDADA.md`) e 22/09/2026 (dois relatórios
+de melhorias que discordavam entre si viraram `MELHORIAS.md`; a apresentação
+executiva e os sete ADRs foram incorporados a `DOCUMENTACAO_CONSOLIDADA.md`).
+Detalhe de cada rodada na [seção 7 de `DOCUMENTACAO_CONSOLIDADA.md`](DOCUMENTACAO_CONSOLIDADA.md#7-histórico-deste-documento-o-que-foi-consolidado).
+Se esta pasta voltar a acumular arquivo solto, é sinal de que chegou a hora
+da próxima rodada.

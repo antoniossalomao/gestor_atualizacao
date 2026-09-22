@@ -615,6 +615,12 @@ kbd {
   min-width: 0;
   max-width: 1600px;
   padding: 28px var(--pad-tela) 44px;
+  transition: max-width var(--dur-media) var(--curva-padrao);
+}
+#app.is-sidebar-collapsed .app-main {
+  /* Aproveita no conteúdo os mesmos 174px liberados ao recolher a sidebar,
+     mantendo a margem direita equivalente à do menu aberto. */
+  max-width: calc(1600px + var(--largura-sidebar) - var(--largura-sidebar-recolhida));
 }
 .app-main:focus {
   outline: none;

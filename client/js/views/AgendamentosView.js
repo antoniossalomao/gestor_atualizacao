@@ -885,9 +885,9 @@ function acoesAgendamento(row, role) {
   wrap.className = "row-actions";
   if (role === "consulta") return wrap;
   const botoes = row.status === STATUS_CONCLUIDO
-    ? [["editar", "✏️", "Editar"]]
-    : [["concluir", "✓", "Marcar como concluída"], ["converter", "↗", "Converter em atualização"], ["editar", "✏️", "Editar"]];
-  for (const [acao, simbolo, titulo] of botoes) {
+    ? [["editar", "editar", "Editar"]]
+    : [["concluir", "check", "Marcar como concluída"], ["converter", "converter", "Converter em atualização"], ["editar", "editar", "Editar"]];
+  for (const [acao, nomeIcone, titulo] of botoes) {
     const botao = document.createElement("button");
     botao.type = "button";
     botao.className = "btn btn--icon btn--ghost";
@@ -895,7 +895,7 @@ function acoesAgendamento(row, role) {
     botao.dataset.id = row.id;
     botao.title = titulo;
     botao.setAttribute("aria-label", titulo);
-    botao.textContent = simbolo;
+    botao.innerHTML = icon(nomeIcone);
     wrap.appendChild(botao);
   }
   return wrap;

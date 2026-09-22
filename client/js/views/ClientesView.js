@@ -721,8 +721,8 @@ export class ClientesView extends View {
 function acoesCliente(row, role) {
   const wrap = document.createElement("div");
   wrap.className = "row-actions";
-  const botoes = [["acesso", "🔑", "Copiar acessos"], ["ficha", "🔍", "Abrir Ficha 360°"], ...(role === "consulta" ? [] : [["editar", "✏️", "Editar"]])];
-  for (const [acao, simbolo, titulo] of botoes) {
+  const botoes = [["acesso", "chave", "Copiar acessos"], ["ficha", "olho", "Abrir Ficha 360°"], ...(role === "consulta" ? [] : [["editar", "editar", "Editar"]])];
+  for (const [acao, nomeIcone, titulo] of botoes) {
     const botao = document.createElement("button");
     botao.type = "button";
     botao.className = "btn btn--icon btn--ghost";
@@ -730,7 +730,7 @@ function acoesCliente(row, role) {
     botao.dataset.id = row.id;
     botao.title = titulo;
     botao.setAttribute("aria-label", titulo);
-    botao.textContent = simbolo;
+    botao.innerHTML = icon(nomeIcone);
     wrap.appendChild(botao);
   }
   return wrap;

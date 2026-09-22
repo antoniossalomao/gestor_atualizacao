@@ -53,6 +53,11 @@ const PATHS = {
     '<rect x="2.5" y="3.5" width="15" height="10" rx="1.5"/><path d="M7 17h6M10 13.5V17" stroke-linecap="round"/><path d="M6.5 8.5l2-2 1.7 1.7 2.8-2.8" stroke-linecap="round" stroke-linejoin="round"/>',
   copiar:
     '<rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M4.5 13H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v.5" stroke-linecap="round" stroke-linejoin="round"/>',
+  editar:
+    '<path d="M13.4 3.4a2 2 0 0 1 2.8 2.8L7 15.4l-4 1 1-4 9.4-9.4z" stroke-linecap="round" stroke-linejoin="round"/>',
+  chave:
+    '<circle cx="6.8" cy="13.2" r="3.2"/><path d="M9.1 10.9 16 4l2 2-1.7 1.7M13.7 7.7l2 2" stroke-linecap="round" stroke-linejoin="round"/>',
+  converter: '<path d="M6 14 14 6M8 6h6v6" stroke-linecap="round" stroke-linejoin="round"/>',
 
   /* -- seções do painel de Configurações -- */
   paleta:

@@ -1024,11 +1024,11 @@ function acoesAtualizacao(row, role) {
   const wrap = document.createElement("div");
   wrap.className = "row-actions";
   const botoes = [
-    ["relatorio", "📋", "Copiar relatório"],
-    ["cliente", "👤", "Abrir ficha do cliente"],
-    ...(role === "consulta" ? [] : [["editar", "✏️", "Editar"]]),
+    ["relatorio", "copiar", "Copiar relatório"],
+    ["cliente", "conta", "Abrir ficha do cliente"],
+    ...(role === "consulta" ? [] : [["editar", "editar", "Editar"]]),
   ];
-  for (const [acao, simbolo, titulo] of botoes) {
+  for (const [acao, nomeIcone, titulo] of botoes) {
     const botao = document.createElement("button");
     botao.type = "button";
     botao.className = "btn btn--icon btn--ghost";
@@ -1036,7 +1036,7 @@ function acoesAtualizacao(row, role) {
     botao.dataset.id = row.id;
     botao.title = titulo;
     botao.setAttribute("aria-label", titulo);
-    botao.textContent = simbolo;
+    botao.innerHTML = icon(nomeIcone);
     wrap.appendChild(botao);
   }
   return wrap;

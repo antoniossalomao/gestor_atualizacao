@@ -178,12 +178,8 @@ export class ResumoView extends View {
 
     const totalIncidentes = erros.length + offline.length + pendencias.length + atrasados.length;
     if (totalIncidentes === 0) {
-      atencaoEl.hidden = false;
-      atencaoEl.innerHTML = `
-        <div class="attention-clean">
-          <span class="status-dot status-dot--ok is-pulsing"></span>
-          <span>Tudo operando normalmente — nenhum agente em erro e nenhum agendamento atrasado.</span>
-        </div>`;
+      atencaoEl.hidden = true;
+      atencaoEl.innerHTML = "";
       return;
     }
 
