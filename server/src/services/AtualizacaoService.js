@@ -1,6 +1,7 @@
 const ExcelJS = require("exceljs");
 
-const { COLUMNS, DESATUALIZADO_DIAS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
+const { COLUMNS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
+const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, parseData } = require("../shared/validation");
 const { normalizarSistemas, normalizarResponsavel } = require("./normalizacao");
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
@@ -22,10 +23,16 @@ class AtualizacaoService {
    * @param {import('./HistoricoService').HistoricoService} historico
    * @param {import('./NotificationService').NotificationService} [notifications]
    */
-  constructor(db, historico, notifications) {
+  /**
+   * @param {{valor(nome: string): any}} [regras] ConfiguracaoSistemaService. Opcional
+   *   para os testes que não mexem em regra: sem ele, vale o padrão de
+   *   config/regrasEquipe.js.
+   */
+  constructor(db, historico, notifications, regras) {
     this.db = db;
     this.historico = historico;
     this.notifications = notifications;
+    this.regras = regras || { valor: (nome) => REGRAS[nome].padrao };
   }
 
   list(search = "", responsavel = "Todos", paginacao = {}) {
@@ -254,7 +261,8 @@ class AtualizacaoService {
     const totalClientes = this.db.clientes.count();
     const totalAtualizacoes = this.db.atualizacoes.count();
     const mesCount = this.db.atualizacoes.countForMonth(mesStr);
-    const desatualizados = this._clientesDesatualizados(hoje);
+    const desatualizadoDias = this.regras.valor("desatualizadoDias");
+    const desatualizados = this._clientesDesatualizados(hoje, desatualizadoDias);
     const porResponsavel = this.db.atualizacoes.countsByResponsavel();
     const atualizadosMesPorSistema = this._atualizadosMesPorSistema(mesStr);
     // Tendencia mensal (grafico do Resumo) e tempo medio de resolucao das
@@ -269,6 +277,10 @@ class AtualizacaoService {
       totalAtualizacoes,
       mesCount,
       desatualizados,
+      // A tela escreve "Parados há mais de N dias" com este N, e não com um
+      // número próprio: é regra da equipe, editável, e o rótulo tem que
+      // contar a mesma regra que a lista acima usou.
+      desatualizadoDias,
       porResponsavel,
       atualizadosMesPorSistema,
       atualizacoesPorMes,
@@ -308,8 +320,8 @@ class AtualizacaoService {
     return resultado;
   }
 
-  /** Clientes cuja ultima atualizacao passou de DESATUALIZADO_DIAS (ou nunca aconteceu). */
-  _clientesDesatualizados(hoje) {
+  /** Clientes cuja ultima atualizacao passou de `limiteDias` (ou nunca aconteceu). */
+  _clientesDesatualizados(hoje, limiteDias) {
     const ultimas = this.db.atualizacoes.lastDateByClient();
     const resultado = [];
     for (const { codigo, nome, cidade } of this.db.clientes.allBasic()) {
@@ -320,7 +332,7 @@ class AtualizacaoService {
         // Formato invalido (erro de digitacao antigo) tratado como "nunca".
         dias = d ? Math.floor((hoje - d) / MS_POR_DIA) : NUNCA;
       }
-      if (dias > DESATUALIZADO_DIAS) {
+      if (dias > limiteDias) {
         resultado.push({ nome, cidade: cidade || "—", ultima: dataStr || "Nunca", dias });
       }
     }

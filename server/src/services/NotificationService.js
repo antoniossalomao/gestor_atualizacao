@@ -6,9 +6,44 @@
  * um no-op silencioso -- a integração é opcional.
  */
 class NotificationService {
-  /** @param {{discordWebhookUrl?: string}} config */
+  /**
+   * @param {{discordWebhookUrl?: string, webhookUrl?: () => string}} config
+   *   `webhookUrl` (função) é o caminho de produção: o webhook é uma regra da
+   *   equipe, editada na tela Administração, e precisa valer no próximo aviso
+   *   sem reiniciar -- então é lido a cada envio, não guardado na construção.
+   *   `discordWebhookUrl` (texto fixo) continua aceito para os testes.
+   */
   constructor(config) {
-    this.webhookUrl = config.discordWebhookUrl || "";
+    this._webhookUrl = typeof config.webhookUrl === "function" ? config.webhookUrl : () => config.discordWebhookUrl || "";
+  }
+
+  get webhookUrl() {
+    return this._webhookUrl() || "";
+  }
+
+  /**
+   * Manda uma mensagem de teste para o webhook informado (ou o configurado),
+   * para o administrador conferir o canal ANTES de depender dele. Diferente
+   * dos avisos normais, este devolve o resultado em vez de engolir a falha:
+   * é justamente a falha que se quer ver.
+   * @param {string} [url]
+   * @returns {Promise<{ok: boolean, detalhe: string}>}
+   */
+  async testar(url) {
+    const destino = url || this.webhookUrl;
+    if (!destino) return { ok: false, detalhe: "Nenhum webhook configurado." };
+    try {
+      const res = await fetch(destino, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: "✅ Teste do Gestor de Atualizações: os avisos vão chegar neste canal." }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) return { ok: true, detalhe: "Mensagem entregue. Confira o canal do Discord." };
+      return { ok: false, detalhe: `O Discord recusou a mensagem (HTTP ${res.status}). Confira se o webhook não foi apagado.` };
+    } catch (err) {
+      return { ok: false, detalhe: `Não foi possível falar com o Discord: ${err.message}` };
+    }
   }
 
   /**

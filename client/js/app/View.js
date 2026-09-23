@@ -76,9 +76,17 @@ export class View {
     return fn;
   }
 
-  /** True se esta é a aba que o usuário está vendo agora. */
+  /**
+   * True se esta é a aba que o usuário está vendo agora.
+   *
+   * O `offsetParent` cobre a view ANINHADA: o Histórico mora dentro de uma
+   * aba da Administração, e quando a Administração inteira sai de cena o
+   * contêiner dele continua `display: flex` -- escondido é o avô. Olhando só
+   * o próprio `display`, uma view aninhada se acharia visível atrás de
+   * qualquer outra tela e responderia aos atalhos de teclado dela.
+   */
   get visivel() {
-    return this.container.style.display !== "none";
+    return this.container.style.display !== "none" && this.container.offsetParent !== null;
   }
 
   /**

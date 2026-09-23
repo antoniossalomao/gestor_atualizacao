@@ -1,4 +1,5 @@
-const { STATUS_OPTIONS, AGENDAMENTO_ARQUIVAR_DIAS } = require("../config/constants");
+const { STATUS_OPTIONS } = require("../config/constants");
+const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, horaValida } = require("../shared/validation");
 const { normalizarResponsavel } = require("./normalizacao");
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
@@ -11,9 +12,14 @@ class AgendamentoService {
    * @param {import('../database/Database').Database} db
    * @param {import('./HistoricoService').HistoricoService} historico
    */
-  constructor(db, historico) {
+  /**
+   * @param {{valor(nome: string): any}} [regras] ConfiguracaoSistemaService; sem ele
+   *   (testes), vale o padrão de config/regrasEquipe.js.
+   */
+  constructor(db, historico, regras) {
     this.db = db;
     this.historico = historico;
+    this.regras = regras || { valor: (nome) => REGRAS[nome].padrao };
   }
 
   /**
@@ -34,15 +40,19 @@ class AgendamentoService {
       ...this.db.agendamentos.list(search, status, paginacao),
       arquivadas: this.db.agendamentos.contarArquivadas(),
       // A tela explica a regra ("concluídas há mais de N dias saem daqui"),
-      // e o N vem daqui em vez de estar escrito na tela: quem mudar o .env
-      // muda o comportamento E o texto, sem os dois se contradizerem.
-      arquivarDias: AGENDAMENTO_ARQUIVAR_DIAS,
+      // e o N vem daqui em vez de estar escrito na tela: quem mudar a regra
+      // na Administração muda o comportamento E o texto, sem os dois se
+      // contradizerem.
+      arquivarDias: this.regras.valor("agendamentoArquivarDias"),
     };
   }
 
   /** @returns {number} quantas tarefas sairam da lista nesta varredura */
   arquivarAntigas() {
-    return this.db.agendamentos.arquivarConcluidasAntigas(AGENDAMENTO_ARQUIVAR_DIAS, STATUS_OPTIONS[STATUS_OPTIONS.length - 1]);
+    return this.db.agendamentos.arquivarConcluidasAntigas(
+      this.regras.valor("agendamentoArquivarDias"),
+      STATUS_OPTIONS[STATUS_OPTIONS.length - 1]
+    );
   }
 
   /** Traz uma tarefa arquivada de volta para a lista, reaberta. */

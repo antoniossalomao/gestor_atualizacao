@@ -21,7 +21,7 @@ export function statTile(chave, nomeIcone, rotulo, destino) {
     <button type="button" class="card stat-tile" data-stat="${chave}" data-destino="${destino}">
       <div class="stat-tile__label">
         <span class="stat-tile__icon">${iconHtml(nomeIcone)}</span>
-        ${rotulo}
+        <span data-role="rotulo">${rotulo}</span>
       </div>
       <div class="stat-tile__value-row">
         <div class="stat-tile__value">—</div>

@@ -24,10 +24,15 @@ class AuthController {
   // barato para o cliente descobrir se o Atualizador está habilitado, sem
   // uma segunda requisição só para isso (ver App.js).
   status = (req, res) => {
+    const logado = Boolean(req.session.user);
     res.json({
       needsSetup: this.authService.needsSetup(),
       user: req.session.user || null,
       atualizadorHabilitado: this.configuracaoSistemaService.atualizadorHabilitado(),
+      // As regras públicas da equipe (ver config/regrasEquipe.js) vão junto
+      // pelo mesmo motivo -- mas só com sessão: esta rota é aberta, e quem
+      // não entrou não tem por que saber as regras internas da equipe.
+      regras: logado ? this.configuracaoSistemaService.ler() : null,
     });
   };
 

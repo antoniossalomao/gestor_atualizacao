@@ -54,10 +54,6 @@ const SISTEMAS_CONHECIDOS = [
 const SISTEMA_SUPORTE_BREDAS = "Suporte Bredas";
 const OBS_SUPORTE_BREDAS = "adicionado o suporte bredas";
 
-// Cliente sem nenhuma atualizacao registrada por mais que isso vira
-// "desatualizado" na tela de Resumo.
-const DESATUALIZADO_DIAS = 60;
-
 // Apelidos/variacoes de nome encontradas no historico real de
 // atualizacoes (campo "sistema", texto livre) para o mesmo sistema de
 // "clientes.sistemas" -- ex.: "B_NFCe" foi usado por um tempo no lugar de
@@ -68,16 +64,9 @@ const SISTEMA_APELIDOS = {
   NFCe: ["B_NFCe"],
 };
 
-// Quantos backups automaticos manter na pasta "backups" -- os mais
-// antigos alem desse numero sao apagados a cada vez que o servidor sobe.
-const BACKUP_KEEP = 10;
-
-// Dias que uma tarefa concluida fica na lista de Agendamentos antes de ser
-// arquivada sozinha. Ajustavel pelo .env porque e uma regra que vale para a
-// EQUIPE INTEIRA -- se fosse uma preferencia por pessoa (as do painel de
-// Configuracoes, que vivem no localStorage de cada navegador), cada um veria
-// uma lista diferente da do colega ao lado.
-const AGENDAMENTO_ARQUIVAR_DIAS = Number(process.env.AGENDAMENTO_ARQUIVAR_DIAS) || 30;
+// DESATUALIZADO_DIAS, BACKUP_KEEP e AGENDAMENTO_ARQUIVAR_DIAS moravam aqui.
+// Viraram regras da equipe, editaveis na tela Administracao -- ver
+// config/regrasEquipe.js.
 
 // Valor do filtro de status que pede justamente o que some da lista. Nao e
 // um status de verdade (nao entra em STATUS_OPTIONS, ninguem marca uma
@@ -91,9 +80,6 @@ module.exports = {
   SISTEMAS_CONHECIDOS,
   SISTEMA_SUPORTE_BREDAS,
   OBS_SUPORTE_BREDAS,
-  DESATUALIZADO_DIAS,
   SISTEMA_APELIDOS,
-  BACKUP_KEEP,
-  AGENDAMENTO_ARQUIVAR_DIAS,
   FILTRO_ARQUIVADAS,
 };

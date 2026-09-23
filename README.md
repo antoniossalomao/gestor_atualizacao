@@ -47,10 +47,13 @@ a mudança grande de tal data?". Filtra por sistema e por uma data de corte.
 **Consulta** — a ficha de um cliente: dados de cadastro, sistemas, acessos
 remotos e as últimas atualizações dele.
 
-**Histórico** — trilha de auditoria: quem criou, editou ou excluiu cada
-cliente, atualização, agendamento, sistema e conta, e quem restaurou cada
-backup. Com várias pessoas mexendo no mesmo banco, é o que responde "quem
-mudou isso?".
+**Administração** — só para administrador. Reúne o que é da equipe inteira:
+usuários e papéis, o **Histórico** de alterações (quem criou, editou ou
+excluiu cada cliente, atualização, agendamento, sistema, conta e regra, e
+quem restaurou cada backup), as **regras da equipe** (dias até um cliente
+contar como desatualizado, dias até arquivar tarefa, cópias de backup), o
+webhook do Discord com mensagem de teste, o liga/desliga do Atualizador,
+os backups e a saúde do servidor. As regras valem na hora, sem reiniciar.
 
 **Distribuição e Versões** — o painel do agente de atualização automática
 (um serviço em C#/.NET que roda no servidor do cliente e aplica as
@@ -113,7 +116,8 @@ client/                front-end (HTML/CSS/JavaScript puro, sem framework nem bu
   js/app/                o "esqueleto" do app: App, View, rota, tema, aparência, preferências, cache
   js/components/         peças de UI reaproveitáveis (modal, toast, tabela, paginação...)
   js/components/charts/  gráficos em SVG escritos à mão (barras, linha, pizza)
-  js/views/              uma tela por arquivo
+  js/views/              uma tela por arquivo; views/administracao/ tem uma aba da Administração por arquivo
+  js/templates/          marcação das telas, montada com a tag html (escapa tudo), SEM tocar no DOM
   js/domain/             vocabulário do negócio, SEM tocar no DOM (status de agente, relatório, papéis)
   js/utils/              utilidades genéricas (datas, HTML, cores, ícones, debounce)
   css/                   theme.css (tokens de cor/tipografia) + components.css (o resto)
@@ -187,8 +191,17 @@ uma. As principais:
 | `DB_PATH` | Caminho do arquivo `gestao.db`. |
 | `SESSION_SECRET` | Texto usado para assinar o cookie de login. **Obrigatório:** o servidor não sobe sem ele nem com o valor de exemplo do `.env.example`. Use um valor longo e aleatório. |
 | `SESSION_SECURE` | `true` quando o servidor roda atrás de HTTPS. |
-| `DISCORD_WEBHOOK_URL` | Opcional. Quando configurada, avisa um canal do Discord a cada atualização nova cadastrada, e também quando um agente do Atualizador automático fica offline/com erro. |
-| `ALERTA_AGENTES_INTERVALO_MINUTOS` | De quanto em quanto tempo checar a situação dos agentes (padrão 15). Só tem efeito com `DISCORD_WEBHOOK_URL` configurada. |
+| `AGENT_API_TOKEN` | Chave compartilhada com os agentes do Atualizador. Para trocar, ver "Rotacionar o token dos agentes" em `docs/OPERACAO.md`. |
+| `TRUST_PROXY` | `true` só quando há um proxy reverso na frente (ver "Na internet", abaixo). |
+
+**Regras da equipe** (webhook do Discord, URL pública para os agentes, dias até
+um cliente contar como desatualizado, dias até arquivar tarefa concluída,
+cópias de backup, intervalo do alerta de agentes) **não moram no `.env`**:
+ficam no banco e são editadas em **Administração**, valendo na hora, sem
+reiniciar. `DISCORD_WEBHOOK_URL`, `PUBLIC_URL`,
+`ALERTA_AGENTES_INTERVALO_MINUTOS` e `AGENDAMENTO_ARQUIVAR_DIAS` ainda são
+lidas do `.env` uma única vez, na primeira subida, para trazer o que uma
+instalação antiga já tinha configurado.
 
 ## Contas de usuário e Controle de Acesso (RBAC)
 
@@ -410,19 +423,20 @@ não no `docker-compose.yml`, pelo motivo explicado no item seguinte:
 |---|---|---|
 | `SESSION_SECURE` | `true` | Sem isso o cookie de login trafega sem exigir HTTPS. |
 | `TRUST_PROXY` | `true` | Sem isso o Express enxerga só o IP do proxy, e com `SESSION_SECURE=true` ninguém consegue entrar. |
-| `PUBLIC_URL` | `https://seu-dominio` | É o que monta os links de download enviados aos agentes. |
 
-E troque o mapeamento de portas para `"127.0.0.1:3000:3000"`, de modo que
+E, em **Administração → Atualizador**, ponha o endereço público
+(`https://seu-dominio`) em "Endereço deste servidor para os agentes": é o
+que monta os links de download enviados aos agentes.
+
+Troque também o mapeamento de portas para `"127.0.0.1:3000:3000"`, de modo que
 só o proxy alcance o Node.
 
 ### Duas armadilhas
 
-- **Não mova variável do `.env` para `environment:` no compose.** O `dotenv`
-  não sobrescreve variável que já veio do ambiente, então o que estiver no
-  compose vence — e a tela *Configurações → Sistema → "Configuração da API"*,
-  que grava no `.env`, passa a não ter efeito nenhum, sem mensagem de erro.
-  `PORT` é a única exceção (não é editável por aquela tela, e fixá-la é o que
-  mantém o mapeamento de portas válido).
+- **Regra da equipe não é variável de ambiente.** Pôr `DISCORD_WEBHOOK_URL`
+  ou `PUBLIC_URL` no `environment:` do compose só vale na primeira subida
+  (é quando o valor é importado para o banco); depois disso, quem manda é a
+  tela Administração. Para mudar, mude lá.
 - **O fuso está fixado em `America/Sao_Paulo`** (`TZ` no `Dockerfile`).
   Container sem fuso roda em UTC, e o app usa o relógio local para decidir o
   que é "hoje": das 21h à meia-noite, os agendamentos de amanhã apareceriam

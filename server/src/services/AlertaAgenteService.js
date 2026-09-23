@@ -67,14 +67,33 @@ class AlertaAgenteService {
     }
   }
 
-  /** Liga a verificação periódica. No-op se não houver webhook configurado -- nada pra avisar. */
+  /**
+   * Liga a verificação periódica. No-op se não houver webhook configurado --
+   * nada pra avisar.
+   * @param {number|(() => number)} intervaloMs função quando o intervalo é
+   *   uma regra editável (ver `reprogramar`), número nos testes.
+   */
   start(intervaloMs) {
+    this._intervaloMs = intervaloMs;
     if (!this.notifications.webhookUrl || this.timer) return;
     this.verificar();
-    this.timer = setInterval(() => this.verificar(), intervaloMs);
+    const ms = typeof intervaloMs === "function" ? intervaloMs() : intervaloMs;
+    this.timer = setInterval(() => this.verificar(), ms);
     // "unref": esse timer sozinho nao deve impedir o processo de encerrar
     // (ex.: durante os testes, que nao chamam stop() explicitamente).
     this.timer.unref?.();
+  }
+
+  /**
+   * Desliga e liga de novo com o webhook e o intervalo de AGORA. Chamado
+   * quando essas regras mudam na tela Administração (ver Server.js). Sem
+   * isto, configurar o webhook com o servidor já no ar não ligava o alerta
+   * até o próximo reinício -- `start()` tinha saído cedo, sem webhook.
+   */
+  reprogramar() {
+    if (this._intervaloMs === undefined) return;
+    this.stop();
+    this.start(this._intervaloMs);
   }
 
   stop() {

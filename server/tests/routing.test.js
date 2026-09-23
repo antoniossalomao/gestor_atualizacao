@@ -22,9 +22,6 @@ async function subirServidor() {
     sessionSecret: "segredo-de-teste",
     sessionSecure: false,
     agentApiToken: "token-de-teste",
-    publicUrl: "",
-    discordWebhookUrl: "",
-    alertaAgentesIntervaloMinutos: 15,
   });
   await server.start();
   const { port } = server.httpServer.address();

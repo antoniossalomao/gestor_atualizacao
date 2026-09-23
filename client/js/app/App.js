@@ -16,13 +16,9 @@ import { AtualizacoesView } from "../views/AtualizacoesView.js";
 import { AgendamentosView } from "../views/AgendamentosView.js";
 import { ClientesView } from "../views/ClientesView.js";
 import { ConsultaView } from "../views/ConsultaView.js";
-import { HistoricoView } from "../views/HistoricoView.js";
 import { SistemasView } from "../views/SistemasView.js";
-import { BackupsPanel } from "../views/BackupsPanel.js";
-import { UsersPanel } from "../views/UsersPanel.js";
-import { ConfiguracaoApiPanel } from "../views/ConfiguracaoApiPanel.js";
-import { AtualizadorConfigPanel } from "../views/AtualizadorConfigPanel.js";
-import { SaudeSistemaPanel } from "../views/SaudeSistemaPanel.js";
+import { AdministracaoView } from "../views/AdministracaoView.js";
+import { abrirTrocaDeSenha } from "../views/TrocarSenhaModal.js";
 import { DistribuicaoView } from "../views/DistribuicaoView.js";
 import { VersoesView } from "../views/VersoesView.js";
 import { MenuNotificacoes } from "../components/MenuNotificacoes.js";
@@ -43,6 +39,10 @@ import { ConexaoBanner } from "../components/ConexaoBanner.js";
  * Atualizador (agente C#) em uso -- somem da navegação, da paleta de
  * comandos e dos atalhos quando ele está desativado em Configurações (ver
  * `this.tabsAtivas`, calculado em `_onAuthenticated`).
+ *
+ * `papel` restringe a aba a um papel (hoje só a Administração, "admin"). É só
+ * a navegação: quem garante de verdade é o servidor, que responde 403 às
+ * rotas de administração para qualquer outro papel.
  */
 const TABS = [
   { key: "resumo", label: "Resumo", icon: "resumo", View: ResumoView, grupo: "Visão Geral",
@@ -61,8 +61,10 @@ const TABS = [
     descricao: "Envie, publique e administre as versões distribuídas.", requerAtualizador: true },
   { key: "sistemas", label: "Sistemas", icon: "sistemas", View: SistemasView, grupo: "Distribuição",
     descricao: "Relatório por sistema, com data de corte opcional." },
-  { key: "historico", label: "Histórico", icon: "historico", View: HistoricoView, grupo: "Administração",
-    descricao: "Quem criou, editou ou excluiu o quê, e quando." },
+  // Só administrador (ver `papel`). O Histórico de alterações, que era uma
+  // aba aberta a todos, mora agora dentro dela -- ver AdministracaoView.
+  { key: "administracao", label: "Administração", icon: "escudo", View: AdministracaoView, grupo: "Administração",
+    descricao: "Usuários, histórico de alterações, regras da equipe, backups e saúde do servidor.", papel: "admin" },
 ];
 
 /**
@@ -120,6 +122,9 @@ export class App {
     // ver AuthController.status no servidor. `!== false` para o app não
     // esconder nada se o servidor for antigo e não mandar este campo.
     this.atualizadorHabilitado = status.atualizadorHabilitado !== false;
+    // Regras públicas da equipe (ex.: quantos dias até "desatualizado"), para
+    // as telas explicarem o que mostram. Só vêm com sessão.
+    this.regras = status.regras || {};
     if (status.needsSetup) {
       new LoginView(this.root, this.api, "setup", (user) => this._onAuthenticated(user));
       return;
@@ -156,8 +161,10 @@ export class App {
     // Calculado uma vez por sessão (não a cada troca de aba): as abas do
     // Atualizador só desaparecem/reaparecem de fato num boot novo do app
     // (login, F5) ou já vêm corretas se o admin tiver acabado de mudar --
-    // ver AtualizadorConfigPanel, que avisa para recarregar.
-    this.tabsAtivas = TABS.filter((t) => !t.requerAtualizador || this.atualizadorHabilitado);
+    // ver AtualizadorAdmin, que recarrega o app ao salvar.
+    this.tabsAtivas = TABS.filter(
+      (t) => (!t.requerAtualizador || this.atualizadorHabilitado) && (!t.papel || t.papel === user?.role)
+    );
 
     // As preferências de apresentação são da CONTA, não do navegador. O
     // localStorage já pintou a tela (theme-init.js, no <head>, antes do
@@ -463,6 +470,8 @@ export class App {
           cache: this.cache,
           navigate: (destino, opcoes) => this.switchTab(destino, opcoes),
           atualizadorHabilitado: this.atualizadorHabilitado,
+          regras: this.regras,
+          recarregarApp: () => this.recarregarApp(),
         }),
       });
     }
@@ -631,7 +640,7 @@ export class App {
    * Reconstrói o app inteiro (abas, sidebar, paleta) a partir de um novo
    * `/auth/status` -- o que `recarregarAba()` NÃO cobre, porque só troca os
    * dados da aba aberta, não a lista de abas que existem. Precisa disto
-   * quando `atualizadorHabilitado` muda (ver AtualizadorConfigPanel): a
+   * quando `atualizadorHabilitado` muda (ver AtualizadorAdmin): a
    * navegação inteira depende de `this.tabsAtivas`, calculado uma vez em
    * `_onAuthenticated`.
    *
@@ -655,44 +664,31 @@ export class App {
         icone: tab.icon,
         executar: () => this.switchTab(tab.key),
       })),
+      // Atalhos direto para cada aba da Administração. Cada um leva à tela, e
+      // não a um modal solto como antes -- dá para voltar, e o "Fechar" não
+      // existe mais para devolver a pessoa ao lugar errado.
       ...(this.user?.role === "admin"
         ? [
-            {
-              id: "acao:saude",
-              titulo: "Saúde Operacional do Sistema",
-              subtitulo: "Diagnóstico técnico: integridade do SQLite, memória e runtime",
-              grupo: "Ações",
-              icone: "saude",
-              executar: () => new SaudeSistemaPanel(this.api).open(),
-            },
-            {
-              id: "acao:backups",
-              titulo: "Abrir Backups",
-              subtitulo: "Download preventivo e restauração do banco",
-              grupo: "Ações",
-              icone: "backups",
-              executar: () => new BackupsPanel(this.api).open(),
-            },
-            {
-              id: "acao:configuracao-api",
-              titulo: "Configuração da API",
-              subtitulo: "URL pública, chave dos agentes, webhook do Discord",
-              grupo: "Ações",
-              icone: "acessos",
-              executar: () => new ConfiguracaoApiPanel(this.api).open(),
-            },
-            {
-              id: "acao:atualizador",
-              titulo: "Ligar/desligar o Atualizador",
-              subtitulo: this.atualizadorHabilitado
-                ? "Hoje HABILITADO -- Distribuição, Versões e alerta de agentes visíveis"
-                : "Hoje DESATIVADO -- Distribuição, Versões e alerta de agentes escondidos",
-              grupo: "Ações",
-              icone: "distribuicao",
-              // Sempre disponível a Admin, mesmo desativado: é o único caminho de volta.
-              executar: () => new AtualizadorConfigPanel(this.api, () => this.recarregarApp()).open(),
-            },
-          ]
+            ["usuarios", "Usuários e papéis", "Criar conta, mudar papel, remover acesso", "users"],
+            ["historico", "Histórico de alterações", "Quem criou, editou ou excluiu o quê, e quando", "historico"],
+            ["regras", "Regras da equipe", "Dias até desatualizado, arquivamento de tarefas, backups", "ajustes"],
+            ["notificacoes", "Notificações no Discord", "Webhook do canal e mensagem de teste", "sino"],
+            [
+              "atualizador",
+              "Ligar/desligar o Atualizador",
+              this.atualizadorHabilitado ? "Hoje ligado" : "Hoje desligado -- é por aqui que se liga de novo",
+              "distribuicao",
+            ],
+            ["backups", "Backups do banco", "Baixar ou restaurar uma cópia", "backups"],
+            ["saude", "Saúde do servidor", "Banco, processo e cópias de segurança", "saude"],
+          ].map(([aba, titulo, subtitulo, icone]) => ({
+            id: `admin:${aba}`,
+            titulo,
+            subtitulo,
+            grupo: "Administração",
+            icone,
+            executar: () => this.switchTab("administracao", { aba }),
+          }))
         : []),
       ...(["operador", "admin"].includes(this.user?.role)
         ? [
@@ -726,9 +722,9 @@ export class App {
             },
           ]
         : []),
-      { id: "acao:usuarios", titulo: "Abrir Usuários", grupo: "Ações", icone: "users",
-        executar: () => new UsersPanel(this.api, this.user).open() },
-      { id: "acao:config", titulo: "Abrir Configurações", subtitulo: "Tema, densidade, segurança, preferências",
+      { id: "acao:trocar-senha", titulo: "Trocar minha senha", grupo: "Ações", icone: "chave",
+        executar: () => abrirTrocaDeSenha(this.api) },
+      { id: "acao:config", titulo: "Abrir Configurações", subtitulo: "Tema, densidade, tabelas, sua conta",
         grupo: "Ações", icone: "config", executar: () => this._abrirConfiguracoes() },
       /*
        * Exportar/imprimir a tela aberta.
@@ -840,12 +836,9 @@ export class App {
       aoMudarVarias: () => this._sincronizarComPreferencias(),
       abas: this.tabsAtivas.map((t) => ({ key: t.key, label: t.label })),
       usuario: this.user,
-      abrirBackups: this.user?.role === "admin" ? () => new BackupsPanel(this.api).open() : undefined,
-      abrirUsuarios: () => new UsersPanel(this.api, this.user).open(),
-      abrirConfiguracaoApi: this.user?.role === "admin" ? () => new ConfiguracaoApiPanel(this.api).open() : undefined,
-      abrirAtualizadorConfig:
-        this.user?.role === "admin" ? () => new AtualizadorConfigPanel(this.api, () => this.recarregarApp()).open() : undefined,
-      abrirSaude: this.user?.role === "admin" ? () => new SaudeSistemaPanel(this.api).open() : undefined,
+      atualizadorHabilitado: this.atualizadorHabilitado,
+      trocarSenha: () => abrirTrocaDeSenha(this.api),
+      abrirAdministracao: this.user?.role === "admin" ? () => this.switchTab("administracao") : undefined,
     });
   }
 

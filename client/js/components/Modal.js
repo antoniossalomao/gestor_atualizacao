@@ -88,9 +88,10 @@ export class Modal {
 
   /**
    * Monta a casca de um diálogo (overlay + caixa + acessibilidade) e devolve
-   * os pedaços para quem quiser preencher o miolo. É o que BackupsPanel e
-   * UsersPanel usam -- antes cada um recriava overlay e caixa na mão, sem
-   * nenhum dos cuidados de foco/teclado deste arquivo.
+   * os pedaços para quem quiser preencher o miolo. É o que a confirmação de
+   * restauração de backup e a troca de senha usam -- antes cada diálogo
+   * recriava overlay e caixa na mão, sem nenhum dos cuidados de foco/teclado
+   * deste arquivo.
    *
    * @param {{largura?: number, onClose?: (resultado?: any) => void, fecharPorFora?: boolean, classe?: string}} opts
    *   `classe` entra ao lado de `.modal-box` para os painéis que precisam de

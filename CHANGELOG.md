@@ -15,6 +15,33 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Administração virou uma tela própria, só de administrador.** Tudo o que é
+  da equipe inteira saiu do painel de preferências pessoais, onde era uma
+  seção "Segurança" feita só de links para cinco modais, cada um com desenho
+  próprio. Agora é uma tela com abas: Usuários, Histórico, Regras da equipe,
+  Notificações, Atualizador, Backups e Saúde do servidor.
+  - **O Histórico mudou de lugar** e passou a ser só de administrador. Operador
+    e Consulta deixam de vê-lo.
+  - **As regras da equipe foram para o banco** e valem na hora, sem reiniciar
+    (`server/src/config/regrasEquipe.js`). Duas delas nem eram ajustáveis: os
+    60 dias de "desatualizado" e as 10 cópias de backup estavam fixos no código.
+    O dia de arquivar tarefa tinha três padrões diferentes (30 no código, 7 no
+    exemplo, o valor de cada `.env`). Na primeira subida, o que estava no
+    `.env` é trazido para o banco uma vez só.
+  - **A tela não escreve mais no `.env`.** A antiga "Configuração da API"
+    reescrevia o arquivo, pedia para reiniciar e mandava a chave dos agentes
+    inteira para o navegador. A chave continua no `.env`; a tela só mostra se
+    ela existe e como termina. No Docker, o `.env` passa a ser montado só
+    para leitura.
+  - **Discord:** botão de mensagem de teste, e o webhook só aceita endereço do
+    Discord (o servidor faz POST nele). Configurar o webhook com o servidor no
+    ar agora liga o alerta de agentes sem reiniciar.
+  - **Configurações pessoais:** "Sistema" virou "Conta", com a troca da
+    própria senha (antes escondida em "Usuários e Permissões"). Com o
+    Atualizador desligado, somem os ajustes que só serviam a ele.
+  - **Acabamento corrigido:** ícone de 200px e títulos quebrados na Saúde,
+    campos sem espaço na Configuração da API, botão-link sublinhado nos backups.
+
 - **Rebaixar ou excluir um usuário agora derruba as sessões dele.** O papel
   que as rotas conferem é o copiado para a sessão no login. Sem isso, um
   admin rebaixado continuava admin por até 7 dias, e podia inclusive religar

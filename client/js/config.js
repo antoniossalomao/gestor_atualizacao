@@ -40,4 +40,5 @@ export const STATUS_OPTIONS = ["A Fazer", "Em Andamento", "Sem resposta", "Concl
  */
 export const FILTRO_ARQUIVADAS = "Arquivadas";
 
-export const DESATUALIZADO_DIAS = 60;
+// DESATUALIZADO_DIAS morava aqui (e uma cópia no servidor). Virou regra da
+// equipe, editável na Administração -- o Resumo recebe o número do servidor.
