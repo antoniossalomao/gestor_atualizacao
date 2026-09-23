@@ -251,7 +251,16 @@ export class SortableTable {
         const botao = document.createElement("button");
         botao.type = "button";
         botao.className = "data-table__sort";
-        botao.textContent = col.label;
+        // O rótulo mora num <span> à parte (não como texto solto do botão)
+        // para poder levar `overflow: hidden` + `text-overflow: ellipsis`
+        // -- um <button> flex sem isso deixa o texto vazar pra fora da
+        // largura da coluna em vez de truncar, o que pareceu, numa coluna
+        // estreita como "Máquinas", o cabeçalho "cortado" no meio da palavra
+        // e encostando na coluna vizinha.
+        const rotulo = document.createElement("span");
+        rotulo.className = "data-table__sort-label";
+        rotulo.textContent = col.label;
+        botao.appendChild(rotulo);
         const seta = document.createElement("span");
         seta.className = "sort-arrow";
         seta.setAttribute("aria-hidden", "true");

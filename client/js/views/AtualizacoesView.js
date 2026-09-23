@@ -144,17 +144,23 @@ export class AtualizacoesView extends View {
 
     this._buildFields();
 
+    // Larguras ajustadas para caber sem rolamento horizontal (ver
+    // CHANGELOG): "máquinas" e "ações" estavam estreitas demais para o
+    // próprio conteúdo -- "MÁQUINAS" cortava no meio, e 3 botões de 26px
+    // mais o padding da célula passavam dos 86px reservados, encostando na
+    // barra de rolagem. "obs" ocupava quase um quarto da tabela para
+    // exibir, na prática, poucas palavras.
     const LARGURAS_ATUALIZACAO = {
-      id: "45px",
-      cliente: "21%",
-      sistema: "18%",
-      versao: "85px",
-      responsavel: "125px",
-      data: "85px",
-      motivo: "115px",
-      maquinas: "58px",
-      obs: "22%",
-      acoes: "86px",
+      id: "46px",
+      cliente: "20%",
+      sistema: "16%",
+      versao: "82px",
+      responsavel: "132px",
+      data: "78px",
+      motivo: "105px",
+      maquinas: "92px",
+      obs: "11%",
+      acoes: "104px",
     };
 
     this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {

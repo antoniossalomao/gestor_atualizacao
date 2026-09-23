@@ -15,6 +15,40 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Colunas da tabela de Atualizações cortando texto, e "Obs" ocupando um
+  quarto da tela.** Duas causas, achadas comparando a tela renderizada
+  contra uma cópia isolada da mesma tabela (mesmo CSS, mesmo componente,
+  fora do app) num Chrome headless: `LARGURAS_ATUALIZACAO` reservava só
+  58px para "Máquinas" -- não cabe nem o rótulo do cabeçalho, que vazava
+  visualmente pra dentro da coluna "Obs" ao lado -- e só 86px para "Ações",
+  8px a menos do que os próprios 3 botões (26px cada) mais o padding da
+  célula já ocupam sozinhos, empurrando o terceiro ícone para debaixo da
+  barra de rolagem. "Obs", em compensação, tinha 22% da tabela (a fatia
+  individual mais larga depois de "Cliente") para mostrar, normalmente,
+  uma frase curta. Larguras redistribuídas (`AtualizacoesView.js`) sem
+  abrir mão de "nenhum rolamento horizontal" -- testado até 1300px de
+  largura de tabela, congestionado de propósito, sem nenhuma coluna
+  sobrepondo a vizinha.
+
+  A causa-raiz por trás do cabeçalho "vazando" era mais geral, e por isso a
+  correção foi no componente, não só nesta tela: o cabeçalho ordenável
+  (`SortableTable`) é um `<button>` `display:flex`, e um item flex não
+  encolhe abaixo do tamanho do próprio conteúdo por padrão -- sem
+  `min-width: 0` no botão e sem o rótulo estar num `<span>` próprio com
+  `text-overflow: ellipsis`, um texto comprido numa coluna estreita
+  simplesmente ultrapassava a largura da célula em vez de truncar. Vale
+  para qualquer tabela que use `SortableTable`, não só Atualizações.
+
+- **O selo vermelho do indicador "Parados" no Resumo mostrava um pedaço de
+  cor destacado atrás do ícone.** `.stat-tile__icon` é uma caixa quadrada de
+  16x16 sem `border-radius`; o ícone `alerta` é um triângulo, que não
+  preenche os quatro cantos do quadrado. Enquanto o fundo ficava
+  `transparent` (estado normal) isso não aparecia -- só quando o indicador
+  vira alerta (`.is-alert`, fundo `--cor-vermelho-fraco`) as quinas do
+  quadrado expostas ao redor do triângulo pareciam uma mancha de cor errada.
+  Corrigido com o mesmo raio que `.stat-tile__delta`, no mesmo arquivo, já
+  usa para o mesmo tipo de selo colorido.
+
 - **O painel passou a ter imagem Docker** (`Dockerfile`, `.dockerignore`,
   `docker-compose.yml`). Não substitui o serviço do Windows via NSSM: é a
   opção para quando o app vai para uma máquina Linux, ou para isolá-lo do

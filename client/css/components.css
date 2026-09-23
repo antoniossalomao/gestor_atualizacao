@@ -1071,6 +1071,12 @@ kbd {
   height: 16px;
   background: transparent;
   color: var(--cor-texto-fraco);
+  /* O ícone "alerta" (.is-alert abaixo) é um triângulo -- sem isto, o fundo
+     vermelho dele pintava o quadrado de 16x16 inteiro, e as quinas expostas
+     nos quatro cantos do triângulo pareciam uma mancha de cor errada atrás
+     do ícone. Mesmo raio que `.stat-tile__delta` já usa pro mesmo tipo de
+     selo colorido, alguns parágrafos abaixo. */
+  border-radius: var(--raio-pequeno);
 }
 .stat-tile__icon svg {
   width: 15px;
@@ -1837,6 +1843,11 @@ table.data-table {
   align-items: center;
   gap: 4px;
   width: 100%;
+  /* Item flex, por padrão, não encolhe abaixo do tamanho do próprio
+     conteúdo (min-width:auto implícito) -- sem isto, um rótulo comprido
+     numa coluna estreita empurrava o botão para além da largura do `th`
+     em vez de truncar. */
+  min-width: 0;
   padding: var(--cabecalho-pad-y) var(--linha-pad-x);
   border: 0;
   background: none;
@@ -1855,9 +1866,20 @@ table.data-table {
   color: var(--cor-texto);
 }
 
+/* O texto do rótulo, à parte da setinha de ordenação -- mesmo raciocínio
+   do `min-width: 0` acima, aplicado a quem realmente precisa truncar. */
+.data-table__sort-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 /* Cabeçalho estático (sem ordenação, sem <button>) */
 .data-table thead th:not(:has(.data-table__sort)) {
   padding: var(--cabecalho-pad-y) var(--linha-pad-x);
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--cor-texto-fraco);
   font-family: var(--fonte);
   font-size: 11px;
