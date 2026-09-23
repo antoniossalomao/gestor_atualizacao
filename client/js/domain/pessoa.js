@@ -27,3 +27,19 @@ export function rotuloPapel(role) {
   if (role === "consulta") return "Consulta";
   return "Operador";
 }
+
+/**
+ * O que cada papel pode, numa frase. A Administração mostra as três ao lado
+ * da tabela de usuários (a pergunta que se faz ANTES de escolher um papel), e
+ * Configurações > Conta mostra a de quem está logado -- "o que eu posso
+ * fazer aqui?" não tinha resposta em lugar nenhum para quem não é admin.
+ */
+const DESCRICOES_PAPEL = {
+  admin: "Tudo, inclusive a Administração, os backups e publicar versões.",
+  operador: "Cadastra e edita clientes, atualizações e agendamentos.",
+  consulta: "Só vê e exporta. Não altera nada.",
+};
+
+export function descricaoPapel(role) {
+  return DESCRICOES_PAPEL[role === "admin" || role === "consulta" ? role : "operador"];
+}

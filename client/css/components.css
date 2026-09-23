@@ -1245,6 +1245,17 @@ kbd {
   background: var(--cor-superficie-hover);
   color: var(--cor-texto);
 }
+/* Aceso enquanto a tela Configurações está aberta: ela não tem item no menu,
+   e este botão faz o papel dele (mesmo desenho da aba ativa). */
+.btn--sidebar.is-active {
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto);
+  font-weight: var(--peso-forte);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.btn--sidebar.is-active svg {
+  color: var(--cor-accent);
+}
 
 /* Spinner do botão ocupado (ver core/guard.js). `currentColor` faz ele herdar
    a cor do botão, então funciona igual no accent, no danger e no ghost. */
@@ -2352,310 +2363,215 @@ textarea.relatorio__texto {
   resize: vertical;
 }
 
-/* -- selo de ícone de painel (Configurações, e disponível para os demais) --
-   O `.painel__head` que morava aqui saiu junto com a lista única de ajustes:
-   o cabeçalho do painel de Configurações virou `.cfg__top`, com busca e botão
-   de fechar, e nenhum outro painel chegou a usá-lo. O selo do ícone ficou --
-   esse sim é reaproveitável, e é o que dá a qualquer painel a mesma cara de
-   "isto é um painel e não uma caixa de aviso". */
-
-.painel__icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: var(--cor-accent-fraco);
-  color: var(--cor-accent);
-}
-.painel__icon svg {
-  width: 19px;
-  height: 19px;
-}
 
 /* ==========================================================================
-   CONFIGURAÇÕES -- painel de duas colunas
-   A forma é a de um painel de preferências de sistema operacional: trilha de
-   seções fixa à esquerda, conteúdo rolando à direita, cabeçalho e rodapé
-   parados. Ver o comentário de abertura em js/views/ConfiguracoesPanel.js para
-   o porquê de ter deixado de ser uma lista única dentro de um modal.
+   CONFIGURAÇÕES (views/ConfiguracoesView.js e views/configuracoes/)
+   Era um modal de duas colunas com um desenho só dele. Virou tela, com a
+   moldura das telas com abas (mais abaixo neste arquivo, junto da
+   Administração). Aqui ficam as peças que só as Configurações têm: a busca,
+   as linhas de ajuste e seus controles, a prévia da tabela, a conta.
    ========================================================================== */
 
-/*
- * A casca: a `.modal-box` padrão tem padding e rola por inteiro, e nenhuma das
- * duas coisas serve aqui -- a rolagem é só do painel da direita, com a busca e
- * os botões sempre à vista. Daí a classe extra (ver Modal.abrirCaixa).
- *
- * A altura é fixa em `min(640px, 86vh)` em vez de crescer com o conteúdo: uma
- * caixa que muda de tamanho a cada troca de seção faz a trilha da esquerda
- * saltar embaixo do cursor, e trocar de seção é justamente a ação mais comum
- * aqui dentro.
- */
-.modal-box.cfg {
-  display: flex;
-  flex-direction: column;
-  height: min(700px, 88vh);
-  padding: 0;
-  overflow: hidden;
-}
-
-.cfg__top {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  flex: 0 0 auto;
-  padding: var(--sp-4) var(--sp-5);
-  border-bottom: 1px solid var(--cor-borda);
-  background: var(--cor-superficie-alta);
-}
-
-.cfg__titles {
-  min-width: 0;
-}
-.cfg__titles .modal-box__message {
-  font-size: var(--txt-xs);
-}
-
-/* Empurra busca e "fechar" para a direita, e encolhe antes deles em telas
-   apertadas -- o título é o que pode ser cortado, não o campo de busca. */
-.cfg__search {
+/* -- busca, à direita das abas -- */
+.cfg-busca {
   position: relative;
-  flex: 1 1 auto;
-  max-width: 260px;
-  margin-left: auto;
+  display: block;
+  width: 260px;
 }
-
-.cfg__search .input {
-  width: 100%;
+.cfg-busca .input {
   padding-left: 32px;
-  font-size: var(--txt-base);
+  font-size: var(--txt-sm);
 }
-
-.cfg__search-icon {
+.cfg-busca__icone {
   position: absolute;
   top: 50%;
   left: 10px;
   display: grid;
-  place-items: center;
   color: var(--cor-texto-fraco);
   transform: translateY(-50%);
   pointer-events: none;
 }
-.cfg__search-icon svg {
+.cfg-busca__icone svg {
   width: 15px;
   height: 15px;
 }
 
-.cfg__close {
+/* Durante a busca, os painéis das abas dão lugar à lista de resultados. As
+   abas continuam na tela, só apagadas: escondê-las mudaria a forma da tela no
+   meio da digitação. */
+.tela-abas.is-buscando .tela-abas__paineis {
+  display: none;
+}
+.tela-abas.is-buscando .tela-abas__lista {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.cfg-resultados {
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
+}
+.cfg-resultados__total {
+  margin: var(--sp-2);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-sm);
+}
+.cfg-resultados__lista {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cfg-resultado {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: 10px var(--sp-3);
+  border: 0;
+  border-radius: var(--raio-pequeno);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transicao);
+}
+.cfg-resultado:hover,
+.cfg-resultado:focus-visible {
+  background: var(--cor-superficie-hover);
+}
+.cfg-resultado:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: -2px;
+}
+.cfg-resultado__icone {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
-  border: 0;
-  border-radius: var(--raio-pequeno);
-  background: none;
-  color: var(--cor-texto-fraco);
-  cursor: pointer;
-  transition: background var(--transicao), color var(--transicao);
-}
-.cfg__close:hover {
-  background: var(--cor-superficie-hover);
-  color: var(--cor-texto);
-}
-.cfg__close svg {
-  width: 16px;
-  height: 16px;
-}
-
-.cfg__body {
-  display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
-/* -- trilha de seções -- */
-
-.cfg__nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 0 0 186px;
-  padding: var(--sp-3);
-  overflow-y: auto;
-  border-right: 1px solid var(--cor-borda);
-  background: var(--cor-fundo-alt);
-}
-
-.cfg__nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 10px;
-  border: 0;
-  border-radius: var(--raio-pequeno);
-  background: none;
-  color: var(--cor-texto-sub);
-  font: var(--peso-forte) var(--txt-base) / 1.2 var(--fonte-display);
-  text-align: left;
-  cursor: pointer;
-  transition: background var(--transicao), color var(--transicao);
-}
-.cfg__nav-item:hover {
-  background: var(--cor-superficie-hover);
-  color: var(--cor-texto);
-}
-.cfg__nav-item.is-active {
-  background: var(--cor-accent-fraco);
-  color: var(--cor-accent);
-}
-
-.cfg__nav-texto {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/*
- * Quantos ajustes desta seção estão fora do padrão.
- *
- * É a mesma informação do selo "alterado" de cada linha, agregada: sem ela, a
- * única forma de descobrir onde se mexeu era entrar seção por seção. Nasce
- * escondido e só aparece com número maior que zero -- um "0" permanente ao
- * lado de cada seção seria ruído com aparência de dado.
- */
-.cfg__nav-count {
-  flex: 0 0 auto;
-  min-width: 18px;
-  padding: 1px 6px;
-  border-radius: var(--raio-pilula);
-  background: var(--cor-accent-fraco);
-  color: var(--cor-accent);
-  font-size: var(--txt-2xs);
-  font-weight: var(--peso-extra);
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-.cfg__nav-icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  color: var(--cor-texto-fraco);
-}
-.cfg__nav-item.is-active .cfg__nav-icon {
-  color: inherit;
-}
-.cfg__nav-icon svg {
-  width: 16px;
-  height: 16px;
-}
-
-/*
- * Durante a busca a trilha continua na tela, mas apagada e sem resposta ao
- * mouse: o painel da direita não está mais mostrando "a seção escolhida", e um
- * item aceso ali apontaria para um lugar que não é o que se está vendo.
- * Escondê-la de vez seria pior -- a caixa mudaria de forma no meio da digitação.
- */
-.cfg.is-buscando .cfg__nav {
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-/* -- painel de conteúdo -- */
-
-.cfg__pane {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: var(--sp-5);
-  overflow-y: auto;
-}
-
-.cfg__section-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-3);
-}
-
-.cfg__section-titles {
-  min-width: 0;
-}
-
-/* Só aparece quando a seção tem algo fora do padrão (ver `_atualizarSelos`).
-   Um botão permanentemente sem efeito ensina a ignorá-lo -- e no dia em que
-   passar a ter efeito, já ninguém o vê. */
-.cfg__restaurar-secao {
-  flex: 0 0 auto;
-}
-.cfg__section-head h4 {
-  margin: 0;
-  font-family: var(--fonte-display);
-  font-size: var(--txt-lg);
-  font-weight: var(--peso-extra);
-  letter-spacing: -0.02em;
-}
-.cfg__section-head p {
-  margin: 3px 0 0;
-  color: var(--cor-texto-fraco);
-  font-size: var(--txt-sm);
-}
-
-/* Na busca, o cabeçalho da seção vira etiqueta de grupo de resultados: o
-   resultado "Densidade" sozinho não diz de onde veio, e a seção é a resposta. */
-.cfg.is-buscando .cfg__section + .cfg__section {
-  margin-top: var(--sp-5);
-}
-.cfg.is-buscando .cfg__section-head h4 {
-  font-size: var(--txt-2xs);
-  font-weight: var(--peso-extra);
-  color: var(--cor-texto-fraco);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.cfg.is-buscando .cfg__section-head p,
-.cfg.is-buscando .cfg__restaurar-secao {
-  display: none;
-}
-
-.cfg__vazio {
-  margin: var(--sp-6) 0;
-  color: var(--cor-texto-fraco);
-  font-size: var(--txt-base);
-  text-align: center;
-}
-
-.cfg__rows {
-  display: flex;
-  flex-direction: column;
-}
-
-/*
- * A busca esconde linhas com a propriedade `hidden`, e quase toda linha daqui
- * é `display: flex` -- que GANHA do `[hidden] { display: none }` da folha do
- * navegador, por ser uma regra de autor contra uma de agente. Sem este
- * `!important`, "esconder" não esconderia nada e a busca pareceria quebrada.
- */
-.cfg__row[hidden] {
-  display: none !important;
-}
-
-.cfg__foot {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex: 0 0 auto;
-  padding: var(--sp-3) var(--sp-5);
-  border-top: 1px solid var(--cor-borda);
+  border-radius: 7px;
   background: var(--cor-superficie-alta);
+  color: var(--cor-texto-sub);
+}
+.cfg-resultado__icone svg {
+  width: 15px;
+  height: 15px;
+}
+.cfg-resultado__texto {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.cfg-resultado__texto strong {
+  font-family: var(--fonte-display);
+  font-size: var(--txt-base);
+  font-weight: var(--peso-forte);
+}
+.cfg-resultado__texto span {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
+.cfg-resultado__caminho {
+  flex: 0 0 auto;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+  white-space: nowrap;
+}
+.cfg-resultado__seta {
+  display: grid;
+  color: var(--cor-texto-fraco);
+}
+.cfg-resultado__seta svg {
+  width: 14px;
+  height: 14px;
+}
+.cfg-resultados__vazio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-6) var(--sp-4);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  text-align: center;
+}
+.cfg-resultados__vazio strong {
+  color: var(--cor-texto);
+  font-family: var(--fonte-display);
+  font-size: var(--txt-base);
 }
 
-/* "3 ajustes fora do padrão" -- o mesmo dado dos selos, somado, no lugar em
-   que já se olha antes de decidir se vale restaurar alguma coisa. */
-.cfg__resumo {
-  color: var(--cor-texto-fraco);
-  font-size: var(--txt-sm);
+/* -- corpo de cada aba: os cartões, e a prévia ao lado quando há -- */
+.cfg-cartoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+.cfg-corpo--com-previa {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+  gap: var(--sp-4);
+  align-items: start;
+}
+/* A prévia acompanha a rolagem: numa tela baixa, mexer num ajuste lá
+   embaixo sem ver o efeito lá em cima seria voltar a escolher no escuro. */
+.cfg-previa-cartao {
+  position: sticky;
+  top: 88px;
+  padding-bottom: var(--sp-5);
+}
+.cfg-previa {
+  margin-top: var(--sp-4);
+}
+/* Com `table-layout: fixed`, a largura das colunas sai da primeira linha. */
+.cfg-previa th:nth-child(1) {
+  width: 50%;
+}
+.cfg-previa th:nth-child(2) {
+  width: 28%;
+}
+.cfg-previa td,
+.cfg-previa th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfg-linhas {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Um ajuste achado pela busca acende por um instante: o olho encontra a
+   linha sem ler a tela inteira de novo. */
+@keyframes cfg-linha-destaque {
+  from {
+    background-color: color-mix(in srgb, var(--cor-accent) 18%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+@keyframes cfg-cartao-destaque {
+  from {
+    outline-color: var(--cor-accent);
+  }
+  to {
+    outline-color: transparent;
+  }
+}
+.cfg-linha.is-destacado {
+  border-radius: var(--raio-pequeno);
+  animation: cfg-linha-destaque 2s ease-out;
+}
+.cfg-cartao.is-destacado {
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  animation: cfg-cartao-destaque 2s ease-out;
 }
 
 /* -- uma linha de ajuste: rótulo à esquerda, controle à direita -- */
@@ -2668,8 +2584,7 @@ textarea.relatorio__texto {
   padding: var(--sp-4) 0;
   border-bottom: 1px solid var(--cor-borda);
 }
-.cfg__rows > :last-child .cfg-group,
-.cfg__rows > .cfg-group:last-child {
+.cfg-linhas > .cfg-group:last-child {
   border-bottom: 0;
 }
 
@@ -2722,10 +2637,10 @@ textarea.relatorio__texto {
 /* A linha alterada ganha um fio na borda esquerda -- dá para varrer a coluna
    inteira com o olho e achar o que foi mexido sem ler selo por selo.
 
-   `.cfg-group` e `.cfg__row` são o MESMO elemento (o segundo é acrescentado
-   por `_montarItem` depois de o controle já existir), e não um dentro do
+   `.cfg-group` e `.cfg-linha` são o MESMO elemento (o segundo é acrescentado
+   por SecaoAjustes depois de o controle já existir), e não um dentro do
    outro -- um seletor de descendente aqui não casaria com nada. */
-.cfg-group.cfg__row.is-alterado {
+.cfg-group.cfg-linha.is-alterado {
   margin-left: -10px;
   padding-left: 10px;
   border-left: 2px solid var(--cor-accent);
@@ -2736,7 +2651,8 @@ textarea.relatorio__texto {
   font-size: var(--txt-xs);
 }
 
-/* Nove telas não cabem num trilho de opções -- ver o comentário no painel. */
+/* Nove telas não cabem num trilho de opções -- ver `selecao` em
+   views/configuracoes/controles.js. */
 .cfg-group__select {
   flex: 0 0 auto;
   width: auto;
@@ -2772,7 +2688,7 @@ textarea.relatorio__texto {
  * O <input type="radio"> continua existindo e recebendo foco -- só não é
  * DESENHADO. Escondê-lo com `display: none` o tiraria da ordem de tabulação
  * junto, e o grupo perderia a navegação por setas que é justamente o motivo
- * de ter usado radio nativo (ver ConfiguracoesPanel._segmentado).
+ * de ter usado radio nativo (ver `segmentado` em views/configuracoes/controles.js).
  */
 .cfg-group__option {
   position: relative;
@@ -3184,44 +3100,226 @@ textarea.relatorio__texto {
   outline-offset: 3px;
 }
 
-/* -- quem está logado -- */
-
-.cfg-conta {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-3);
-  padding: var(--sp-3);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-pequeno);
-  background: var(--cor-fundo-alt);
+/* -- interruptor (liga/desliga) --
+   Um checkbox de verdade por baixo, invisível e cobrindo o desenho: mesmo
+   raciocínio do trilho de opções, e o leitor de tela anuncia "ligado". */
+.interruptor {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+.interruptor__input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.interruptor__trilho {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: var(--raio-pilula);
+  background: var(--cor-borda-forte);
+  transition: background var(--transicao);
+}
+.interruptor__bolinha {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform var(--transicao);
+}
+.interruptor:has(input:checked) .interruptor__trilho {
+  background: var(--cor-accent);
+}
+.interruptor:has(input:checked) .interruptor__bolinha {
+  transform: translateX(16px);
+}
+.interruptor:has(input:focus-visible) .interruptor__trilho {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: 2px;
 }
 
-.cfg-conta__avatar {
+/* -- botões dentro de uma linha de ajuste -- */
+.cfg-botoes {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.cfg-group .btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* -- conta: quem está logado -- */
+.cfg-identidade {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  padding: var(--sp-4) 0 var(--sp-3);
+}
+.cfg-identidade__avatar {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--cor-accent-fraco);
   color: var(--cor-accent);
-  font: var(--peso-extra) var(--txt-base) / 1 var(--fonte-display);
+  font: var(--peso-extra) var(--txt-lg) / 1 var(--fonte-display);
 }
-
-.cfg-conta__texto {
+.cfg-identidade__texto {
   display: flex;
+  flex: 1 1 200px;
   flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
-.cfg-conta__texto strong {
+.cfg-identidade__texto strong {
+  font: var(--peso-extra) var(--txt-lg) / 1.2 var(--fonte-display);
+  letter-spacing: -0.01em;
+}
+.cfg-identidade__texto span {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-sm);
+}
+.cfg-identidade__fatos {
+  display: flex;
+  gap: var(--sp-6);
+  margin: 0;
+}
+.cfg-identidade__fatos > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cfg-identidade__fatos dt {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-extra);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.cfg-identidade__fatos dd {
+  margin: 0;
+  font-size: var(--txt-sm);
+  font-weight: var(--peso-forte);
+}
+.cfg-identidade__papel {
+  margin: 0 0 var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+.cfg-campo {
+  flex: 0 1 400px;
+}
+
+/* -- conta: senha -- */
+.cfg-senha__campos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-4);
+  padding: var(--sp-4) 0;
+}
+.cfg-senha .admin-form__rodape {
+  margin-bottom: calc(var(--sp-2) * -1);
+}
+.admin-form__estado.is-erro {
+  color: var(--cor-vermelho);
+  font-weight: var(--peso-forte);
+}
+
+/* -- conta: sessões abertas -- */
+.cfg-sessoes {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cfg-sessao {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+.cfg-sessao__icone {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-sub);
+}
+.cfg-sessao__icone svg {
+  width: 17px;
+  height: 17px;
+}
+.cfg-sessao.is-atual .cfg-sessao__icone {
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+.cfg-sessao__texto {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.cfg-sessao__texto strong {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
   font-family: var(--fonte-display);
   font-size: var(--txt-base);
   font-weight: var(--peso-forte);
 }
-.cfg-conta__texto span {
+.cfg-sessao__texto span:not(.badge) {
   color: var(--cor-texto-fraco);
   font-size: var(--txt-xs);
+}
+.cfg-sessoes__resumo {
+  margin: 0;
+  padding: var(--sp-3) 0 var(--sp-4);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+
+/* -- atalhos -- */
+.cfg-atalhos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+  column-gap: var(--sp-8);
+  margin: 0;
+}
+.cfg-atalhos__linha {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+.cfg-atalhos__linha dd {
+  margin: 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
 }
 
 /* -- linhas que levam a outro lugar (Backups, Usuários, Atalhos) --
@@ -3290,38 +3388,41 @@ textarea.relatorio__texto {
 .cfg-link:hover .cfg-link__seta {
   color: var(--cor-accent);
 }
+/* `.cfg-link` vem depois de `.card` e zera borda e fundo; como cartão solto,
+   eles voltam. */
+.cfg-link--cartao {
+  padding: var(--sp-4) var(--sp-5);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--card-gradiente);
+  box-shadow: var(--sombra-card);
+}
+.cfg-link--cartao:hover {
+  background: var(--cor-superficie-hover);
+}
 
-/* Numa caixa estreita a trilha da esquerda vira uma fila horizontal e o painel
-   ocupa a largura inteira: 186px de menu num celular são 186px que a tabela de
-   opções não tem. */
-@media (max-width: 680px) {
-  .modal-box.cfg {
-    height: min(700px, 90vh);
+/* Numa tela estreita a prévia desce para baixo dos ajustes, e cada linha
+   empilha o rótulo em cima do controle: rótulo e controle lado a lado num
+   celular deixam os dois espremidos. */
+@media (max-width: 1100px) {
+  .cfg-corpo--com-previa {
+    grid-template-columns: minmax(0, 1fr);
   }
-  .cfg__top {
-    flex-wrap: wrap;
+  .cfg-previa-cartao {
+    position: static;
   }
-  .cfg__search {
-    order: 3;
-    max-width: none;
+}
+@media (max-width: 900px) {
+  .cfg-senha__campos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .cfg-busca {
     width: 100%;
-    margin-left: 0;
   }
-  .cfg__body {
-    flex-direction: column;
-  }
-  .cfg__nav {
-    flex: 0 0 auto;
-    flex-direction: row;
-    overflow-x: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--cor-borda);
-  }
-  .cfg__nav-item {
-    flex: 0 0 auto;
-  }
-  .cfg__pane {
-    padding: var(--sp-4);
+  .cfg-resultado__caminho {
+    display: none;
   }
   .cfg-group {
     flex-direction: column;
@@ -3339,8 +3440,10 @@ textarea.relatorio__texto {
     min-width: 0;
     width: 100%;
   }
+  .cfg-campo {
+    flex-basis: auto;
+  }
 }
-
 /* -- paleta de comandos (Ctrl+K) -- */
 
 .cmdk-overlay {
@@ -6122,6 +6225,44 @@ h1, h2, h3, strong {
   font-size: 10px;
   padding: 1px 5px;
 }
+/* Borda esquerda colorida por prioridade (coexiste com .is-overdue) */
+.kanban-card.is-urgente {
+  border-left: 3px solid var(--cor-vermelho-forte, #dc2626);
+}
+.kanban-card.is-alta {
+  border-left: 3px solid var(--cor-laranja, #f97316);
+}
+/* Prévia de obs no card: máximo 2 linhas, truncada */
+.kanban-card__obs {
+  margin: 0;
+  font-size: 11px;
+  color: var(--cor-texto-fraco);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+/* Badges de alerta (urgentes/vencidas) no header da coluna */
+.kanban-column__header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+.kanban-column__alert {
+  border-radius: 3px;
+  font-size: 10px;
+  padding: 1px 5px;
+  cursor: default;
+}
+/* Grupo de badges no header do card */
+.kanban-card__badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
 .client-hub-tabs { display: flex; gap: var(--sp-2); overflow-x: auto; margin: var(--sp-5) 0; padding-bottom: var(--sp-2); border-bottom: 1px solid var(--cor-borda); }
 .client-hub-tabs .btn { white-space: nowrap; border-color: transparent; }
 .client-hub-tabs .btn.is-active { color: var(--cor-accent); border-color: var(--cor-accent); background: var(--cor-superficie-alta); }
@@ -6159,35 +6300,41 @@ h1, h2, h3, strong {
 }
 
 /* ==========================================================================
-   Administração (views/AdministracaoView.js e views/administracao/)
+   Telas com abas: Administração e Configurações
+   (components/TelaComAbas.js e templates/secao.js)
 
-   Antes eram cinco modais com desenho próprio cada um -- títulos de tamanhos
-   diferentes, `style=""` espalhado, um ícone sem tamanho que saía com 200px.
-   Aqui tudo reaproveita as peças do painel de preferências (.cfg-group,
-   .segmented) e da tabela (.data-table), e o que é novo mora neste bloco.
+   As duas nasceram como modais, cada uma com um desenho próprio. Viraram
+   telas com a MESMA moldura -- abas sublinhadas, cabeçalho de seção, cartões
+   com título -- e o que é de uma só mora no bloco dela, mais abaixo.
    ========================================================================== */
 
-.admin {
+.tela-abas {
   display: flex;
   flex-direction: column;
   gap: var(--sp-5);
 }
 
-/* -- abas da tela: sublinhado, e não botões, para não competir com o menu
-   lateral, que já é a navegação principal -- */
-.admin__abas {
+/* -- abas: sublinhado, e não botões, para não competir com o menu lateral,
+   que já é a navegação principal -- */
+.tela-abas__barra {
   display: flex;
+  align-items: flex-end;
+  gap: var(--sp-4);
+  border-bottom: 1px solid var(--cor-borda);
+}
+.tela-abas__lista {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: var(--sp-1);
   overflow-x: auto;
-  border-bottom: 1px solid var(--cor-borda);
   scrollbar-width: none;
 }
-.admin__aba {
+.tela-abas__aba {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
   flex: 0 0 auto;
-  margin-bottom: -1px;
   padding: var(--sp-2) var(--sp-3) calc(var(--sp-2) + 2px);
   border: 0;
   border-bottom: 2px solid transparent;
@@ -6197,67 +6344,142 @@ h1, h2, h3, strong {
   cursor: pointer;
   transition: color var(--transicao), border-color var(--transicao);
 }
-.admin__aba svg {
+.tela-abas__aba svg {
   width: 15px;
   height: 15px;
 }
-.admin__aba:hover {
+.tela-abas__aba:hover {
   color: var(--cor-texto);
 }
-.admin__aba.is-active {
+.tela-abas__aba.is-active {
   border-bottom-color: var(--cor-accent);
   color: var(--cor-accent);
 }
-.admin__aba:focus-visible {
+.tela-abas__aba:focus-visible {
   outline: 2px solid var(--cor-accent);
   outline-offset: -2px;
   border-radius: var(--raio-pequeno);
 }
 
-.admin__painel {
+/* Quantos ajustes da aba estão fora do padrão (Configurações). Mesmo desenho
+   do selo "alterado" das linhas, para os dois se lerem como a mesma coisa. */
+.tela-abas__contador {
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: var(--raio-pilula);
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-extra);
+  line-height: 18px;
+  text-align: center;
+}
+
+/* O que fica à direita das abas (a busca das Configurações). */
+.tela-abas__extra {
+  flex: 0 0 auto;
+  padding-bottom: var(--sp-2);
+}
+
+.tela-abas__painel {
   flex-direction: column;
   gap: var(--sp-4);
 }
 
+/* Numa tela estreita, o que fica à direita das abas (a busca) sobe para
+   cima delas e ocupa a largura toda. Fica aqui, depois das regras de base,
+   para ganhar delas na cascata. */
+@media (max-width: 760px) {
+  .tela-abas__barra {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: var(--sp-2);
+  }
+  .tela-abas__extra {
+    padding: 0;
+  }
+}
+
 /* -- cabeçalho de cada aba -- */
-.admin-secao__head {
+.secao-head {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--sp-4);
   flex-wrap: wrap;
 }
-.admin-secao__titulos {
+.secao-head__titulos {
   min-width: 0;
 }
-.admin-secao__titulos h2 {
+.secao-head__titulos h2 {
   margin: 0;
   font: var(--peso-extra) var(--txt-lg) / 1.2 var(--fonte-display);
   letter-spacing: -0.02em;
 }
-.admin-secao__titulos p {
+.secao-head__titulos p {
   margin: var(--sp-1) 0 0;
   color: var(--cor-texto-sub);
   font-size: var(--txt-sm);
 }
-.admin-secao__acoes {
+.secao-head__acoes {
   display: flex;
   gap: var(--sp-2);
 }
-.admin-secao__acoes .btn svg,
+.secao-head__acoes .btn svg,
+.secao-card__acoes .btn svg,
 .admin-tabela__acoes .btn svg {
   width: 14px;
   height: 14px;
 }
 
 /* -- cartões -- */
-.admin-card {
+.secao-card {
   padding: var(--sp-2) var(--sp-5);
 }
-.admin-card:has(> .data-table) {
+.secao-card:has(> .data-table) {
   padding: 0;
   overflow: hidden;
 }
+.secao-card--lateral {
+  padding: var(--sp-4) var(--sp-5);
+}
+
+/* Título de um cartão: separa o assunto do cartão das linhas de ajuste. */
+.secao-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-4) 0 var(--sp-3);
+  border-bottom: 1px solid var(--cor-borda);
+}
+.secao-card__titulos {
+  min-width: 0;
+}
+.secao-card__titulos h3 {
+  margin: 0;
+  font: var(--peso-extra) var(--txt-md) / 1.3 var(--fonte-display);
+  letter-spacing: -0.01em;
+}
+.secao-card__titulos p {
+  margin: 2px 0 0;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-sm);
+}
+.secao-card__acoes {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--sp-2);
+}
+
+/* ==========================================================================
+   Administração (views/AdministracaoView.js e views/administracao/)
+
+   Antes eram cinco modais com desenho próprio cada um -- títulos de tamanhos
+   diferentes, `style=""` espalhado, um ícone sem tamanho que saía com 200px.
+   Aqui tudo reaproveita a moldura acima, as peças das Configurações
+   (.cfg-group, .segmented) e a tabela (.data-table).
+   ========================================================================== */
 
 /* Usuários: tabela larga à esquerda, legenda dos papéis ao lado. */
 .admin-grade {
@@ -6266,10 +6488,6 @@ h1, h2, h3, strong {
   gap: var(--sp-4);
   align-items: start;
 }
-.admin-card--lateral {
-  padding: var(--sp-4) var(--sp-5);
-}
-
 .admin-papeis {
   display: flex;
   flex-direction: column;
@@ -6485,7 +6703,7 @@ h1, h2, h3, strong {
   }
 }
 @media (max-width: 640px) {
-  .admin-card {
+  .secao-card {
     padding: var(--sp-1) var(--sp-4);
   }
   .admin-form__rodape {

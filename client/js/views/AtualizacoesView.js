@@ -17,7 +17,7 @@ import { baixarBlob } from "../utils/arquivo.js";
 import { prefs } from "../app/prefs.js";
 import { aparencia } from "../app/appearance.js";
 import { Drawer } from "../components/Drawer.js";
-import { montarPresets } from "../components/DatePresets.js";
+import { montarPresets, intervaloPreset } from "../components/DatePresets.js";
 import { chipsFiltroAtualizacoes, htmlChips } from "../templates/filtros.js";
 
 /**
@@ -42,12 +42,19 @@ export class AtualizacoesView extends View {
     this.selectedId = null;
     this.selectedRow = null;
     // Filtros restaurados da sessão: sair da aba e voltar não zera mais nada.
-    const salvo = prefs.get("atualizacoes:filtros", {});
+    const salvo = prefs.get("atualizacoes:filtros", null) || {};
+    // Sem filtro guardado (primeira visita da sessão, ou "lembrar filtros"
+    // desligado), a tela abre no período escolhido em Configurações >
+    // Navegação. Com filtro guardado, é ele que manda: quem limpou a data de
+    // propósito não quer vê-la voltar só porque trocou de aba e voltou.
+    const semFiltroGuardado = Object.keys(salvo).length === 0;
+    this.presetInicial = semFiltroGuardado ? aparencia.periodoAtualizacoes() : "";
+    const periodoInicial = this.presetInicial ? intervaloPreset(this.presetInicial) : null;
     this.page = 1;
     this.busca = salvo.busca || "";
     this.responsavel = salvo.responsavel || "Todos";
-    this.desde = salvo.desde || "";
-    this.ate = salvo.ate || "";
+    this.desde = salvo.desde || periodoInicial?.desde || "";
+    this.ate = salvo.ate || periodoInicial?.ate || "";
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "desc";
     this._buildDom();
@@ -278,6 +285,7 @@ export class AtualizacoesView extends View {
       this.pintarPreset(chave);
       this._aplicarPeriodo(intervalo.desde, intervalo.ate);
     });
+    if (this.presetInicial) this.pintarPreset(this.presetInicial);
 
     this.table.container.addEventListener("click", (e) => {
       const botao = e.target.closest("[data-row-action]");

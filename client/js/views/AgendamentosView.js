@@ -1,4 +1,4 @@
-import { AGENDA_COLUMNS, STATUS_OPTIONS, FILTRO_ARQUIVADAS } from "../config.js";
+import { AGENDA_COLUMNS, STATUS_OPTIONS, FILTRO_ARQUIVADAS, PRIORIDADE_OPTIONS } from "../config.js";
 import { ApiError } from "../api/ApiClient.js";
 import { View } from "../app/View.js";
 import { Autocomplete } from "../components/Autocomplete.js";
@@ -34,9 +34,11 @@ export class AgendamentosView extends View {
     this._draggedCardId = null;
     this._draggedColStatus = null;
     this._isDragging = false;
+    this._lastDragEnd = 0; // timestamp do último dragend -- distingue clique de drag
     const salvo = prefs.get("agendamentos:filtros", {});
     this.busca = salvo.busca || "";
     this.status = salvo.status || "Todos";
+    this.prioridade = salvo.prioridade || "Todas";
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "asc";
     this.ordemColunas = this._carregarOrdemColunas();
@@ -107,6 +109,13 @@ export class AgendamentosView extends View {
               <option value="${FILTRO_ARQUIVADAS}">${FILTRO_ARQUIVADAS}</option>
             </select>
           </div>
+          <div class="field">
+            <label class="field__label" for="age-prioridade">Prioridade</label>
+            <select class="input" id="age-prioridade" data-role="prioridade-filter">
+              <option value="Todas">Todas</option>
+              ${PRIORIDADE_OPTIONS.slice().reverse().map((p) => html`<option>${p}</option>`)}
+            </select>
+          </div>
           <div class="toolbar__clear">
             <button type="button" class="btn btn--small btn--ghost" data-action="limpar-filtros" hidden>Limpar filtros</button>
           </div>
@@ -134,10 +143,12 @@ export class AgendamentosView extends View {
 
     this.searchInput = this.container.querySelector('[data-role="search"]');
     this.statusFilter = this.container.querySelector('[data-role="status-filter"]');
+    this.prioridadeFilter = this.container.querySelector('[data-role="prioridade-filter"]');
     this.botaoLimparFiltros = this.container.querySelector('[data-action="limpar-filtros"]');
     this.avisoArquivadas = this.container.querySelector('[data-role="aviso-arquivadas"]');
     this.searchInput.value = this.busca;
     this.statusFilter.value = this.status;
+    if (this.prioridadeFilter) this.prioridadeFilter.value = this.prioridade;
 
     const reload = debounce(() => {
       this._salvarFiltros();
@@ -152,6 +163,13 @@ export class AgendamentosView extends View {
 
     this.statusFilter.addEventListener("change", () => {
       this.status = this.statusFilter.value;
+      this._pintarLimparFiltros();
+      this._salvarFiltros();
+      this._reloadList();
+    });
+
+    this.prioridadeFilter?.addEventListener("change", () => {
+      this.prioridade = this.prioridadeFilter.value;
       this._pintarLimparFiltros();
       this._salvarFiltros();
       this._reloadList();
@@ -231,6 +249,15 @@ export class AgendamentosView extends View {
         input = document.createElement("select");
         input.className = "input";
         input.innerHTML = html`${STATUS_OPTIONS.map((s) => html`<option>${s}</option>`)}`;
+      } else if (col.key === "prioridade") {
+        input = document.createElement("select");
+        input.className = "input";
+        input.innerHTML = html`${PRIORIDADE_OPTIONS.map((p) => html`<option>${p}</option>`)}`;
+      } else if (col.key === "obs") {
+        input = document.createElement("textarea");
+        input.className = "input";
+        input.rows = 2;
+        input.style.resize = "vertical";
       } else {
         input = document.createElement("input");
         input.type = col.key === "horario" ? "time" : "text";
@@ -263,6 +290,7 @@ export class AgendamentosView extends View {
     }
     this.clienteAutocomplete = new Autocomplete(this.fields.cliente, { values: [] });
     this.responsavelAutocomplete = new Autocomplete(this.fields.responsavel, { values: [] });
+    this.sistemaAutocomplete = new Autocomplete(this.fields.sistema, { values: [] });
   }
 
   _bindKanbanDragDrop() {
@@ -310,6 +338,7 @@ export class AgendamentosView extends View {
       }
       setTimeout(() => {
         this._isDragging = false;
+        this._lastDragEnd = Date.now(); // registrado DEPOIS do timeout: clique falso jamais passa daqui
         this._draggedCardId = null;
         this._draggedColStatus = null;
       }, 80);
@@ -371,15 +400,17 @@ export class AgendamentosView extends View {
     await this.swr(
       "agendamentos:opcoes",
       async () => {
-        const [nomes, responsaveis] = await Promise.all([
+        const [nomes, responsaveis, sistemas] = await Promise.all([
           this.api.get("/clientes/names", null, { key: "clientes:names" }),
           this.api.get("/atualizacoes/responsaveis", null, { key: "atu:responsaveis" }),
+          this.api.get("/sistemas", null, { key: "sistemas:lista" }),
         ]);
-        return { nomes, responsaveis };
+        return { nomes, responsaveis, sistemas };
       },
-      ({ nomes, responsaveis }) => {
+      ({ nomes, responsaveis, sistemas }) => {
         this.clienteAutocomplete.setValues(nomes);
         this.responsavelAutocomplete.setValues(responsaveis);
+        this.sistemaAutocomplete?.setValues(sistemas || []);
       }
     );
     await this._reloadList();
@@ -389,11 +420,11 @@ export class AgendamentosView extends View {
     this.kanban.classList.add("is-refreshing");
     try {
       await this.swr(
-        `agendamentos:lista:${this.busca}|${this.status}|200|${this.sortBy}|${this.sortDir}`,
+        `agendamentos:lista:${this.busca}|${this.status}|${this.prioridade}|200|${this.sortBy}|${this.sortDir}`,
         () =>
           this.api.get(
             "/agendamentos",
-            { search: this.busca, status: this.status, page: 1, pageSize: 200, sortBy: this.sortBy, sortDir: this.sortDir },
+            { search: this.busca, status: this.status, prioridade: this.prioridade, page: 1, pageSize: 200, sortBy: this.sortBy, sortDir: this.sortDir },
             { key: "agendamentos:lista" }
           ),
         (resposta) => {
@@ -534,7 +565,11 @@ export class AgendamentosView extends View {
     }
 
     const card = e.target.closest(".kanban-card");
-    if (card && !this._isDragging) {
+    // Ignora o clique se ele veio logo após um drag (janela de 300 ms).
+    // _isDragging sozinho não basta: o click dispara APÓS o dragend,
+    // quando _isDragging já pode ter sido resetado pelo setTimeout.
+    const acabouDeDragar = Date.now() - this._lastDragEnd < 300;
+    if (card && !acabouDeDragar) {
       const row = this.rows?.find((item) => String(item.id) === card.dataset.id);
       if (row) {
         this._loadIntoForm(row);
@@ -566,7 +601,7 @@ export class AgendamentosView extends View {
   }
 
   _temFiltro() {
-    return Boolean(this.busca) || this.status !== "Todos";
+    return Boolean(this.busca) || this.status !== "Todos" || this.prioridade !== "Todas";
   }
 
   _pintarLimparFiltros() {
@@ -576,8 +611,10 @@ export class AgendamentosView extends View {
   _limparFiltros() {
     this.busca = "";
     this.status = "Todos";
+    this.prioridade = "Todas";
     if (this.searchInput) this.searchInput.value = "";
     if (this.statusFilter) this.statusFilter.value = "Todos";
+    if (this.prioridadeFilter) this.prioridadeFilter.value = "Todas";
     this._pintarLimparFiltros();
     this._salvarFiltros();
     this._reloadList();
@@ -587,6 +624,7 @@ export class AgendamentosView extends View {
     prefs.set("agendamentos:filtros", {
       busca: this.busca,
       status: this.status,
+      prioridade: this.prioridade,
       sortBy: this.sortBy,
       sortDir: this.sortDir,
     });
@@ -851,6 +889,7 @@ export class AgendamentosView extends View {
     this.drawer?.destroy();
     this.clienteAutocomplete?.destroy();
     this.responsavelAutocomplete?.destroy();
+    this.sistemaAutocomplete?.destroy();
     super.destroy();
   }
 }

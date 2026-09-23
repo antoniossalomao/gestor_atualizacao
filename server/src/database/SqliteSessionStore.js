@@ -108,6 +108,20 @@ class SqliteSessionStore extends session.Store {
     }
   }
 
+  /**
+   * As sessões ainda válidas de um usuário, para Configurações > Conta mostrar
+   * em que aparelhos a conta está aberta. Mesmo cuidado de `clearByUserId`
+   * com o tipo do id: tem que chegar como número.
+   * @param {number} userId
+   * @returns {Array<{sid: string, dados: any, expiraEm: number}>}
+   */
+  listByUserId(userId) {
+    return this.conn
+      .prepare("SELECT sid, dados, expira_em FROM sessoes WHERE json_extract(dados, '$.user.id') = ? AND expira_em >= ?")
+      .all(userId, Date.now())
+      .map((row) => ({ sid: row.sid, dados: JSON.parse(row.dados), expiraEm: row.expira_em }));
+  }
+
   /** Invalida todas as sessões ativas (usado após restauração do banco de dados). */
   clearAll(callback) {
     try {

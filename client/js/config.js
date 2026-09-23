@@ -21,13 +21,19 @@ export const COLUMNS = [
 export const AGENDA_COLUMNS = [
   { key: "tarefa", label: "Tarefa" },
   { key: "cliente", label: "Cliente" },
+  { key: "sistema", label: "Sistema" },
   { key: "responsavel", label: "Responsável" },
+  { key: "prioridade", label: "Prioridade" },
   { key: "data", label: "Data" },
   { key: "horario", label: "Horário" },
   { key: "status", label: "Status" },
+  { key: "obs", label: "Obs" },
 ];
 
 export const STATUS_OPTIONS = ["A Fazer", "Em Andamento", "Sem resposta", "Concluído"];
+
+/** Níveis de prioridade de uma tarefa agendada (ordem crescente de urgência). */
+export const PRIORIDADE_OPTIONS = ["Baixa", "Normal", "Alta", "Urgente"];
 
 /**
  * Valor do filtro de Status que pede as tarefas arquivadas.
@@ -42,3 +48,4 @@ export const FILTRO_ARQUIVADAS = "Arquivadas";
 
 // DESATUALIZADO_DIAS morava aqui (e uma cópia no servidor). Virou regra da
 // equipe, editável na Administração -- o Resumo recebe o número do servidor.
+

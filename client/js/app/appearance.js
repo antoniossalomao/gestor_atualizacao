@@ -111,6 +111,61 @@ export const ZEBRAS = [
 ];
 
 /**
+ * A fonte da interface. A Inter vem do Google Fonts; "Do sistema" usa a do
+ * Windows (Segoe UI). Não é só gosto: numa máquina sem acesso à internet a
+ * Inter nunca chega, e a tela nasce numa fonte e termina em outra quando o
+ * download desiste -- quem escolhe a do sistema troca isso por uma tela que
+ * já nasce certa. E a Segoe UI, com o ClearType, é mais nítida em texto
+ * pequeno num monitor comum de escritório.
+ */
+export const FONTES = [
+  { valor: "inter", rotulo: "Inter" },
+  { valor: "sistema", rotulo: "Do sistema" },
+];
+
+/**
+ * Largura máxima do conteúdo. O limite de 1600px existe para uma linha de
+ * texto não atravessar um monitor inteiro -- mas num monitor largo as tabelas
+ * de dez colunas são justamente o que quer a largura toda.
+ */
+export const LARGURAS = [
+  { valor: "limitada", rotulo: "Limitada" },
+  { valor: "total", rotulo: "Tela inteira" },
+];
+
+/** O anel que mostra onde está o foco do teclado. */
+export const FOCOS = [
+  { valor: "normal", rotulo: "Normal" },
+  { valor: "reforcado", rotulo: "Reforçado" },
+];
+
+/**
+ * Quanto tempo um aviso ("Registro salvo") fica na tela. O fator multiplica
+ * as durações do Toast, então o aviso com botão de "Desfazer" continua mais
+ * longo que o simples em qualquer escolha. "Longo" é a opção de quem lê
+ * devagar -- um aviso que some antes de terminar de ser lido é um aviso que
+ * não foi dado.
+ */
+export const DURACOES_AVISO = [
+  { valor: "curta", rotulo: "Curto", fator: 0.7 },
+  { valor: "normal", rotulo: "Normal", fator: 1 },
+  { valor: "longa", rotulo: "Longo", fator: 2 },
+];
+
+/**
+ * O período com que a tela Atualizações já abre filtrada. As chaves são as
+ * dos botões de período da própria tela (ver components/DatePresets.js),
+ * para a preferência e o clique no botão darem exatamente o mesmo recorte.
+ */
+export const PERIODOS_INICIAIS = [
+  { valor: "", rotulo: "Tudo" },
+  { valor: "hoje", rotulo: "Hoje" },
+  { valor: "semana", rotulo: "Esta semana" },
+  { valor: "mes", rotulo: "Este mês" },
+  { valor: "30dias", rotulo: "Últimos 30 dias" },
+];
+
+/**
  * Valor de fábrica de CADA preferência, num lugar só.
  *
  * Antes eram sete constantes soltas (`PADRAO_DENSIDADE`, `PADRAO_LINHAS`…)
@@ -133,6 +188,10 @@ const PADROES = {
   fundoTela: "grade",
   contraste: "normal",
   transparencia: "normal",
+  fonte: "inter",
+  largura: "limitada",
+  foco: "normal",
+  dicasAtalho: true,
   // -- tabelas --
   densidade: "padrao",
   alturaTabela: "alta",
@@ -143,8 +202,12 @@ const PADROES = {
   sidebarRecolhida: false,
   lembrarFiltros: true,
   ritmoPainel: 30000,
+  periodoAtualizacoes: "",
+  confirmarSaida: true,
   // -- avisos --
   posicaoAvisos: "rodape",
+  duracaoAvisos: "normal",
+  contadorNoTitulo: true,
 };
 
 /**
@@ -182,6 +245,14 @@ const VALIDOS = {
   lembrarFiltros: [true, false],
   ritmoPainel: RITMOS.map((r) => r.valor),
   posicaoAvisos: POSICOES_AVISO.map((p) => p.valor),
+  fonte: FONTES.map((f) => f.valor),
+  largura: LARGURAS.map((l) => l.valor),
+  foco: FOCOS.map((f) => f.valor),
+  dicasAtalho: [true, false],
+  periodoAtualizacoes: PERIODOS_INICIAIS.map((p) => p.valor),
+  confirmarSaida: [true, false],
+  duracaoAvisos: DURACOES_AVISO.map((d) => d.valor),
+  contadorNoTitulo: [true, false],
 };
 
 /**
@@ -218,6 +289,7 @@ export const PERFIS = [
       sidebarRecolhida: true,
       fundoTela: "liso",
       posicaoAvisos: "topo",
+      largura: "total",
     },
   },
   {
@@ -235,7 +307,7 @@ export const PERFIS = [
   {
     valor: "acessivel",
     rotulo: "Alto contraste",
-    descricao: "Bordas fortes, texto grande, sem animação nem transparência.",
+    descricao: "Bordas fortes, texto grande, foco bem visível, sem animação nem transparência.",
     valores: {
       contraste: "alto",
       escalaTexto: "maior",
@@ -243,6 +315,8 @@ export const PERFIS = [
       transparencia: "reduzida",
       fundoTela: "liso",
       densidade: "confortavel",
+      foco: "reforcado",
+      duracaoAvisos: "longa",
     },
   },
 ];
@@ -313,6 +387,47 @@ export const aparencia = {
 
   posicaoAvisos() {
     return umDe("posicaoAvisos", POSICOES_AVISO, PADROES.posicaoAvisos);
+  },
+
+  fonte() {
+    return umDe("fonte", FONTES, PADROES.fonte);
+  },
+
+  largura() {
+    return umDe("largura", LARGURAS, PADROES.largura);
+  },
+
+  foco() {
+    return umDe("foco", FOCOS, PADROES.foco);
+  },
+
+  /** Se as dicas de atalho (Alt+1 no menu, Ctrl K na busca) aparecem na tela. */
+  dicasAtalho() {
+    return settings.get("dicasAtalho", true) !== false;
+  },
+
+  duracaoAvisos() {
+    return umDe("duracaoAvisos", DURACOES_AVISO, PADROES.duracaoAvisos);
+  },
+
+  /** O multiplicador que o Toast aplica às próprias durações. */
+  fatorDuracaoAvisos() {
+    return DURACOES_AVISO.find((d) => d.valor === this.duracaoAvisos())?.fator ?? 1;
+  },
+
+  /** Chave de DatePresets ("hoje", "mes"...) ou "" para abrir sem filtro de data. */
+  periodoAtualizacoes() {
+    return umDe("periodoAtualizacoes", PERIODOS_INICIAIS, PADROES.periodoAtualizacoes);
+  },
+
+  /** Se "Sair da conta" pede confirmação antes. */
+  confirmarSaida() {
+    return settings.get("confirmarSaida", true) !== false;
+  },
+
+  /** Se o título da aba do navegador leva o número de pendências do sino. */
+  contadorNoTitulo() {
+    return settings.get("contadorNoTitulo", true) !== false;
   },
 
   /**
@@ -458,6 +573,16 @@ export const aparencia = {
     const { realce, escalaTexto, movimento, fundoTela, posicaoAvisos, lembrarFiltros } = mudancas;
     const { contraste, transparencia, zebra } = mudancas;
 
+    // As preferências mais novas usam o MESMO nome no painel e no
+    // armazenamento (sem a tradução de `altura` para `alturaTabela`), então
+    // passam todas pelo mesmo caminho: texto de uma lista fechada, ou booleano.
+    for (const chave of ["fonte", "largura", "foco", "duracaoAvisos", "periodoAtualizacoes"]) {
+      if (mudancas[chave] !== undefined && valorValido(chave, mudancas[chave])) settings.set(chave, mudancas[chave]);
+    }
+    for (const chave of ["dicasAtalho", "confirmarSaida", "contadorNoTitulo"]) {
+      if (mudancas[chave] !== undefined) settings.set(chave, Boolean(mudancas[chave]));
+    }
+
     if (densidade) settings.set("densidade", densidade);
     if (linhasPorPagina) settings.set("linhasPorPagina", Number(linhasPorPagina));
     if (altura) settings.set("alturaTabela", altura);
@@ -533,6 +658,10 @@ function pintar() {
     "data-transparencia": aparencia.transparencia() === "normal" ? null : "reduzida",
     "data-zebra": aparencia.zebra() === "sim" ? null : "nao",
     "data-avisos": aparencia.posicaoAvisos() === PADROES.posicaoAvisos ? null : aparencia.posicaoAvisos(),
+    "data-fonte": aparencia.fonte() === PADROES.fonte ? null : aparencia.fonte(),
+    "data-largura": aparencia.largura() === PADROES.largura ? null : aparencia.largura(),
+    "data-foco": aparencia.foco() === PADROES.foco ? null : aparencia.foco(),
+    "data-dicas": aparencia.dicasAtalho() ? null : "nao",
   };
   for (const [nome, valor] of Object.entries(atributos)) {
     if (valor == null) raiz.removeAttribute(nome);

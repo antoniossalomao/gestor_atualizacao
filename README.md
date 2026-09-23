@@ -72,8 +72,10 @@ a situação de cada agente em campo. O agente vive em
   privilégio de administrador, revalidação da senha atual e confirmação por texto,
   além de invalidar sessões ativas e disponibilizar download preventivo do banco.
 - **Preferências por conta**, não por navegador: tema, cor de destaque,
-  tamanho do texto, densidade das tabelas e o resto acompanham a pessoa em
-  qualquer máquina.
+  tamanho e fonte do texto, densidade das tabelas e o resto acompanham a
+  pessoa em qualquer máquina. Ficam na tela **Configurações** (rodapé do
+  menu lateral, menu da conta ou `Ctrl + ,`), com perfis prontos, prévia ao
+  vivo das tabelas e busca.
 - **Nomes de sistema e de responsável são padronizados na gravação** —
   quem digitar `B_NFE` grava `B_NFe`, e `CAMILA` grava `Camila`. Sem isso, o
   relatório por sistema erra em silêncio (ver a seção de 11/09 abaixo, que
@@ -211,9 +213,9 @@ O sistema conta com três perfis de acesso bem definidos:
 - **Operador (`operador`):** Voltado para a equipe de suporte e implantação no dia a dia. Pode cadastrar e editar atendimentos, clientes, agendamentos e cadastrar rascunhos de versão.
 - **Consulta (`consulta`):** Apenas leitura. Pode navegar em relatórios, resumos e tabelas, além de exportar dados para Excel. Não possui permissão para criar, editar ou excluir registros.
 
-A primeira conta criada na inicialização inicial é automaticamente **administradora**. Posteriormente, apenas administradores podem cadastrar novas contas ou alterar permissões. Todas as opções de gestão de segurança (Usuários, Backups e Credenciais da API) estão centralizadas e organizadas dentro do painel **Configurações**.
+A primeira conta criada na inicialização inicial é automaticamente **administradora**. Posteriormente, apenas administradores podem cadastrar novas contas ou alterar permissões. Usuários, backups e as regras da equipe ficam na tela **Administração**, que só administrador vê.
 
-Travas de segurança protegem o sistema contra exclusão ou rebaixamento acidental do último administrador existente. Qualquer pessoa logada pode **trocar a própria senha** pelo painel de Usuários (exige a confirmação da senha atual).
+Travas de segurança protegem o sistema contra exclusão ou rebaixamento acidental do último administrador existente. Qualquer pessoa logada pode, em **Configurações → Conta**, trocar o próprio nome e a própria senha (exige a senha atual) e ver em que aparelhos a conta está aberta, encerrando os que não reconhecer.
 
 ### Recuperando acesso (ninguém consegue mais entrar)
 
@@ -378,7 +380,7 @@ de arquivos do Docker Desktop. Trocar a imagem (`up -d --build`) não mexe
 nos volumes; os dados ficam.
 
 Para tirar uma cópia para fora, use o **download de backup do próprio
-painel** (Configurações → Backup), que é o caminho pensado para isso. Os
+painel** (Administração → Backups), que é o caminho pensado para isso. Os
 backups automáticos continuam acontecendo a cada início, dentro do volume.
 
 ### Trazer um `gestao.db` que já existe

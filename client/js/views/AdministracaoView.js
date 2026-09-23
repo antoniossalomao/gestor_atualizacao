@@ -1,8 +1,6 @@
 import { View } from "../app/View.js";
-import { prefs } from "../app/prefs.js";
-import { html } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
-import { cabecalhoSecao } from "../templates/administracao.js";
+import { TelaComAbas } from "../components/TelaComAbas.js";
+import { cabecalhoSecao } from "../templates/secao.js";
 import { HistoricoView } from "./HistoricoView.js";
 import { UsuariosAdmin } from "./administracao/UsuariosAdmin.js";
 import { RegrasAdmin } from "./administracao/RegrasAdmin.js";
@@ -29,7 +27,8 @@ import { SaudeAdmin } from "./administracao/SaudeAdmin.js";
  *
  * Cada aba é montada na primeira vez que é aberta, e só então vai à rede: a
  * Saúde e os Backups não têm por que ser consultados quando se entra só para
- * mudar o papel de alguém.
+ * mudar o papel de alguém. A moldura das abas é a mesma das Configurações
+ * (components/TelaComAbas.js).
  */
 const ABAS = [
   { key: "usuarios", rotulo: "Usuários", icone: "users", Secao: UsuariosAdmin },
@@ -54,96 +53,36 @@ export class AdministracaoView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
     this.ctx = ctx;
-    /** @type {Map<string, {painel: HTMLElement, instancia: any}>} */
-    this.secoes = new Map();
-    const salva = prefs.get("administracao:aba", "usuarios");
-    this.aba = ABAS.some((a) => a.key === salva) ? salva : "usuarios";
-    this._buildDom();
-  }
-
-  _buildDom() {
-    this.container.innerHTML = html`
-      <div class="admin">
-        <nav class="admin__abas" role="tablist" aria-label="Seções da administração">
-          ${ABAS.map(
-            (a) => html`
-              <button type="button" class="admin__aba" role="tab" id="admin-aba-${a.key}" data-aba="${a.key}"
-                      aria-controls="admin-painel-${a.key}" aria-selected="false" tabindex="-1">
-                ${iconHtml(a.icone)}<span>${a.rotulo}</span>
-              </button>`
-          )}
-        </nav>
-        <div class="admin__paineis" data-role="paineis"></div>
-      </div>`;
-    this.nav = this.container.querySelector(".admin__abas");
-    this.paineis = this.container.querySelector('[data-role="paineis"]');
-
-    this.nav.addEventListener("click", (e) => {
-      const botao = e.target.closest("[data-aba]");
-      if (botao) this._mostrar(botao.dataset.aba);
-    });
-    // Setas entre as abas, como no menu lateral (padrão ARIA de tablist).
-    this.nav.addEventListener("keydown", (e) => {
-      const passo = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-      if (!passo) return;
-      e.preventDefault();
-      const i = ABAS.findIndex((a) => a.key === this.aba);
-      const proxima = ABAS[(i + passo + ABAS.length) % ABAS.length].key;
-      this._mostrar(proxima);
-      this.nav.querySelector(`[data-aba="${proxima}"]`)?.focus();
+    this.tela = new TelaComAbas(container, {
+      abas: ABAS,
+      rotulo: "Seções da administração",
+      idBase: "admin",
+      chavePrefs: "administracao:aba",
+      criar: (key, painel) => {
+        const def = ABAS.find((a) => a.key === key);
+        let alvo = painel;
+        if (def.cabecalho) {
+          painel.insertAdjacentHTML("beforeend", String(cabecalhoSecao(def.cabecalho)));
+          alvo = document.createElement("div");
+          alvo.className = "admin__conteudo";
+          painel.appendChild(alvo);
+        }
+        return new def.Secao(alvo, this.api, this.ctx);
+      },
     });
   }
 
   /** `navigate("administracao", { aba: "backups" })` abre direto na aba. */
   aplicarParams({ aba } = {}) {
-    if (ABAS.some((a) => a.key === aba)) this.aba = aba;
+    this.tela.escolher(aba);
   }
 
   async refresh() {
-    await this._mostrar(this.aba);
-  }
-
-  async _mostrar(key) {
-    const def = ABAS.find((a) => a.key === key);
-    if (!def) return;
-    this.aba = key;
-    prefs.set("administracao:aba", key);
-
-    for (const botao of this.nav.querySelectorAll("[data-aba]")) {
-      const ativa = botao.dataset.aba === key;
-      botao.classList.toggle("is-active", ativa);
-      botao.setAttribute("aria-selected", String(ativa));
-      botao.tabIndex = ativa ? 0 : -1;
-    }
-
-    let secao = this.secoes.get(key);
-    if (!secao) {
-      const painel = document.createElement("section");
-      painel.className = "admin__painel view";
-      painel.id = `admin-painel-${key}`;
-      painel.setAttribute("role", "tabpanel");
-      painel.setAttribute("aria-labelledby", `admin-aba-${key}`);
-      this.paineis.appendChild(painel);
-      let alvo = painel;
-      if (def.cabecalho) {
-        painel.insertAdjacentHTML("beforeend", String(cabecalhoSecao(def.cabecalho)));
-        alvo = document.createElement("div");
-        alvo.className = "admin__conteudo";
-        painel.appendChild(alvo);
-      }
-      secao = { painel, instancia: new def.Secao(alvo, this.api, this.ctx) };
-      this.secoes.set(key, secao);
-    }
-    // `display`, e não `hidden`: é por ele que as views medem se estão
-    // visíveis (ver View.visivel) -- inclusive a do Histórico, que é uma View
-    // completa morando aqui dentro.
-    for (const [k, { painel }] of this.secoes) painel.style.display = k === key ? "flex" : "none";
-
-    await secao.instancia.refresh?.();
+    await this.tela.mostrar();
   }
 
   destroy() {
-    for (const { instancia } of this.secoes.values()) instancia.destroy?.();
+    this.tela.destroy();
     super.destroy();
   }
 }

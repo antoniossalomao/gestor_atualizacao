@@ -71,6 +71,14 @@ class AuthController {
     req.session.regenerate((err) => {
       if (err) return next(err);
       req.session.user = user;
+      // Para Configurações > Conta listar onde a conta está aberta ("Chrome
+      // no Windows, desde ontem"). O IP ficou de fora de propósito: atrás do
+      // Docker ele é o do gateway da rede interna, igual para todo mundo --
+      // e um dado que parece exato mas não é engana mais do que ajuda.
+      req.session.aparelho = {
+        agente: String(req.get("user-agent") || "").slice(0, 300),
+        desde: new Date().toISOString(),
+      };
       req.session.save((saveErr) => (saveErr ? next(saveErr) : onOk()));
     });
   }

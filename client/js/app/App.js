@@ -7,7 +7,6 @@ import { CommandPalette } from "../components/CommandPalette.js";
 import { ligarAtalhoAjuda, mostrarAtalhos } from "./Shortcuts.js";
 import { theme } from "./theme.js";
 import { settings, conectarPreferencias } from "./prefs.js";
-import { abrirConfiguracoes } from "../views/ConfiguracoesPanel.js";
 import { aparencia, reaplicarAparencia } from "./appearance.js";
 import { RequestCancelled } from "../api/ApiClient.js";
 import { LoginView } from "../views/LoginView.js";
@@ -18,7 +17,7 @@ import { ClientesView } from "../views/ClientesView.js";
 import { ConsultaView } from "../views/ConsultaView.js";
 import { SistemasView } from "../views/SistemasView.js";
 import { AdministracaoView } from "../views/AdministracaoView.js";
-import { abrirTrocaDeSenha } from "../views/TrocarSenhaModal.js";
+import { ConfiguracoesView } from "../views/ConfiguracoesView.js";
 import { DistribuicaoView } from "../views/DistribuicaoView.js";
 import { VersoesView } from "../views/VersoesView.js";
 import { MenuNotificacoes } from "../components/MenuNotificacoes.js";
@@ -43,6 +42,12 @@ import { ConexaoBanner } from "../components/ConexaoBanner.js";
  * `papel` restringe a aba a um papel (hoje só a Administração, "admin"). É só
  * a navegação: quem garante de verdade é o servidor, que responde 403 às
  * rotas de administração para qualquer outro papel.
+ *
+ * `rodape: true` é uma tela SEM item no menu (hoje só as Configurações): tem
+ * rota, título e fica viva como as outras, mas se chega a ela pelo botão do
+ * rodapé da barra lateral, pelo menu da conta, por Ctrl + , ou pela paleta.
+ * Fica fora da numeração Alt+1…9, das setas do menu e da escolha de "tela
+ * inicial" -- ver `this.tabsNoMenu`.
  */
 const TABS = [
   { key: "resumo", label: "Resumo", icon: "resumo", View: ResumoView, grupo: "Visão Geral",
@@ -65,6 +70,11 @@ const TABS = [
   // aba aberta a todos, mora agora dentro dela -- ver AdministracaoView.
   { key: "administracao", label: "Administração", icon: "escudo", View: AdministracaoView, grupo: "Administração",
     descricao: "Usuários, histórico de alterações, regras da equipe, backups e saúde do servidor.", papel: "admin" },
+  // Era um modal com desenho próprio; virou tela com a moldura da
+  // Administração, mas continua sendo aberta pelos mesmos lugares de sempre
+  // (ver `rodape` acima e ConfiguracoesView).
+  { key: "configuracoes", label: "Configurações", icon: "config", View: ConfiguracoesView, rodape: true,
+    descricao: "A sua conta e como o Gestor se comporta para você, em qualquer máquina em que você entrar." },
 ];
 
 /**
@@ -165,6 +175,8 @@ export class App {
     this.tabsAtivas = TABS.filter(
       (t) => (!t.requerAtualizador || this.atualizadorHabilitado) && (!t.papel || t.papel === user?.role)
     );
+    /** As que têm item no menu lateral (ver `rodape` em TABS). */
+    this.tabsNoMenu = this.tabsAtivas.filter((t) => !t.rodape);
 
     // As preferências de apresentação são da CONTA, não do navegador. O
     // localStorage já pintou a tela (theme-init.js, no <head>, antes do
@@ -188,9 +200,9 @@ export class App {
     // rota: um link para `#/clientes` continua mandando mais que a preferência.
     // Se a preferência salva era uma aba do Atualizador e ele foi desativado
     // depois, cai no primeiro item de `tabsAtivas` como qualquer aba inexistente.
-    const inicial = this.tabsAtivas.some((t) => t.key === aparencia.abaInicial())
+    const inicial = this.tabsNoMenu.some((t) => t.key === aparencia.abaInicial())
       ? aparencia.abaInicial()
-      : this.tabsAtivas[0].key;
+      : this.tabsNoMenu[0].key;
     this.router.iniciar(inicial);
     this._carregarNotificacoes();
   }
@@ -261,14 +273,21 @@ export class App {
    */
   _atualizarTitulo() {
     const nome = this.views.get(this.activeTab)?.tab.label || "Resumo";
-    const pendentes = this.menuNotificacoes?.pendentesNaoVistas() || 0;
+    // Desligável em Configurações > Notificações: para quem deixa o Gestor
+    // aberto numa tela compartilhada, o número na barra de tarefas é mais
+    // incômodo do que útil.
+    const pendentes = aparencia.contadorNoTitulo() ? this.menuNotificacoes?.pendentesNaoVistas() || 0 : 0;
     const prefixo = pendentes > 0 ? `(${pendentes}) ` : "";
     document.title = `${prefixo}${nome} · Gestor de Atualizações`;
   }
 
   async _logout() {
-    const ok = await Modal.confirm("Sair", "Deseja encerrar sua sessão?", { confirmLabel: "Sair", danger: false });
-    if (!ok) return;
+    // A confirmação é desligável (Configurações > Navegação): protege quem
+    // clica sem querer, e só atrasa quem sempre sai de propósito.
+    if (aparencia.confirmarSaida()) {
+      const ok = await Modal.confirm("Sair", "Deseja encerrar sua sessão?", { confirmLabel: "Sair", danger: false });
+      if (!ok) return;
+    }
     await this.api.post("/auth/logout");
     this._desmontar();
     this.start();
@@ -375,12 +394,7 @@ export class App {
     this._cleanups.push(() => this.menuNotificacoes.destroy());
     this._cleanups.push(this._ligarRitmoDasNotificacoes());
 
-    this.menuConta = new MenuConta(this.root.querySelector('[data-role="conta"]'), this.user, {
-      aoConfigurar: () => this._abrirConfiguracoes(),
-      aoAtalhos: () => mostrarAtalhos(),
-      aoSair: () => this._logout(),
-      aoAtualizar: () => this.recarregarAba({ avisar: true }),
-    });
+    this._montarMenuConta();
     this._cleanups.push(() => this.menuConta.destroy());
 
     // Configurações continua a um clique: o do rodapé da barra lateral, onde
@@ -417,6 +431,35 @@ export class App {
     const aoTrocarTema = () => this.recarregarAba();
     document.addEventListener("tema:mudou", aoTrocarTema);
     this._cleanups.push(() => document.removeEventListener("tema:mudou", aoTrocarTema));
+
+    // "Pendências no título da aba" pode ser ligado e desligado a qualquer
+    // momento -- o título tem que acompanhar na hora, não no próximo ciclo
+    // do sino.
+    const aoMudarAparencia = () => this._atualizarTitulo();
+    document.addEventListener("aparencia:mudou", aoMudarAparencia);
+    this._cleanups.push(() => document.removeEventListener("aparencia:mudou", aoMudarAparencia));
+  }
+
+  _montarMenuConta() {
+    this.menuConta = new MenuConta(this.root.querySelector('[data-role="conta"]'), this.user, {
+      aoConfigurar: () => this._abrirConfiguracoes(),
+      aoAtalhos: () => mostrarAtalhos(),
+      aoSair: () => this._logout(),
+      aoAtualizar: () => this.recarregarAba({ avisar: true }),
+    });
+  }
+
+  /**
+   * O nome mudou em Configurações > Conta. O objeto do usuário é alterado NO
+   * LUGAR, e não trocado por outro: todas as views receberam esta mesma
+   * referência em `ctx.user` -- é de lá que Atualizações e Agendamentos tiram
+   * o responsável que já vem preenchido num registro novo, e um objeto novo
+   * deixaria as views com o nome antigo até o próximo login.
+   */
+  _aoMudarNome(nome) {
+    this.user.nome = nome;
+    this.menuConta.destroy();
+    this._montarMenuConta();
   }
 
   _montarAbas() {
@@ -424,7 +467,10 @@ export class App {
     const main = this.root.querySelector(".app-main");
 
     let ultimoGrupo = null;
-    for (const [i, tab] of this.tabsAtivas.entries()) {
+    for (const tab of this.tabsAtivas) {
+      const container = this._montarContainerDaAba(main, tab);
+      if (tab.rodape) continue; // sem item no menu (ver `rodape` em TABS)
+      const i = this.tabsNoMenu.indexOf(tab);
       if (tab.grupo && tab.grupo !== ultimoGrupo) {
         ultimoGrupo = tab.grupo;
         const grupoEl = document.createElement("div");
@@ -453,27 +499,7 @@ export class App {
       // senão cada aba mudaria de largura quando o mouse passasse.
       button.innerHTML = `${icon(tab.icon)}<span>${tab.label}</span><kbd class="tab-button__atalho">Alt+${i + 1}</kbd>`;
       tabsNav.appendChild(button);
-
-      const container = document.createElement("div");
-      container.className = "view";
-      container.id = `painel-${tab.key}`;
-      container.setAttribute("role", "tabpanel");
       container.setAttribute("aria-labelledby", `aba-${tab.key}`);
-      container.style.display = "none";
-      main.appendChild(container);
-
-      this.views.set(tab.key, {
-        tab,
-        container,
-        instance: new tab.View(container, this.api, {
-          user: this.user,
-          cache: this.cache,
-          navigate: (destino, opcoes) => this.switchTab(destino, opcoes),
-          atualizadorHabilitado: this.atualizadorHabilitado,
-          regras: this.regras,
-          recarregarApp: () => this.recarregarApp(),
-        }),
-      });
     }
 
     tabsNav.addEventListener("click", (event) => {
@@ -483,6 +509,38 @@ export class App {
     // Setas percorrem as abas sem sair do teclado, como manda o padrão ARIA
     // de tablist -- antes, Tab passava por cada uma das nove abas.
     tabsNav.addEventListener("keydown", (e) => this._navegarAbas(e));
+  }
+
+  /** O painel de uma aba e a View dentro dele. */
+  _montarContainerDaAba(main, tab) {
+    const container = document.createElement("div");
+    container.className = "view";
+    container.id = `painel-${tab.key}`;
+    container.setAttribute("role", tab.rodape ? "region" : "tabpanel");
+    if (tab.rodape) container.setAttribute("aria-label", tab.label);
+    container.style.display = "none";
+    main.appendChild(container);
+
+    this.views.set(tab.key, {
+      tab,
+      container,
+      instance: new tab.View(container, this.api, {
+        user: this.user,
+        cache: this.cache,
+        navigate: (destino, opcoes) => this.switchTab(destino, opcoes),
+        atualizadorHabilitado: this.atualizadorHabilitado,
+        regras: this.regras,
+        recarregarApp: () => this.recarregarApp(),
+        // Só as Configurações usam estes -- são as partes do shell que ela
+        // mexe (o menu lateral, o cabeçalho com o nome) sem sair procurando
+        // elementos pela tela e adivinhando como cada um se comporta.
+        abasDoMenu: this.tabsNoMenu.map((t) => ({ key: t.key, label: t.label })),
+        definirSidebar: (recolhida) => this._definirSidebar(recolhida),
+        sincronizarPreferencias: () => this._sincronizarComPreferencias(),
+        aoMudarNome: (nome) => this._aoMudarNome(nome),
+      }),
+    });
+    return container;
   }
 
   _abrirAcoesRapidas() {
@@ -520,13 +578,13 @@ export class App {
     const passo = teclas[e.key];
     if (!passo && e.key !== "Home" && e.key !== "End") return;
     e.preventDefault();
-    const indiceAtual = this.tabsAtivas.findIndex((t) => t.key === this.activeTab);
+    const indiceAtual = this.tabsNoMenu.findIndex((t) => t.key === this.activeTab);
     let alvo;
     if (e.key === "Home") alvo = 0;
-    else if (e.key === "End") alvo = this.tabsAtivas.length - 1;
-    else alvo = (indiceAtual + passo + this.tabsAtivas.length) % this.tabsAtivas.length;
-    this.switchTab(this.tabsAtivas[alvo].key);
-    this.root.querySelector(`#aba-${this.tabsAtivas[alvo].key}`)?.focus();
+    else if (e.key === "End") alvo = this.tabsNoMenu.length - 1;
+    else alvo = (indiceAtual + passo + this.tabsNoMenu.length) % this.tabsNoMenu.length;
+    this.switchTab(this.tabsNoMenu[alvo].key);
+    this.root.querySelector(`#aba-${this.tabsNoMenu[alvo].key}`)?.focus();
   }
 
   /** `Alt+1` … `Alt+9` levam direto à aba de mesmo número. */
@@ -534,9 +592,9 @@ export class App {
     const handler = (e) => {
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
       const n = Number(e.key);
-      if (!Number.isInteger(n) || n < 1 || n > this.tabsAtivas.length) return;
+      if (!Number.isInteger(n) || n < 1 || n > this.tabsNoMenu.length) return;
       e.preventDefault();
-      this.switchTab(this.tabsAtivas[n - 1].key);
+      this.switchTab(this.tabsNoMenu[n - 1].key);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -723,9 +781,24 @@ export class App {
           ]
         : []),
       { id: "acao:trocar-senha", titulo: "Trocar minha senha", grupo: "Ações", icone: "chave",
-        executar: () => abrirTrocaDeSenha(this.api) },
-      { id: "acao:config", titulo: "Abrir Configurações", subtitulo: "Tema, densidade, tabelas, sua conta",
-        grupo: "Ações", icone: "config", executar: () => this._abrirConfiguracoes() },
+        executar: () => this._abrirConfiguracoes({ aba: "conta", ajuste: "senha" }) },
+      // Cada aba das Configurações direto da paleta, como as da Administração.
+      // "Configurações" em si já aparece no grupo Telas.
+      ...[
+        ["conta", "Minha conta", "Nome, senha e sessões abertas", "conta"],
+        ["aparencia", "Aparência", "Tema, cor de destaque, texto e perfis", "paleta"],
+        ["tabelas", "Ajustes das tabelas", "Densidade, linhas por página, altura, com prévia", "tabela"],
+        ["navegacao", "Navegação e comportamento", "Tela inicial, período inicial, filtros, confirmar ao sair", "bussola"],
+        ["notificacoes", "Avisos e notificações", "Onde e por quanto tempo os avisos aparecem", "sino"],
+        ["acessibilidade", "Acessibilidade", "Contraste, anel de foco, animações, superfícies", "acessibilidade"],
+      ].map(([aba, titulo, subtitulo, icone]) => ({
+        id: `config:${aba}`,
+        titulo,
+        subtitulo,
+        grupo: "Configurações",
+        icone,
+        executar: () => this._abrirConfiguracoes({ aba }),
+      })),
       /*
        * Exportar/imprimir a tela aberta.
        */
@@ -829,37 +902,40 @@ export class App {
     this._cleanups.push(this.palette.ligarAtalho());
   }
 
-  _abrirConfiguracoes() {
-    abrirConfiguracoes({
-      aoMudarLinhas: () => this.recarregarAba(),
-      aoMudarSidebar: (recolhida) => this._definirSidebar(recolhida),
-      aoMudarVarias: () => this._sincronizarComPreferencias(),
-      abas: this.tabsAtivas.map((t) => ({ key: t.key, label: t.label })),
-      usuario: this.user,
-      atualizadorHabilitado: this.atualizadorHabilitado,
-      trocarSenha: () => abrirTrocaDeSenha(this.api),
-      abrirAdministracao: this.user?.role === "admin" ? () => this.switchTab("administracao") : undefined,
-    });
+  /**
+   * Configurações é uma tela (ver TABS); este é o caminho comum do botão do
+   * rodapé, do menu da conta, do Ctrl + , e da paleta.
+   * @param {{aba?: string, ajuste?: string}} [params] abre direto numa aba,
+   *   e opcionalmente acende um ajuste dela
+   */
+  _abrirConfiguracoes(params) {
+    this.switchTab("configuracoes", params);
   }
 
-  /** Recolhe ou abre o menu. Único caminho, hoje vindo só de Configurações. */
+  /** Recolhe ou abre o menu. Vem de Configurações e do Ctrl + B. */
   _definirSidebar(recolhida) {
     this.root.classList.toggle("is-sidebar-collapsed", recolhida);
     settings.set("sidebarRecolhida", recolhida);
+    // Avisa quem mostra essa preferência (a tela Configurações, se estiver
+    // aberta): pelo Ctrl + B ela muda sem passar por lá.
+    reaplicarAparencia();
   }
 
   /**
    * Alinha a casca ao que está guardado nas preferências AGORA.
    *
-   * Serve aos dois casos em que MUITAS preferências mudam de uma vez: um perfil
-   * aplicado e um arquivo de preferências importado. O painel poderia avisar
-   * ajuste por ajuste, mas aí cada preferência nova obrigaria a lembrar de
-   * acrescentar mais um aviso -- e o esquecimento apareceria como "o perfil
-   * mudou tudo, menos o menu lateral".
+   * Serve aos casos em que MUITAS preferências mudam de uma vez: um perfil
+   * aplicado, um arquivo importado, uma seção restaurada. A tela poderia
+   * avisar ajuste por ajuste, mas aí cada preferência nova obrigaria a lembrar
+   * de acrescentar mais um aviso -- e o esquecimento apareceria como "o
+   * perfil mudou tudo, menos o menu lateral".
+   *
+   * Não recarrega a aba: quem chama é a própria tela Configurações, e as
+   * outras telas buscam os dados de novo quando voltam a aparecer -- com o
+   * número de linhas por página que estiver valendo.
    */
   _sincronizarComPreferencias() {
     this.root.classList.toggle("is-sidebar-collapsed", settings.get("sidebarRecolhida", false));
-    this.recarregarAba();
   }
 
   /**
@@ -930,6 +1006,14 @@ export class App {
       button.setAttribute("aria-selected", String(ativa));
       // Só a aba ativa fica na ordem de Tab: é o padrão "roving tabindex".
       button.tabIndex = ativa ? 0 : -1;
+    }
+    // O botão do rodapé é o "item de menu" das Configurações: aceso enquanto
+    // ela está aberta, para a barra lateral continuar dizendo onde se está.
+    for (const botao of this.root.querySelectorAll('[data-action="config"]')) {
+      const aqui = key === "configuracoes";
+      botao.classList.toggle("is-active", aqui);
+      if (aqui) botao.setAttribute("aria-current", "page");
+      else botao.removeAttribute("aria-current");
     }
 
     if (!entrada) return;

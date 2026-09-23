@@ -3,7 +3,8 @@ import { toast } from "../../components/Toast.js";
 import { html } from "../../utils/html.js";
 import { iconHtml } from "../../utils/icons.js";
 import { marcarOcupado } from "../../utils/guard.js";
-import { cabecalhoSecao, blocosSaude } from "../../templates/administracao.js";
+import { cabecalhoSecao } from "../../templates/secao.js";
+import { blocosSaude } from "../../templates/administracao.js";
 import { mensagem } from "./FormularioRegras.js";
 
 /**

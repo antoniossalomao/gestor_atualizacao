@@ -1,30 +1,16 @@
 import { html, confiavel } from "../utils/html.js";
 import { iconHtml } from "../utils/icons.js";
 import { formatarBytes, formatarDataHora, tempoRelativo } from "../utils/date.js";
-import { rotuloPapel } from "../domain/pessoa.js";
+import { rotuloPapel, descricaoPapel } from "../domain/pessoa.js";
 import { formatarTempoAtivo, papelNormalizado } from "../domain/administracao.js";
 
 /**
  * Marcação da tela Administração. As abas antigas eram cinco modais, cada um
  * com um desenho próprio (títulos de tamanhos diferentes, `style=""` espalhado,
  * um ícone de 200px na Saúde). Aqui todas usam as mesmas peças: cabeçalho de
- * seção, cartão, linha de regra (a mesma `.cfg-group` do painel de
- * preferências) e tabela.
+ * seção (templates/secao.js, o mesmo das Configurações), cartão, linha de
+ * regra (a mesma `.cfg-group` das Configurações) e tabela.
  */
-
-/**
- * @param {{titulo: string, descricao: string, acoes?: import("../utils/html.js").HtmlSeguro}} opcoes
- */
-export function cabecalhoSecao({ titulo, descricao, acoes }) {
-  return html`
-    <header class="admin-secao__head">
-      <div class="admin-secao__titulos">
-        <h2>${titulo}</h2>
-        <p>${descricao}</p>
-      </div>
-      ${acoes && html`<div class="admin-secao__acoes">${acoes}</div>`}
-    </header>`;
-}
 
 /**
  * Uma regra numérica, no mesmo formato de linha do painel de preferências:
@@ -56,11 +42,7 @@ export function rodapeFormulario() {
     </footer>`;
 }
 
-const PAPEIS = [
-  { valor: "admin", descricao: "Tudo, inclusive esta tela, backups e publicar versões." },
-  { valor: "operador", descricao: "Cadastra e edita clientes, atualizações e agendamentos." },
-  { valor: "consulta", descricao: "Só vê e exporta. Não altera nada." },
-];
+const PAPEIS = ["admin", "operador", "consulta"].map((valor) => ({ valor, descricao: descricaoPapel(valor) }));
 
 /** O que cada papel pode -- a pergunta que se faz ANTES de escolher um. */
 export function legendaPapeis() {

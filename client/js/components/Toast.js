@@ -1,4 +1,5 @@
 import { icon } from "../utils/icons.js";
+import { aparencia } from "../app/appearance.js";
 
 const DURACAO_MS = 4000;
 const DURACAO_ACAO_MS = 7000;
@@ -144,7 +145,9 @@ export class ToastManager {
     const entrada = this.ativos.get(chave);
     if (!entrada) return;
     clearTimeout(entrada.timer);
-    entrada.timer = setTimeout(() => this._remover(chave), ms);
+    // A duração escolhida em Configurações > Notificações multiplica as
+    // daqui, então o aviso com "Desfazer" continua mais longo que o simples.
+    entrada.timer = setTimeout(() => this._remover(chave), ms * aparencia.fatorDuracaoAvisos());
   }
 
   _remover(chave) {

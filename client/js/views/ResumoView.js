@@ -72,14 +72,6 @@ export class ResumoView extends View {
         </div>
       </div>
 
-      <div class="card">
-        <h2 class="card__title">Tempo Médio de Resolução de Tarefas Por Responsável</h2>
-        <p class="text-muted">
-          Dias entre uma tarefa de Agendamentos ser criada e marcada como "Concluído".
-          Só conta tarefa criada depois desta métrica existir.
-        </p>
-        <div data-role="resolucao"></div>
-      </div>
     `;
 
     // Um listener na grade toda (delegação) em vez de quatro. Cada destino é
@@ -116,16 +108,6 @@ export class ResumoView extends View {
     this.sistemaChart = new BarChart(this.container.querySelector('[data-role="sistemas"]'));
     this.tendenciaChart = new LineChart(this.container.querySelector('[data-role="tendencia"]'));
 
-    this.resolucaoTable = new SortableTable(this.container.querySelector('[data-role="resolucao"]'), {
-      columns: [
-        { key: "label", label: "Responsável" },
-        { key: "diasMedios", label: "Dias (média)", type: "numeric" },
-        { key: "total", label: "Tarefas concluídas", type: "numeric" },
-      ],
-      rowKey: (row) => row.label,
-      emptyMessage: "Nenhuma tarefa concluída com os dados necessários ainda.",
-      selectable: false,
-    });
   }
 
   /**
@@ -173,7 +155,6 @@ export class ResumoView extends View {
     this.tendenciaChart.render(
       (resumo.atualizacoesPorMes || []).map((item) => ({ label: formatarMes(item.mes), total: item.total }))
     );
-    this.resolucaoTable.setRows(resumo.tempoMedioResolucao || []);
   }
 
   _setStat(key, value) {

@@ -8,8 +8,12 @@ import { Modal } from "../components/Modal.js";
  * mencionados. Um atalho que ninguém descobre é código morto: ou aparece numa
  * lista, ou não existe na prática.
  */
-/** Definição plana: [teclas, descrição, grupo] */
-const TABELA = [
+/**
+ * Definição plana: [teclas, descrição, grupo]. Exportada porque a aba Atalhos
+ * das Configurações mostra a mesma lista -- uma só, para as duas nunca
+ * discordarem sobre o que cada tecla faz.
+ */
+export const ATALHOS = [
   ["Ctrl + K", "Abrir a paleta de comandos: telas, clientes e ações", "Global"],
   ["Ctrl + ,", "Abrir as Configurações", "Global"],
   ["Ctrl + B", "Recolher ou abrir o menu lateral", "Global"],
@@ -34,7 +38,7 @@ const TABELA = [
 export function mostrarAtalhos() {
   const { box, close } = Modal.abrirCaixa({ largura: 560 });
 
-  const grupos = [...new Set(TABELA.map(([, , grupo]) => grupo))];
+  const grupos = [...new Set(ATALHOS.map(([, , grupo]) => grupo))];
   box.innerHTML = `
     <h3 class="modal-box__title" id="atalhos-titulo">Atalhos de teclado</h3>
     <p class="modal-box__message">Tudo que dá para fazer sem tirar a mão do teclado.</p>
@@ -44,7 +48,7 @@ export function mostrarAtalhos() {
           (grupo) => `
         <div class="shortcuts__group">
           <h4>${grupo}</h4>
-          ${TABELA.filter(([, , g]) => g === grupo)
+          ${ATALHOS.filter(([, , g]) => g === grupo)
             .map(
               ([teclas, descricao]) => `
             <div class="shortcuts__row">

@@ -23,7 +23,6 @@ const CRU = /(?:innerHTML|outerHTML)\s*\+?=\s*`|insertAdjacentHTML\([^,]+,\s*`/g
 /** Teto atual de cada arquivo ainda não migrado. */
 const TETO = {
   "views/VersoesView.js": 9,
-  "views/ConfiguracoesPanel.js": 8,
   "views/DistribuicaoView.js": 5,
   "app/App.js": 4,
   "views/AcessosModal.js": 3,

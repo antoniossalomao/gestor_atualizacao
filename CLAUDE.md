@@ -8,7 +8,7 @@ arquivo resume só o que é **não óbvio** e o que mais se erra por aqui.
 ```bash
 cd web
 npm run check     # tipos (client/js/domain, client/js/utils, server/src/shared)
-npm test          # ~675 testes (servidor + cliente)
+npm test          # ~745 testes (servidor + cliente)
 ```
 
 Os dois têm que passar. Não relate conclusão sem ter rodado.

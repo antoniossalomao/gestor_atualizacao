@@ -1,5 +1,6 @@
 import { html } from "../../utils/html.js";
-import { cabecalhoSecao, linhaRegraNumero, rodapeFormulario } from "../../templates/administracao.js";
+import { cabecalhoSecao } from "../../templates/secao.js";
+import { linhaRegraNumero, rodapeFormulario } from "../../templates/administracao.js";
 import { FormularioRegras } from "./FormularioRegras.js";
 
 /**
@@ -20,7 +21,7 @@ export class RegrasAdmin extends FormularioRegras {
         titulo: "Regras da equipe",
         descricao: "Valem para todas as contas, na hora em que você salva. Cada mudança fica no Histórico.",
       })}
-      <form class="card admin-card admin-form" data-role="form" novalidate>
+      <form class="card secao-card admin-form" data-role="form" novalidate>
         ${linhaRegraNumero({
           nome: "desatualizadoDias",
           titulo: "Cliente desatualizado depois de",

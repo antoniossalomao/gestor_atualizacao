@@ -2,7 +2,8 @@ import { toast } from "../../components/Toast.js";
 import { html } from "../../utils/html.js";
 import { iconHtml } from "../../utils/icons.js";
 import { marcarOcupado } from "../../utils/guard.js";
-import { cabecalhoSecao, rodapeFormulario } from "../../templates/administracao.js";
+import { cabecalhoSecao } from "../../templates/secao.js";
+import { rodapeFormulario } from "../../templates/administracao.js";
 import { FormularioRegras, mensagem } from "./FormularioRegras.js";
 
 /**
@@ -22,7 +23,7 @@ export class NotificacoesAdmin extends FormularioRegras {
         titulo: "Notificações",
         descricao: "Para onde o Gestor manda os avisos que a equipe precisa ver sem estar com o sistema aberto.",
       })}
-      <form class="card admin-card admin-form" data-role="form" novalidate>
+      <form class="card secao-card admin-form" data-role="form" novalidate>
         <div class="cfg-group cfg-group--largo">
           <div class="cfg-group__labels">
             <label class="cfg-group__title" for="regra-webhook">Webhook do Discord</label>
