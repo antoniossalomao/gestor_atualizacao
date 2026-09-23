@@ -1,9 +1,12 @@
+const crypto = require("node:crypto");
 const bcrypt = require("bcryptjs");
 
 const { ValidationError, ForbiddenError } = require("../shared/errors");
 
 const SALT_ROUNDS = 10;
 const SENHA_MIN_LENGTH = 8;
+/** O nome aparece no menu da conta, no Histórico e como responsável dos registros novos. */
+const NOME_MAX_LENGTH = 80;
 
 /**
  * Login multiusuario -- novidade em relacao ao app Python original, que
@@ -232,6 +235,135 @@ class AuthService {
     // o requisito de confirmar a senha atual antes de trocar.
     this.sessionStore?.clearByUserId(linha.id);
   }
+
+  // ==========================================================================
+  // A PRÓPRIA CONTA (Configurações > Conta)
+  // ==========================================================================
+
+  /**
+   * Os dados da conta de quem está logado, lidos do BANCO e não da sessão: a
+   * sessão guarda uma cópia feita no login, e "membro desde" e "último
+   * acesso" nem estão nela.
+   * @param {{id: number}} usuarioLogado
+   */
+  meuPerfil(usuarioLogado) {
+    const linha = this.db.usuarios.findById(usuarioLogado.id);
+    if (!linha) throw new ValidationError("Sua conta não foi encontrada. Faça login novamente.");
+    const { id, nome, usuario, role, criado_em, ultimo_login } = linha;
+    return { id, nome, usuario, role, criado_em, ultimo_login };
+  }
+
+  /**
+   * Troca o nome de exibição da própria conta -- qualquer papel pode. Até
+   * aqui só um administrador conseguia, e só pela tela dele, então um nome
+   * digitado errado na criação da conta ficava errado para sempre.
+   *
+   * O papel NÃO passa por aqui (ver `updateUser`, que é do administrador), e
+   * por isso nenhuma sessão cai: trocar o nome não mexe em permissão.
+   * @param {{id: number, nome: string}} usuarioLogado
+   * @param {unknown} nome
+   */
+  atualizarMeuNome(usuarioLogado, nome) {
+    const linha = this.db.usuarios.findById(usuarioLogado.id);
+    if (!linha) throw new ValidationError("Sua conta não foi encontrada. Faça login novamente.");
+    const nomeLimpo = String(nome ?? "").trim().replace(/\s+/g, " ");
+    if (!nomeLimpo) throw new ValidationError("Informe o seu nome.");
+    if (nomeLimpo.length > NOME_MAX_LENGTH) {
+      throw new ValidationError(`O nome pode ter no máximo ${NOME_MAX_LENGTH} caracteres.`);
+    }
+    if (nomeLimpo !== linha.nome) {
+      this.db.usuarios.updateUser(linha.id, { nome: nomeLimpo, role: linha.role });
+      this.historico?.registrar(
+        usuarioLogado,
+        "atualizar",
+        "usuario",
+        `Nome de "${linha.nome}" (@${linha.usuario}) alterado para "${nomeLimpo}"`
+      );
+    }
+    return this.meuPerfil(usuarioLogado);
+  }
+
+  /**
+   * Em que aparelhos a conta está aberta agora: um item por sessão válida.
+   *
+   * O `id` que sai daqui NÃO é o `sid`. O sid é o valor que viaja no cookie,
+   * e esta lista existe justamente para quem desconfia de acesso indevido --
+   * ela não pode espalhar o que dá acesso. Um resumo do sid serve para
+   * apontar qual encerrar, e para nada além disso.
+   *
+   * @param {{id: number}} usuarioLogado
+   * @param {string} sidAtual o `req.sessionID` de quem pergunta
+   */
+  sessoesDe(usuarioLogado, sidAtual) {
+    return this._sessoesDaConta(usuarioLogado)
+      .map(({ sid, dados, expiraEm }) => ({
+        id: idPublicoDaSessao(sid),
+        atual: sid === sidAtual,
+        // Sessões abertas antes de o login passar a anotar o aparelho não têm
+        // estes dois campos -- a tela diz "aparelho não identificado".
+        desde: dados.aparelho?.desde || null,
+        agente: dados.aparelho?.agente || "",
+        ultimoUso: ultimoUsoDaSessao(expiraEm, dados.cookie?.originalMaxAge),
+      }))
+      .sort((a, b) => Number(b.atual) - Number(a.atual) || (b.ultimoUso || "").localeCompare(a.ultimoUso || ""));
+  }
+
+  /**
+   * Encerra UMA sessão da própria conta. A que está fazendo o pedido fica de
+   * fora: sair desta é o "Sair da conta", que também apaga o cookie. Apagar a
+   * sessão por baixo do navegador que pediu deixaria a tela aberta e o
+   * próximo clique caindo no login sem explicação nenhuma.
+   * @param {{id: number, nome: string}} usuarioLogado
+   * @param {string} id o id público devolvido por `sessoesDe`
+   * @param {string} sidAtual
+   */
+  encerrarSessao(usuarioLogado, id, sidAtual) {
+    const alvo = this._sessoesDaConta(usuarioLogado).find((s) => idPublicoDaSessao(s.sid) === id);
+    if (!alvo) throw new ValidationError("Essa sessão já não existe: ela expirou ou foi encerrada.");
+    if (alvo.sid === sidAtual) {
+      throw new ValidationError("Esta é a sessão que você está usando agora. Para encerrá-la, use Sair da conta.");
+    }
+    this.sessionStore.destroy(alvo.sid);
+    this.historico?.registrar(usuarioLogado, "excluir", "usuario", `"${usuarioLogado.nome}" encerrou uma sessão aberta em outro aparelho`);
+  }
+
+  /**
+   * "Encerrar todas as outras": o gesto de quem esqueceu a conta aberta no
+   * computador de outra pessoa e não sabe qual das linhas é qual.
+   * @returns {number} quantas sessões caíram
+   */
+  encerrarOutrasSessoes(usuarioLogado, sidAtual) {
+    const outras = this._sessoesDaConta(usuarioLogado).filter((s) => s.sid !== sidAtual);
+    for (const { sid } of outras) this.sessionStore.destroy(sid);
+    if (outras.length > 0) {
+      this.historico?.registrar(
+        usuarioLogado,
+        "excluir",
+        "usuario",
+        `"${usuarioLogado.nome}" encerrou ${outras.length === 1 ? "1 sessão aberta" : `${outras.length} sessões abertas`} em outros aparelhos`
+      );
+    }
+    return outras.length;
+  }
+
+  _sessoesDaConta(usuarioLogado) {
+    return this.sessionStore?.listByUserId(usuarioLogado.id) || [];
+  }
 }
 
-module.exports = { AuthService };
+/** Ver `sessoesDe`: identifica a sessão sem revelar o sid. */
+function idPublicoDaSessao(sid) {
+  return crypto.createHash("sha256").update(String(sid)).digest("hex").slice(0, 16);
+}
+
+/**
+ * A cada pedido, o express-session renova o prazo da sessão para "agora +
+ * duração total" e a regrava (`touch` no store). Então o último uso é o
+ * prazo menos a duração -- sem precisar gravar mais nada a cada clique.
+ */
+function ultimoUsoDaSessao(expiraEm, duracaoMs) {
+  if (!Number.isFinite(duracaoMs)) return null;
+  return new Date(expiraEm - duracaoMs).toISOString();
+}
+
+module.exports = { AuthService, NOME_MAX_LENGTH };

@@ -387,19 +387,28 @@ domain/*.js       -- vocabulário do negócio, SEM tocar no DOM: agenteStatus, a
 utils/*.js        -- utilidades genéricas: date, html, color, icons, debounce, guard, arquivo
 views/*.js        -- uma classe por tela (Resumo, Atualizações, Agendamentos, Clientes, Consultar
                      Cliente, Distribuição, Versões, Sistemas, Administração, Histórico,
-                     Login) e o painel de Configurações pessoais
+                     Configurações, Login)
 views/administracao/ -- uma classe por aba da Administração (Usuários, Regras, Notificações,
                      Atualizador, Backups, Saúde); o Histórico entra lá como a própria view
+views/configuracoes/ -- as abas das Configurações: ajustes.js (a lista de ajustes, como dados),
+                     controles.js, SecaoAjustes.js (as abas de preferência) e ContaConfig.js
+components/TelaComAbas.js -- a moldura de abas sublinhadas que Administração e
+                     Configurações usam; templates/secao.js tem o cabeçalho de seção e o
+                     título de cartão das duas
 api/ApiClient.js  -- único lugar que chama fetch; todo o resto fala com o servidor por ele
 
-app/theme.js + app/appearance.js + views/ConfiguracoesPanel.js
+app/theme.js + app/appearance.js + views/ConfiguracoesView.js
              -- as preferências do usuário. theme.js cuida só de claro/escuro/sistema;
                 appearance.js cuida do resto (cor de destaque, tamanho do texto, densidade e
-                altura das tabelas, linhas por página, animações, fundo, posição dos avisos,
-                tela inicial, lembrar filtros). Escrevem um atributo no <html> (data-tema,
-                data-realce, data-densidade, ...) que o CSS lê -- nenhum componente conhece as
-                preferências. ConfiguracoesPanel.js é o painel de duas colunas com busca que
-                expõe tudo isso.
+                altura das tabelas, linhas por página, animações, fundo, posição e tempo dos
+                avisos, fonte, largura do conteúdo, anel de foco, dicas de atalho, tela
+                inicial, período inicial de Atualizações, lembrar filtros, confirmar ao sair).
+                Escrevem um atributo no <html> (data-tema, data-realce, data-densidade, ...)
+                que o CSS lê -- nenhum componente conhece as preferências. ConfiguracoesView.js
+                é a tela (rota #/configuracoes, sem item no menu: abre pelo rodapé da barra
+                lateral, pelo menu da conta, por Ctrl + , e pela paleta) que expõe tudo isso,
+                mais a conta: nome, senha e sessões abertas (/api/usuarios/me e
+                /api/usuarios/me/sessoes).
                 As preferências são da CONTA: ficam em usuario_preferencias no servidor
                 (GET/PUT /api/preferencias). O localStorage continua sendo escrito, mas como
                 cache -- theme-init.js roda no <head> e precisa de resposta síncrona, senão a

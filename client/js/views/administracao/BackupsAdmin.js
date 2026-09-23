@@ -5,7 +5,8 @@ import { emptyState } from "../../components/EmptyState.js";
 import { html } from "../../utils/html.js";
 import { iconHtml } from "../../utils/icons.js";
 import { marcarOcupado } from "../../utils/guard.js";
-import { cabecalhoSecao, linhaBackup } from "../../templates/administracao.js";
+import { cabecalhoSecao } from "../../templates/secao.js";
+import { linhaBackup } from "../../templates/administracao.js";
 import { mensagem } from "./FormularioRegras.js";
 
 /**
@@ -27,7 +28,7 @@ export class BackupsAdmin extends View {
         descricao: "Uma cópia do banco é feita toda vez que o servidor liga. Quantas guardar é uma das Regras da equipe.",
         acoes: html`<a class="btn" href="/api/backups/atual/download" download>${iconHtml("download")} Baixar o banco de agora</a>`,
       })}
-      <div class="card admin-card" data-role="conteudo"></div>`;
+      <div class="card secao-card" data-role="conteudo"></div>`;
     this.conteudo = this.container.querySelector('[data-role="conteudo"]');
     this.conteudo.addEventListener("click", (e) => {
       const botao = e.target.closest('[data-action="restaurar"]');

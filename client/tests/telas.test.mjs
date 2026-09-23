@@ -24,6 +24,10 @@ import { statTile, deltaTendencia } from "../js/templates/resumo.js";
 import { listaNotificacoes, itemNotificacao } from "../js/templates/notificacoes.js";
 import { alteracoesRegras, descreverChaveAgentes, formatarTempoAtivo, papelNormalizado } from "../js/domain/administracao.js";
 import { linhaUsuario, linhaBackup, blocosSaude, linhaRegraNumero } from "../js/templates/administracao.js";
+import { cartaoPerfil, linhaSessao, listaSessoes, previaTabela, listaAtalhos, resultadosBusca } from "../js/templates/configuracoes.js";
+import { cabecalhoSecao, tituloCartao } from "../js/templates/secao.js";
+import { descreverAparelho } from "../js/domain/aparelho.js";
+import { descricaoPapel } from "../js/domain/pessoa.js";
 
 const MALICIOSO = '"><img src=x onerror=alert(1)>';
 const texto = (v) => String(v);
@@ -40,10 +44,16 @@ function atributo(marcacao, nome) {
     .replace(/&amp;/g, "&");
 }
 
-/** Nenhum trecho do texto malicioso sobreviveu como marcação. */
+/**
+ * Nenhum trecho do texto malicioso sobreviveu como marcação.
+ *
+ * O nome da tag aceita dígito (`[a-z][a-z0-9]*`): só com letras, um `<h3>`
+ * logo depois de um atributo legítimo não era reconhecido como tag, e o teste
+ * acusava injeção onde não havia nenhuma.
+ */
 function semInjecao(marcacao) {
   assert.ok(!marcacao.includes("<img"), "uma tag digitada virou HTML de verdade");
-  assert.ok(!/"\s*>\s*</.test(marcacao.replace(/"\s*>\s*<(\/?[a-z]+[\s>])/g, "")), "um atributo foi fechado antes da hora");
+  assert.ok(!/"\s*>\s*</.test(marcacao.replace(/"\s*>\s*<(\/?[a-z][a-z0-9]*[\s>])/g, "")), "um atributo foi fechado antes da hora");
 }
 
 // Quarta-feira, 23/09/2026, 15h -- fixo para "hoje" e "vencida" não mudarem com o dia em que o teste roda.
@@ -542,4 +552,137 @@ test("Administração - linha de regra numérica", () => {
   const html = texto(linhaRegraNumero({ nome: "desatualizadoDias", titulo: "T", ajuda: "A", unidade: "dias", valor: 60, min: 7, max: 730 }));
   assert.match(html, /data-regra="desatualizadoDias" value="60"\s+min="7" max="730"/);
   assert.match(html, /for="regra-desatualizadoDias"/);
+});
+
+// ---------------------------------------------------------------- Configurações
+
+test("Configurações - cabeçalho de seção e título de cartão", async (t) => {
+  await t.test("sem ações, não sobra uma div vazia no cabeçalho", () => {
+    assert.doesNotMatch(texto(cabecalhoSecao({ titulo: "T", descricao: "D" })), /secao-head__acoes/);
+    assert.doesNotMatch(texto(tituloCartao({ titulo: "T" })), /<p>|secao-card__acoes/);
+  });
+
+  await t.test("título e descrição são escapados", () => {
+    semInjecao(texto(tituloCartao({ titulo: MALICIOSO, descricao: MALICIOSO })));
+  });
+});
+
+test("Configurações - aparelho de cada sessão", async (t) => {
+  const casos = [
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36", "Chrome no Windows", false],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0", "Edge no Windows", false],
+    ["Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0", "Firefox no Linux", false],
+    ["Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36", "Chrome no Android", true],
+    ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1", "Safari no iOS", true],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15", "Safari no macOS", false],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 OPR/113.0.0.0", "Opera no Windows", false],
+  ];
+  for (const [agente, rotulo, movel] of casos) {
+    await t.test(rotulo, () => {
+      const d = descreverAparelho(agente);
+      // O mais específico vem antes: Edge e Opera também dizem "Chrome", o
+      // Chrome também diz "Safari", o Android também diz "Linux" e o iPhone
+      // também diz "Mac OS X".
+      assert.equal(d.rotulo, rotulo);
+      assert.equal(d.movel, movel);
+    });
+  }
+
+  await t.test("sem User-Agent (sessão aberta antes desta versão)", () => {
+    assert.equal(descreverAparelho("").rotulo, "Aparelho não identificado");
+    assert.equal(descreverAparelho(undefined).rotulo, "Aparelho não identificado");
+  });
+});
+
+test("Configurações - sessões abertas", async (t) => {
+  const chrome = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/128.0.0.0 Safari/537.36";
+  const atual = { id: "aaaa", atual: true, agente: chrome, desde: AGORA.toISOString(), ultimoUso: AGORA.toISOString() };
+  const outra = { id: "bbbb", atual: false, agente: "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Firefox/130.0", desde: AGORA.toISOString(), ultimoUso: AGORA.toISOString() };
+
+  await t.test("a sessão atual tem o selo e NÃO tem botão de encerrar", () => {
+    const html = texto(linhaSessao(atual));
+    assert.match(html, /Este aparelho/);
+    assert.doesNotMatch(html, /encerrar-sessao/);
+  });
+
+  await t.test("as outras têm o botão, apontando para o id público", () => {
+    assert.equal(atributo(texto(linhaSessao(outra)), "data-id"), "bbbb");
+  });
+
+  await t.test("sessão sem dados do aparelho diz de onde veio, em vez de ficar em branco", () => {
+    const html = texto(linhaSessao({ id: "c", atual: false, agente: "", desde: null, ultimoUso: null }));
+    assert.match(html, /Aparelho não identificado/);
+    assert.match(html, /antes desta versão/);
+  });
+
+  await t.test("o resumo diz se está tudo certo ou quantos aparelhos a mais", () => {
+    assert.match(texto(listaSessoes([atual])), /só está aberta neste aparelho/);
+    assert.match(texto(listaSessoes([atual, outra])), /em outro aparelho/);
+    assert.match(texto(listaSessoes([atual, outra, { ...outra, id: "z" }])), /em 2 outros aparelhos/);
+  });
+
+  await t.test("um User-Agent forjado não vira HTML", () => {
+    semInjecao(texto(linhaSessao({ ...outra, agente: MALICIOSO })));
+  });
+});
+
+test("Configurações - perfil da conta", async (t) => {
+  const perfil = { id: 1, nome: "Bianca Ferreira", usuario: "bia", role: "consulta", criado_em: "2026-03-10T12:00:00.000Z" };
+
+  await t.test("mostra papel, o que ele pode e desde quando", () => {
+    const html = texto(cartaoPerfil(perfil));
+    assert.match(html, />Consulta</);
+    assert.ok(html.includes(descricaoPapel("consulta")));
+    assert.match(html, /10\/03\/2026/);
+    assert.match(html, />BF</);
+  });
+
+  await t.test("o campo nasce com o nome atual e o Salvar desligado", () => {
+    const html = texto(cartaoPerfil(perfil));
+    assert.equal(atributo(html, "value"), "Bianca Ferreira");
+    assert.match(html, /data-action="salvar-nome" disabled/);
+  });
+
+  await t.test("antes de a resposta chegar, sem data, mostra travessão", () => {
+    assert.match(texto(cartaoPerfil({ ...perfil, criado_em: null })), /Membro desde<\/dt><dd>—/);
+  });
+
+  await t.test("um nome malicioso não vira HTML, nem no texto nem no value", () => {
+    const html = texto(cartaoPerfil({ ...perfil, nome: MALICIOSO }));
+    semInjecao(html);
+    assert.equal(atributo(html, "value"), MALICIOSO);
+  });
+
+  await t.test("todo papel tem uma frase (e conta legada cai em Operador)", () => {
+    for (const papel of ["admin", "operador", "consulta"]) assert.ok(descricaoPapel(papel).length > 10);
+    assert.equal(descricaoPapel("user"), descricaoPapel("operador"));
+  });
+});
+
+test("Configurações - prévia, atalhos e busca", async (t) => {
+  await t.test("a prévia usa as classes da tabela de verdade (é o que faz a densidade valer nela)", () => {
+    const html = texto(previaTabela());
+    assert.match(html, /class="table-wrap/);
+    assert.match(html, /class="data-table"/);
+    assert.ok((html.match(/<tr>/g) || []).length >= 5);
+  });
+
+  await t.test("atalho com '+' vira uma tecla por <kbd>", () => {
+    const html = texto(listaAtalhos([["Ctrl + K", "Abrir a paleta", "Global"]]));
+    assert.match(html, /<kbd>Ctrl<\/kbd>/);
+    assert.match(html, /<span>\+<\/span><kbd>K<\/kbd>/);
+  });
+
+  await t.test("resultado leva à aba e ao ajuste certos", () => {
+    const html = texto(resultadosBusca([{ aba: "tabelas", id: "densidade", titulo: "Densidade", ajuda: "a", caminho: "Tabelas › Linhas", icone: "tabela" }], "dens"));
+    assert.equal(atributo(html, "data-aba"), "tabelas");
+    assert.equal(atributo(html, "data-ajuste"), "densidade");
+    assert.match(html, /1 ajuste encontrado/);
+  });
+
+  await t.test("sem resultado, sugere palavras -- e o termo digitado é escapado", () => {
+    const html = texto(resultadosBusca([], MALICIOSO));
+    assert.match(html, /Nenhum ajuste/);
+    semInjecao(html);
+  });
 });

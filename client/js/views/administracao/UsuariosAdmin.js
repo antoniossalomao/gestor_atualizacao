@@ -7,7 +7,8 @@ import { html } from "../../utils/html.js";
 import { iconHtml } from "../../utils/icons.js";
 import { marcarOcupado } from "../../utils/guard.js";
 import { rotuloPapel } from "../../domain/pessoa.js";
-import { cabecalhoSecao, legendaPapeis, linhaUsuario } from "../../templates/administracao.js";
+import { cabecalhoSecao } from "../../templates/secao.js";
+import { legendaPapeis, linhaUsuario } from "../../templates/administracao.js";
 
 /**
  * Aba Usuários da Administração: quem entra no sistema e com que papel.
@@ -39,13 +40,13 @@ export class UsuariosAdmin extends View {
         acoes: html`<button type="button" class="btn btn--accent" data-action="nova">${iconHtml("plus")} Nova conta</button>`,
       })}
       <div class="admin-grade">
-        <div class="card admin-card">
+        <div class="card secao-card">
           <table class="data-table admin-tabela">
             <thead><tr><th scope="col">Pessoa</th><th scope="col">Papel</th><th scope="col">Último acesso</th><th scope="col"><span class="sr-only">Ações</span></th></tr></thead>
             <tbody data-role="lista"></tbody>
           </table>
         </div>
-        <aside class="card admin-card admin-card--lateral">
+        <aside class="card secao-card secao-card--lateral">
           <h3 class="card__title">O que cada papel pode</h3>
           ${legendaPapeis()}
         </aside>

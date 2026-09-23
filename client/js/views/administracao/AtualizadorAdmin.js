@@ -1,5 +1,6 @@
 import { html } from "../../utils/html.js";
-import { cabecalhoSecao, linhaRegraNumero, rodapeFormulario } from "../../templates/administracao.js";
+import { cabecalhoSecao } from "../../templates/secao.js";
+import { linhaRegraNumero, rodapeFormulario } from "../../templates/administracao.js";
 import { descreverChaveAgentes } from "../../domain/administracao.js";
 import { FormularioRegras } from "./FormularioRegras.js";
 
@@ -24,7 +25,7 @@ export class AtualizadorAdmin extends FormularioRegras {
         titulo: "Atualizador",
         descricao: "O agente que instala as versões sozinho em cada cliente. Ainda em pré-piloto.",
       })}
-      <form class="card admin-card admin-form" data-role="form" novalidate>
+      <form class="card secao-card admin-form" data-role="form" novalidate>
         <div class="cfg-group">
           <div class="cfg-group__labels">
             <span class="cfg-group__title" id="regra-atualizador-rotulo">Atualizador</span>

@@ -541,6 +541,60 @@
 }
 
 /* ==========================================================================
+   FONTE DA INTERFACE
+   "Do sistema" troca a Inter (que vem do Google Fonts) pela Segoe UI do
+   Windows -- ver FONTES em js/app/appearance.js para o porquê. O título
+   também troca: a Sora ao lado da Segoe UI parece erro de digitação, não
+   escolha de desenho.
+   ========================================================================== */
+:root[data-fonte="sistema"] {
+  --fonte: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --fonte-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+}
+
+/* ==========================================================================
+   LARGURA DO CONTEÚDO
+   "Tela inteira" tira o teto de 1600px do conteúdo. O `#app` no seletor é
+   para ganhar da regra do menu recolhido, que também mexe no teto e tem um
+   id na frente.
+   ========================================================================== */
+:root[data-largura="total"] #app .app-main {
+  max-width: none;
+}
+
+/* ==========================================================================
+   FOCO REFORÇADO
+   O anel de foco é o único "você está aqui" de quem navega pelo teclado, e o
+   de 2px some fácil numa tabela cheia de bordas. Mais grosso e mais afastado
+   do elemento, ele não se confunde com a borda do próprio controle.
+   ========================================================================== */
+:root[data-foco="reforcado"] :focus-visible {
+  outline: 3px solid var(--cor-accent);
+  outline-offset: 3px;
+}
+/* Os controles de opções desenham o foco no rótulo, não no <input> (que é
+   invisível) -- ver `.cfg-group__option` em components.css. */
+:root[data-foco="reforcado"] .cfg-group__option:has(input:focus-visible) span,
+:root[data-foco="reforcado"] .cfg-cor:has(input:focus-visible),
+:root[data-foco="reforcado"] .cfg-tema:has(input:focus-visible) .cfg-tema__preview {
+  outline-width: 3px;
+  outline-offset: 3px;
+}
+
+/* ==========================================================================
+   DICAS DE ATALHO
+   As etiquetas "Alt+1", "Ctrl K" e "Alt+N" espalhadas pela tela. Ensinam
+   muito na primeira semana e viram ruído para quem já sabe todas de cor.
+   Os atalhos continuam funcionando; só as etiquetas saem.
+   ========================================================================== */
+:root[data-dicas="nao"] .tab-button__atalho,
+:root[data-dicas="nao"] .app-header__search kbd,
+:root[data-dicas="nao"] .app-header__quick kbd,
+:root[data-dicas="nao"] .app-menu__atalho {
+  display: none;
+}
+
+/* ==========================================================================
    BASE
    ========================================================================== */
 

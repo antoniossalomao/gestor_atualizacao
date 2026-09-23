@@ -178,6 +178,14 @@ class ApiRouter {
 
     // Gestão de Usuários: listagem e administração restrita a Admin; troca de senha própria aberta
     api.get("/usuarios", requireRole("admin"), usuarios.list);
+    // A própria conta (nome e sessões abertas), para qualquer papel. Vem
+    // ANTES de "/usuarios/:id": com ele primeiro, um PUT em /usuarios/me
+    // casaria com ":id" e cairia no requireRole("admin").
+    api.get("/usuarios/me", usuarios.meuPerfil);
+    api.put("/usuarios/me", usuarios.atualizarMeuPerfil);
+    api.get("/usuarios/me/sessoes", usuarios.listarSessoes);
+    api.delete("/usuarios/me/sessoes", usuarios.encerrarOutrasSessoes);
+    api.delete("/usuarios/me/sessoes/:id", usuarios.encerrarSessao);
     api.post("/usuarios", requireRole("admin"), usuarios.create);
     api.put("/usuarios/:id", requireRole("admin"), usuarios.update);
     api.put("/usuarios/me/senha", usuarios.changeOwnPassword);

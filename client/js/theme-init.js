@@ -45,6 +45,11 @@
   if (lido("contraste", "normal") === "alto") raiz.setAttribute("data-contraste", "alto");
   if (lido("transparencia", "normal") === "reduzida") raiz.setAttribute("data-transparencia", "reduzida");
 
+  // Fonte e largura do conteúdo mudam a MEDIDA de tudo: aplicadas tarde, a
+  // página inteira se reorganiza na frente de quem acabou de abri-la.
+  if (lido("fonte", "inter") === "sistema") raiz.setAttribute("data-fonte", "sistema");
+  if (lido("largura", "limitada") === "total") raiz.setAttribute("data-largura", "total");
+
   // Captura qualquer erro global ou rejeição assíncrona para que o usuário
   // nunca fique diante de uma tela preta vazia sem diagnóstico.
   function exibirErroFatal(titulo, erro) {

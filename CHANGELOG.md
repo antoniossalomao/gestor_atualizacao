@@ -15,6 +15,41 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Configurações virou uma tela, com a mesma cara do resto do app.** Era um
+  modal de duas colunas com um desenho só dele (outra trilha de navegação,
+  outro cabeçalho, outro rodapé), apertado em 880px com a tela desfocada
+  atrás. Agora usa a moldura da Administração: abas sublinhadas, cabeçalho de
+  seção e cartões com título. **Continua sendo aberta pelos mesmos lugares**
+  (o botão no rodapé do menu lateral, o menu da conta, `Ctrl + ,` e a
+  paleta) e não ganhou item no menu; o botão do rodapé fica aceso enquanto
+  ela está aberta. São sete abas: Conta, Aparência, Tabelas, Navegação,
+  Notificações, Acessibilidade e Atalhos.
+  - **Conta de verdade:** o próprio nome se troca ali (antes só um
+    administrador conseguia); a senha se troca num formulário no cartão,
+    que avisa enquanto se digita se as duas não batem; e há a lista de
+    **onde a conta está aberta** ("Chrome no Windows, entrou ontem"), com
+    "Encerrar" em cada uma e "Encerrar as outras". A troca de senha já
+    derrubava as outras sessões, mas não havia como ver quais eram. Rotas
+    novas: `GET/PUT /api/usuarios/me` e `GET/DELETE /api/usuarios/me/sessoes`.
+    A lista nunca devolve o identificador da sessão, só um resumo dele.
+  - **Oito ajustes novos:** fonte (Inter ou a do Windows, que aparece na hora
+    mesmo sem internet), largura do conteúdo (tela inteira para monitor
+    largo), anel de foco reforçado, esconder as dicas de atalho, período com
+    que Atualizações já abre filtrada, confirmar ou não ao sair, quanto tempo
+    os avisos ficam na tela e o contador de pendências no título da aba. Os
+    perfis Operação e Alto contraste passaram a usar alguns deles.
+  - **Prévia ao vivo** na aba Tabelas: uma tabela de exemplo com as classes da
+    tabela de verdade, então densidade, zebra e tamanho do texto aparecem nela
+    como vão aparecer nas telas.
+  - **Liga/desliga** no lugar dos trilhos "Sim / Não" e "Lembrar / Sempre
+    limpo".
+  - **Busca** que responde com uma lista de ajustes; escolher um leva à aba
+    certa, acende a linha e põe o foco no controle. A paleta (`Ctrl + K`)
+    ganhou um atalho para cada aba.
+  - **Atalhos de teclado** listados na própria tela, sem abrir outro modal.
+  - A moldura das abas saiu da Administração para
+    `components/TelaComAbas.js`, e as duas telas usam a mesma.
+
 - **Agendamentos: prioridade, sistema e observação.** Cada tarefa ganhou
   prioridade (Baixa, Normal, Alta, Urgente), o sistema a atualizar e um campo
   de observação. Feito com o Gemini.
