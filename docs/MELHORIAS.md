@@ -130,6 +130,37 @@ na conferência de 22/09.
   transitiva ainda sem correção upstream. Decisão pendente: aguardar
   `exceljs` novo, trocar de biblioteca, ou aceitar o risco formalmente.
 
+### Versão-alvo manual por sistema e campanhas de atualização
+
+_Proposta de 23/09/2026, ainda não aprovada para implementação._
+
+**Problema:** com o Atualizador desativado (ver
+[DOCUMENTACAO_CONSOLIDADA.md, seção 3.4](DOCUMENTACAO_CONSOLIDADA.md#34-estado-atual-pré-piloto)),
+a atualização dos clientes voltou a ser manual, e o painel não ajuda nisso:
+- A aba "Matriz de Versões" da ficha do cliente busca a versão publicada em
+  `/api/versoes/painel`. Com o Atualizador desligado, essa rota responde 403,
+  e a matriz mostra "Sem publicação" em todos os sistemas de todos os
+  clientes (`ConsultaView`, chamada com `.catch(() => null)`).
+- "Desatualizado" hoje é medido por tempo (`DESATUALIZADO_DIAS = 60`), não
+  por versão. O painel não sabe dizer quem está abaixo da versão atual de
+  um sistema.
+
+**Proposta:**
+- **Versão-alvo:** um administrador define, por sistema, qual é a versão
+  atual (ex.: B_Vendas 2026.09.01), sem depender do Atualizador.
+- **Matriz:** passa a comparar a última versão registrada de cada cliente com
+  essa versão-alvo.
+- **Resumo:** ganha o indicador "N clientes com <sistema> abaixo da <versão>".
+- **Campanha:** definir uma versão-alvo nova abre uma campanha com a lista de
+  clientes pendentes e o progresso. Ela pode gerar agendamentos em lote, que
+  já existe hoje por data de corte na tela Sistemas.
+- **Quando o Atualizador voltar,** a versão-alvo passa a ser a versão
+  publicada, e nada do que foi montado se perde.
+
+**Risco:** a versão é texto livre no cadastro de atualização. A comparação
+exige um formato consistente, então vem junto a validação do campo
+`versao` no formulário e na importação de planilha.
+
 ### Regras e notificações
 
 - **Regras automáticas / SLA** — severidade e prazo para agente sem
@@ -165,6 +196,7 @@ na conferência de 22/09.
 | 5 | Notificações configuráveis (resumo diário, silêncio, destinatário por evento) |
 | 6 | Polimento visual restante (barras, glass completo, tooltips) |
 | 7 | Decisão formal sobre a dependência `uuid`/`exceljs` |
+| — | Versão-alvo manual e campanhas (proposta de 23/09, a priorizar) |
 
 ---
 
