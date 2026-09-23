@@ -318,6 +318,14 @@ class Database {
       ["agendamentos", "revisao", "INTEGER NOT NULL DEFAULT 1"],
       ["agendamentos", "atualizado_em", "TEXT"],
       ["agendamentos", "atualizado_por", "TEXT"],
+      // "sistema": exibido no card do Kanban mas não existia como coluna
+      // própria -- tarefas antigas ficam com sistema vazio.
+      ["agendamentos", "sistema", "TEXT"],
+      // "obs": observações livres, exibidas como prévia no card.
+      ["agendamentos", "obs", "TEXT"],
+      // "prioridade": Baixa / Normal / Alta / Urgente. DEFAULT 'Normal'
+      // garante que tarefas antigas não apareçam sem prioridade definida.
+      ["agendamentos", "prioridade", "TEXT NOT NULL DEFAULT 'Normal'"],
       ["atualizacoes", "revisao", "INTEGER NOT NULL DEFAULT 1"],
       ["atualizacoes", "atualizado_em", "TEXT"],
       ["atualizacoes", "atualizado_por", "TEXT"],

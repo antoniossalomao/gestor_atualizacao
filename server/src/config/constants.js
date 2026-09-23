@@ -26,11 +26,18 @@ const COLUMNS = [
 const AGENDA_COLUMNS = [
   { key: "tarefa", label: "Tarefa" },
   { key: "cliente", label: "Cliente" },
+  { key: "sistema", label: "Sistema" },
   { key: "responsavel", label: "Responsável" },
+  { key: "prioridade", label: "Prioridade" },
   { key: "data", label: "Data" },
   { key: "horario", label: "Horário" },
   { key: "status", label: "Status" },
+  { key: "obs", label: "Obs" },
 ];
+
+// Níveis de prioridade de uma tarefa agendada (ordem crescente de urgência).
+// "Normal" é o padrão: tarefas sem prioridade definida ficam aqui.
+const PRIORIDADE_OPTIONS = ["Baixa", "Normal", "Alta", "Urgente"];
 
 // Opcoes fixas de andamento de uma tarefa (a ordem importa: e a ordem de
 // prioridade usada para ordenar a tabela -- pendentes antes de concluidas.
@@ -77,9 +84,11 @@ module.exports = {
   COLUMNS,
   AGENDA_COLUMNS,
   STATUS_OPTIONS,
+  PRIORIDADE_OPTIONS,
   SISTEMAS_CONHECIDOS,
   SISTEMA_SUPORTE_BREDAS,
   OBS_SUPORTE_BREDAS,
   SISTEMA_APELIDOS,
   FILTRO_ARQUIVADAS,
 };
+

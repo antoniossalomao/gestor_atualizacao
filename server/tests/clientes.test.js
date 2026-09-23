@@ -97,10 +97,13 @@ test("ClienteService - renomear propaga para o histórico", async (t) => {
     env.db.agendamentos.insert({
       tarefa: "Atualizar",
       cliente: "Padaria Antiga",
+      sistema: "",
       responsavel: "Camila",
+      prioridade: "Normal",
       data: "02/01/2026",
       horario: "09:00",
       status: "A Fazer",
+      obs: "",
     });
 
     await t.test("atualizações e agendamentos seguem o novo nome", () => {

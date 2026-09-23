@@ -1,4 +1,4 @@
-const { STATUS_OPTIONS } = require("../config/constants");
+const { STATUS_OPTIONS, PRIORIDADE_OPTIONS } = require("../config/constants");
 const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, horaValida } = require("../shared/validation");
 const { normalizarResponsavel } = require("./normalizacao");
@@ -109,6 +109,9 @@ class AgendamentoService {
     const itens = clientes.map((cliente) => this._validate({
       tarefa: `Atualizar ${sistema}${input.dataCorte ? ` — defasado antes de ${input.dataCorte}` : ""}`,
       cliente,
+      // O lote é sempre de UM sistema, e a tarefa agora tem campo próprio
+      // para ele (aparece no cartão do quadro).
+      sistema,
       responsavel: input.responsavel || usuario?.nome || "",
       data,
       horario: "",
@@ -205,17 +208,21 @@ class AgendamentoService {
     const horario = (input.horario || "").trim();
     if (!horaValida(horario)) throw new ValidationError("Campo 'Horário' precisa estar no formato hh:mm.");
     const status = STATUS_OPTIONS.includes(input.status) ? input.status : STATUS_OPTIONS[0];
+    const prioridade = PRIORIDADE_OPTIONS.includes(input.prioridade) ? input.prioridade : "Normal";
     return {
       tarefa,
       cliente: (input.cliente || "").trim(),
+      sistema: (input.sistema || "").trim(),
       // Mesma grafia canônica das Atualizações, e de propósito buscada LÁ: é
       // a mesma equipe, e é lá que está o volume que define qual grafia vale
       // ("Camila", não "CAMILA"). Sem isto, o campo Responsável de uma aba
       // divergia do da outra -- foi assim que "Marcos/lennon" nasceu aqui.
       responsavel: normalizarResponsavel(input.responsavel, this.db.atualizacoes.distinctResponsaveis()),
+      prioridade,
       data,
       horario,
       status,
+      obs: (input.obs || "").trim(),
     };
   }
 }

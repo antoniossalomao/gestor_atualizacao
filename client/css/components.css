@@ -6122,6 +6122,44 @@ h1, h2, h3, strong {
   font-size: 10px;
   padding: 1px 5px;
 }
+/* Borda esquerda colorida por prioridade (coexiste com .is-overdue) */
+.kanban-card.is-urgente {
+  border-left: 3px solid var(--cor-vermelho-forte, #dc2626);
+}
+.kanban-card.is-alta {
+  border-left: 3px solid var(--cor-laranja, #f97316);
+}
+/* Prévia de obs no card: máximo 2 linhas, truncada */
+.kanban-card__obs {
+  margin: 0;
+  font-size: 11px;
+  color: var(--cor-texto-fraco);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+/* Badges de alerta (urgentes/vencidas) no header da coluna */
+.kanban-column__header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+.kanban-column__alert {
+  border-radius: 3px;
+  font-size: 10px;
+  padding: 1px 5px;
+  cursor: default;
+}
+/* Grupo de badges no header do card */
+.kanban-card__badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
 .client-hub-tabs { display: flex; gap: var(--sp-2); overflow-x: auto; margin: var(--sp-5) 0; padding-bottom: var(--sp-2); border-bottom: 1px solid var(--cor-borda); }
 .client-hub-tabs .btn { white-space: nowrap; border-color: transparent; }
 .client-hub-tabs .btn.is-active { color: var(--cor-accent); border-color: var(--cor-accent); background: var(--cor-superficie-alta); }

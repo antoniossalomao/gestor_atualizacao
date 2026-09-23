@@ -15,6 +15,18 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Agendamentos: prioridade, sistema e observação.** Cada tarefa ganhou
+  prioridade (Baixa, Normal, Alta, Urgente), o sistema a atualizar e um campo
+  de observação. Feito com o Gemini.
+  - No quadro, Urgente e Alta ganham selo e borda colorida, a observação
+    aparece em até duas linhas no cartão, e o cabeçalho de cada coluna conta
+    as vencidas (ou, sem vencidas, as urgentes e altas).
+  - Dentro de cada coluna as mais urgentes vêm primeiro, e há filtro por
+    prioridade.
+  - Tarefas que já existiam ficam como "Normal" e sem sistema. A geração em
+    lote grava o sistema do lote em cada tarefa.
+  - O cartão "Tempo Médio de Resolução de Tarefas" saiu do Resumo.
+
 - **Administração virou uma tela própria, só de administrador.** Tudo o que é
   da equipe inteira saiu do painel de preferências pessoais, onde era uma
   seção "Segurança" feita só de links para cinco modais, cada um com desenho

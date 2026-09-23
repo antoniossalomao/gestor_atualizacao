@@ -3,7 +3,7 @@ const { DATE_SORT_EXPR, titleCase } = require("./AtualizacaoRepository");
 const { buildOrderBy } = require("../shared/sortHelper");
 const { FILTRO_ARQUIVADAS } = require("../config/constants");
 
-const COLUMNS = ["tarefa", "cliente", "responsavel", "data", "horario", "status"];
+const COLUMNS = ["tarefa", "cliente", "sistema", "responsavel", "prioridade", "data", "horario", "status", "obs"];
 
 // "horario" fica vazio em tarefas sem hora marcada -- esse CASE joga essas
 // para o fim de cada dia, em vez de aparecerem antes de "08:00" so porque
@@ -17,6 +17,11 @@ const HORARIO_SORT_EXPR = "(CASE WHEN horario = '' OR horario IS NULL THEN 1 ELS
 const STATUS_ORDER_EXPR =
   "CASE status WHEN 'A Fazer' THEN 0 WHEN 'Em Andamento' THEN 1 WHEN 'Sem resposta' THEN 2 WHEN 'Concluído' THEN 3 ELSE 4 END";
 
+// Urgente=0, Alta=1, Normal=2, Baixa=3: dentro de cada coluna de status,
+// tarefas mais urgentes aparecem no topo.
+const PRIORIDADE_ORDER_EXPR =
+  "CASE prioridade WHEN 'Urgente' THEN 0 WHEN 'Alta' THEN 1 WHEN 'Normal' THEN 2 WHEN 'Baixa' THEN 3 ELSE 2 END";
+
 /** Colunas que a tela pode pedir para ordenar, e a expressao SQL segura correspondente. */
 const SORT_MAP = {
   id: "id",
@@ -26,6 +31,7 @@ const SORT_MAP = {
   data: DATE_SORT_EXPR,
   horario: "horario",
   status: "status COLLATE NOCASE",
+  prioridade: PRIORIDADE_ORDER_EXPR,
 };
 
 /**
@@ -41,7 +47,7 @@ class AgendamentoRepository extends BaseRepository {
    * Uma página de tarefas, pendentes primeiro (ordenadas por data),
    * concluidas no final. Devolve `{ rows, total, page, pageSize }`.
    */
-  list(search = "", status = "Todos", { page = 1, pageSize = 50, sortBy, sortDir } = {}) {
+  list(search = "", status = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, prioridade } = {}) {
     const clauses = [];
     const params = {};
     if (search) {
@@ -60,6 +66,10 @@ class AgendamentoRepository extends BaseRepository {
         params.status = status;
       }
     }
+    if (prioridade && prioridade !== "Todas") {
+      clauses.push("prioridade = @prioridade");
+      params.prioridade = prioridade;
+    }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table} ${where}`).get(params).total;
@@ -69,7 +79,7 @@ class AgendamentoRepository extends BaseRepository {
       SORT_MAP,
       sortBy,
       sortDir,
-      `${STATUS_ORDER_EXPR}, ${DATE_SORT_EXPR} ASC, ${HORARIO_SORT_EXPR}, id DESC`
+      `${STATUS_ORDER_EXPR}, ${PRIORIDADE_ORDER_EXPR}, ${DATE_SORT_EXPR} ASC, ${HORARIO_SORT_EXPR}, id DESC`
     );
     const sql = `
       SELECT id, ${COLUMNS.join(", ")}, arquivado_em AS arquivadoEm, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table}
