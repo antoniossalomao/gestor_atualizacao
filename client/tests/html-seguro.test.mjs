@@ -26,16 +26,11 @@ const TETO = {
   "views/ConfiguracoesPanel.js": 8,
   "views/DistribuicaoView.js": 5,
   "app/App.js": 4,
-  "views/UsersPanel.js": 3,
-  "views/SaudeSistemaPanel.js": 3,
-  "views/BackupsPanel.js": 3,
   "views/AcessosModal.js": 3,
   "views/LoginView.js": 2,
   "views/HistoricoView.js": 2,
   "views/AgenteDetalheModal.js": 2,
   "views/SistemasView.js": 1,
-  "views/ConfiguracaoApiPanel.js": 1,
-  "views/AtualizadorConfigPanel.js": 1,
   "main.js": 1,
   "components/charts/PieChart.js": 1,
   "components/charts/LineChart.js": 1,
@@ -68,6 +63,15 @@ test("HTML montado sem a tag html só pode diminuir", async (t) => {
       assert.ok(achados <= teto, `${rel}: ${achados} innerHTML com template cru (teto ${teto}). Use html\`...\` de utils/html.js.`);
       assert.ok(achados >= teto, `${rel}: caiu para ${achados} -- abaixe o teto em html-seguro.test.mjs para ${achados}.`);
     });
+  }
+});
+
+test("todo arquivo da lista de tetos ainda existe", () => {
+  // Arquivo apagado ou renomeado some da contagem acima sem aviso -- e o teto
+  // dele ficaria aqui para sempre, sugerindo uma pendência que não existe.
+  const existentes = new Set(arquivos.map((a) => a.rel));
+  for (const rel of Object.keys(TETO)) {
+    assert.ok(existentes.has(rel), `${rel} está em TETO mas não existe mais -- tire-o da lista.`);
   }
 });
 

@@ -94,7 +94,6 @@ class ApiRouter {
       usuarios,
       versoes,
       preferencias,
-      configuracaoApi,
       configuracaoSistema,
       saude,
     } = this.controllers;
@@ -108,16 +107,14 @@ class ApiRouter {
     api.get("/preferencias", preferencias.get);
     api.put("/preferencias", preferencias.put);
 
-    // Configuração do sistema / .env (exclusivo Administrador)
-    api.get("/configuracao-api", requireRole("admin"), configuracaoApi.get);
-    api.put("/configuracao-api", requireRole("admin"), configuracaoApi.put);
-    api.post("/configuracao-api/gerar-token", requireRole("admin"), configuracaoApi.gerarToken);
-
-    // Liga/desliga o Atualizador (Distribuição, Versões e alerta de
-    // agentes) para o painel inteiro -- leitura para qualquer autenticado
-    // (o front-end usa isso para decidir o que mostrar), escrita só Admin.
+    // Regras da equipe (config/regrasEquipe.js). As públicas para qualquer
+    // autenticado -- o front-end usa para decidir o que mostrar e para
+    // explicar o que mostra --; todas as outras operações, só Admin.
+    // (As antigas /configuracao-api, que reescreviam o .env, saíram.)
     api.get("/configuracao-sistema", configuracaoSistema.get);
+    api.get("/configuracao-sistema/completa", requireRole("admin"), configuracaoSistema.completa);
     api.put("/configuracao-sistema", requireRole("admin"), configuracaoSistema.put);
+    api.post("/configuracao-sistema/testar-discord", requireRole("admin"), configuracaoSistema.testarDiscord);
 
     // Clientes: leitura aberta a Consulta; escrita a Operador/Admin; exclusão em lote a Admin
     api.get("/clientes", clientes.list);

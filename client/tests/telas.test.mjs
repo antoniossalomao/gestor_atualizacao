@@ -1,6 +1,6 @@
 /*
  * Testes das telas mais usadas: Agendamentos, Atualizações, Consultar
- * Cliente, Resumo e o sino de notificações.
+ * Cliente, Resumo, o sino de notificações e a Administração.
  *
  * As views em si não carregam no Node (mexem no `document` já ao serem
  * importadas). O que se testa aqui é o que foi tirado delas justamente para
@@ -22,6 +22,8 @@ import { cartaoAcesso, linhaMatrizVersoes } from "../js/templates/consulta.js";
 import { formatarMes, primeiroDiaDoMes, tendenciaMensal } from "../js/domain/resumo.js";
 import { statTile, deltaTendencia } from "../js/templates/resumo.js";
 import { listaNotificacoes, itemNotificacao } from "../js/templates/notificacoes.js";
+import { alteracoesRegras, descreverChaveAgentes, formatarTempoAtivo, papelNormalizado } from "../js/domain/administracao.js";
+import { linhaUsuario, linhaBackup, blocosSaude, linhaRegraNumero } from "../js/templates/administracao.js";
 
 const MALICIOSO = '"><img src=x onerror=alert(1)>';
 const texto = (v) => String(v);
@@ -411,4 +413,133 @@ test("Notificações - itens do sino", async (t) => {
     assert.match(texto(listaNotificacoes([])), /Nada pendente agora/);
     assert.equal(texto(listaNotificacoes([aviso, aviso])).match(/<button/g).length, 2);
   });
+});
+
+// ---------------------------------------------------------------- Administração
+
+test("Administração - o que mudou num formulário de regras", async (t) => {
+  const definicoes = {
+    desatualizadoDias: { tipo: "inteiro" },
+    discordWebhookUrl: { tipo: "url" },
+    atualizadorHabilitado: { tipo: "booleano" },
+  };
+  const salvas = { desatualizadoDias: 60, discordWebhookUrl: "", atualizadorHabilitado: false };
+  const nomes = Object.keys(definicoes);
+
+  await t.test("nada mexido: nada a salvar (o botão fica apagado)", () => {
+    // O <input type=number> devolve "60" -- texto. Sem normalizar, TODO
+    // formulário aberto pareceria alterado.
+    assert.deepEqual(alteracoesRegras(salvas, { desatualizadoDias: "60", discordWebhookUrl: "  ", atualizadorHabilitado: false }, definicoes, nomes), {});
+  });
+
+  await t.test("só o que mudou vai para o servidor, já no tipo certo", () => {
+    assert.deepEqual(
+      alteracoesRegras(salvas, { desatualizadoDias: "45", discordWebhookUrl: "", atualizadorHabilitado: true }, definicoes, nomes),
+      { desatualizadoDias: 45, atualizadorHabilitado: true }
+    );
+  });
+
+  await t.test("número inválido vai como texto, para o servidor recusar com a mensagem da regra", () => {
+    assert.deepEqual(alteracoesRegras(salvas, { desatualizadoDias: "" }, definicoes, ["desatualizadoDias"]), { desatualizadoDias: "" });
+    assert.deepEqual(alteracoesRegras(salvas, { desatualizadoDias: "4x" }, definicoes, ["desatualizadoDias"]), { desatualizadoDias: "4x" });
+  });
+
+  await t.test("regras fora da lista do formulário são ignoradas", () => {
+    assert.deepEqual(alteracoesRegras(salvas, { desatualizadoDias: "10", atualizadorHabilitado: true }, definicoes, ["atualizadorHabilitado"]), {
+      atualizadorHabilitado: true,
+    });
+  });
+});
+
+test("Administração - textos e formatos", async (t) => {
+  await t.test("chave dos agentes: três situações, nunca o valor", () => {
+    assert.deepEqual(descreverChaveAgentes({ situacao: "configurada", final: "9f3c" }), { texto: "Configurada, terminando em …9f3c", tom: "ok" });
+    assert.equal(descreverChaveAgentes({ situacao: "exemplo" }).tom, "perigo");
+    assert.equal(descreverChaveAgentes({ situacao: "ausente" }).tom, "alerta");
+    assert.equal(descreverChaveAgentes(null).tom, "alerta");
+  });
+
+  await t.test("tempo no ar", () => {
+    assert.equal(formatarTempoAtivo(30), "menos de 1m");
+    assert.equal(formatarTempoAtivo(125 * 60), "2h 5m");
+    assert.equal(formatarTempoAtivo(3 * 86400 + 60), "3d 0h 1m");
+    assert.equal(formatarTempoAtivo(NaN), "menos de 1m");
+  });
+
+  await t.test("conta antiga com papel 'user' é operador", () => {
+    assert.equal(papelNormalizado("user"), "operador");
+    assert.equal(papelNormalizado(undefined), "operador");
+    assert.equal(papelNormalizado("admin"), "admin");
+  });
+});
+
+test("Administração - linha de usuário", async (t) => {
+  const outro = { id: 2, nome: "Bia", usuario: "bia", role: "consulta", ultimo_login: null };
+
+  await t.test("a própria conta: papel só como selo, sem remover", () => {
+    const html = texto(linhaUsuario({ ...outro, id: 1, role: "admin" }, { ehVoce: true }));
+    assert.match(html, /\(você\)/);
+    assert.doesNotMatch(html, /<select|data-action="remover"/);
+  });
+
+  await t.test("outra conta: papel atual já selecionado, e o botão de remover", () => {
+    const html = texto(linhaUsuario(outro, { ehVoce: false }));
+    assert.match(html, /<option value="consulta" selected>/);
+    assert.doesNotMatch(html, /<option value="admin" selected>/);
+    assert.match(html, /data-action="remover" data-id="2"/);
+    assert.match(html, /Nunca entrou/);
+  });
+
+  await t.test("conta legada 'user' aparece como Operador selecionado", () => {
+    assert.match(texto(linhaUsuario({ ...outro, role: "user" }, { ehVoce: false })), /<option value="operador" selected>/);
+  });
+
+  await t.test("nome e usuário digitados não viram HTML", () => {
+    semInjecao(texto(linhaUsuario({ ...outro, nome: MALICIOSO, usuario: MALICIOSO }, { ehVoce: false })));
+  });
+});
+
+test("Administração - linha de backup", async (t) => {
+  await t.test("cópia corrompida: selo e restauração bloqueada", () => {
+    const html = texto(linhaBackup({ arquivo: "gestao_1.db", label: "22/09 09:16", integro: false }));
+    assert.match(html, />Corrompida</);
+    assert.match(html, /data-action="restaurar"[^>]*disabled/);
+  });
+
+  await t.test("cópia íntegra pode ser restaurada; o nome do arquivo vai codificado na URL", () => {
+    const html = texto(linhaBackup({ arquivo: "gestao antes&depois.db", label: "x", tamanhoBytes: 2048, integro: true }));
+    assert.doesNotMatch(html, /disabled/);
+    assert.match(html, /\/api\/backups\/gestao%20antes%26depois\.db\/download/);
+  });
+});
+
+test("Administração - saúde do servidor", async (t) => {
+  const dados = {
+    statusGeral: "saudavel",
+    banco: { integridade: "ok", caminho: "gestao.db", tamanhoBytes: 4096, journalMode: "wal" },
+    servidor: { versao: "2.1.0", node: "v22", plataforma: "win32", uptimeSegundos: 3600, memoriaHeapUsadaMB: 18, memoriaHeapTotalMB: 21 },
+    backups: { total: 0, ultimo: null },
+    pacotes: { total: 0, tamanhoBytes: 0 },
+    agentes: { total: 0, ok: 0, offline: 0, erro: 2 },
+  };
+
+  await t.test("com o Atualizador desligado, diz isso -- e não '0 agentes, sem incidentes'", () => {
+    const html = texto(blocosSaude(dados, { atualizadorHabilitado: false }));
+    assert.match(html, /badge--muted">Desligado</);
+    assert.doesNotMatch(html, /Sem incidentes|com erro/);
+  });
+
+  await t.test("ligado, os erros de agente aparecem no selo", () => {
+    assert.match(texto(blocosSaude(dados, { atualizadorHabilitado: true })), /2 com erro/);
+  });
+
+  await t.test("sem backup nenhum é aviso, não neutro", () => {
+    assert.match(texto(blocosSaude(dados, { atualizadorHabilitado: false })), /badge--warning">Nenhuma cópia/);
+  });
+});
+
+test("Administração - linha de regra numérica", () => {
+  const html = texto(linhaRegraNumero({ nome: "desatualizadoDias", titulo: "T", ajuda: "A", unidade: "dias", valor: 60, min: 7, max: 730 }));
+  assert.match(html, /data-regra="desatualizadoDias" value="60"\s+min="7" max="730"/);
+  assert.match(html, /for="regra-desatualizadoDias"/);
 });

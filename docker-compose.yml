@@ -31,15 +31,11 @@ services:
       - "3000:3000"
 
     environment:
-      # ATENÇÃO: o dotenv NÃO sobrescreve variável que já veio do ambiente,
-      # então tudo que for declarado aqui VENCE o .env e deixa de poder ser
-      # editado pela tela Configurações → Sistema → "Configuração da API".
-      # Por isso só PORT mora aqui: ela não é editável por aquela tela, e
-      # fixá-la é o que mantém o mapeamento de portas acima sempre válido.
-      # Não acrescente AGENT_API_TOKEN, PUBLIC_URL, DISCORD_WEBHOOK_URL nem
-      # ALERTA_AGENTES_INTERVALO_MINUTOS aqui: a tela continuaria gravando
-      # no .env, e nada mudaria -- um ajuste que "não pega", sem mensagem
-      # de erro.
+      # Só PORT mora aqui: fixá-la é o que mantém o mapeamento de portas
+      # acima sempre válido. O resto fica no .env (infraestrutura e
+      # segredos). As regras da equipe (URL pública, webhook do Discord,
+      # intervalos) não são mais variável de ambiente nenhuma: moram no
+      # banco e se editam na tela Administração.
       PORT: 3000
 
     volumes:
@@ -54,17 +50,17 @@ services:
       - gestor-data:/app/server/data
       - gestor-logs:/app/server/logs
 
-      # O .env é montado como ARQUIVO, e gravável, porque a tela
-      # "Configuração da API" escreve nele (ConfiguracaoApiService). Se
-      # fosse só embutido na imagem ou passado por "environment", salvar
-      # naquela tela falharia ou não teria efeito.
+      # O .env é montado como ARQUIVO e SÓ LEITURA (":ro"): nada no painel
+      # escreve nele desde que as regras da equipe foram para o banco. Não
+      # vai embutido na imagem porque imagem se copia e se publica, e ele
+      # tem o SESSION_SECRET e a AGENT_API_TOKEN.
       #
       # Ele PRECISA existir antes do primeiro "up": quando o caminho de
       # origem não existe, o Docker cria uma PASTA vazia com esse nome, e aí
       # não há SESSION_SECRET -- o servidor se recusa a subir e o container
       # fica reiniciando, com o motivo em "docker compose logs". (Antes ele
       # subia com o segredo de exemplo, que é público.) Ver o README.
-      - ./server/.env:/app/server/.env
+      - ./server/.env:/app/server/.env:ro
 
     healthcheck:
       # Definido no Dockerfile (bate em /api/auth/status). Repetido aqui só

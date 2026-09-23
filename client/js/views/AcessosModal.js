@@ -10,7 +10,7 @@ import { emptyState } from "../components/EmptyState.js";
  * Janela flutuante com os acessos remotos (AnyDesk / Suporte Bredas) das
  * máquinas de UM cliente, aberta pelo botão "Acessos" da aba Clientes (ver
  * ClientesView) com o cliente já selecionado na tabela. Mesmo padrão de
- * `Modal.abrirCaixa` usado por UsersPanel/BackupsPanel -- uma janela por
+ * `Modal.abrirCaixa` usado pela troca de senha -- uma janela por
  * cima da tela, não uma aba fixa.
  */
 export class AcessosModal {

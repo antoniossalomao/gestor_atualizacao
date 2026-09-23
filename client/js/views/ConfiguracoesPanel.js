@@ -45,7 +45,7 @@ import { baixarTexto, escolherArquivo } from "../utils/arquivo.js";
  * mesmos motivos:
  *
  *  - **seções com nome** (Aparência, Tabelas, Acessibilidade, Comportamento,
- *    Avisos, Sistema). Cada uma cabe na tela inteira sem rolar, então escolher
+ *    Avisos, Conta). Cada uma cabe na tela inteira sem rolar, então escolher
  *    a seção é escolher um conjunto pequeno de decisões relacionadas -- em vez
  *    de procurar uma agulha numa lista de dezoito;
  *  - **uma trilha de navegação fixa à esquerda**, que responde "onde estou e o
@@ -82,11 +82,9 @@ export class ConfiguracoesPanel {
    *   aoMudarVarias?: () => void,
    *   abas?: Array<{key: string, label: string}>,
    *   usuario?: {nome: string, usuario: string, role?: string},
-   *   abrirBackups?: () => void,
-   *   abrirUsuarios?: () => void,
-   *   abrirConfiguracaoApi?: () => void,
-   *   abrirAtualizadorConfig?: () => void,
-   *   abrirSaude?: () => void,
+   *   atualizadorHabilitado?: boolean,
+   *   trocarSenha?: () => void,
+   *   abrirAdministracao?: () => void,
    * }} [acoes]
    *   O painel não mexe no shell por conta própria: quem sabe atualizar o
    *   rótulo do botão de recolher e recarregar a aba aberta é o App, então ele
@@ -105,11 +103,9 @@ export class ConfiguracoesPanel {
     aoMudarVarias,
     abas,
     usuario,
-    abrirBackups,
-    abrirUsuarios,
-    abrirConfiguracaoApi,
-    abrirAtualizadorConfig,
-    abrirSaude,
+    atualizadorHabilitado = true,
+    trocarSenha,
+    abrirAdministracao,
   } = {}) {
     this.aoMudarLinhas = aoMudarLinhas || (() => {});
     this.aoMudarSidebar = aoMudarSidebar || (() => {});
@@ -117,11 +113,11 @@ export class ConfiguracoesPanel {
     /** @type {Array<{key: string, label: string}>} para o seletor de tela inicial */
     this.abas = abas || [];
     this.usuario = usuario || null;
-    this.abrirBackups = abrirBackups || null;
-    this.abrirUsuarios = abrirUsuarios || null;
-    this.abrirConfiguracaoApi = abrirConfiguracaoApi || null;
-    this.abrirAtualizadorConfig = abrirAtualizadorConfig || null;
-    this.abrirSaude = abrirSaude || null;
+    // Sem o Atualizador, "Atualizar a Distribuição sozinha" e "Avisar quando um
+    // agente falhar" são ajustes de uma tela que não existe -- somem daqui.
+    this.atualizadorHabilitado = atualizadorHabilitado;
+    this.trocarSenha = trocarSenha || null;
+    this.abrirAdministracao = abrirAdministracao || null;
     /** @type {Map<string, HTMLElement>} id da seção -> painel montado */
     this.secoes = new Map();
   }
@@ -375,7 +371,7 @@ export class ConfiguracoesPanel {
         id: "comportamento",
         titulo: "Comportamento",
         icone: "ajustes",
-        descricao: "Onde o app abre, o que ele lembra e de quanto em quanto tempo se atualiza.",
+        descricao: "Onde o app abre e o que ele lembra de uma tela para outra.",
         itens: [
           {
             // Nove telas não cabem num trilho de opções: nove botões colados
@@ -436,6 +432,7 @@ export class ConfiguracoesPanel {
             nome: "cfg-ritmo",
             chaves: ["ritmoPainel"],
             busca: "atualizar sozinha automático distribuição agentes intervalo tempo",
+            oculto: () => !this.atualizadorHabilitado,
             opcoes: RITMOS.map((r) => ({ valor: String(r.valor), rotulo: r.rotulo })),
             atual: () => String(aparencia.ritmoPainel()),
             aoEscolher: (valor) => aparencia.aplicar({ ritmoPainel: Number(valor) }),
@@ -455,7 +452,7 @@ export class ConfiguracoesPanel {
             ajuda: "Notificação do sistema, mesmo com o Gestor em outra aba. Vale só nesta máquina.",
             nome: "cfg-notificacoes",
             busca: "notificação aviso falha erro agente windows alerta som",
-            oculto: () => !notificacoes.suportado(),
+            oculto: () => !notificacoes.suportado() || !this.atualizadorHabilitado,
             opcoes: [
               { valor: "nao", rotulo: "Não" },
               { valor: "sim", rotulo: "Sim" },
@@ -492,70 +489,45 @@ export class ConfiguracoesPanel {
         ],
       },
 
+      /*
+       * "Conta" no lugar de duas seções que não diziam o que tinham:
+       *  - "Segurança" era uma lista de links para modais de administração
+       *    (usuários, backups, chave dos agentes, diagnóstico, Atualizador),
+       *    tudo da EQUIPE dentro do painel de preferências PESSOAIS. Foi para
+       *    a tela Administração, só de admin;
+       *  - "Sistema" tinha o cartão da conta, exportar/importar e os atalhos --
+       *    nada de sistema. É a conta de quem está usando.
+       * A troca da própria senha, que estava escondida dentro de "Usuários e
+       * Permissões", veio para cá: é da pessoa, e todo papel tem.
+       */
       {
-        id: "seguranca",
-        titulo: "Segurança",
-        icone: "escudo",
-        descricao: "Controle de acesso, papéis de usuários, proteção de backups e chave da API.",
-        itens: [
-          {
-            tipo: "link",
-            titulo: "Usuários e Permissões",
-            ajuda: "Gerenciar contas da equipe e definir papéis (Administrador, Operador, Consulta)",
-            icone: "users",
-            busca: "segurança usuários permissões papéis rbac admin operador consulta contas",
-            acao: () => this.abrirUsuarios?.(),
-            oculto: () => typeof this.abrirUsuarios !== "function",
-          },
-          {
-            tipo: "link",
-            titulo: "Backups e Restauração Protegida",
-            ajuda: "Download preventivo e restauração protegida com senha e confirmação textual",
-            icone: "backups",
-            busca: "backup segurança restauração banco restaurar download cópia",
-            acao: () => this.abrirBackups?.(),
-            oculto: () => typeof this.abrirBackups !== "function",
-          },
-          {
-            tipo: "link",
-            titulo: "Configuração da API e Agentes",
-            ajuda: "Chave secreta dos agentes C#, URL pública e webhook de alertas",
-            icone: "acessos",
-            busca: "api url chave token agente atualizador discord webhook intervalo configuração servidor .env",
-            acao: () => this.abrirConfiguracaoApi?.(),
-            oculto: () => typeof this.abrirConfiguracaoApi !== "function",
-          },
-          {
-            tipo: "link",
-            titulo: "Saúde Operacional do Sistema",
-            ajuda: "Diagnóstico técnico: integridade do SQLite, memória, backups e runtime do servidor",
-            icone: "saude",
-            busca: "saúde integridade diagnóstico servidor banco memória uptime status operacional",
-            acao: () => this.abrirSaude?.(),
-            oculto: () => typeof this.abrirSaude !== "function",
-          },
-          {
-            tipo: "link",
-            titulo: "Atualizador (Distribuição e Agentes)",
-            ajuda: "Liga ou desliga, para a equipe inteira, as abas Distribuição/Versões e o alerta de agente offline",
-            icone: "distribuicao",
-            busca: "atualizador desativar distribuição versões agentes agente offline desligar temporário piloto",
-            acao: () => this.abrirAtualizadorConfig?.(),
-            oculto: () => typeof this.abrirAtualizadorConfig !== "function",
-          },
-        ],
-      },
-
-      {
-        id: "sistema",
-        titulo: "Sistema",
-        icone: "config",
-        descricao: "Quem está usando, o que levar para outra máquina, e as telas que não são ajuste.",
+        id: "conta",
+        titulo: "Conta",
+        icone: "conta",
+        descricao: "Com que conta você entrou, sua senha e como levar estas preferências para outra máquina.",
         itens: [
           {
             tipo: "conta",
-            busca: "conta usuário logado perfil quem sou permissão",
+            busca: "conta usuário logado perfil quem sou permissão papel",
             oculto: () => !this.usuario,
+          },
+          {
+            tipo: "link",
+            titulo: "Trocar minha senha",
+            ajuda: "Quem estiver usando a sua conta em outro computador é desconectado",
+            icone: "chave",
+            busca: "senha trocar mudar alterar segurança password",
+            acao: () => this.trocarSenha?.(),
+            oculto: () => typeof this.trocarSenha !== "function",
+          },
+          {
+            tipo: "link",
+            titulo: "Administração da equipe",
+            ajuda: "Usuários, histórico de alterações, regras da equipe, backups e saúde do servidor",
+            icone: "escudo",
+            busca: "administração admin usuários permissões backup histórico regras discord atualizador saúde",
+            acao: () => this.abrirAdministracao?.(),
+            oculto: () => typeof this.abrirAdministracao !== "function",
           },
           {
             tipo: "link",
@@ -920,8 +892,8 @@ export class ConfiguracoesPanel {
   /**
    * Quem está usando. Não é ajuste nenhum -- está aqui porque "com que conta
    * eu entrei?" era, até agora, uma pergunta que só o canto do cabeçalho
-   * respondia, e é a primeira coisa que se quer confirmar antes de mexer em
-   * Usuários ou em Backups, que ficam logo abaixo.
+   * respondia, e é a primeira coisa que se quer confirmar antes de trocar a
+   * senha, logo abaixo.
    */
   _conta() {
     const caixa = document.createElement("div");
@@ -1220,22 +1192,18 @@ export function abrirConfiguracoes({
   aoMudarVarias,
   abas,
   usuario,
-  abrirBackups,
-  abrirUsuarios,
-  abrirConfiguracaoApi,
-  abrirAtualizadorConfig,
-  abrirSaude,
+  atualizadorHabilitado,
+  trocarSenha,
+  abrirAdministracao,
 } = {}) {
   new ConfiguracoesPanel({
     aoMudarSidebar,
     aoMudarVarias,
     abas,
     usuario,
-    abrirBackups,
-    abrirUsuarios,
-    abrirConfiguracaoApi,
-    abrirAtualizadorConfig,
-    abrirSaude,
+    atualizadorHabilitado,
+    trocarSenha,
+    abrirAdministracao,
     aoMudarLinhas: () => {
       aoMudarLinhas?.();
       // As outras preferências se explicam sozinhas na tela (o tema muda a

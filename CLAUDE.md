@@ -8,7 +8,7 @@ arquivo resume só o que é **não óbvio** e o que mais se erra por aqui.
 ```bash
 cd web
 npm run check     # tipos (client/js/domain, client/js/utils, server/src/shared)
-npm test          # ~640 testes (servidor + cliente)
+npm test          # ~675 testes (servidor + cliente)
 ```
 
 Os dois têm que passar. Não relate conclusão sem ter rodado.
@@ -38,6 +38,11 @@ Os dois têm que passar. Não relate conclusão sem ter rodado.
 **Servidor** — `routes/ → controllers/ → services/ → database/`. Cada camada só
 conhece a de baixo. SQL **só** em `database/`. `shared/` é para o que tem dois
 consumidores em camadas diferentes — não antes disso.
+
+**Regra que vale para a equipe inteira** (um prazo, um limite, uma URL de
+integração) **não vai no `.env` nem numa constante**: entra em
+`server/src/config/regrasEquipe.js` e aparece na tela Administração. O `.env`
+é só para infraestrutura e segredos.
 
 **Front-end** — a regra, na ordem em que se pergunta:
 

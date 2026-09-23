@@ -16,7 +16,6 @@ const { NotificationService } = require("./services/NotificationService");
 const { VersaoService } = require("./services/VersaoService");
 const { PreferenciaService } = require("./services/PreferenciaService");
 const { AlertaAgenteService } = require("./services/AlertaAgenteService");
-const { ConfiguracaoApiService } = require("./services/ConfiguracaoApiService");
 const { ConfiguracaoSistemaService } = require("./services/ConfiguracaoSistemaService");
 const { AuthController } = require("./controllers/AuthController");
 const { ClientesController } = require("./controllers/ClientesController");
@@ -29,7 +28,6 @@ const { HistoricoController } = require("./controllers/HistoricoController");
 const { UsersController } = require("./controllers/UsersController");
 const { VersoesController } = require("./controllers/VersoesController");
 const { PreferenciasController } = require("./controllers/PreferenciasController");
-const { ConfiguracaoApiController } = require("./controllers/ConfiguracaoApiController");
 const { ConfiguracaoSistemaController } = require("./controllers/ConfiguracaoSistemaController");
 const { SaudeService } = require("./services/SaudeService");
 const { SaudeController } = require("./controllers/SaudeController");
@@ -61,14 +59,16 @@ const NAO_SERVIR = [/^\/package(-lock)?\.json$/, /^\/tests(\/|$)/];
  */
 class Server {
   /**
-   * @param {{dbPath: string, port: number, sessionSecret: string, sessionSecure: boolean, discordWebhookUrl?: string}} config
+   * @param {{dbPath: string, port: number, sessionSecret: string, sessionSecure: boolean, agentApiToken?: string, trustProxy?: boolean, ambiente?: Record<string, string|undefined>}} config
+   *   `ambiente` (normalmente process.env) só serve para importar, uma vez, as
+   *   regras da equipe que antes moravam no .env -- ver
+   *   ConfiguracaoSistemaService.importarValoresIniciais.
    */
   constructor(config) {
     this.config = config;
     this.db = new Database(config.dbPath);
     this.app = express();
     this.app.locals.agentApiToken = config.agentApiToken;
-    this.app.set("publicUrl", config.publicUrl);
     this._buildServices();
     this._buildControllers();
     this._configureExpress();
@@ -78,17 +78,21 @@ class Server {
     // "historico" é passado para os demais serviços registrarem quem fez
     // o quê -- ver services/HistoricoService.js.
     const historico = new HistoricoService(this.db);
-    const notifications = new NotificationService(this.config);
+    // As regras da equipe vêm primeiro: quase todo o resto lê alguma delas.
+    const configuracaoSistema = new ConfiguracaoSistemaService(this.db, historico, { tokenAgentes: this.config.agentApiToken });
+    // Uma vez só, na primeira subida depois de as regras irem para o banco --
+    // ver ConfiguracaoSistemaService.importarValoresIniciais.
+    configuracaoSistema.importarValoresIniciais(this.config.ambiente || {});
+    const notifications = new NotificationService({ webhookUrl: () => configuracaoSistema.valor("discordWebhookUrl") });
     const versoes = new VersaoService(this.db, historico);
-    const configuracaoSistema = new ConfiguracaoSistemaService(this.db, historico);
     this.services = {
       historico,
       notifications,
       auth: new AuthService(this.db, historico),
       preferencias: new PreferenciaService(this.db),
       clientes: new ClienteService(this.db, historico),
-      atualizacoes: new AtualizacaoService(this.db, historico, notifications),
-      agendamentos: new AgendamentoService(this.db, historico),
+      atualizacoes: new AtualizacaoService(this.db, historico, notifications, configuracaoSistema),
+      agendamentos: new AgendamentoService(this.db, historico, configuracaoSistema),
       backups: new BackupService(this.db, historico),
       versoes,
       configuracaoSistema,
@@ -98,7 +102,6 @@ class Server {
       // Recebe "configuracaoSistema" para não rodar nenhuma checagem
       // (nem gerar alarme falso) enquanto o Atualizador estiver desativado.
       alertaAgentes: new AlertaAgenteService(this.db, versoes, notifications, configuracaoSistema),
-      configuracaoApi: new ConfiguracaoApiService({ historico }),
       saude: new SaudeService({ db: this.db, backups: new BackupService(this.db, historico), versoes }),
     };
   }
@@ -115,10 +118,12 @@ class Server {
       backups: new BackupsController(s.backups),
       historico: new HistoricoController(s.historico),
       usuarios: new UsersController(s.auth),
-      versoes: new VersoesController(s.versoes),
+      // A URL pública entra nos links de download dos pacotes. É regra da
+      // equipe (Administração); sem ela, vale o endereço pelo qual o admin
+      // acessou o painel ao enviar o pacote.
+      versoes: new VersoesController(s.versoes, () => s.configuracaoSistema.valor("publicUrl")),
       preferencias: new PreferenciasController(s.preferencias),
-      configuracaoApi: new ConfiguracaoApiController(s.configuracaoApi),
-      configuracaoSistema: new ConfiguracaoSistemaController(s.configuracaoSistema),
+      configuracaoSistema: new ConfiguracaoSistemaController(s.configuracaoSistema, s.notifications),
       saude: new SaudeController(s.saude),
     };
     this.loginLimiter = new LoginRateLimiter();
@@ -249,11 +254,17 @@ class Server {
   }
 
   start() {
-    // Intervalo do alerta de agentes é minutos, não ms, pra ficar legível
-    // no .env -- e tem um piso de 1 minuto pra ninguém configurar "0" ou
-    // um número tão pequeno que vira um martelo batendo no banco.
-    const intervaloMinutos = Math.max(1, Number(this.config.alertaAgentesIntervaloMinutos) || 15);
-    this.services.alertaAgentes.start(intervaloMinutos * 60 * 1000);
+    // O intervalo é regra da equipe (minutos, com piso de 1 garantido em
+    // config/regrasEquipe.js), lido de novo a cada reprogramação: mudar o
+    // intervalo ou o webhook na Administração reinicia o timer na hora, e
+    // configurar o webhook com o servidor já no ar liga o alerta sem reiniciar.
+    const { alertaAgentes, configuracaoSistema } = this.services;
+    alertaAgentes.start(() => configuracaoSistema.valor("alertaAgentesIntervaloMinutos") * 60 * 1000);
+    configuracaoSistema.aoMudar((mudou) => {
+      if (mudou.includes("alertaAgentesIntervaloMinutos") || mudou.includes("discordWebhookUrl")) {
+        alertaAgentes.reprogramar();
+      }
+    });
     return new Promise((resolve) => {
       this.httpServer = this.app.listen(this.config.port, () => resolve(this.httpServer));
     });

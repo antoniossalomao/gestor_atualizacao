@@ -6,8 +6,13 @@
  * em VersaoService.
  */
 class VersoesController {
-  constructor(service) {
+  /**
+   * @param {import("../services/VersaoService").VersaoService} service
+   * @param {() => string} [publicUrl] regra da equipe, lida a cada upload
+   */
+  constructor(service, publicUrl = () => "") {
     this.service = service;
+    this.publicUrl = publicUrl;
   }
 
   list = (req, res) => res.json(this.service.list());
@@ -74,7 +79,7 @@ class VersoesController {
         req.body || {},
         req.session.user,
         req.file,
-        req.app.get("publicUrl") || `${req.protocol}://${req.get("host")}`
+        this.publicUrl() || `${req.protocol}://${req.get("host")}`
       );
       res.status(201).json(item);
     } catch (err) {

@@ -8,16 +8,22 @@ import { html } from "../utils/html.js";
 import { todayBR } from "../utils/date.js";
 import { formatarMes, primeiroDiaDoMes, tendenciaMensal } from "../domain/resumo.js";
 import { statTile, deltaTendencia } from "../templates/resumo.js";
-import { DESATUALIZADO_DIAS } from "../config.js";
 
 /**
  * Aba Resumo: indicadores gerais. Equivalente de gestor/views/resumo.py -- a
  * diferença é que os cálculos moram no backend (AtualizacaoService.resumo()),
  * então esta classe só cuida de desenhar o que a API devolve.
  */
+/** @param {number|undefined} dias */
+function rotuloParados(dias) {
+  return dias ? `Parados Há Mais de ${dias} Dias` : "Clientes Parados";
+}
+
 export class ResumoView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
+    /** Regra da equipe; o /resumo confirma o valor a cada carga (ver _render). */
+    this.desatualizadoDias = ctx?.regras?.desatualizadoDias;
     this._buildDom();
   }
 
@@ -27,7 +33,7 @@ export class ResumoView extends View {
         ${statTile("clientes", "clientes", "Clientes", "Ver clientes")}
         ${statTile("atualizacoes", "atualizacoes", "Atualizações", "Ver histórico")}
         ${statTile("mes", "calendario", "Atualizações Este Mês", "Ver o mês")}
-        ${statTile("desatualizados", "alerta", `Parados Há Mais de ${DESATUALIZADO_DIAS} Dias`, "Ver por sistema")}
+        ${statTile("desatualizados", "alerta", rotuloParados(this.desatualizadoDias), "Ver por sistema")}
       </div>
 
       <!--
@@ -145,6 +151,13 @@ export class ResumoView extends View {
     this._setStat("atualizacoes", resumo.totalAtualizacoes);
     this._setStat("mes", resumo.mesCount);
     this._setStat("desatualizados", resumo.desatualizados.length);
+    // O limite é regra da equipe e pode ter mudado desde que a tela abriu: o
+    // rótulo usa o número com que o servidor MONTOU esta lista, não o que a
+    // tela tinha guardado -- os dois não podem se contradizer.
+    if (resumo.desatualizadoDias) {
+      this.container.querySelector('[data-stat="desatualizados"] [data-role="rotulo"]').textContent =
+        rotuloParados(resumo.desatualizadoDias);
+    }
     this._setDelta("mes", tendenciaMensal(resumo.atualizacoesPorMes || []));
 
     const desatTile = this.container.querySelector('[data-stat="desatualizados"]');

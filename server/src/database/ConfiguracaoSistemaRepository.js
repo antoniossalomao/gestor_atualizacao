@@ -27,6 +27,18 @@ class ConfiguracaoSistemaRepository extends BaseRepository {
       )
       .run(chave, valor);
   }
+
+  /**
+   * Grava várias chaves numa transação só: salvar a tela de regras é uma
+   * decisão, e metade dela gravada (a outra metade recusada por erro no meio)
+   * deixaria a equipe com uma combinação que ninguém escolheu.
+   * @param {Array<[string, string]>} pares chave e valor
+   */
+  setVarias(pares) {
+    this.conn.transaction(() => {
+      for (const [chave, valor] of pares) this.set(chave, valor);
+    })();
+  }
 }
 
 module.exports = { ConfiguracaoSistemaRepository };

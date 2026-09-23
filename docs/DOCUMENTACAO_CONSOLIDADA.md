@@ -311,13 +311,13 @@ como um servidor web acessível por várias pessoas ao mesmo tempo, cada uma com
   ordenação calculada no servidor.
 - **Segurança de servidor web**: cabeçalhos HTTP de proteção (`helmet`) e limite de tentativas de
   login por IP — o app original, local e sem login, não precisava de nenhum dos dois.
-- **Notificação no Discord** (opcional, `DISCORD_WEBHOOK_URL`): avisa um canal a cada atualização
+- **Notificação no Discord** (opcional, webhook em Administração → Notificações): avisa um canal a cada atualização
   cadastrada e quando um agente do Atualizador automático fica offline/com erro.
 
 **Funcionalidades adicionadas em set/2026:**
 
 - **Alerta proativo de agente offline/com erro** (`AlertaAgenteService`) — confere sozinho, a cada
-  `ALERTA_AGENTES_INTERVALO_MINUTOS` (padrão 15 min), a situação de cada agente do Atualizador
+  N minutos (regra da equipe, padrão 15, em Administração → Atualizador), a situação de cada agente do Atualizador
   automático e avisa o Discord só na *transição* para "offline" (24h+ sem contato) ou "erro" — não
   repete o aviso a cada ciclo enquanto o problema continua.
 - **Tendência mensal de atualizações** (Resumo) — gráfico dos últimos 12 meses.
@@ -386,8 +386,10 @@ domain/*.js       -- vocabulário do negócio, SEM tocar no DOM: agenteStatus, a
                      do navegador
 utils/*.js        -- utilidades genéricas: date, html, color, icons, debounce, guard, arquivo
 views/*.js        -- uma classe por tela (Resumo, Atualizações, Agendamentos, Clientes, Consultar
-                     Cliente, Distribuição, Versões, Sistemas, Histórico, Login) e os painéis
-                     (Configurações, Backups, Usuários, Saúde, Configuração da API)
+                     Cliente, Distribuição, Versões, Sistemas, Administração, Histórico,
+                     Login) e o painel de Configurações pessoais
+views/administracao/ -- uma classe por aba da Administração (Usuários, Regras, Notificações,
+                     Atualizador, Backups, Saúde); o Histórico entra lá como a própria view
 api/ApiClient.js  -- único lugar que chama fetch; todo o resto fala com o servidor por ele
 
 app/theme.js + app/appearance.js + views/ConfiguracoesPanel.js
@@ -666,8 +668,12 @@ aponte `DB_PATH` direto pro arquivo original) — o schema é compatível.
 | `DB_PATH` | Caminho do `gestao.db` |
 | `SESSION_SECRET` | Assina o cookie de login — trocar por valor aleatório em produção |
 | `SESSION_SECURE` | `true` quando atrás de HTTPS |
-| `DISCORD_WEBHOOK_URL` | Opcional — avisa Discord a cada atualização nova e quando um agente fica offline/com erro |
-| `ALERTA_AGENTES_INTERVALO_MINUTOS` | Intervalo do alerta proativo (padrão 15) |
+| `AGENT_API_TOKEN` | Chave compartilhada com os agentes |
+
+As **regras da equipe** (webhook do Discord, URL pública, intervalo do alerta, dias até
+"desatualizado", dias até arquivar tarefa, cópias de backup) moram no banco
+(`configuracoes_sistema`, definidas em `server/src/config/regrasEquipe.js`) e são editadas em
+Administração. As variáveis antigas do `.env` para elas são lidas só uma vez, na primeira subida.
 
 **Backup e restauração:** cópia automática do `gestao.db` em `server/data/backups/` a cada início
 do servidor (mantém as 10 mais recentes). O botão **Backups** no cabeçalho lista e restaura — a
@@ -760,7 +766,8 @@ catálogo por já aparecerem em atualizações reais: `B_NFCe`, `B_Sped`, `B_Ven
 `B_Marques` e `B_Marivet`.
 
 **Arquivamento automático de agendamentos concluídos.** Tarefa concluída há mais de
-`AGENDAMENTO_ARQUIVAR_DIAS` (30, no `.env`) sai da lista sozinha. A varredura roda junto da
+N dias (regra da equipe "Arquivar tarefa concluída depois de", padrão 30, em Administração → Regras
+da equipe) sai da lista sozinha. A varredura roda junto da
 listagem, **sem agendador**: o app não tem um, um cron só para isto seria mais peça do que o
 problema pede, e um `UPDATE` cujo `WHERE` quase nunca casa, numa tabela de dezenas de linhas, roda
 exatamente quando alguém está olhando a lista. Coluna `arquivado_em`, **não** `DELETE`: a tarefa
@@ -789,7 +796,7 @@ não apareciam no Resumo nem na Consulta. Foram resolvidos 6: três clientes can
 5 atualizações apagadas, um ex-cliente teve a sua apagada, um cliente que estava na lista externa
 mas não no cadastro foi criado (com o próximo código da sequência `C` + 6 dígitos) e as duas
 atualizações que traziam o nome dele sem o sufixo "LTDA" foram vinculadas a esse cadastro. Restam **32 órfãos / 48 registros**, pendentes de triagem. Toda a limpeza está
-registrada na aba Histórico sob o autor "limpeza de cadastro".
+registrada no Histórico (hoje em Administração) sob o autor "limpeza de cadastro".
 
 ### 2.8 Mudanças de 15/09/2026
 
@@ -1016,7 +1023,7 @@ mantendo os últimos `BACKUPS_PARA_MANTER` ciclos (padrão 10).
 ### 3.4 Estado atual: pré-piloto
 
 > **Em produção, o Atualizador está DESATIVADO** desde 22/09/2026, 09:19 (horário de
-> Brasília), por Antonio Salomão (Configurações → Sistema → Atualizador; registro no
+> Brasília), por Antonio Salomão (Administração → Atualizador; registro no
 > Histórico). Enquanto estiver assim:
 >
 > - toda a API dos agentes (`/api/update/*`) responde **403**: nenhum agente consulta,

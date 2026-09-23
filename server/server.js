@@ -34,9 +34,11 @@ const config = {
   sessionSecret: String(process.env.SESSION_SECRET),
   sessionSecure: process.env.SESSION_SECURE === "true",
   agentApiToken: process.env.AGENT_API_TOKEN || "",
-  publicUrl: process.env.PUBLIC_URL || "",
-  discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL || "",
-  alertaAgentesIntervaloMinutos: Number(process.env.ALERTA_AGENTES_INTERVALO_MINUTOS) || 15,
+  // PUBLIC_URL, DISCORD_WEBHOOK_URL, ALERTA_AGENTES_INTERVALO_MINUTOS e
+  // AGENDAMENTO_ARQUIVAR_DIAS viraram regras da equipe, no banco, editadas
+  // na tela Administração. O .env só é lido para elas UMA vez, para trazer o
+  // que a instalação já tinha -- ver ConfiguracaoSistemaService.importarValoresIniciais.
+  ambiente: process.env,
   // "true" quando há exatamente um proxy reverso confiável na frente (Caddy,
   // nginx...) terminando o HTTPS. Ligado: o Express confia no X-Forwarded-For
   // para descobrir o IP real do cliente (usado pelo rate limiter do login).

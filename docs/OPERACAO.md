@@ -8,7 +8,7 @@ Os comandos assumem que você está no servidor onde o painel roda, na pasta
 `web/`, num PowerShell. Onde for preciso ser administrador, está dito.
 
 > **Antes de qualquer intervenção que mexa em dados:** baixe o banco atual pelo
-> painel (**Configurações → Sistema → Backups → Baixar banco atual**). Leva
+> painel (**Administração → Backups → Baixar o banco de agora**). Leva
 > segundos e é a diferença entre um susto e um prejuízo.
 
 ---
@@ -117,7 +117,7 @@ transição**, não a cada ciclo, para não virar ruído.
 Investigue nesta ordem — do mais provável para o menos:
 
 0. **O Atualizador está ligado?** Desde 22/09/2026 ele está **desativado de
-   propósito** em Configurações → Sistema → Atualizador (ver a seção 3.4 de
+   propósito** em Administração → Atualizador (ver a seção 3.4 de
    [DOCUMENTACAO_CONSOLIDADA.md](DOCUMENTACAO_CONSOLIDADA.md#34-estado-atual-pré-piloto)).
    Desativado, a API dos agentes responde 403 a tudo, e a aba Distribuição
    nem aparece. Nenhum cliente atualiza e nenhum alerta sai. Se for esse
@@ -141,11 +141,13 @@ Investigue nesta ordem — do mais provável para o menos:
    - **sem resposta** → rede/firewall, ou `API_URL` apontando para um endereço
      que o cliente não enxerga.
 
-4. **O `PUBLIC_URL` está certo?** Esta é a armadilha clássica: se estiver
-   `http://localhost:3000`, o link de download que o agente recebe aponta para
-   **ele mesmo**, e o download falha sempre. `PUBLIC_URL` tem que ser o endereço
-   pelo qual *os outros* enxergam o servidor. Se o IP veio de DHCP e mudou,
-   é isto.
+4. **O endereço para os agentes está certo?** (Administração → Atualizador →
+   "Endereço deste servidor para os agentes".) Esta é a armadilha clássica: se
+   estiver `http://localhost:3000`, o link de download que o agente recebe
+   aponta para **ele mesmo**, e o download falha sempre. Tem que ser o endereço
+   pelo qual *os outros* enxergam o servidor. Se o IP veio de DHCP e mudou, é
+   isto. Atenção: o link vai gravado no pacote no momento do upload -- pacote
+   enviado com o endereço errado precisa ser enviado de novo.
 
 5. **O agente está pausado?** Existe uma chave geral por cliente no painel. Um
    agente pausado fica vivo e respondendo, mas não inicia ciclo nenhum — e é
@@ -167,7 +169,7 @@ Investigue nesta ordem — do mais provável para o menos:
 Um `gestao.db` é copiado para `server/data/backups/` **toda vez que o servidor
 sobe**, e as 10 cópias mais recentes ficam guardadas.
 
-Pelo painel (**Configurações → Sistema → Backups**), como administrador:
+Pelo painel (**Administração → Backups**), como administrador:
 
 1. **Baixe o banco atual primeiro.** Restaurar substitui o que existe hoje; se
    o problema for outro, você vai querer o estado anterior de volta.
@@ -194,6 +196,9 @@ não é uma operação isolada no servidor:
 2. Atualize o `API_TOKEN` no `atualizador.ini` de **todos** os agentes
    instalados e reinicie cada serviço.
 3. **Só então** troque o `AGENT_API_TOKEN` no `.env` do servidor e reinicie.
+   (A chave não é editável pelo navegador: a tela Administração → Atualizador
+   só mostra se ela está configurada e como termina, para conferir que a
+   troca pegou.)
 
 Fazendo na ordem inversa, todos os agentes passam a receber 401 até você
 terminar — e do ponto de vista do painel isso é **silencioso**: os agentes
@@ -230,7 +235,7 @@ O banco é SQLite com driver **síncrono**, então uma consulta lenta trava o
 processo inteiro ([ADR-0002](adr/0002-sqlite-com-better-sqlite3.md)). Com o
 volume atual isso é teórico, mas se acontecer:
 
-1. **Confira o tamanho do banco** em **Configurações → Sistema → Saúde**.
+1. **Confira o tamanho do banco** em **Administração → Saúde do servidor**.
 2. **Alguém pediu uma página gigante?** O `pageSize` tem teto de 200 no
    servidor, então não é isso — mas exportação de `.xlsx` de milhares de linhas
    é legitimamente pesada e bloqueia enquanto roda.
@@ -263,7 +268,7 @@ npm run check     # verificação estática de tipos
 npm test          # 458 testes
 ```
 
-E, pelo navegador, **Configurações → Sistema → Saúde**: integridade do banco,
+E, pelo navegador, **Administração → Saúde do servidor**: integridade do banco,
 último backup, situação de cada agente, uso de memória e tempo no ar.
 
 `statusGeral` só fica `saudavel` quando a integridade do banco está `ok` **e**

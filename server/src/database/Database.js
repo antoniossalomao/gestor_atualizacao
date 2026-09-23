@@ -2,7 +2,8 @@ const fs = require("fs");
 const path = require("path");
 const Sqlite3 = require("better-sqlite3");
 
-const { SISTEMAS_CONHECIDOS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS, BACKUP_KEEP } = require("../config/constants");
+const { SISTEMAS_CONHECIDOS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
+const { lerRegra } = require("../config/regrasEquipe");
 const { BaseRepository } = require("./BaseRepository");
 const { AtualizacaoRepository } = require("./AtualizacaoRepository");
 const { ClienteRepository } = require("./ClienteRepository");
@@ -573,12 +574,14 @@ class Database {
       const verificacoes = this._lerVerificacoesBackup(dir);
       verificacoes[arquivoBackup] = integro;
 
-      // Mantem so os BACKUP_KEEP mais recentes.
+      // Mantem so os N mais recentes -- N e regra da equipe (Administracao),
+      // lida direto do repositorio porque o Database esta abaixo dos
+      // servicos e nao pode depender de ConfiguracaoSistemaService.
       const existentes = fs
         .readdirSync(dir)
         .filter((f) => f.startsWith(`${name}_`) && f.endsWith(ext))
         .sort();
-      const antigos = existentes.slice(0, Math.max(0, existentes.length - BACKUP_KEEP));
+      const antigos = existentes.slice(0, Math.max(0, existentes.length - lerRegra(this.configuracoesSistema, "backupsManter")));
       for (const arquivo of antigos) {
         fs.rmSync(path.join(dir, arquivo), { force: true });
         delete verificacoes[arquivo];
