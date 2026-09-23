@@ -1,5 +1,5 @@
-import { icon } from "../utils/icons.js";
-import { escapeHtml } from "../utils/html.js";
+import { iconHtml } from "../utils/icons.js";
+import { html } from "../utils/html.js";
 
 const MAX_RESULTADOS = 12;
 
@@ -61,10 +61,10 @@ export class CommandPalette {
 
     this.overlay = document.createElement("div");
     this.overlay.className = "cmdk-overlay";
-    this.overlay.innerHTML = `
+    this.overlay.innerHTML = html`
       <div class="cmdk" role="dialog" aria-modal="true" aria-label="Paleta de comandos">
         <div class="cmdk__field">
-          ${icon("busca")}
+          ${iconHtml("busca")}
           <input type="text" class="cmdk__input" role="combobox" aria-expanded="true" aria-controls="cmdk-lista"
                  aria-autocomplete="list" placeholder="Buscar telas, ações e clientes..." autocomplete="off" />
           <kbd class="cmdk__esc">Esc</kbd>
@@ -134,7 +134,7 @@ export class CommandPalette {
   _render() {
     this.lista.replaceChildren();
     if (this.filtrados.length === 0) {
-      this.lista.innerHTML = `<div class="cmdk__empty">Nada encontrado para "${escapeHtml(this.input.value)}".</div>`;
+      this.lista.innerHTML = html`<div class="cmdk__empty">Nada encontrado para "${this.input.value}".</div>`;
       return;
     }
 
@@ -152,11 +152,11 @@ export class CommandPalette {
       item.setAttribute("role", "option");
       item.setAttribute("aria-selected", String(idx === this.indiceAtivo));
       item.id = `cmdk-item-${idx}`;
-      item.innerHTML = `
-        <span class="cmdk__icon">${icon(cmd.icone || "seta")}</span>
+      item.innerHTML = html`
+        <span class="cmdk__icon">${iconHtml(cmd.icone || "seta")}</span>
         <span class="cmdk__labels">
-          <strong>${escapeHtml(cmd.titulo)}</strong>
-          ${cmd.subtitulo ? `<span>${escapeHtml(cmd.subtitulo)}</span>` : ""}
+          <strong>${cmd.titulo}</strong>
+          ${cmd.subtitulo && html`<span>${cmd.subtitulo}</span>`}
         </span>
       `;
       // "mousedown" e não "click": o click só chegaria depois do blur do

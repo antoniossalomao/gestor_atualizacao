@@ -7,13 +7,13 @@ import { toast } from "../components/Toast.js";
 import { debounce } from "../utils/debounce.js";
 import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { emptyState } from "../components/EmptyState.js";
-import { plural, escapeHtml, escapeAttr } from "../utils/html.js";
-import { icon } from "../utils/icons.js";
+import { plural, html } from "../utils/html.js";
+import { iconHtml } from "../utils/icons.js";
 import { marcarOcupado } from "../utils/guard.js";
 import { prefs } from "../app/prefs.js";
 import { Drawer } from "../components/Drawer.js";
-
-const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+import { STATUS_CONCLUIDO } from "../domain/agendamento.js";
+import { colunasKanban } from "../templates/agendamentos.js";
 
 const META_COLUNAS = {
   "A Fazer": { titulo: "A Fazer" },
@@ -68,7 +68,7 @@ export class AgendamentosView extends View {
   }
 
   _buildDom() {
-    this.container.innerHTML = `
+    this.container.innerHTML = html`
       <div class="view-actions">
         <div class="view-actions__right">
           <button type="button" class="btn btn--accent" data-action="novo-agendamento">+ Novo Agendamento</button>
@@ -79,14 +79,14 @@ export class AgendamentosView extends View {
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${icon("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
             <span class="form-actions__hint text-muted" data-role="modo"></span>
           </div>
           <div class="form-actions__right">
             <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
-            <button type="button" class="btn btn--ghost" data-action="modal-converter" hidden>${icon("converter")} Converter</button>
-            <button type="button" class="btn btn--ghost" data-action="modal-reabrir" hidden>${icon("atualizar")} Reabrir</button>
-            <button type="button" class="btn btn--ghost" data-action="modal-done" hidden>${icon("check")} Concluir</button>
+            <button type="button" class="btn btn--ghost" data-action="modal-converter" hidden>${iconHtml("converter")} Converter</button>
+            <button type="button" class="btn btn--ghost" data-action="modal-reabrir" hidden>${iconHtml("atualizar")} Reabrir</button>
+            <button type="button" class="btn btn--ghost" data-action="modal-done" hidden>${iconHtml("check")} Concluir</button>
             <button type="submit" class="btn btn--accent" data-action="add">Adicionar Tarefa</button>
             <button type="button" class="btn btn--accent" data-action="update" hidden>Salvar Alterações</button>
           </div>
@@ -103,7 +103,7 @@ export class AgendamentosView extends View {
             <label class="field__label" for="age-status">Status</label>
             <select class="input" id="age-status" data-role="status-filter">
               <option>Todos</option>
-              ${STATUS_OPTIONS.map((s) => `<option>${s}</option>`).join("")}
+              ${STATUS_OPTIONS.map((s) => html`<option>${s}</option>`)}
               <option value="${FILTRO_ARQUIVADAS}">${FILTRO_ARQUIVADAS}</option>
             </select>
           </div>
@@ -224,13 +224,13 @@ export class AgendamentosView extends View {
       const field = document.createElement("div");
       field.className = "field";
       if (["tarefa", "cliente", "obs"].includes(col.key)) field.classList.add("field--full");
-      field.innerHTML = `<label class="field__label" for="${id}">${col.label}</label>`;
+      field.innerHTML = html`<label class="field__label" for="${id}">${col.label}</label>`;
 
       let input;
       if (col.key === "status") {
         input = document.createElement("select");
         input.className = "input";
-        input.innerHTML = STATUS_OPTIONS.map((s) => `<option>${s}</option>`).join("");
+        input.innerHTML = html`${STATUS_OPTIONS.map((s) => html`<option>${s}</option>`)}`;
       } else {
         input = document.createElement("input");
         input.type = col.key === "horario" ? "time" : "text";
@@ -490,26 +490,9 @@ export class AgendamentosView extends View {
     this.kanban.innerHTML = this._gerarHtmlColunas(colunas);
   }
 
+  /** A marca\u00e7\u00e3o mora em templates/agendamentos.js, onde \u00e9 testada. */
   _gerarHtmlColunas(colunas) {
-    const podeArrastarCol = this.user?.role !== "consulta" && colunas.length > 1;
-    return colunas
-      .map((col) => {
-        const cardsHtml = col.itens.map((r) => cartaoKanban(r, this.user?.role)).join("");
-        const emptyHtml = `<div class="kanban-empty-placeholder"><span>Nenhuma tarefa aqui</span></div>`;
-        const slug = col.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-");
-        return `
-          <section class="kanban-column kanban-column--${slug}" data-status="${col.status}">
-            <header class="kanban-column__header" ${podeArrastarCol ? 'draggable="true" data-col-drag="true" title="Arraste para reordenar coluna"' : ""}>
-              <div class="kanban-column__header-top">
-                <h3 class="kanban-column__title">${escapeHtml(col.titulo)}</h3>
-                <span class="kanban-column__count">${col.itens.length}</span>
-              </div>
-            </header>
-            <div class="kanban-column__cards">${cardsHtml || emptyHtml}</div>
-          </section>
-        `;
-      })
-      .join("");
+    return colunasKanban(colunas, this.user?.role);
   }
 
   async _moverCard(id, novoStatus) {
@@ -872,51 +855,8 @@ export class AgendamentosView extends View {
   }
 }
 
-function cartaoKanban(row, role) {
-  const vencida = row.status !== STATUS_CONCLUIDO && estaAtrasada(row.data);
-  const hoje = row.status !== STATUS_CONCLUIDO && row.data === todayBR();
-  const podeArrastar = role !== "consulta" && !row.arquivadoEm;
-  const dataHora = [row.data, row.horario].filter(Boolean).join(" · ");
-  const meta = [row.sistema, row.responsavel].filter(Boolean).join(" · ");
-
-  return `<article class="kanban-card${vencida ? " is-overdue" : ""}" ${
-    podeArrastar ? 'draggable="true"' : ""
-  } data-id="${row.id}" data-status="${row.status}" tabindex="0" role="button" aria-label="Tarefa ${escapeHtml(row.tarefa)}">
-    <div class="kanban-card__header">
-      <strong class="kanban-card__client" title="${escapeAttr(row.cliente || "Sem cliente")}">${escapeHtml(row.cliente || "Sem cliente")}</strong>
-      ${vencida ? '<span class="badge badge--danger">Vencida</span>' : hoje ? '<span class="badge badge--accent">Hoje</span>' : ""}
-    </div>
-    <p class="kanban-card__title">${escapeHtml(row.tarefa)}</p>
-    <div class="kanban-card__footer">
-      <span class="kanban-card__meta">${escapeHtml(meta || "—")}</span>
-      ${dataHora ? `<time class="kanban-card__time${vencida ? " is-vencida" : hoje ? " is-today" : ""}">${escapeHtml(dataHora)}</time>` : ""}
-    </div>
-    ${
-      row.arquivadoEm && role !== "consulta"
-        ? `
-      <div class="kanban-card__actions">
-        <button type="button" class="btn btn--small btn--ghost" data-row-action="reabrir" data-id="${row.id}">
-          ${icon("atualizar")} Reabrir
-        </button>
-      </div>`
-        : ""
-    }
-  </article>`;
-}
-
 function isTypingTarget(el) {
   return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
-}
-
-/** True se `dataBR` (dd/mm/aaaa) for anterior a hoje. Data vazia/mal formada nunca conta como atrasada. */
-function estaAtrasada(dataBR) {
-  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dataBR || "");
-  if (!m) return false;
-  const [, diaStr, mesStr, anoStr] = m;
-  const data = new Date(Number(anoStr), Number(mesStr) - 1, Number(diaStr));
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  return data < hoje;
 }
 
 function errorMessage(err) {

@@ -1,27 +1,12 @@
 import { View } from "../app/View.js";
 import { debounce } from "../utils/debounce.js";
 import { emptyState } from "../components/EmptyState.js";
-import { plural, escapeHtml, escapeAttr, copyToClipboard } from "../utils/html.js";
+import { plural, html, copyToClipboard } from "../utils/html.js";
 import { toast } from "../components/Toast.js";
-import { tempoRelativo, formatarDataHora } from "../utils/date.js";
+import { montarMatrizVersoes } from "../domain/matrizVersoes.js";
+import { cartaoAcesso, CABECALHO_MATRIZ, linhaMatrizVersoes } from "../templates/consulta.js";
 
 const MAX_SUGESTOES = 50;
-
-/**
- * Um log de atualização pode registrar vários sistemas de uma vez, separados
- * por vírgula (ex.: "B_Vendas, B_NFe, B_Importa" quando o lote atualiza os
- * três juntos). Sem separar esses nomes, a matriz de versões tratava a
- * string inteira como se fosse um "sistema" só, e cada sistema individual
- * (ex.: "B_Vendas" sozinho) nunca batia com o registro combinado -- mesmo
- * instalado, aparecia como "Não instalado". Mesmo critério de split usado no
- * backend (ver splitSystems em AtualizacaoRepository.js).
- */
-function splitSistemas(texto) {
-  return String(texto || "")
-    .split(/,|\s+e\s+/i)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
 
 /**
  * Aba Consultar Cliente: busca por nome e mostra sistemas + última
@@ -42,7 +27,7 @@ export class ConsultaView extends View {
   }
 
   _buildDom() {
-    this.container.innerHTML = `
+    this.container.innerHTML = html`
       <div class="consulta-layout">
         <div class="card consulta-search">
           <h2 class="card__title">Buscar Cliente</h2>
@@ -194,7 +179,7 @@ export class ConsultaView extends View {
   }
 
   _renderDetail(cliente, historico, painelVersoes, acessos = []) {
-    this.detailBox.innerHTML = `
+    this.detailBox.innerHTML = html`
       <div class="consulta-detail__name"></div>
       <div class="consulta-detail__subtitle"></div>
       <nav class="client-hub-tabs" role="tablist" aria-label="Ficha 360 graus">
@@ -226,11 +211,7 @@ export class ConsultaView extends View {
     for (const acesso of acessos) {
       const card = document.createElement("article");
       card.className = "access-card";
-      card.innerHTML = `<h3>${escapeHtml(acesso.maquina)}</h3>
-        <p><span>AnyDesk</span><strong>${escapeHtml(acesso.anydesk || "—")}</strong></p>
-        <p><span>Suporte Bredas</span><strong>${escapeHtml(acesso.suporte_bredas || acesso.suporteBredas || "—")}</strong></p>
-        <div class="form-actions"><button type="button" class="btn btn--small" data-copy="anydesk">Copiar AnyDesk</button>
-        <button type="button" class="btn btn--small" data-copy="bredas">Copiar Suporte</button></div>`;
+      card.innerHTML = cartaoAcesso(acesso);
       card.addEventListener("click", async (e) => {
         const tipo = e.target.closest("[data-copy]")?.dataset.copy;
         if (!tipo) return;
@@ -282,24 +263,11 @@ export class ConsultaView extends View {
     });
   }
 
+  /** As contas estão em domain/matrizVersoes.js e a marcação em templates/consulta.js -- os dois testados. */
   _renderMatrizVersoes(cliente, historico, painelVersoes) {
     const container = this.detailBox.querySelector('[data-role="versao-matriz"]');
-    const sistemas = new Set(cliente.sistemas || []);
-
-    const nomeNorm = (cliente.nome || "").trim().toLowerCase();
-    const cnpjNorm = String(cliente.cnpj || "").replace(/\D/g, "");
-
-    const agentes = (painelVersoes?.agentes || []).filter((a) => {
-      if (cnpjNorm && a.cnpj && a.cnpj.replace(/\D/g, "") === cnpjNorm) return true;
-      if (a.empresa && a.empresa.trim().toLowerCase() === nomeNorm) return true;
-      return false;
-    });
-
-    agentes.forEach((a) => splitSistemas(a.ultimoSistema).forEach((s) => sistemas.add(s)));
-    (historico || []).forEach((h) => splitSistemas(h.sistema).forEach((s) => sistemas.add(s)));
-
-    const listaSistemas = Array.from(sistemas).sort((a, b) => a.localeCompare(b));
-    if (listaSistemas.length === 0) {
+    const linhas = montarMatrizVersoes(cliente, historico, painelVersoes);
+    if (linhas.length === 0) {
       container.replaceChildren(
         emptyState({
           titulo: "Nenhum sistema associado",
@@ -310,114 +278,19 @@ export class ConsultaView extends View {
       return;
     }
 
-    const ativas = painelVersoes?.ativas || [];
-
     const tableWrap = document.createElement("div");
     tableWrap.className = "table-wrap";
     tableWrap.style.marginBottom = "var(--sp-2)";
 
     const table = document.createElement("table");
     table.className = "data-table";
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th scope="col">Sistema</th>
-          <th scope="col" style="text-align: right">Instalada</th>
-          <th scope="col" style="text-align: right">Publicada</th>
-          <th scope="col">Estado</th>
-          <th scope="col">Último contato</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    `;
+    table.innerHTML = CABECALHO_MATRIZ;
 
     const tbody = table.querySelector("tbody");
-
-    for (const sistema of listaSistemas) {
-      const versaoAtiva = ativas.find((v) => v.sistema.toLowerCase() === sistema.toLowerCase())?.versao || null;
-      const agente = agentes.find((a) => splitSistemas(a.ultimoSistema).some((s) => s.toLowerCase() === sistema.toLowerCase()));
-      // historico já vem ordenado do mais recente pro mais antigo (recent-by-client), então o
-      // primeiro registro cujo campo sistema mencione este sistema é o mais atual para ele.
-      const histReg = (historico || []).find((h) => splitSistemas(h.sistema).some((s) => s.toLowerCase() === sistema.toLowerCase()));
-
-      const instalada = agente?.ultimaVersao || histReg?.versao || "—";
-      const publicada = versaoAtiva || "Nenhuma";
-
-      let estadoLabel = "Atualizado";
-      let estadoBadge = "badge--success";
-
-      if (agente) {
-        if (agente.situacao === "ok") {
-          estadoLabel = "Atualizado";
-          estadoBadge = "badge--success";
-        } else if (agente.situacao === "desatualizado") {
-          estadoLabel = "Atrasado";
-          estadoBadge = "badge--warning";
-        } else if (agente.situacao === "erro") {
-          estadoLabel = "Erro";
-          estadoBadge = "badge--danger";
-        } else if (agente.situacao === "offline") {
-          estadoLabel = "Sem contato";
-          estadoBadge = "badge--muted";
-        } else if (agente.situacao === "pendencias") {
-          estadoLabel = "Pendências";
-          estadoBadge = "badge--warning";
-        } else if (agente.situacao?.startsWith("aguardando_autorizacao")) {
-          estadoLabel = "Aguardando";
-          estadoBadge = "badge--warning";
-        } else if (agente.situacao === "pausado") {
-          estadoLabel = "Pausado";
-          estadoBadge = "badge--muted";
-        } else {
-          estadoLabel = agente.situacao || "Desconhecido";
-          estadoBadge = "badge--muted";
-        }
-      } else {
-        if (instalada !== "—" && versaoAtiva) {
-          if (instalada === versaoAtiva) {
-            estadoLabel = "Atualizado";
-            estadoBadge = "badge--success";
-          } else {
-            estadoLabel = "Atrasado";
-            estadoBadge = "badge--warning";
-          }
-        } else if (!versaoAtiva) {
-          estadoLabel = "Sem publicação";
-          estadoBadge = "badge--muted";
-        } else {
-          estadoLabel = "Não instalado";
-          estadoBadge = "badge--muted";
-        }
-      }
-
-      let contatoTexto = "—";
-      let contatoTitle = "";
-      if (agente?.ultimaComunicacao) {
-        contatoTexto = tempoRelativo(agente.ultimaComunicacao);
-        contatoTitle = formatarDataHora(agente.ultimaComunicacao);
-        if (agente.maquina) contatoTexto += ` (${agente.maquina})`;
-      } else if (histReg?.data) {
-        contatoTexto = histReg.data;
-        contatoTitle = "Última atualização registrada";
-      }
-
+    for (const linha of linhas) {
       const tr = document.createElement("tr");
       tr.className = "is-readonly";
-      tr.innerHTML = `
-        <td data-label="Sistema"><strong>${escapeHtml(sistema)}</strong></td>
-        <td data-label="Instalada" style="text-align: right">
-          ${instalada !== "—" ? `<span class="version-chip">${escapeHtml(instalada)}</span>` : "—"}
-        </td>
-        <td data-label="Publicada" style="text-align: right">
-          ${publicada !== "Nenhuma" ? escapeHtml(publicada) : `<span class="text-muted">Nenhuma</span>`}
-        </td>
-        <td data-label="Estado">
-          <span class="badge ${estadoBadge}">${escapeHtml(estadoLabel)}</span>
-        </td>
-        <td data-label="Último contato" title="${escapeAttr(contatoTitle)}">
-          ${escapeHtml(contatoTexto)}
-        </td>
-      `;
+      tr.innerHTML = linhaMatrizVersoes(linha);
       tbody.appendChild(tr);
     }
 

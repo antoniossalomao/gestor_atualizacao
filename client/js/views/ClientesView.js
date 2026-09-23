@@ -5,9 +5,9 @@ import { Pagination } from "../components/Pagination.js";
 import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
 import { debounce } from "../utils/debounce.js";
-import { icon } from "../utils/icons.js";
+import { icon, iconHtml } from "../utils/icons.js";
 import { emptyState } from "../components/EmptyState.js";
-import { escapeAttr, plural, copyToClipboard } from "../utils/html.js";
+import { html, plural, copyToClipboard } from "../utils/html.js";
 import { marcarOcupado } from "../utils/guard.js";
 import { prefs } from "../app/prefs.js";
 import { aparencia } from "../app/appearance.js";
@@ -41,11 +41,11 @@ export class ClientesView extends View {
   }
 
   _buildDom() {
-    this.container.innerHTML = `
+    this.container.innerHTML = html`
       <div class="view-actions">
         <div class="view-actions__left">
-          <button type="button" class="btn" data-action="acessos" disabled>${icon("acessos")} Acessos</button>
-          <button type="button" class="btn btn--danger btn--ghost" data-action="delete" disabled>${icon("alerta")} Excluir</button>
+          <button type="button" class="btn" data-action="acessos" disabled>${iconHtml("acessos")} Acessos</button>
+          <button type="button" class="btn btn--danger btn--ghost" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
         </div>
         <div class="view-actions__right">
           <button type="button" class="btn btn--accent" data-action="toggle-form">+ Novo Cliente</button>
@@ -65,7 +65,7 @@ export class ClientesView extends View {
 
         <div class="clientes-sistemas-head" style="margin-top: var(--sp-4);">
           <span class="field__label">Sistemas Contratados</span>
-          <button type="button" class="btn btn--small" data-action="toggle-novo-sistema">${icon("plus")} Novo Sistema</button>
+          <button type="button" class="btn btn--small" data-action="toggle-novo-sistema">${iconHtml("plus")} Novo Sistema</button>
         </div>
         <div class="toolbar" data-role="novo-sistema-row" hidden>
           <input type="text" class="input" data-role="novo-sistema-input" style="max-width:240px" placeholder="Nome do sistema" />
@@ -75,7 +75,7 @@ export class ClientesView extends View {
 
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${icon("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
           </div>
           <div class="form-actions__right">
             <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
@@ -107,7 +107,7 @@ export class ClientesView extends View {
           <select class="input" data-role="bulk-sistema-select" style="max-width:200px"></select>
           <button type="button" class="btn btn--small" data-action="bulk-add-sistema">Adicionar sistema</button>
           <button type="button" class="btn btn--small btn--danger" data-action="bulk-excluir">
-            ${icon("alerta")} Excluir selecionados
+            ${iconHtml("alerta")} Excluir selecionados
           </button>
         </div>
         <div data-role="table"></div>
@@ -333,7 +333,10 @@ export class ClientesView extends View {
 
       const label = document.createElement("label");
       label.className = "checkbox-item";
-      label.innerHTML = `<input type="checkbox" value="${escapeAttr(sistema)}" ${marcados.has(sistema) ? "checked" : ""} /> <span></span>`;
+      label.innerHTML = html`<input type="checkbox" value="${sistema}" /> <span></span>`;
+      // defaultChecked, e não .checked: é o equivalente do atributo "checked"
+      // que o HTML trazia antes, e continua valendo num form.reset().
+      label.querySelector("input").defaultChecked = marcados.has(sistema);
       label.querySelector("span").textContent = sistema;
 
       const excluir = document.createElement("button");
@@ -353,9 +356,7 @@ export class ClientesView extends View {
     // primeiro sistema do catálogo (ordem alfabética) já escolhido, e quem
     // clicasse "Adicionar sistema" sem prestar atenção aplicaria esse
     // sistema por engano em todos os clientes marcados.
-    this.bulkSistemaSelect.innerHTML =
-      `<option value="">Escolha um sistema…</option>` +
-      this.sistemasDisponiveis.map((s) => `<option>${escapeAttr(s)}</option>`).join("");
+    this.bulkSistemaSelect.innerHTML = html`<option value="">Escolha um sistema…</option>${this.sistemasDisponiveis.map((s) => html`<option>${s}</option>`)}`;
     if (this.sistemasDisponiveis.includes(selecionado)) this.bulkSistemaSelect.value = selecionado;
   }
 

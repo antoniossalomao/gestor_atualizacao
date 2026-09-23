@@ -1,5 +1,6 @@
-import { icon } from "../utils/icons.js";
-import { escapeHtml, escapeAttr } from "../utils/html.js";
+import { iconHtml } from "../utils/icons.js";
+import { html } from "../utils/html.js";
+import { listaNotificacoes } from "../templates/notificacoes.js";
 import { prefs } from "../app/prefs.js";
 import { totalDe } from "../domain/notificacoes.js";
 
@@ -53,10 +54,10 @@ export class MenuNotificacoes {
 
   _montar() {
     this.container.className = "app-notificacoes";
-    this.container.innerHTML = `
+    this.container.innerHTML = html`
       <button type="button" class="app-notificacoes__sino" data-role="gatilho"
               aria-haspopup="true" aria-expanded="false" aria-controls="menu-notificacoes">
-        <span class="app-notificacoes__icone" aria-hidden="true">${icon("sino")}</span>
+        <span class="app-notificacoes__icone" aria-hidden="true">${iconHtml("sino")}</span>
         <span class="app-notificacoes__contador" data-role="contador" aria-hidden="true" hidden>0</span>
       </button>
 
@@ -142,35 +143,9 @@ export class MenuNotificacoes {
     return this._jaVistas() ? 0 : this.total();
   }
 
+  /** A marcação (e o porquê do escape de data-params) está em templates/notificacoes.js. */
   _renderLista() {
-    if (this.notificacoes.length === 0) {
-      // Dizer "nada pendente" em vez de abrir um menu vazio: menu vazio
-      // parece defeito, e a pessoa clica de novo para conferir.
-      this.lista.innerHTML = `<p class="app-menu__vazio">${icon("check")} Nada pendente agora.</p>`;
-      return;
-    }
-    this.lista.innerHTML = this.notificacoes
-      .map((n) => {
-        // `escapeAttr`, não `escapeHtml`: este vai DENTRO de um atributo entre
-        // aspas, e `escapeHtml` (textContent -> innerHTML) não escapa aspas
-        // duplas. O filtro é um JSON, que é feito delas -- com o escape
-        // errado, o atributo fecharia no primeiro `"` e o resto do JSON viraria
-        // atributo solto no botão. Nada quebra visivelmente: só o clique passa
-        // a levar para a tela sem filtro nenhum.
-        const params = n.params ? ` data-params="${escapeAttr(JSON.stringify(n.params))}"` : "";
-        const detalhe = n.detalhe ? `<span>${escapeHtml(n.detalhe)}</span>` : "";
-        return `
-        <button type="button" class="app-menu__aviso app-menu__aviso--${n.tom}" role="menuitem"
-                data-destino="${escapeAttr(n.destino)}"${params}>
-          <span class="app-menu__aviso-icone">${icon(n.icone)}</span>
-          <span class="app-menu__aviso-texto">
-            <strong>${escapeHtml(n.titulo)}</strong>
-            ${detalhe}
-          </span>
-          <span class="app-menu__aviso-seta">${icon("seta")}</span>
-        </button>`;
-      })
-      .join("");
+    this.lista.innerHTML = listaNotificacoes(this.notificacoes);
   }
 
   _renderContador() {
