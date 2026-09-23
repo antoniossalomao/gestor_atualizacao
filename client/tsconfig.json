@@ -49,5 +49,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["js/domain/**/*.js", "js/utils/**/*.js"]
+  // `templates/` entra pelo mesmo motivo: é marcação montada com a tag `html`
+  // (utils/html.js), sem tocar no DOM -- a view só pega o resultado e joga
+  // num innerHTML. Se um template precisar de `document`, é view, não template.
+  "include": ["js/domain/**/*.js", "js/utils/**/*.js", "js/templates/**/*.js"]
 }

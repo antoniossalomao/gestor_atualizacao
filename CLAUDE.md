@@ -8,7 +8,7 @@ arquivo resume só o que é **não óbvio** e o que mais se erra por aqui.
 ```bash
 cd web
 npm run check     # tipos (client/js/domain, client/js/utils, server/src/shared)
-npm test          # 458 testes
+npm test          # ~640 testes (servidor + cliente)
 ```
 
 Os dois têm que passar. Não relate conclusão sem ter rodado.
@@ -28,7 +28,10 @@ Os dois têm que passar. Não relate conclusão sem ter rodado.
 - **Não escreva em inglês** nomes de domínio, mensagens ao usuário ou
   comentários. Inglês só onde a linguagem impõe (`get`, `catch`, `async`).
 - **Não use `sortBy` da URL direto no SQL.** Use `shared/sortHelper.js`.
-- **Não monte HTML com dado do usuário** sem `escapeHtml` (`js/utils/html.js`).
+- **Não monte HTML com template literal cru.** Use a tag `html` de
+  `js/utils/html.js`, que escapa tudo o que é interpolado. Os ícones entram
+  com `iconHtml()`. `confiavel()` só vale para marcação gerada pelo próprio
+  código. `client/tests/html-seguro.test.mjs` trava a contagem por arquivo.
 
 ## Onde colocar arquivo novo
 
@@ -38,13 +41,14 @@ consumidores em camadas diferentes — não antes disso.
 
 **Front-end** — a regra, na ordem em que se pergunta:
 
-1. Precisa do DOM? Se **não** → `utils/` (genérico) ou `domain/` (fala de
-   cliente/atualização/agente).
+1. Precisa do DOM? Se **não** → `utils/` (genérico), `domain/` (fala de
+   cliente/atualização/agente) ou `templates/` (marcação montada com a tag
+   `html`, que a view só joga num `innerHTML`).
 2. É reaproveitável entre telas? → `components/`.
 3. É uma tela? → `views/`.
 4. É o esqueleto (rota, tema, preferências, cache)? → `app/`.
 
-`domain/` e `utils/` **não podem tocar no DOM** — não é estilo, é o que os
+`domain/`, `templates/` e `utils/` **não podem tocar no DOM** — não é estilo, é o que os
 torna testáveis fora do navegador e é o que `npm run check` verifica. Se um
 arquivo só passa quando alcança o `document`, ele está na pasta errada.
 

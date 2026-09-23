@@ -61,8 +61,9 @@ services:
       #
       # Ele PRECISA existir antes do primeiro "up": quando o caminho de
       # origem não existe, o Docker cria uma PASTA vazia com esse nome, e aí
-      # o servidor sobe com os valores padrão -- inclusive o
-      # SESSION_SECRET de exemplo. Ver o README.
+      # não há SESSION_SECRET -- o servidor se recusa a subir e o container
+      # fica reiniciando, com o motivo em "docker compose logs". (Antes ele
+      # subia com o segredo de exemplo, que é público.) Ver o README.
       - ./server/.env:/app/server/.env
 
     healthcheck:

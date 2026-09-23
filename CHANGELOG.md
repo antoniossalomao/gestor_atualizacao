@@ -15,6 +15,27 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Rebaixar ou excluir um usuário agora derruba as sessões dele.** O papel
+  que as rotas conferem é o copiado para a sessão no login. Sem isso, um
+  admin rebaixado continuava admin por até 7 dias, e podia inclusive religar
+  o Atualizador. Trocar só o nome não desloga ninguém.
+- **O servidor se recusa a subir sem `SESSION_SECRET`, ou com o valor de
+  exemplo do `.env.example`.** Esse valor é público, e com ele qualquer um
+  forja um cookie de admin. O caso mais comum era silencioso: no Docker, sem
+  o `server/.env`, o servidor subia com o segredo de exemplo. Agora o
+  container não sobe, e o motivo aparece em `docker compose logs`.
+- **Tag `html` para montar HTML (`utils/html.js`).** Ela escapa todo valor
+  interpolado. O que antes dependia de lembrar do `escapeHtml` em cada
+  interpolação passa a ser o padrão. O próprio `escapeHtml` não escapava
+  aspas, e o `aria-label` do cartão do kanban quebrava com uma tarefa que
+  tivesse `"` no título.
+  - Já foram migrados: Agendamentos, Atualizações, Clientes, Consultar
+    Cliente, Resumo, o sino e a paleta Ctrl+K.
+  - O resto está listado em `client/tests/html-seguro.test.mjs`, uma trava
+    em que a contagem de cada arquivo só pode cair.
+  - A marcação e a regra dessas telas saíram das views para `templates/` e
+    `domain/`, onde são testadas no Node (`client/tests/telas.test.mjs`).
+
 - **Colunas da tabela de Atualizações cortando texto, e "Obs" ocupando um
   quarto da tela.** Duas causas, achadas comparando a tela renderizada
   contra uma cópia isolada da mesma tabela (mesmo CSS, mesmo componente,

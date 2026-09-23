@@ -1,8 +1,10 @@
 /*
  * Testes de js/utils/ -- as utilidades genéricas, que não conhecem o negócio.
  *
- * Só entram aqui as funções que NÃO tocam no DOM: `escapeHtml` e `el` usam
- * `document`, que não existe no Node, e ficam de fora por construção. Essa é
+ * Só entram aqui as funções que NÃO tocam no DOM: `el` e `copyToClipboard`
+ * usam `document`, que não existe no Node, e ficam de fora por construção.
+ * (`escapeHtml` também usava, e por isso não era testada -- deixou de usar
+ * justamente para poder ser, ver utils/html.js.) Essa é
  * exatamente a linha que a divisão de pastas desenhou (ver ADR-0005) -- o que
  * é testável fora do navegador fica separado do que não é.
  */
@@ -18,7 +20,8 @@ import {
   formatarDuracao,
   mascaraDataBR,
 } from "../js/utils/date.js";
-import { escapeAttr, plural } from "../js/utils/html.js";
+import { escapeAttr, escapeHtml, html, confiavel, HtmlSeguro, plural } from "../js/utils/html.js";
+import { icon, iconHtml } from "../js/utils/icons.js";
 import { blendHex } from "../js/utils/color.js";
 
 test("utils/date - todayBR", async (t) => {
@@ -151,6 +154,82 @@ test("utils/html - escapeAttr", async (t) => {
   await t.test("nulo e indefinido viram string vazia", () => {
     assert.equal(escapeAttr(null), "");
     assert.equal(escapeAttr(undefined), "");
+  });
+});
+
+test("utils/html - escapeHtml", async (t) => {
+  await t.test("serve também DENTRO de atributo: escapa aspas duplas e simples", () => {
+    // A versão antiga (textContent -> innerHTML do navegador) não escapava
+    // aspas. O cartão do kanban a usava em `aria-label="Tarefa ${...}"`, e uma
+    // tarefa com `"` no título fechava o atributo antes da hora.
+    assert.equal(escapeHtml('diz "oi"'), "diz &quot;oi&quot;");
+    assert.equal(escapeHtml("d'água"), "d&#39;água");
+  });
+
+  await t.test("escapa o que abriria uma tag, e o & primeiro", () => {
+    assert.equal(escapeHtml("<img src=x onerror=alert(1)>"), "&lt;img src=x onerror=alert(1)&gt;");
+    assert.equal(escapeHtml('&"'), "&amp;&quot;");
+    assert.equal(escapeHtml("&amp;"), "&amp;amp;", "texto que PARECE entidade continua sendo texto");
+  });
+
+  await t.test("nulo e indefinido viram vazio; número vira texto", () => {
+    assert.equal(escapeHtml(null), "");
+    assert.equal(escapeHtml(undefined), "");
+    assert.equal(escapeHtml(0), "0");
+  });
+});
+
+test("utils/html - tag html", async (t) => {
+  const texto = (v) => String(v);
+
+  await t.test("escapa todo valor interpolado, em conteúdo e em atributo", () => {
+    const nome = '"><script>alert(1)</script>';
+    assert.equal(
+      texto(html`<p title="${nome}">${nome}</p>`),
+      '<p title="&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;">&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;</p>'
+    );
+  });
+
+  await t.test("a parte fixa do template NÃO é escapada", () => {
+    assert.equal(texto(html`<b class="x">fixo</b>`), '<b class="x">fixo</b>');
+  });
+
+  await t.test("devolve HtmlSeguro, que funciona direto num innerHTML", () => {
+    const r = html`<i>${"a"}</i>`;
+    assert.ok(r instanceof HtmlSeguro);
+    // innerHTML converte o valor com ToString -- é o que isto simula.
+    assert.equal(`${r}`, "<i>a</i>");
+  });
+
+  await t.test("html dentro de html entra como está (não escapa duas vezes)", () => {
+    const item = html`<li>${"<b>"}</li>`;
+    assert.equal(texto(html`<ul>${item}</ul>`), "<ul><li>&lt;b&gt;</li></ul>");
+  });
+
+  await t.test("array: cada item segue as mesmas regras, sem separador", () => {
+    const itens = ["a", "<b>", null, html`<br>`];
+    assert.equal(texto(html`${itens}`), "a&lt;b&gt;<br>");
+    assert.equal(texto(html`${[]}`), "", "lista vazia não vira vírgula nem 'undefined'");
+  });
+
+  await t.test("null, undefined e false viram nada -- permite `${cond && html`...`}`", () => {
+    assert.equal(texto(html`[${null}][${undefined}][${false}]`), "[][][]");
+    assert.equal(texto(html`[${false && html`<b>nunca</b>`}]`), "[]");
+  });
+
+  await t.test("0 e true NÃO somem: são valores, não ausência", () => {
+    // Um contador zerado que sumisse da tela seria pior que um "0".
+    assert.equal(texto(html`${0}|${true}`), "0|true");
+  });
+
+  await t.test("confiavel() é a única forma de pular o escape", () => {
+    assert.equal(texto(html`${confiavel("<b>ok</b>")}`), "<b>ok</b>");
+    assert.equal(texto(confiavel(null)), "");
+  });
+
+  await t.test("iconHtml entra como SVG, icon() puro seria escapado", () => {
+    assert.equal(texto(html`${iconHtml("seta")}`), icon("seta"));
+    assert.match(texto(html`${icon("seta")}`), /^&lt;svg/, "é esse escape que o iconHtml evita");
   });
 });
 

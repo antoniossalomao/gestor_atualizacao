@@ -11,7 +11,7 @@ Só o Node.js é necessário (versão 20 ou mais nova; testado em 22).
 ```bash
 cd server
 npm install
-cp .env.example .env     # e edite: pelo menos SESSION_SECRET
+cp .env.example .env     # e edite o SESSION_SECRET: com o de exemplo o servidor não sobe
 npm run dev              # sobe com reinício automático em http://localhost:3000
 ```
 

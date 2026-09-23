@@ -1015,6 +1015,21 @@ mantendo os últimos `BACKUPS_PARA_MANTER` ciclos (padrão 10).
 
 ### 3.4 Estado atual: pré-piloto
 
+> **Em produção, o Atualizador está DESATIVADO** desde 22/09/2026, 09:19 (horário de
+> Brasília), por Antonio Salomão (Configurações → Sistema → Atualizador; registro no
+> Histórico). Enquanto estiver assim:
+>
+> - toda a API dos agentes (`/api/update/*`) responde **403**: nenhum agente consulta,
+>   baixa pacote ou envia retorno;
+> - `/api/versoes/*` também responde 403, e as abas **Distribuição** e **Versões** somem
+>   do painel;
+> - o alerta de agentes offline no Discord não roda.
+>
+> Nenhum cliente recebe atualização automática nesse período. Agente sem contato,
+> ou um cliente parado numa versão antiga, é o **esperado** e não um defeito. Para
+> reativar, é preciso um administrador, na mesma tela. Ao mudar esse estado, atualize este
+> aviso.
+
 O que já foi validado contra Firebird real, com testes registrados:
 
 - Ciclo completo (Fase 1 → Fase 3 → Fase 4, Fase 2 simulada) rodando **através da API real**

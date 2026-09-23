@@ -116,6 +116,13 @@ transição**, não a cada ciclo, para não virar ruído.
 
 Investigue nesta ordem — do mais provável para o menos:
 
+0. **O Atualizador está ligado?** Desde 22/09/2026 ele está **desativado de
+   propósito** em Configurações → Sistema → Atualizador (ver a seção 3.4 de
+   [DOCUMENTACAO_CONSOLIDADA.md](DOCUMENTACAO_CONSOLIDADA.md#34-estado-atual-pré-piloto)).
+   Desativado, a API dos agentes responde 403 a tudo, e a aba Distribuição
+   nem aparece. Nenhum cliente atualiza e nenhum alerta sai. Se for esse
+   o caso, não há nada quebrado para investigar.
+
 1. **Abra o detalhe do agente** (aba Distribuição → clique na linha). O último
    retorno diz em que fase ele parou e com qual mensagem. Metade dos casos
    termina aqui.

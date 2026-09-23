@@ -1,3 +1,5 @@
+import { confiavel } from "./html.js";
+
 /**
  * Pequeno conjunto de ícones em SVG inline (estilo "linha", 20x20),
  * usados na navegação por abas e em alguns botões -- puramente
@@ -90,4 +92,15 @@ const PATHS = {
 export function icon(name) {
   const inner = PATHS[name] || "";
   return `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false">${inner}</svg>`;
+}
+
+/**
+ * O mesmo `<svg>` de `icon`, já marcado como HTML confiável para interpolar
+ * dentro da tag `html` (que, sem isso, escaparia o ícone e mostraria o código
+ * na tela). Confiável por construção: `name` só escolhe uma entrada de PATHS,
+ * e nada que venha da API ou de um formulário entra na marcação.
+ * @param {keyof typeof PATHS} name
+ */
+export function iconHtml(name) {
+  return confiavel(icon(name));
 }

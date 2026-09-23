@@ -8,8 +8,8 @@ import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
 import { debounce } from "../utils/debounce.js";
 import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
-import { icon } from "../utils/icons.js";
-import { escapeHtml, plural, copyToClipboard } from "../utils/html.js";
+import { icon, iconHtml } from "../utils/icons.js";
+import { html, plural, copyToClipboard } from "../utils/html.js";
 import { relatorioDeAtualizacao, relatorioDoCliente } from "../domain/relatorio.js";
 import { emptyState } from "../components/EmptyState.js";
 import { withBusyButton, marcarOcupado } from "../utils/guard.js";
@@ -18,6 +18,7 @@ import { prefs } from "../app/prefs.js";
 import { aparencia } from "../app/appearance.js";
 import { Drawer } from "../components/Drawer.js";
 import { montarPresets } from "../components/DatePresets.js";
+import { chipsFiltroAtualizacoes, htmlChips } from "../templates/filtros.js";
 
 /**
  * Aba Atualizações: histórico de atualizações de sistemas por cliente.
@@ -53,13 +54,13 @@ export class AtualizacoesView extends View {
   }
 
   _buildDom() {
-    this.container.innerHTML = `
+    this.container.innerHTML = html`
       <div class="view-actions">
         <div class="view-actions__left">
-          <button type="button" class="btn" data-action="import">${icon("upload")} Importar (.xlsx)</button>
-          <button type="button" class="btn" data-action="export">${icon("download")} Exportar (.xlsx)</button>
-          <button type="button" class="btn btn--ghost" data-action="relatorio" disabled>${icon("copiar")} Relatório do Cliente</button>
-          <button type="button" class="btn btn--danger btn--ghost" data-action="delete" disabled>${icon("alerta")} Excluir</button>
+          <button type="button" class="btn" data-action="import">${iconHtml("upload")} Importar (.xlsx)</button>
+          <button type="button" class="btn" data-action="export">${iconHtml("download")} Exportar (.xlsx)</button>
+          <button type="button" class="btn btn--ghost" data-action="relatorio" disabled>${iconHtml("copiar")} Relatório do Cliente</button>
+          <button type="button" class="btn btn--danger btn--ghost" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
           <input type="file" accept=".xlsx,.xls" data-role="file-input" hidden />
         </div>
         <div class="view-actions__right">
@@ -70,7 +71,7 @@ export class AtualizacoesView extends View {
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${icon("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
             <span class="form-actions__hint text-muted" data-role="modo"></span>
           </div>
           <div class="form-actions__right">
@@ -133,7 +134,7 @@ export class AtualizacoesView extends View {
           <button type="button" class="btn btn--small btn--ghost" data-action="bulk-limpar">Desmarcar</button>
           <div class="toolbar-spacer"></div>
           <button type="button" class="btn btn--small btn--danger" data-action="bulk-excluir">
-            ${icon("alerta")} Excluir selecionados
+            ${iconHtml("alerta")} Excluir selecionados
           </button>
         </div>
 
@@ -353,7 +354,7 @@ export class AtualizacoesView extends View {
       const field = document.createElement("div");
       field.className = "field";
       if (col.key === "cliente" || col.key === "obs") field.classList.add("field--full");
-      field.innerHTML = `<label class="field__label" for="${id}">${col.label}</label>`;
+      field.innerHTML = html`<label class="field__label" for="${id}">${col.label}</label>`;
       const input = document.createElement("input");
       input.type = "text";
       input.className = "input";
@@ -403,7 +404,7 @@ export class AtualizacoesView extends View {
         this.clienteAutocomplete.setValues(nomes);
         this.responsavelAutocomplete.setValues(responsaveis);
         const opcoes = ["Todos", ...responsaveis];
-        this.responsavelFilter.innerHTML = opcoes.map((r) => `<option>${escapeHtml(r)}</option>`).join("");
+        this.responsavelFilter.innerHTML = html`${opcoes.map((r) => html`<option>${r}</option>`)}`;
         this.responsavelFilter.value = opcoes.includes(this.responsavel) ? this.responsavel : "Todos";
         this.responsavel = this.responsavelFilter.value;
       }
@@ -501,70 +502,39 @@ export class AtualizacoesView extends View {
     const chipsEl = this.container.querySelector('[data-role="filter-chips"]');
     if (!chipsEl) return;
 
-    const chips = [];
-    if (this.busca) {
-      chips.push({
-        id: "busca",
-        label: `Busca: "${this.busca}"`,
-        clear: () => {
-          this.busca = "";
-          this.searchInput.value = "";
-          this._trocouDeFiltro();
-          this._salvarFiltros();
-          this.page = 1;
-          this._reloadList();
-        },
-      });
-    }
-    if (this.responsavel && this.responsavel !== "Todos") {
-      chips.push({
-        id: "responsavel",
-        label: `Responsável: ${this.responsavel}`,
-        clear: () => {
-          this.responsavel = "Todos";
-          this.responsavelFilter.value = "Todos";
-          this._trocouDeFiltro();
-          this._salvarFiltros();
-          this.page = 1;
-          this._reloadList();
-        },
-      });
-    }
-    if (this.desde || this.ate) {
-      const periodoTexto =
-        this.desde && this.ate
-          ? `${this.desde} a ${this.ate}`
-          : this.desde
-          ? `A partir de ${this.desde}`
-          : `Até ${this.ate}`;
-      chips.push({
-        id: "periodo",
-        label: `Período: ${periodoTexto}`,
-        clear: () => {
-          this._aplicarPeriodo("", "");
-        },
-      });
-    }
-
+    // Quais chips e com que rótulo: templates/filtros.js (testado lá). Aqui
+    // fica só o que cada um faz ao ser removido, porque isso mexe na tela.
+    const chips = chipsFiltroAtualizacoes(this);
     if (chips.length === 0) {
       chipsEl.hidden = true;
       chipsEl.innerHTML = "";
       return;
     }
 
-    chipsEl.hidden = false;
-    chipsEl.innerHTML = chips
-      .map(
-        (c) =>
-          `<span class="filter-chip"><span>${escapeHtml(c.label)}</span><button type="button" class="filter-chip__remove" data-chip="${c.id}" aria-label="Remover filtro">✕</button></span>`
-      )
-      .join("");
+    const limpar = {
+      busca: () => {
+        this.busca = "";
+        this.searchInput.value = "";
+        this._trocouDeFiltro();
+        this._salvarFiltros();
+        this.page = 1;
+        this._reloadList();
+      },
+      responsavel: () => {
+        this.responsavel = "Todos";
+        this.responsavelFilter.value = "Todos";
+        this._trocouDeFiltro();
+        this._salvarFiltros();
+        this.page = 1;
+        this._reloadList();
+      },
+      periodo: () => this._aplicarPeriodo("", ""),
+    };
 
+    chipsEl.hidden = false;
+    chipsEl.innerHTML = htmlChips(chips);
     chipsEl.querySelectorAll(".filter-chip__remove").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const found = chips.find((c) => c.id === btn.dataset.chip);
-        found?.clear();
-      });
+      btn.addEventListener("click", () => limpar[btn.dataset.chip]?.());
     });
   }
 
@@ -971,7 +941,7 @@ export class AtualizacoesView extends View {
     const sufixo = Math.random().toString(36).slice(2, 8);
     const tituloId = `relatorio-titulo-${sufixo}`;
     box.setAttribute("aria-labelledby", tituloId);
-    box.innerHTML = `
+    box.innerHTML = html`
       <div class="relatorio">
         <h3 class="modal-box__title" id="${tituloId}">Relatório</h3>
         <div class="segmented" role="radiogroup" aria-label="Conteúdo do relatório">
@@ -1068,12 +1038,6 @@ function acoesAtualizacao(row, role) {
     wrap.appendChild(botao);
   }
   return wrap;
-}
-
-/** Primeiro dia do mês corrente em dd/mm/aaaa -- o "de" do botão "Este mês". */
-function primeiroDiaDoMes() {
-  const hoje = new Date();
-  return `01/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
 }
 
 function isTypingTarget(el) {

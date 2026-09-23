@@ -15,11 +15,23 @@ require("dotenv").config({ quiet: true });
 const path = require("path");
 
 const { Server } = require("./src/Server");
+const { problemaNoSegredoDeSessao } = require("./src/config/segredoSessao");
+
+// Recusa subir sem um SESSION_SECRET de verdade -- ver o porquê em
+// src/config/segredoSessao.js. Antes de abrir o banco, de propósito: não
+// há nada a fazer com o servidor de pé se o login dele pode ser forjado.
+const problemaSegredo = problemaNoSegredoDeSessao(process.env.SESSION_SECRET);
+if (problemaSegredo) {
+  console.error(`O servidor NÃO foi iniciado: ${problemaSegredo}`);
+  console.error("Gere um valor aleatório e grave em SESSION_SECRET no server/.env:");
+  console.error("  node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"");
+  process.exit(1);
+}
 
 const config = {
   port: Number(process.env.PORT) || 3000,
   dbPath: path.resolve(__dirname, process.env.DB_PATH || "./data/gestao.db"),
-  sessionSecret: process.env.SESSION_SECRET || "troque-este-valor-em-producao",
+  sessionSecret: String(process.env.SESSION_SECRET),
   sessionSecure: process.env.SESSION_SECURE === "true",
   agentApiToken: process.env.AGENT_API_TOKEN || "",
   publicUrl: process.env.PUBLIC_URL || "",

@@ -135,6 +135,14 @@ class AuthService {
       role: novoPapel,
     });
 
+    // O papel que vale nas rotas é o gravado NA SESSÃO no momento do login
+    // (ver requireRole) -- não o do banco. Sem derrubar as sessões aqui, um
+    // admin rebaixado continuava admin por até 7 dias (o maxAge do cookie),
+    // inclusive podendo religar o Atualizador e publicar executável para
+    // todos os clientes. Só quando o papel muda: trocar o nome não mexe em
+    // permissão e não justifica deslogar ninguém.
+    if (alvo.role !== atualizado.role) this.sessionStore?.clearByUserId(id);
+
     if (this.historico) {
       this.historico.registrar(
         usuarioLogado,
@@ -173,6 +181,10 @@ class AuthService {
       }
     }
     this.db.usuarios.delete(id);
+    // requireAuth só confere se a sessão existe, não se a conta ainda existe:
+    // sem isto, quem teve a conta excluída seguia usando o painel com o papel
+    // que tinha até o cookie expirar (7 dias).
+    this.sessionStore?.clearByUserId(id);
     this.historico.registrar(usuarioLogado, "excluir", "usuario", `Usuário "${alvo.nome}" (@${alvo.usuario})`);
   }
 

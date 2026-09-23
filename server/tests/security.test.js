@@ -353,3 +353,59 @@ test("Saúde Operacional do Sistema - SaudeService", async (t) => {
   }
 });
 
+
+/*
+ * SESSION_SECRET assina o cookie de login: com o valor de exemplo (público,
+ * está no repositório), qualquer um forja uma sessão de admin. O server.js
+ * caía nesse valor sozinho quando a variável faltava -- e ela falta sem
+ * ninguém perceber no Docker, quando o server/.env vira uma pasta vazia.
+ */
+test("SESSION_SECRET - o servidor recusa subir com segredo ausente ou de exemplo", async (t) => {
+  const { problemaNoSegredoDeSessao, SEGREDO_DE_EXEMPLO } = require("../src/config/segredoSessao");
+
+  await t.test("recusa ausente, vazio e só espaços", () => {
+    for (const valor of [undefined, null, "", "   "]) {
+      assert.match(problemaNoSegredoDeSessao(valor), /não está definido/, JSON.stringify(valor));
+    }
+  });
+
+  await t.test("recusa o valor do .env.example, mesmo com espaço em volta", () => {
+    assert.match(problemaNoSegredoDeSessao(SEGREDO_DE_EXEMPLO), /exemplo/);
+    assert.match(problemaNoSegredoDeSessao(` ${SEGREDO_DE_EXEMPLO} `), /exemplo/);
+  });
+
+  await t.test("a constante bate com o que o .env.example realmente traz", () => {
+    // Se alguém trocar o texto de exemplo lá e esquecer daqui, a trava
+    // deixaria de reconhecer justamente o valor que todo mundo copia.
+    const exemplo = fs.readFileSync(path.join(__dirname, "..", ".env.example"), "utf8");
+    assert.match(exemplo, new RegExp(`^SESSION_SECRET=${SEGREDO_DE_EXEMPLO}$`, "m"));
+  });
+
+  await t.test("aceita um segredo de verdade", () => {
+    assert.equal(problemaNoSegredoDeSessao(require("node:crypto").randomBytes(32).toString("hex")), null);
+  });
+
+  await t.test("o server.js de verdade encerra com erro, antes de abrir o banco", () => {
+    const { spawnSync } = require("node:child_process");
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-segredo-"));
+    try {
+      for (const segredo of ["", SEGREDO_DE_EXEMPLO]) {
+        const dbPath = path.join(tmpDir, "gestao.db");
+        // SESSION_SECRET vai no ambiente (mesmo vazio): o dotenv não
+        // sobrescreve variável que já existe, então um server/.env local com
+        // segredo de verdade não interfere no teste.
+        const r = spawnSync(process.execPath, ["server.js"], {
+          cwd: path.join(__dirname, ".."),
+          env: { ...process.env, SESSION_SECRET: segredo, DB_PATH: dbPath, PORT: "0" },
+          encoding: "utf8",
+          timeout: 15000,
+        });
+        assert.equal(r.status, 1, `segredo ${JSON.stringify(segredo)}: deveria sair com código 1`);
+        assert.match(r.stderr, /NÃO foi iniciado/);
+        assert.equal(fs.existsSync(dbPath), false, "não deveria nem ter criado o banco");
+      }
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});

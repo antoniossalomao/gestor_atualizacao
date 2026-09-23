@@ -1,6 +1,9 @@
-/** Data de hoje no formato dd/mm/aaaa, usada para pré-preencher formulários. */
-export function todayBR() {
-  const d = new Date();
+/**
+ * Data de hoje no formato dd/mm/aaaa, usada para pré-preencher formulários.
+ * `d` existe para teste (e para quem precisa de "hoje" de uma data fixa).
+ * @param {Date} [d]
+ */
+export function todayBR(d = new Date()) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
