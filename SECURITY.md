@@ -31,7 +31,8 @@ trate como incidente: rotacione primeiro, avise depois.
 - `server/.env` **nunca** vai para o git. O `.gitignore` cobre `.env` e
   `.env.*` (exceto `.env.example`) — a regra ampla existe porque um `.env.bak`
   feito à mão já foi commitado uma vez.
-- `SESSION_SECRET` precisa ser longo e aleatório em produção. Trocá-lo desloga
+- `SESSION_SECRET` precisa ser longo e aleatório. O servidor se recusa a subir
+  sem ele ou com o valor de exemplo do `.env.example`. Trocá-lo desloga
   todo mundo, e é a ação certa se houver suspeita de vazamento:
   ```bash
   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"

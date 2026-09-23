@@ -185,7 +185,7 @@ uma. As principais:
 |---|---|
 | `PORT` | Porta em que o servidor escuta (padrão 3000). |
 | `DB_PATH` | Caminho do arquivo `gestao.db`. |
-| `SESSION_SECRET` | Texto usado para assinar o cookie de login — troque por um valor aleatório em produção. |
+| `SESSION_SECRET` | Texto usado para assinar o cookie de login. **Obrigatório:** o servidor não sobe sem ele nem com o valor de exemplo do `.env.example`. Use um valor longo e aleatório. |
 | `SESSION_SECURE` | `true` quando o servidor roda atrás de HTTPS. |
 | `DISCORD_WEBHOOK_URL` | Opcional. Quando configurada, avisa um canal do Discord a cada atualização nova cadastrada, e também quando um agente do Atualizador automático fica offline/com erro. |
 | `ALERTA_AGENTES_INTERVALO_MINUTOS` | De quanto em quanto tempo checar a situação dos agentes (padrão 15). Só tem efeito com `DISCORD_WEBHOOK_URL` configurada. |
@@ -322,9 +322,10 @@ Windows, ele usa o WSL 2).
 **O `.env` precisa existir antes do primeiro `up`.** Isso não é preciosismo
 de documentação: o `docker-compose.yml` monta `server/.env` como arquivo, e
 quando o caminho de origem não existe o Docker cria uma **pasta** vazia com
-esse nome. O servidor sobe assim mesmo, com os valores padrão — inclusive o
-`SESSION_SECRET` de exemplo, que é público — e nada nos logs diz que foi
-isso que aconteceu.
+esse nome. Sem `.env`, não há `SESSION_SECRET`, e o servidor **se recusa a
+subir**: o container fica reiniciando, e `docker compose logs` mostra o motivo.
+O mesmo acontece se o `SESSION_SECRET` continuar com o valor de exemplo
+copiado do `.env.example`, que é público.
 
 ```powershell
 cd web

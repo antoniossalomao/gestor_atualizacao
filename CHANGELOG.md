@@ -15,6 +15,15 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Rebaixar ou excluir um usuário agora derruba as sessões dele.** O papel
+  que as rotas conferem é o copiado para a sessão no login. Sem isso, um
+  admin rebaixado continuava admin por até 7 dias, e podia inclusive religar
+  o Atualizador. Trocar só o nome não desloga ninguém.
+- **O servidor se recusa a subir sem `SESSION_SECRET`, ou com o valor de
+  exemplo do `.env.example`.** Esse valor é público, e com ele qualquer um
+  forja um cookie de admin. O caso mais comum era silencioso: no Docker, sem
+  o `server/.env`, o servidor subia com o segredo de exemplo. Agora o
+  container não sobe, e o motivo aparece em `docker compose logs`.
 - **Colunas da tabela de Atualizações cortando texto, e "Obs" ocupando um
   quarto da tela.** Duas causas, achadas comparando a tela renderizada
   contra uma cópia isolada da mesma tabela (mesmo CSS, mesmo componente,

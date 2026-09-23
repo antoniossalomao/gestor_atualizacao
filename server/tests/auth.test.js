@@ -215,3 +215,77 @@ test("AuthService - troca de senha", async (t) => {
     env.cleanup();
   }
 });
+
+/*
+ * O papel que as rotas conferem é o COPIADO para a sessão no login (ver
+ * requireRole), não o do banco. Então rebaixar ou excluir uma conta só tem
+ * efeito real se as sessões abertas dela caírem junto -- senão a pessoa segue
+ * com o papel antigo até o cookie expirar (7 dias). Nada na tela denuncia o
+ * problema: a lista de usuários mostra o papel novo, corretamente.
+ *
+ * Store de verdade, num arquivo temporário: o que se quer provar é que o
+ * DELETE por `json_extract` casa com a sessão gravada, e isso um mock não prova.
+ */
+test("AuthService - sessões caem quando o papel muda ou a conta some", async (t) => {
+  const env = ambiente();
+  const { SqliteSessionStore } = require("../src/database/SqliteSessionStore");
+  const store = new SqliteSessionStore({ filePath: path.join(path.dirname(env.db.path), "sessions.sqlite") });
+  env.auth.setSessionStore(store);
+
+  const abrirSessao = (sid, user) =>
+    store.set(sid, { cookie: { maxAge: 60_000 }, user: { id: user.id, nome: user.nome, usuario: user.usuario, role: user.role } });
+  const sessaoExiste = (sid) =>
+    new Promise((resolve, reject) => store.get(sid, (err, dados) => (err ? reject(err) : resolve(dados != null))));
+
+  try {
+    const admin = env.auth.setupAdmin({ nome: "Admin", usuario: "admin", senha: SENHA });
+    const outroAdmin = env.auth.createUser({ nome: "Bia", usuario: "bia", senha: SENHA, role: "admin" }, admin);
+    const operador = env.auth.createUser({ nome: "Caio", usuario: "caio", senha: SENHA, role: "operador" }, admin);
+
+    await t.test("rebaixar derruba todas as sessões da conta", async () => {
+      abrirSessao("bia-pc", outroAdmin);
+      abrirSessao("bia-celular", outroAdmin);
+      env.auth.updateUser(outroAdmin.id, { role: "consulta" }, admin);
+      assert.equal(await sessaoExiste("bia-pc"), false);
+      assert.equal(await sessaoExiste("bia-celular"), false);
+    });
+
+    await t.test("promover também derruba (a sessão guardava o papel menor)", async () => {
+      abrirSessao("caio-pc", operador);
+      env.auth.updateUser(operador.id, { role: "admin" }, admin);
+      assert.equal(await sessaoExiste("caio-pc"), false);
+    });
+
+    await t.test("só as sessões DAQUELA conta caem", async () => {
+      abrirSessao("admin-pc", admin);
+      abrirSessao("caio-pc", { ...operador, role: "admin" });
+      env.auth.updateUser(operador.id, { role: "operador" }, admin);
+      assert.equal(await sessaoExiste("admin-pc"), true, "quem fez a alteração continua logado");
+      assert.equal(await sessaoExiste("caio-pc"), false);
+    });
+
+    await t.test("trocar só o nome NÃO desloga ninguém", async () => {
+      abrirSessao("caio-pc", operador);
+      env.auth.updateUser(operador.id, { nome: "Caio Souza" }, admin);
+      assert.equal(await sessaoExiste("caio-pc"), true);
+    });
+
+    await t.test("excluir a conta derruba as sessões dela", async () => {
+      abrirSessao("caio-pc", operador);
+      env.auth.deleteUser(operador.id, admin);
+      assert.equal(await sessaoExiste("caio-pc"), false);
+      assert.equal(await sessaoExiste("admin-pc"), true);
+    });
+
+    await t.test("alteração recusada não derruba nada", async () => {
+      // Rebaixar o único admin restante é recusado -- a sessão dele fica.
+      env.auth.updateUser(outroAdmin.id, { role: "consulta" }, admin);
+      abrirSessao("admin-pc", admin);
+      assert.throws(() => env.auth.updateUser(admin.id, { role: "consulta" }, { ...admin, role: "admin" }), /único administrador/);
+      assert.equal(await sessaoExiste("admin-pc"), true);
+    });
+  } finally {
+    store.close();
+    env.cleanup();
+  }
+});

@@ -90,7 +90,13 @@ class SqliteSessionStore extends session.Store {
    * todos os usuários) e correto porque a estrutura do JSON é controlada por
    * nós (ver `set` acima e `AuthController._iniciarSessao`).
    * Chamado por `AuthService.changePassword` para revogar sessões abertas em
-   * outros navegadores/dispositivos após uma troca de senha.
+   * outros navegadores/dispositivos após uma troca de senha, e por
+   * `updateUser`/`deleteUser` quando o papel muda ou a conta some -- o papel
+   * que as rotas conferem é o copiado para a sessão no login.
+   *
+   * `userId` tem que chegar como NÚMERO: `json_extract` devolve inteiro, e
+   * no SQLite `5 = '5'` é falso aqui (a expressão não tem afinidade de tipo).
+   * Com um id em texto, a exclusão não casaria nada e nenhum erro apareceria.
    * @param {number} userId
    */
   clearByUserId(userId) {
