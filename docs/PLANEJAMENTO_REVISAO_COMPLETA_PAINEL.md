@@ -168,8 +168,8 @@ Substituir a rosca genérica por um card **Atualização dos clientes**, com bar
 - [x] Abrir lista com cliente, último atendimento e dias; responsável somente se houver fonte definida.
 - [x] Remover fundo escuro arredondado do ícone de alerta.
 - [x] Usar ícone simples e cor discreta, coerente com os demais indicadores.
-- [ ] Não tratar acompanhamento preventivo como falha crítica do sistema.
-- [ ] Validar contraste, foco e leitura nos dois temas.
+- [x] Não tratar acompanhamento preventivo como falha crítica do sistema. Verificado: nenhuma palavra "falha"/"crítico" ligada ao indicador; o sino de notificações (`domain/notificacoes.js`) nem inclui "sem atualização" entre os avisos, só agendamentos atrasados e agentes.
+- [x] Validar contraste, foco e leitura nos dois temas. Contraste calculado do valor vermelho contra o fundo do card: 6.17:1 (escuro) e 5.44:1 (claro), acima do mínimo de 4.5:1. Foco por teclado usa a regra global `::focus-visible`, sem reset em `.stat-tile`. Validação visual pixel a pixel fica para o E10 (sem ferramenta de navegador nesta etapa).
 
 ### 5.3 Tendência mensal
 
