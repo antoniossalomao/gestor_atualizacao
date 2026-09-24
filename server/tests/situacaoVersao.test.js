@@ -53,15 +53,25 @@ test("situacaoDoSistema", async (t) => {
 });
 
 test("situacaoDoCliente", async (t) => {
-  await t.test("um atraso confirmado ganha de informação faltando em outro sistema", () => {
-    assert.equal(situacaoDoCliente(["Em dia", "Sem referência", "Desatualizado"]), "desatualizado");
+  const grupo = (...pares) => situacaoDoCliente(pares.map(([sistema, situacao]) => ({ sistema, situacao }))).grupo;
+
+  await t.test("com B_Vendas, só ele decide", () => {
+    assert.equal(grupo(["B_Vendas", "Em dia"], ["B_NFe", "Desatualizado"]), "em_dia", "NFe atrasada não derruba");
+    assert.equal(grupo(["B_Vendas", "Desatualizado"], ["B_NFe", "Em dia"]), "desatualizado");
+    assert.equal(grupo(["B_Vendas", "Nunca atualizado"], ["B_NFe", "Em dia"]), "pendente");
+    assert.deepEqual(situacaoDoCliente([{ sistema: "B_Vendas", situacao: "Em dia" }]), { grupo: "em_dia", decididoPor: "B_Vendas" });
   });
-  await t.test("em dia só com TODOS em dia", () => {
-    assert.equal(situacaoDoCliente(["Em dia", "Em dia"]), "em_dia");
-    assert.equal(situacaoDoCliente(["Em dia", "Nunca atualizado"]), "pendente");
+
+  await t.test("sem B_Vendas, um atraso confirmado ganha de informação faltando", () => {
+    assert.equal(grupo(["B_Importa", "Em dia"], ["B_Ordem", "Sem referência"], ["B_NFe", "Desatualizado"]), "desatualizado");
+  });
+  await t.test("sem B_Vendas, em dia só com TODOS em dia", () => {
+    assert.equal(grupo(["B_NFe", "Em dia"], ["B_Importa", "Em dia"]), "em_dia");
+    assert.equal(grupo(["B_NFe", "Em dia"], ["B_Importa", "Nunca atualizado"]), "pendente");
+    assert.equal(situacaoDoCliente([{ sistema: "B_NFe", situacao: "Em dia" }]).decididoPor, null);
   });
   await t.test("sem sistema que controle versão fica fora da conta", () => {
-    assert.equal(situacaoDoCliente([]), "sem_atualizaveis");
+    assert.equal(situacaoDoCliente([]).grupo, "sem_atualizaveis");
   });
   await t.test("fixo e inativo não contam", () => {
     assert.equal(contaParaVersao({ ativo: 1, controla_versao: 0 }), false);
@@ -116,8 +126,9 @@ test("Resumo - situação dos clientes", async (t) => {
     const nomes = (grupo) => s[grupo].map((c) => c.nome);
 
     await t.test("cada cliente cai em um grupo só, e os grupos somam o total", () => {
-      assert.deepEqual(nomes("em_dia"), []);
-      assert.deepEqual(nomes("desatualizado"), ["Loja Dois Sistemas", "Mercado Atrasado"]);
+      // A Loja está com a NFe atrasada, mas o B_Vendas em dia: conta em dia.
+      assert.deepEqual(nomes("em_dia"), ["Loja Dois Sistemas"]);
+      assert.deepEqual(nomes("desatualizado"), ["Mercado Atrasado"]);
       assert.deepEqual(nomes("pendente"), ["Nunca Atendido"]);
       assert.deepEqual(nomes("sem_atualizaveis"), ["Só Fixos"]);
       const soma = s.em_dia.length + s.desatualizado.length + s.pendente.length + s.sem_atualizaveis.length;
@@ -131,7 +142,7 @@ test("Resumo - situação dos clientes", async (t) => {
     });
 
     await t.test("sistema fixo não aparece na situação consolidada, mas continua na ficha", () => {
-      const doCliente = s.desatualizado.find((c) => c.nome === "Loja Dois Sistemas");
+      const doCliente = s.em_dia.find((c) => c.nome === "Loja Dois Sistemas");
       assert.ok(!doCliente.sistemas.some((x) => x.sistema === "Suporte Bredas"));
       const ficha = env.servico.situacaoCliente("Só Fixos");
       assert.ok(ficha.every((x) => x.contaNaSituacao === false));

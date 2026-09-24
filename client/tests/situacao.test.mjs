@@ -53,6 +53,14 @@ test("rótulos da situação", async (t) => {
     assert.equal(sistemasQueExplicam("desatualizado", sistemas), "B_NFe (pela data)");
     assert.equal(sistemasQueExplicam("pendente", sistemas), "B_Ordem: sem referência");
   });
+
+  await t.test("quem foi decidido pelo B_Vendas mostra só ele", () => {
+    const sistemas = [
+      { sistema: "B_Vendas", situacao: "Em dia" },
+      { sistema: "B_NFe", situacao: "Desatualizado" },
+    ];
+    assert.equal(sistemasQueExplicam("em_dia", sistemas, "B_Vendas"), "B_Vendas");
+  });
 });
 
 test("corpoSituacao", async (t) => {

@@ -87,7 +87,7 @@ export function corpoSituacao(totais, maisAtrasados) {
     ${top.length
       ? html`
         <div class="situacao__sistemas">
-          <h3 class="situacao__subtitulo">Mais clientes desatualizados</h3>
+          <h3 class="situacao__subtitulo">Sistemas com mais clientes atrasados</h3>
           <ul>
             ${top.map(
               (s) => html`

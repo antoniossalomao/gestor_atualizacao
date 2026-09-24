@@ -16,12 +16,13 @@ import { statTile, deltaTendencia, corpoSituacao } from "../templates/resumo.js"
  */
 /**
  * Era "Parados Há Mais de N Dias", e o card ao lado chamava de "em dia" quem
- * NÃO estava nesta lista -- tempo sem visita fazendo papel de situação de
- * versão. Agora o rótulo diz só o que conta: atendimento.
+ * NÃO estava nesta lista -- tempo parado fazendo papel de situação de
+ * versão. Agora o rótulo diz só o que conta: tempo desde a última
+ * atualização registrada.
  * @param {number|undefined} dias
  */
 function rotuloSemAtendimento(dias) {
-  return dias ? `Sem Atendimento Há Mais de ${dias} Dias` : "Sem Atendimento Recente";
+  return dias ? `Sem Atualização Há Mais de ${dias} Dias` : "Sem Atualização Recente";
 }
 
 export class ResumoView extends View {
@@ -198,7 +199,7 @@ export class ResumoView extends View {
         { key: "cidade", label: "Cidade" },
         { key: "sistemas", label: chave === "desatualizado" ? "Sistemas atrasados" : chave === "pendente" ? "O que falta" : "Sistemas" },
       ],
-      linhas: clientes.map((c) => ({ nome: c.nome, cidade: c.cidade, sistemas: sistemasQueExplicam(chave, c.sistemas) })),
+      linhas: clientes.map((c) => ({ nome: c.nome, cidade: c.cidade, sistemas: sistemasQueExplicam(chave, c.sistemas, c.decididoPor) })),
       chave: (row) => row.nome,
       vazio: "Nenhum cliente nesta situação.",
     });
@@ -208,11 +209,11 @@ export class ResumoView extends View {
     const clientes = this.resumo?.semAtendimento || [];
     this._abrirGaveta({
       titulo: `${rotuloSemAtendimento(this.resumo?.desatualizadoDias)} — ${plural(clientes.length, "cliente")}`,
-      ajuda: "Tempo desde o último atendimento registrado. Não diz se as versões estão em dia: isso está no card Atualização dos Clientes.",
+      ajuda: "Tempo desde a última atualização registrada. Não diz se as versões estão em dia: isso está no card Atualização dos Clientes.",
       colunas: [
         { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
         { key: "cidade", label: "Cidade" },
-        { key: "ultima", label: "Último atendimento", type: "date" },
+        { key: "ultima", label: "Última atualização", type: "date" },
         // Para quem nunca foi atendido, o servidor manda um número enorme
         // como sentinela: ordena esses primeiro, mas não é para ser lido.
         { key: "dias", label: "Dias", type: "numeric", render: (row) => document.createTextNode(row.ultima === "Nunca" ? "—" : String(row.dias)) },
@@ -226,8 +227,8 @@ export class ResumoView extends View {
   _listarSistemas() {
     const sistemas = this.resumo?.situacaoClientes?.sistemasMaisAtrasados || [];
     this._abrirGaveta({
-      titulo: "Clientes desatualizados por sistema",
-      ajuda: "Um cliente atrasado em dois sistemas aparece nos dois.",
+      titulo: "Clientes atrasados por sistema",
+      ajuda: "Conta cada sistema separado: um cliente atrasado em dois sistemas aparece nos dois, e um cliente em dia pelo B_Vendas ainda aparece aqui se outro sistema dele estiver atrasado.",
       colunas: [
         { key: "sistema", label: "Sistema", render: (row) => this._link("sistema", row.sistema) },
         { key: "total", label: "Clientes", type: "numeric" },

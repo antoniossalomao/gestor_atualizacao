@@ -50,8 +50,8 @@ const REGRAS = {
     publica: true,
     // A chave continua "desatualizado_dias" (já gravada nas instalações),
     // mas desde o card "Atualização dos Clientes" a regra mede só tempo sem
-    // atendimento -- versão atrasada é outra conta (services/situacaoVersao.js).
-    rotulo: "Dias sem atendimento até o cliente entrar na lista do Resumo",
+    // atualização -- versão atrasada é outra conta (services/situacaoVersao.js).
+    rotulo: "Dias sem atualização até o cliente entrar na lista do Resumo",
   },
   agendamentoArquivarDias: {
     chave: "agendamento_arquivar_dias",

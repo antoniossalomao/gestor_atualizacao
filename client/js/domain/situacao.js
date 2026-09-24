@@ -12,14 +12,14 @@
  * só como uma nota embaixo do card.
  */
 export const GRUPOS_SITUACAO = [
-  { chave: "em_dia", rotulo: "Em dia", severidade: "boa", descricao: "Todos os sistemas com a versão oficial." },
-  { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "Ao menos um sistema com versão anterior à oficial." },
-  { chave: "pendente", rotulo: "Verificação pendente", severidade: "media", descricao: "Sem atraso confirmado, mas falta informação em algum sistema." },
+  { chave: "em_dia", rotulo: "Em dia", severidade: "boa", descricao: "B_Vendas na versão oficial (sem B_Vendas: todos os sistemas)." },
+  { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "B_Vendas com versão anterior à oficial (sem B_Vendas: algum sistema)." },
+  { chave: "pendente", rotulo: "Verificação pendente", severidade: "media", descricao: "Sem atraso confirmado, mas falta informação para decidir." },
 ];
 
 /** A explicação de "pela data", repetida onde o rótulo aparece. */
 export const AJUDA_PELA_DATA =
-  "Sem versão registrada no atendimento: a situação foi deduzida comparando a data do atendimento com a data da versão oficial.";
+  "Sem versão registrada na atualização: a situação foi deduzida comparando a data da atualização com a data da versão oficial.";
 
 /**
  * "Em dia (pela data)" quando a situação não veio de uma versão registrada.
@@ -59,14 +59,18 @@ export function totaisSituacao(situacao) {
 
 /**
  * O que a lista de um grupo mostra na coluna "Sistemas": os sistemas que
- * puseram o cliente naquele grupo. Um desatualizado lista os atrasados (não
- * os em dia); um pendente lista os que estão sem informação.
+ * puseram o cliente naquele grupo. Quem tem B_Vendas foi decidido só por
+ * ele (`decididoPor`, ver services/situacaoVersao.js no servidor), então só
+ * ele aparece. Sem B_Vendas, um desatualizado lista os atrasados (não os em
+ * dia), e um pendente lista os que estão sem informação.
  * @param {string} grupo
  * @param {Array<{sistema: string, situacao: string, pelaData?: boolean}>} sistemas
+ * @param {string|null} [decididoPor]
  */
-export function sistemasQueExplicam(grupo, sistemas) {
-  const relevantes =
-    grupo === "desatualizado"
+export function sistemasQueExplicam(grupo, sistemas, decididoPor = null) {
+  const relevantes = decididoPor
+    ? sistemas.filter((s) => s.sistema === decididoPor)
+    : grupo === "desatualizado"
       ? sistemas.filter((s) => s.situacao === "Desatualizado")
       : grupo === "pendente"
         ? sistemas.filter((s) => s.situacao !== "Em dia" && s.situacao !== "Desatualizado")

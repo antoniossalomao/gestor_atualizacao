@@ -42,24 +42,41 @@ function situacaoDoSistema(registro, oficial) {
   return { situacao: atendimento < dataOficial ? "Desatualizado" : "Em dia", pelaData: true };
 }
 
+/** O sistema que, quando o cliente tem, decide sozinho a situação dele. */
+const SISTEMA_PRINCIPAL = "B_Vendas";
+
 /**
  * Situação do cliente como um todo, a partir da situação de cada sistema
  * que CONTROLA versão (sem os fixos e sem os inativos -- quem chama filtra).
- * Os grupos não se sobrepõem, para as contagens do Resumo somarem o total:
- * um atraso confirmado ganha de uma informação faltando em outro sistema.
- * @param {string[]} situacoes
- * @returns {"desatualizado"|"pendente"|"em_dia"|"sem_atualizaveis"}
+ *
+ * **Quem tem B_Vendas é julgado só pelo B_Vendas.** É o sistema que puxa a
+ * atualização dos outros: com ele em dia, a equipe considera o cliente
+ * atualizado, mesmo com um B_NFe para trás. Pela regra "todos em dia",
+ * que valia antes, só 21 de 369 clientes de produção ficavam em dia -- um
+ * número que não batia com o que a equipe vê no dia a dia. Nome fixo aqui,
+ * e não regra editável, por escolha da equipe.
+ *
+ * Sem B_Vendas, valem todos os sistemas: um atraso confirmado ganha de uma
+ * informação faltando em outro sistema, e em dia é só com todos em dia.
+ *
+ * Os grupos não se sobrepõem, para as contagens do Resumo somarem o total.
+ * @param {Array<{sistema: string, situacao: string}>} sistemas
+ * @returns {{grupo: "desatualizado"|"pendente"|"em_dia"|"sem_atualizaveis", decididoPor: string|null}}
  */
-function situacaoDoCliente(situacoes) {
-  if (situacoes.length === 0) return "sem_atualizaveis";
-  if (situacoes.includes("Desatualizado")) return "desatualizado";
-  if (situacoes.every((s) => s === "Em dia")) return "em_dia";
-  return "pendente";
+function situacaoDoCliente(sistemas) {
+  if (sistemas.length === 0) return { grupo: "sem_atualizaveis", decididoPor: null };
+  const principal = sistemas.find((s) => s.sistema.toLowerCase() === SISTEMA_PRINCIPAL.toLowerCase());
+  const consideradas = principal ? [principal.situacao] : sistemas.map((s) => s.situacao);
+  const decididoPor = principal ? principal.sistema : null;
+  if (consideradas.includes("Desatualizado")) return { grupo: "desatualizado", decididoPor };
+  if (consideradas.every((s) => s === "Em dia")) return { grupo: "em_dia", decididoPor };
+  return { grupo: "pendente", decididoPor };
 }
+
 
 /** O sistema entra na situação de versão? (fixos e inativos, não) */
 function contaParaVersao(sistema) {
   return Boolean(sistema && sistema.ativo && sistema.controla_versao);
 }
 
-module.exports = { situacaoDoSistema, situacaoDoCliente, contaParaVersao };
+module.exports = { situacaoDoSistema, situacaoDoCliente, contaParaVersao, SISTEMA_PRINCIPAL };

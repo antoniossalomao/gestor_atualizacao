@@ -15,17 +15,20 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
-- **"Em dia" passou a falar de versão, não de visita.** O card "Situação dos
+- **"Em dia" passou a falar de versão, não de tempo parado.** O card "Situação dos
   Clientes" do Resumo chamava de em dia quem teve qualquer atendimento nos
   últimos 60 dias. Um cliente atendido ontem com a NFe velha aparecia em
   dia, e um sem visita há três meses, mas sem versão nova para receber,
   aparecia desatualizado. Agora há duas coisas separadas:
   - **Card "Atualização dos Clientes"**: Em dia, Desatualizados e Verificação
-    pendente, pela versão recebida em cada sistema comparada com a oficial.
-    Cada total abre a lista exata dos clientes que ele contou, e o card
-    mostra os sistemas com mais clientes atrasados. Quem só tem sistemas
+    pendente, pela versão recebida comparada com a oficial. **Quem tem
+    B_Vendas é julgado só por ele**, que é o sistema que puxa os outros.
+    Julgando por todos os sistemas, a produção mostrou só 21 de 369 em dia.
+    Sem B_Vendas, precisam estar todos em dia. Cada total abre a lista exata
+    dos clientes que ele contou, e o card mostra os sistemas com mais
+    clientes atrasados. Quem só tem sistemas
     fixos (B_Atualizador, Suporte Bredas) fica fora da conta.
-  - **Indicador "Sem Atendimento Há Mais de N Dias"** (era "Parados"): mede
+  - **Indicador "Sem Atualização Há Mais de N Dias"** (era "Parados"): mede
     só o tempo. O clique abria a aba Sistemas, que não mostrava esse
     conjunto; agora abre a lista.
   - **A mesma regra vale na aba Sistemas e na ficha.** Antes comparavam a

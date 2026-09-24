@@ -494,7 +494,8 @@ class AtualizacaoService {
         if (situacao === "Desatualizado") atrasosPorSistema.set(sistema.nome, (atrasosPorSistema.get(sistema.nome) || 0) + 1);
       }
       sistemas.sort((a, b) => a.sistema.localeCompare(b.sistema, "pt-BR"));
-      grupos[situacaoDoCliente(sistemas.map((s) => s.situacao))].push({ nome, cidade: cidade || "—", sistemas });
+      const { grupo, decididoPor } = situacaoDoCliente(sistemas);
+      grupos[grupo].push({ nome, cidade: cidade || "—", sistemas, decididoPor });
     }
     for (const lista of Object.values(grupos)) lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 

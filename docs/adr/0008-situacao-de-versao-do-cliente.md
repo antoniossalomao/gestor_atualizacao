@@ -46,16 +46,27 @@ Resumo, pela aba Sistemas e pela situação do cliente.
   o atendimento não muda isso.
 
 **Por cliente** (grupos que não se sobrepõem, para os totais somarem):
-Desatualizado se algum sistema está desatualizado; senão Em dia se todos
-estão em dia; senão Verificação pendente. Quem não tem nenhum sistema que
-controle versão fica **fora da conta**.
+
+- **Quem tem B_Vendas é julgado só pelo B_Vendas.** É o sistema que puxa a
+  atualização dos outros: com ele em dia, a equipe considera o cliente
+  atualizado, mesmo com outro sistema para trás. Na primeira versão desta
+  regra (todos os sistemas precisavam estar em dia), a produção mostrou 21
+  em dia, 245 desatualizados e 103 pendentes, de 369, o que não batia com o
+  que a equipe vê. O nome fica fixo no código, por escolha da equipe.
+- **Sem B_Vendas:** Desatualizado se algum sistema está desatualizado; senão
+  Em dia se todos estão em dia; senão Verificação pendente.
+- Quem não tem nenhum sistema que controle versão fica **fora da conta**.
+
+A lista "sistemas com mais clientes atrasados" continua contando por sistema.
+Um cliente em dia pelo B_Vendas ainda aparece nela se outro sistema dele
+estiver atrasado.
 
 **Sistemas fixos:** `sistemas.controla_versao` (migração 2), falso para
 B_Atualizador e Suporte Bredas. Fixos e inativos não entram na situação do
 cliente, mas continuam no cadastro, no histórico e na ficha.
 
-**Tempo sem atendimento** continua existindo, como indicador separado ("Sem
-atendimento há mais de N dias"), e não altera a situação de versão.
+**Tempo sem atualização** continua existindo, como indicador separado ("Sem
+atualização há mais de N dias"), e não altera a situação de versão.
 
 ## Consequências
 
@@ -69,6 +80,6 @@ atendimento há mais de N dias"), e não altera a situação de versão.
 - Datas continuam `dd/mm/aaaa`. Uma versão que não é data não é comparável e
   cai na regra da data do atendimento.
 - A chave da regra da equipe continua `desatualizado_dias` (já gravada nas
-  instalações); só o texto na Administração mudou para "Sem atendimento".
+  instalações); só o texto na Administração mudou para "Sem atualização".
 - O que ficou para depois: tela para marcar ou desmarcar sistema fixo e
   bloqueio na API de oficial para sistema fixo (resto do I04).
