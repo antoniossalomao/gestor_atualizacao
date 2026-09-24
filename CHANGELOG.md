@@ -15,6 +15,40 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **O banco parou de guardar listas em texto e de ligar cliente pelo nome.**
+  Os sistemas de um atendimento e de um cliente eram texto separado por
+  vírgula ("B_Vendas, B_NFe"), com um JSON de versões por cima, e o cliente
+  de um atendimento/agendamento era o nome dele. Toda tela reinterpretava
+  esse texto com as mesmas regras de grafia, espalhadas em seis arquivos, e
+  o catálogo não garantia nada: `B_NFCe` (100 usos), `B_Sped` (53), `CTe`,
+  `B_Rat` e outros estavam no histórico sem existir na tabela de sistemas,
+  e a situação do cliente chegava a listar `NFCe` e `B_NFCe` como dois
+  sistemas. Agora há `atualizacao_sistemas` (um sistema por linha, com a
+  versão recebida), `cliente_sistemas` e `cliente_id` de verdade.
+  - **Sistemas que saíram do catálogo viram inativos**, e não somem do
+    histórico: não aparecem nas telas de cadastro, e cadastrar o mesmo nome
+    de novo reativa o sistema com o histórico junto. "Excluir" um sistema
+    agora desativa em vez de apagar. As grafias de um mesmo sistema
+    (`B_NFE`/`B_NFe`, `DFE`/`B_DFe`, `NFCe`/`B_NFCe`) viraram um só.
+  - **Renomear um cliente** não precisa mais reescrever o nome em outras
+    tabelas para não perder o histórico. Os 57 atendimentos de clientes já
+    excluídos ficam com o nome como estava, e passam a pertencer ao cliente
+    se alguém cadastrá-lo de novo com esse nome.
+  - O esquema passou a mudar por **migrações numeradas**, que rodam uma vez
+    só, numa transação, com um backup do banco feito antes (aparece na tela
+    de Backups). O `ALTER TABLE` a cada boot servia para acrescentar coluna,
+    não para mover dado de uma coluna para uma tabela.
+  - A API continua entregando os mesmos campos, montados por visões
+    (`atualizacoes_v`, `clientes_v`), por isso o front-end não mudou. Um
+    ensaio numa cópia do banco de produção comparou o código antigo com o
+    novo: relatório por sistema, Resumo e última versão por sistema saíram
+    iguais. A única mudança de resultado, além das grafias corrigidas, é que
+    a quantidade de máquinas de um cliente com dois atendimentos no MESMO
+    dia agora vem sempre do último registrado; antes a escolha entre os dois
+    era arbitrária.
+  - Detalhes e o que ficou de fora de propósito (datas em texto,
+    responsável em texto): [ADR-0007](docs/adr/0007-esquema-normalizado-e-migracoes-versionadas.md).
+
 - **Sistemas ganhou uma "versão oficial" por sistema, e cada atendimento
   guarda a versão que o cliente recebeu naquela data.** Antes a "versão"
   de um atendimento era um texto solto, sem ligação com o que estava

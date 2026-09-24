@@ -5,6 +5,12 @@ const { FILTRO_ARQUIVADAS } = require("../config/constants");
 
 const COLUMNS = ["tarefa", "cliente", "sistema", "responsavel", "prioridade", "data", "horario", "status", "obs"];
 
+// A tarefa guarda o nome do cliente como foi digitado e, se ele tiver
+// cadastro, o id -- mesma regra de vínculo de ClienteRepository.resolverNome
+// (nome exato, senão ignorando caixa e espaço nas pontas).
+const CLIENTE_ID_EXPR =
+  "COALESCE((SELECT id FROM clientes WHERE nome = @cliente), (SELECT id FROM clientes WHERE lower(trim(nome)) = lower(trim(@cliente)) ORDER BY id LIMIT 1))";
+
 // "horario" fica vazio em tarefas sem hora marcada -- esse CASE joga essas
 // para o fim de cada dia, em vez de aparecerem antes de "08:00" so porque
 // "" < "08:00" na comparacao de texto.
@@ -99,14 +105,14 @@ class AgendamentoRepository extends BaseRepository {
   }
 
   insert(data) {
-    const columns = [...COLUMNS, "criado_em"].join(", ");
-    const placeholders = [...COLUMNS.map((c) => `@${c}`), "@criadoEm"].join(", ");
+    const columns = [...COLUMNS, "criado_em", "cliente_id"].join(", ");
+    const placeholders = [...COLUMNS.map((c) => `@${c}`), "@criadoEm", CLIENTE_ID_EXPR].join(", ");
     this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`).run({ ...data, criadoEm: new Date().toISOString() });
   }
 
   insertMany(lista) {
-    const columns = [...COLUMNS, "criado_em"].join(", ");
-    const placeholders = [...COLUMNS.map((c) => `@${c}`), "@criadoEm"].join(", ");
+    const columns = [...COLUMNS, "criado_em", "cliente_id"].join(", ");
+    const placeholders = [...COLUMNS.map((c) => `@${c}`), "@criadoEm", CLIENTE_ID_EXPR].join(", ");
     const stmt = this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`);
     const agora = new Date().toISOString();
     return this.conn.transaction((itens) => {
@@ -124,7 +130,7 @@ class AgendamentoRepository extends BaseRepository {
    * concluida ou nunca esteve.
    */
   update(id, data, revisaoEsperada = null, usuarioNome = "") {
-    const assignments = [...COLUMNS.map((c) => `${c} = @${c}`), "concluido_em = @concluidoEm", "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
+    const assignments = [...COLUMNS.map((c) => `${c} = @${c}`), `cliente_id = ${CLIENTE_ID_EXPR}`, "concluido_em = @concluidoEm", "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
     return this.conn
       .prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)`)
       .run({ ...data, id, concluidoEm: data.concluidoEm ?? null, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome }).changes;

@@ -247,7 +247,7 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
       env.db.conn.prepare("INSERT INTO clientes (codigo, nome) VALUES ('C1', 'Mercado X')").run();
       const quarentaDiasAtras = new Date(Date.now() - 40 * 86400000);
       const data = `${String(quarentaDiasAtras.getDate()).padStart(2, "0")}/${String(quarentaDiasAtras.getMonth() + 1).padStart(2, "0")}/${quarentaDiasAtras.getFullYear()}`;
-      env.db.conn.prepare("INSERT INTO atualizacoes (cliente, sistema, versao, data) VALUES ('Mercado X', 'B_Vendas', '1', ?)").run(data);
+      atualizacoes.create({ cliente: "Mercado X", sistema: "B_Vendas", versao: "1", data }, null);
 
       let resumo = atualizacoes.resumo();
       assert.equal(resumo.desatualizadoDias, 60);

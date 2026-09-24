@@ -195,10 +195,10 @@ test("BackupService - efeito da restauração", async (t) => {
     await t.test("os dados voltam ao estado do backup", () => {
       // O teste de ponta a ponta: grava, faz backup, grava mais, restaura, e
       // confere que o segundo registro sumiu e o primeiro ficou.
-      env.db.clientes.insert("C001", "Antes do backup", "", "", "");
+      env.db.clientes.insert("C001", "Antes do backup", "", [], "");
       const arquivo = criarBackup(env);
 
-      env.db.clientes.insert("C002", "Depois do backup", "", "", "");
+      env.db.clientes.insert("C002", "Depois do backup", "", [], "");
       assert.ok(env.db.clientes.getByNome("Depois do backup"), "existe antes de restaurar");
 
       env.service.restore(arquivo, env.admin, { senha: SENHA, confirmacao: "RESTAURAR" });
@@ -228,7 +228,7 @@ test("BackupService - efeito da restauração", async (t) => {
     await t.test("o banco continua utilizável depois de restaurar", () => {
       // A conexão é fechada e reaberta no meio do processo. Se a reabertura
       // falhasse, o servidor ficaria de pé respondendo erro em tudo.
-      assert.doesNotThrow(() => env.db.clientes.insert("C003", "Depois de restaurar", "", "", ""));
+      assert.doesNotThrow(() => env.db.clientes.insert("C003", "Depois de restaurar", "", [], ""));
       assert.ok(env.db.clientes.getByNome("Depois de restaurar"));
     });
   } finally {

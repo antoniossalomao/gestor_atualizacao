@@ -86,14 +86,13 @@ test("ClienteService - renomear propaga para o histórico", async (t) => {
 
     env.db.atualizacoes.insert({
       cliente: "Padaria Antiga",
-      sistema: "B_Vendas",
       versao: "1.0",
       responsavel: "Camila",
       data: "01/01/2026",
       motivo: "",
       maquinas: 2,
       obs: "",
-    });
+    }, env.db.sistemas.resolverOuCriar(["B_Vendas"]));
     env.db.agendamentos.insert({
       tarefa: "Atualizar",
       cliente: "Padaria Antiga",
@@ -180,21 +179,30 @@ test("ClienteService - catálogo de sistemas", async (t) => {
       env.service.addSistema("B_Extinto", USUARIO);
       env.db.atualizacoes.insert({
         cliente: "Cliente A",
-        sistema: "B_Extinto",
         versao: "1.0",
         responsavel: "",
         data: "01/01/2026",
         motivo: "",
         maquinas: 1,
         obs: "",
-      });
+      }, env.db.sistemas.resolverOuCriar(["B_Extinto"]));
 
       env.service.removeSistema("B_Extinto", USUARIO);
 
       const restou = env.db.conn
-        .prepare("SELECT COUNT(*) AS n FROM atualizacoes WHERE sistema = 'B_Extinto'")
+        .prepare("SELECT COUNT(*) AS n FROM atualizacoes_v WHERE sistema = 'B_Extinto'")
         .get().n;
       assert.equal(restou, 1, "o registro do que JÁ aconteceu não pode ser reescrito");
+      // O sistema continua existindo, inativo: some do catálogo, não do histórico.
+      assert.ok(!env.service.listSistemas().includes("B_Extinto"), "saiu do catálogo");
+      assert.equal(env.db.sistemas.resolver("B_Extinto").ativo, 0);
+    });
+
+    await t.test("cadastrar de novo um sistema removido reativa o mesmo, com o histórico junto", () => {
+      const antes = env.db.sistemas.resolver("B_Extinto").id;
+      env.service.addSistema("B_Extinto", USUARIO);
+      assert.equal(env.db.sistemas.resolver("B_Extinto").id, antes, "mesmo id: os atendimentos antigos voltam a aparecer");
+      assert.ok(env.service.listSistemas().includes("B_Extinto"));
     });
 
     await t.test("remover sistema inexistente dá 404", () => {

@@ -76,7 +76,6 @@ COPY --from=build /app/server/node_modules ./node_modules
 COPY --chown=node:node package.json /app/package.json
 COPY --chown=node:node server/package.json server/server.js server/resetar-senha.js ./
 COPY --chown=node:node server/src ./src
-COPY --chown=node:node server/scripts ./scripts
 COPY --chown=node:node client /app/client
 
 # Pastas de dados criadas AQUI, já pertencendo ao usuário "node", de

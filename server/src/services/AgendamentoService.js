@@ -1,7 +1,7 @@
 const { STATUS_OPTIONS, PRIORIDADE_OPTIONS } = require("../config/constants");
 const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, horaValida } = require("../shared/validation");
-const { normalizarResponsavel } = require("./normalizacao");
+const { normalizarResponsavel } = require("../shared/normalizacao");
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
 
 /**

@@ -191,8 +191,11 @@ em `client/`.
 Para começar com dados que já existem, copie o `gestao.db` para dentro de
 `server/data/`, ou aponte a variável `DB_PATH` do `.env` direto para o
 arquivo onde ele estiver. Nada precisa ser convertido: as migrações rodam
-sozinhas a cada início do servidor e são idempotentes — tabelas e colunas
-que faltarem são criadas, o que já existe fica como está.
+sozinhas no início do servidor. Cada uma é numerada e roda uma vez só
+(`PRAGMA user_version` guarda a última aplicada), numa transação; antes de
+aplicar uma migração pendente, o servidor copia o banco para `backups/` —
+essa cópia aparece na tela de Backups e pode ser restaurada por lá. Ver
+[ADR-0007](docs/adr/0007-esquema-normalizado-e-migracoes-versionadas.md).
 
 ## Variáveis de ambiente (`.env`)
 
