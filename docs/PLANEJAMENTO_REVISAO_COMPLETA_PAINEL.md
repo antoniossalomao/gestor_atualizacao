@@ -86,7 +86,7 @@ Para volume de trabalho: um atendimento misto continua contando uma vez. Registr
 
 ### 3.3 Situação consolidada do cliente
 
-Grupos mutuamente exclusivos (decididos):
+Grupos mutuamente exclusivos (decididos). **Cliente com B_Vendas é julgado só pelo B_Vendas** (decidido em 24/09/2026, depois de ver o card com dados reais: com todos os sistemas eram 21 em dia, 245 desatualizados e 103 pendentes, de 369). Sem B_Vendas, valem as regras abaixo sobre todos os sistemas:
 
 1. **Desatualizado:** existe sistema atualizável com versão recebida **anterior** à oficial (ou, sem versão registrada, atendido antes da data da oficial).
 2. **Verificação pendente:** não há atraso confirmado, mas algum sistema atualizável nunca teve atendimento, não tem oficial cadastrada ou tem data de atendimento inválida.
@@ -162,7 +162,7 @@ Substituir a rosca genérica por um card **Atualização dos clientes**, com bar
 
 ### 5.2 Sem atendimento há mais de 60 dias
 
-- [x] Renomear indicador para **Sem atendimento há mais de 60 dias**, usando o prazo configurado (e o texto da regra na Administração).
+- [x] Renomear indicador para **Sem atualização há mais de 60 dias** (a equipe preferiu "atualização" a "atendimento"), usando o prazo configurado, e o texto da regra na Administração.
 - [x] Separar Nunca atendidos de clientes com atendimento antigo (vêm primeiro na lista, com "Nunca").
 - [x] Corrigir destino do clique: hoje abre Sistemas sem reproduzir o conjunto contado.
 - [x] Abrir lista com cliente, último atendimento e dias; responsável somente se houver fonte definida.
@@ -624,6 +624,8 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 | Central de pendências | Mantida como E11, opcional e independente |
 | Nome/símbolo | Gestor de Atualizações, assinatura Bredas Sistemas; símbolo vetorial (seção 4) |
 | Atendimento sem versão registrada | Julgado pela data do atendimento contra a da oficial, marcado "(pela data)" (ADR-0008) |
+| Quem decide a situação do cliente | O B_Vendas, quando o cliente tem (fixo no código); sem ele, todos os sistemas |
+| Nome do indicador de tempo | "Sem atualização há mais de N dias" (não "atendimento") |
 | Sistemas fixos agora | Parte mínima do I04 junto com o I02 (migração 2); tela e API depois |
 
 ### Em aberto
