@@ -21,9 +21,14 @@ class SistemaRepository extends BaseRepository {
     return this.conn.prepare("SELECT nome FROM sistemas WHERE ativo = 1 ORDER BY nome").all().map((r) => r.nome);
   }
 
-  /** Todos, inclusive os inativos -- para casar nomes antigos do histórico. */
+  /**
+   * Todos, inclusive os inativos -- para casar nomes antigos do histórico.
+   * `*` em vez da lista de colunas: a migração 1 usa este método num banco
+   * que ainda não tem `controla_versao` (criada só na migração 2), e uma
+   * lista explícita quebraria a migração de toda instalação antiga.
+   */
   todos() {
-    return this.conn.prepare("SELECT id, nome, ativo, ultima_versao FROM sistemas ORDER BY nome").all();
+    return this.conn.prepare("SELECT * FROM sistemas ORDER BY nome").all();
   }
 
   versoes() {
@@ -75,7 +80,7 @@ class SistemaRepository extends BaseRepository {
    * é o B_Vendas, e "DFE" e "B_DFe" são o mesmo sistema. É a regra que o
    * antigo `sameSystem` aplicava a cada leitura; agora roda uma vez, na
    * gravação, e o resto do programa só compara ids.
-   * @returns {{id: number, nome: string, ativo: number, ultima_versao: string} | null}
+   * @returns {{id: number, nome: string, ativo: number, ultima_versao: string, controla_versao: number} | null}
    */
   resolver(nome) {
     return achar(this.todos(), nome);
@@ -99,7 +104,7 @@ class SistemaRepository extends BaseRepository {
       let sistema = achar(catalogo, nome);
       if (!sistema) {
         const id = Number(inserir.run(nome).lastInsertRowid);
-        sistema = { id, nome, ativo: 0, ultima_versao: "" };
+        sistema = { id, nome, ativo: 0, ultima_versao: "", controla_versao: 1 };
         catalogo.push(sistema);
       }
       if (!saida.some((s) => s.id === sistema.id)) saida.push({ id: sistema.id, nome: sistema.nome });
