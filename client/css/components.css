@@ -1112,12 +1112,13 @@ kbd {
 
 /* O indicador de clientes parados é o único que pode virar má notícia. Quando
    vira, o número inteiro muda de cor e o ícone acompanha -- assim o alerta é
-   visível na varredura rápida, não só para quem parar para ler o valor. */
+   visível na varredura rápida, não só para quem parar para ler o valor.
+   Sem fundo: o triângulo já é vermelho, e o badge atrás dele (mesmo "fraco")
+   ficava escuro demais no tema escuro, parecendo uma mancha, não um ícone. */
 .stat-tile.is-alert .stat-tile__value {
   color: var(--cor-vermelho);
 }
 .stat-tile.is-alert .stat-tile__icon {
-  background: var(--cor-vermelho-fraco);
   color: var(--cor-vermelho);
 }
 

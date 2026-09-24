@@ -166,7 +166,7 @@ Substituir a rosca genérica por um card **Atualização dos clientes**, com bar
 - [x] Separar Nunca atendidos de clientes com atendimento antigo (vêm primeiro na lista, com "Nunca").
 - [x] Corrigir destino do clique: hoje abre Sistemas sem reproduzir o conjunto contado.
 - [x] Abrir lista com cliente, último atendimento e dias; responsável somente se houver fonte definida.
-- [ ] Remover fundo escuro arredondado do ícone de alerta.
+- [x] Remover fundo escuro arredondado do ícone de alerta.
 - [ ] Usar ícone simples e cor discreta, coerente com os demais indicadores.
 - [ ] Não tratar acompanhamento preventivo como falha crítica do sistema.
 - [ ] Validar contraste, foco e leitura nos dois temas.
