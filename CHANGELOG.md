@@ -39,6 +39,23 @@ Para o agente C#, o equivalente é
     atendimento e de situação do cliente que já existiam. O Excel exportado
     passou a acrescentar resumo, filtros e cabeçalhos formatados numa aba
     além dos registros crus.
+  - Ajustes de acabamento depois do primeiro uso: a tela Sistemas perdeu a
+    coluna "Versão oficial" da grade (ela já aparecia sozinha, igual pra
+    toda a lista, acima da tabela) e o aviso vermelho repetindo a mesma
+    informação; o select de sistema parou de mostrar "— Sem referência"
+    para quem ainda não tem data cadastrada; o botão "Salvar versão"
+    ficou do tamanho do texto, e não mais esticado aos 200px mínimos do
+    campo ao lado (herdava a largura por estar dentro de um `.field`); e o
+    botão "Gerar Agendamentos em Lote" saiu dessa tela (a rota
+    `/agendamentos/gerar-lote` continua existindo, só não tem mais gatilho
+    aqui). A Matriz de Versões da ficha do cliente comparava a mesma versão
+    resumida ("B_Vendas: 1; B_NFe: 2") contra TODAS as linhas de sistema, em
+    vez da versão de cada um; e a grade de Atualizações cortava esse mesmo
+    resumo no meio, porque a coluna é estreita demais para ele. As duas
+    passaram a usar `versaoRegistrada()` para pegar a versão de um sistema
+    específico — a matriz usa o sistema da própria linha, a grade usa o
+    primeiro sistema listado no atendimento (o resumo inteiro continua
+    disponível no title, ao passar o mouse).
 
 - **Configurações virou uma tela, com a mesma cara do resto do app.** Era um
   modal de duas colunas com um desenho só dele (outra trilha de navegação,

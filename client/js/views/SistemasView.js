@@ -40,12 +40,14 @@ export class SistemasView extends View {
                    placeholder="dd/mm/aaaa" aria-describedby="sis-corte-hint" />
             <div class="field__hint" id="sis-corte-hint" data-role="data-hint"></div>
           </div>
-          <button type="button" class="btn" data-action="salvar-versao">Salvar versão</button>
+          <div class="field" style="min-width: 0;">
+            <label class="field__label" aria-hidden="true">&nbsp;</label>
+            <button type="button" class="btn" style="align-self: flex-start;" data-action="salvar-versao">Salvar versão</button>
+            <div class="field__hint" aria-hidden="true"></div>
+          </div>
           <div class="toolbar-spacer"></div>
-          <button type="button" class="btn btn--accent" data-action="gerar-agendamentos">Gerar Agendamentos em Lote</button>
           <span class="result-count" data-role="count" aria-live="polite"></span>
         </div>
-        <p class="field__hint" data-role="referencia" aria-live="polite"></p>
         <div data-role="table"></div>
       </div>
     `;
@@ -56,7 +58,6 @@ export class SistemasView extends View {
         { key: "cidade", label: "Cidade" },
         { key: "ultima", label: "Última Atualização", type: "date" },
         { key: "instalada", label: "Versão recebida" },
-        { key: "oficial", label: "Versão oficial" },
         { key: "situacao", label: "Situação" },
       ],
       rowKey: (row) => row.cliente,
@@ -74,9 +75,6 @@ export class SistemasView extends View {
 
     this.sistemaFilter = this.container.querySelector('[data-role="sistema-filter"]');
     this.dataCorteInput = this.container.querySelector('[data-role="data-corte"]');
-    this.gerarBtn = this.container.querySelector('[data-action="gerar-agendamentos"]');
-    this.gerarBtn.hidden = this.user?.role === "consulta";
-    this.gerarBtn.addEventListener("click", () => this._gerarAgendamentos());
     this.dataHint = this.container.querySelector('[data-role="data-hint"]');
     this.dataCorteInput.value = this.dataCorte;
 
@@ -102,7 +100,7 @@ export class SistemasView extends View {
 
   async refresh() {
     this.versoes = await this.api.get("/sistemas/versoes", null, { key: "sistemas:versoes" });
-    this.sistemaFilter.innerHTML = this.versoes.map((s) => `<option value="${escapeHtml(s.nome)}">${escapeHtml(s.nome)} — ${escapeHtml(s.data || "Sem referência")}</option>`).join("");
+    this.sistemaFilter.innerHTML = this.versoes.map((s) => `<option value="${escapeHtml(s.nome)}">${escapeHtml(s.nome)}${s.data ? ` — ${escapeHtml(s.data)}` : ""}</option>`).join("");
     if (this.versoes.some((s) => s.nome === this.sistema)) this.sistemaFilter.value = this.sistema;
     this.sistema = this.sistemaFilter.value;
     this._usarReferencia();
@@ -115,9 +113,6 @@ export class SistemasView extends View {
     this.dataHint.textContent = "";
     this.dataCorteInput.setAttribute("aria-invalid", "false");
     this.salvarBtn.disabled = !this.sistema;
-    this.container.querySelector('[data-role="referencia"]').textContent = this.dataCorte
-      ? `Referência salva: ${this.dataCorte}. A situação compara a versão recebida pelo cliente com esta versão oficial.`
-      : "Sem data de referência para este sistema. Cadastre a última versão para identificar clientes desatualizados.";
   }
 
   async _salvarVersao() {
@@ -171,28 +166,6 @@ export class SistemasView extends View {
 
   _salvarFiltros() {
     prefs.set("sistemas:filtros", { sistema: this.sistema });
-  }
-
-  async _gerarAgendamentos() {
-    const clientes = (this.rows || []).filter((row) => ["Desatualizado", "Nunca atualizado"].includes(row.situacao)).map((row) => row.cliente);
-    if (clientes.length === 0) {
-      Modal.alert("Agendamentos", "Nenhum cliente defasado neste recorte.", "info");
-      return;
-    }
-    const ok = await Modal.confirm("Gerar agendamentos em lote", `Criar ${plural(clientes.length, "tarefa")} para os clientes defasados em ${this.sistema}?`, { confirmLabel: "Gerar", danger: false });
-    if (!ok) return;
-    try {
-      const resultado = await this.api.post("/agendamentos/gerar-lote", {
-        clientes,
-        sistema: this.sistema,
-        dataCorte: this.dataCorte,
-        responsavel: this.user?.nome || "",
-      });
-      this.cache?.invalidar("agendamentos:");
-      Modal.alert("Agendamentos criados", `${plural(resultado.criados, "tarefa")} criada para acompanhamento.`, "success");
-    } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
-    }
   }
 }
 

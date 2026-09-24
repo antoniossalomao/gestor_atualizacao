@@ -11,7 +11,8 @@ import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { icon, iconHtml } from "../utils/icons.js";
 import { html, plural, copyToClipboard } from "../utils/html.js";
 import { abrirRelatorio } from "../components/RelatorioModal.js";
-import { relatorioDeAtualizacao, relatorioDoCliente, relatorioSituacao, relatorioDoPeriodo } from "../domain/relatorio.js";
+import { relatorioDeAtualizacao, relatorioDoCliente, relatorioSituacao, relatorioDoPeriodo, versaoRegistrada } from "../domain/relatorio.js";
+import { splitSistemas } from "../domain/matrizVersoes.js";
 import { emptyState } from "../components/EmptyState.js";
 import { withBusyButton, marcarOcupado } from "../utils/guard.js";
 import { baixarBlob } from "../utils/arquivo.js";
@@ -181,6 +182,13 @@ export class AtualizacoesView extends View {
           label: c.label,
           type: c.key === "data" ? "date" : "text",
           largura: LARGURAS_ATUALIZACAO[c.key],
+          // A célula é estreita demais para o resumo de vários sistemas
+          // ("B_Vendas: 09/09/2026; B_NFe: 02/09/2026"), que cortava no meio.
+          // Mostra só a versão do primeiro sistema listado -- geralmente uma
+          // data só, do mesmo jeito que um atendimento de um sistema só
+          // sempre apareceu aqui. O resumo inteiro continua no title (hover)
+          // e no relatório/edição, que têm espaço para ele.
+          ...(c.key === "versao" ? { render: (row) => versaoResumida(row) } : {}),
         })),
         { key: "acoes", label: "Ações", largura: LARGURAS_ATUALIZACAO.acoes, render: (row) => acoesAtualizacao(row, this.user?.role) },
       ],
@@ -998,6 +1006,24 @@ export class AtualizacoesView extends View {
     this.responsavelAutocomplete?.destroy();
     super.destroy();
   }
+}
+
+/**
+ * Versão para a coluna estreita da grade: a do primeiro sistema listado
+ * (a ordem em que a pessoa digitou), não o resumo de todos. O resumo
+ * completo ("B_Vendas: ...; B_NFe: ...") fica só no title, pra quem passar
+ * o mouse -- ele já existe pronto em row.versao.
+ */
+function versaoResumida(row) {
+  const span = document.createElement("span");
+  if (row.versoes_sistemas != null) {
+    const primeiro = splitSistemas(row.sistema)[0] || "";
+    span.textContent = versaoRegistrada(row, primeiro) || "—";
+    span.title = row.versao || "";
+  } else {
+    span.textContent = row.versao || "—";
+  }
+  return span;
 }
 
 function acoesAtualizacao(row, role) {
