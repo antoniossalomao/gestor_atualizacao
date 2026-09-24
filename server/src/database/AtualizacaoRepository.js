@@ -342,6 +342,25 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
+   * Último atendimento de TODOS os clientes em cada sistema, de uma vez só:
+   * [{ cliente_id, sistema_id, data, versao }]. É a mesma escolha de
+   * ultimaPorClienteNoSistema, para o Resumo classificar os clientes sem
+   * uma consulta por sistema.
+   */
+  ultimaPorClienteESistema() {
+    return this.conn
+      .prepare(
+        `SELECT cliente_id, sistema_id, data, versao FROM (
+           SELECT a.cliente_id, x.sistema_id, a.data, x.versao,
+                  ROW_NUMBER() OVER (PARTITION BY a.cliente_id, x.sistema_id ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC) AS n
+             FROM ${this.table} a JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
+            WHERE a.cliente_id IS NOT NULL
+         ) WHERE n = 1`
+      )
+      .all();
+  }
+
+  /**
    * Último atendimento de um cliente em cada sistema que já passou por ele:
    * [{ sistema_id, sistema, data, versao }]. Usado na situação do cliente.
    */

@@ -1,4 +1,4 @@
-import { html } from "../utils/html.js";
+import { html, plural } from "../utils/html.js";
 import { iconHtml } from "../utils/icons.js";
 
 /**
@@ -39,4 +39,64 @@ export function statTile(chave, nomeIcone, rotulo, destino) {
 export function deltaTendencia(tendencia) {
   const pct = `${Math.abs(tendencia.pct)}%`;
   return tendencia.tendencia === "neutra" ? html`${pct}` : html`${iconHtml("seta")}${pct}`;
+}
+
+/**
+ * Corpo do card "Atualização dos Clientes": barra de distribuição, os três
+ * totais clicáveis e os sistemas com mais clientes atrasados.
+ *
+ * Substituiu uma rosca de duas fatias ("Em dia" x "Desatualizados") em que
+ * "em dia" era só quem teve algum atendimento nos últimos 60 dias -- não
+ * dizia nada sobre versão. A barra é auxiliar: os números e os botões
+ * funcionam sem ela, e ela some quando não há ninguém para dividir.
+ *
+ * @param {ReturnType<typeof import("../domain/situacao.js").totaisSituacao>} totais
+ * @param {Array<{sistema: string, total: number}>} maisAtrasados
+ */
+export function corpoSituacao(totais, maisAtrasados) {
+  if (totais.avaliados === 0) {
+    // Nunca "100% em dia" de um conjunto vazio.
+    return html`
+      <p class="situacao__vazio">
+        Nenhum cliente tem sistema com controle de versão para avaliar.
+        Marque os sistemas de cada cliente em Clientes e cadastre a versão oficial em Sistemas.
+      </p>`;
+  }
+  const descricaoBarra = totais.grupos.map((g) => `${g.rotulo}: ${g.pct}%`).join(", ");
+  const top = maisAtrasados.slice(0, 3);
+  return html`
+    <div class="situacao__barra" role="img" aria-label="${descricaoBarra}">
+      ${totais.grupos.filter((g) => g.total > 0).map((g) => html`<span class="situacao__parte is-${g.severidade}" style="flex-grow: ${g.total}"></span>`)}
+    </div>
+    <div class="situacao__totais">
+      ${totais.grupos.map(
+        (g) => html`
+          <button type="button" class="situacao__total" data-grupo="${g.chave}" title="${g.descricao} Clique para ver a lista.">
+            <span class="situacao__marca is-${g.severidade}" aria-hidden="true"></span>
+            <span class="situacao__rotulo">${g.rotulo}</span>
+            <strong class="situacao__valor">${g.total}</strong>
+            <span class="situacao__pct">${g.pct}%</span>
+          </button>`
+      )}
+    </div>
+    <p class="situacao__nota">
+      De ${plural(totais.avaliados, "cliente")} com sistema que controla versão.${totais.foraDaAvaliacao
+        ? ` ${plural(totais.foraDaAvaliacao, "cliente")} fora da conta (só sistemas fixos ou nenhum).`
+        : ""}
+    </p>
+    ${top.length
+      ? html`
+        <div class="situacao__sistemas">
+          <h3 class="situacao__subtitulo">Mais clientes desatualizados</h3>
+          <ul>
+            ${top.map(
+              (s) => html`
+                <li><button type="button" class="situacao__sistema" data-sistema="${s.sistema}">
+                  <span>${s.sistema}</span><span>${plural(s.total, "cliente")}</span>
+                </button></li>`
+            )}
+          </ul>
+          ${maisAtrasados.length > top.length ? html`<button type="button" class="btn btn--small" data-action="todos-sistemas">Ver todos (${maisAtrasados.length})</button>` : ""}
+        </div>`
+      : ""}`;
 }

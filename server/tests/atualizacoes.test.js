@@ -285,10 +285,17 @@ test("Referência oficial não atribui versões retroativamente", () => {
     clientes.salvarVersaoSistema("B_Vendas", "09/09/2026", USUARIO);
     clientes.salvarVersaoSistema("B_NFe", "22/09/2026", USUARIO);
     const rows = service.relatorioPorSistema("B_Vendas");
-    assert.equal(rows.find((r) => r.cliente === "Anterior").situacao, "Sem informação");
-    assert.equal(rows.find((r) => r.cliente === "Igual").situacao, "Sem informação");
-    assert.equal(rows.find((r) => r.cliente === "Posterior").situacao, "Sem informação");
-    assert.equal(rows.find((r) => r.cliente === "Sem registro").situacao, "Nunca atualizado");
+    const linha = (cliente) => rows.find((r) => r.cliente === cliente);
+    // O que não pode acontecer: a oficial salva hoje virar a versão que
+    // esses atendimentos antigos "receberam".
+    for (const cliente of ["Anterior", "Igual", "Posterior"]) assert.equal(linha(cliente).instalada, "Não informada");
+    // A situação, sem versão registrada, sai pela data do atendimento -- e
+    // marcada `pelaData`, para a tela não apresentar como comprovada
+    // (decisão da equipe, ver services/situacaoVersao.js).
+    assert.deepEqual([linha("Anterior").situacao, linha("Anterior").pelaData], ["Desatualizado", true]);
+    assert.deepEqual([linha("Igual").situacao, linha("Igual").pelaData], ["Em dia", true]);
+    assert.deepEqual([linha("Posterior").situacao, linha("Posterior").pelaData], ["Em dia", true]);
+    assert.equal(linha("Sem registro").situacao, "Nunca atualizado");
     assert.equal(db.sistemas.versoes().find((s) => s.nome === "B_NFe").data, "22/09/2026");
     assert.throws(() => clientes.salvarVersaoSistema("B_Vendas", "31/02/2026", USUARIO));
     assert.throws(() => clientes.salvarVersaoSistema("B_Vendas", 123, USUARIO));

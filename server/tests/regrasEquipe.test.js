@@ -251,12 +251,12 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
 
       let resumo = atualizacoes.resumo();
       assert.equal(resumo.desatualizadoDias, 60);
-      assert.ok(!resumo.desatualizados.some((c) => c.nome === "Mercado X"), "40 dias < 60");
+      assert.ok(!resumo.semAtendimento.some((c) => c.nome === "Mercado X"), "40 dias < 60");
 
       env.regras.atualizar(ADMIN, { desatualizadoDias: 30 });
       resumo = atualizacoes.resumo();
       assert.equal(resumo.desatualizadoDias, 30, "a tela escreve o rótulo com este número");
-      assert.ok(resumo.desatualizados.some((c) => c.nome === "Mercado X"), "40 dias > 30");
+      assert.ok(resumo.semAtendimento.some((c) => c.nome === "Mercado X"), "40 dias > 30");
     } finally {
       env.cleanup();
     }

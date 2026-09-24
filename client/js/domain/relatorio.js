@@ -1,4 +1,5 @@
 import { splitSistemas } from "./matrizVersoes.js";
+import { rotuloSituacao } from "./situacao.js";
 import { plural } from "../utils/html.js";
 
 /**
@@ -167,7 +168,7 @@ export function versaoRegistrada(registro, sistema) {
 }
 
 export function relatorioSituacao(situacao) {
-  return ["SITUAÇÃO ATUAL DOS SISTEMAS", ...situacao.map((s) => `${s.sistema}: ${s.situacao}\nRecebida: ${s.instalada || "Não informada"} · Oficial: ${s.oficial || "Não informada"}${s.data ? ` · Atendimento: ${s.data}` : ""}`)].join("\n\n");
+  return ["SITUAÇÃO ATUAL DOS SISTEMAS", ...situacao.map((s) => `${s.sistema}: ${rotuloSituacao(s.situacao, s.pelaData)}\nRecebida: ${s.instalada || "Não informada"} · Oficial: ${s.oficial || "Não informada"}${s.data ? ` · Atendimento: ${s.data}` : ""}`)].join("\n\n");
 }
 
 export function relatorioDoPeriodo(resumo) {

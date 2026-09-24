@@ -6,6 +6,7 @@ const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, parseData } = require("../shared/validation");
 const { normalizarSistemas, normalizarResponsavel } = require("../shared/normalizacao");
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
+const { situacaoDoSistema, situacaoDoCliente, contaParaVersao } = require("./situacaoVersao");
 
 // Sentinela: cliente nunca atualizado, sempre no topo da lista de
 // pendencias (ninguem esta "mais atrasado" do que quem nunca foi atualizado).
@@ -214,18 +215,19 @@ class AtualizacaoService {
     for (const { id, nome, cidade } of this.db.clientes.clientesDoSistema(alvo.id)) {
       const registro = ultimas.get(id);
       const instalada = registro?.versao || "";
-      let situacao = "Sem informação";
-      if (!registro) situacao = "Nunca atualizado";
-      else if (consultaAvulsa) {
+      let situacao;
+      let pelaData = false;
+      if (registro && consultaAvulsa) {
         // Consulta avulsa por data: não dá pra saber se a versão bate com a
         // oficial (não é isso que foi pedido), só se o atendimento é de
         // antes ou depois do corte digitado.
         const d = parseData(registro.data);
         situacao = !d ? "Nunca atualizado" : d < dataCorte ? "Desatualizado" : "Em dia";
-      } else if (oficial) {
-        situacao = instalada ? (instalada === oficial ? "Em dia" : "Desatualizado") : "Sem informação";
-      } else situacao = "Sem referência";
-      resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", instalada: instalada || "Não informada", oficial: oficial || "Não informada", situacao });
+      } else {
+        // Mesma regra do Resumo e da ficha (ver situacaoVersao.js).
+        ({ situacao, pelaData } = situacaoDoSistema(registro, oficial));
+      }
+      resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", instalada: instalada || "Não informada", oficial: oficial || "Não informada", situacao, pelaData });
     }
     resultado.sort((a, b) => a.cliente.localeCompare(b.cliente, "pt-BR"));
     return resultado;
@@ -351,8 +353,11 @@ class AtualizacaoService {
         const registro = ultimas.get(id);
         const instalada = registro?.versao || "";
         const oficial = sistema.ultima_versao || "";
-        const situacao = !registro ? "Nunca atualizado" : !instalada ? "Sem informação" : !oficial ? "Sem referência" : instalada === oficial ? "Em dia" : "Desatualizado";
-        return { sistema: sistema.nome, instalada, oficial, situacao, data: registro?.data || "" };
+        const { situacao, pelaData } = situacaoDoSistema(registro, oficial);
+        // `contaNaSituacao` falso = sistema fixo (B_Atualizador, Suporte
+        // Bredas) ou fora do catálogo: a ficha mostra, mas ele não entra na
+        // situação consolidada do cliente (a do Resumo).
+        return { sistema: sistema.nome, instalada, oficial, situacao, pelaData, contaNaSituacao: contaParaVersao(sistema), data: registro?.data || "" };
       })
       .sort((a, b) => (a.sistema < b.sistema ? -1 : a.sistema > b.sistema ? 1 : 0));
   }
@@ -417,7 +422,8 @@ class AtualizacaoService {
     const totalAtualizacoes = this.db.atualizacoes.count();
     const mesCount = this.db.atualizacoes.countForMonth(mesStr);
     const desatualizadoDias = this.regras.valor("desatualizadoDias");
-    const desatualizados = this._clientesDesatualizados(hoje, desatualizadoDias);
+    const semAtendimento = this._clientesSemAtendimento(hoje, desatualizadoDias);
+    const situacaoClientes = this._situacaoDosClientes();
     const porResponsavel = this.db.atualizacoes.countsByResponsavel();
     const atualizadosMesPorSistema = this._atualizadosMesPorSistema(mesStr);
     // Tendencia mensal (grafico do Resumo) e tempo medio de resolucao das
@@ -431,16 +437,72 @@ class AtualizacaoService {
       totalClientes,
       totalAtualizacoes,
       mesCount,
-      desatualizados,
-      // A tela escreve "Parados há mais de N dias" com este N, e não com um
-      // número próprio: é regra da equipe, editável, e o rótulo tem que
-      // contar a mesma regra que a lista acima usou.
+      // Tempo sem atendimento e situação de versão são perguntas DIFERENTES,
+      // e por isso duas chaves. Antes o Resumo chamava de "em dia" o
+      // complemento da lista abaixo: cliente atendido ontem com a NFe velha
+      // aparecia em dia, e cliente sem visita há 3 meses mas sem nenhuma
+      // versão nova para receber aparecia desatualizado.
+      semAtendimento,
+      // A tela escreve "Sem atendimento há mais de N dias" com este N, e não
+      // com um número próprio: é regra da equipe, editável, e o rótulo tem
+      // que contar a mesma regra que a lista acima usou.
       desatualizadoDias,
+      situacaoClientes,
       porResponsavel,
       atualizadosMesPorSistema,
       atualizacoesPorMes,
       tempoMedioResolucao,
-      emDia: totalClientes - desatualizados.length,
+    };
+  }
+
+  /**
+   * Situação de versão de cada cliente (ver situacaoVersao.js), agrupada.
+   * As listas vão inteiras para a tela: o clique num total abre exatamente
+   * os clientes que ele contou, sem uma segunda consulta que pudesse
+   * discordar do número.
+   *
+   * Os sistemas de um cliente são os do cadastro MAIS os que aparecem no
+   * histórico dele (mesmo conjunto da ficha), tirando fixos e inativos.
+   */
+  _situacaoDosClientes() {
+    const catalogo = new Map(this.db.sistemas.todos().map((s) => [s.id, s]));
+    /** @type {Map<number, Map<number, {data: string, versao: string|null}>>} */
+    const ultimas = new Map();
+    for (const u of this.db.atualizacoes.ultimaPorClienteESistema()) {
+      if (!ultimas.has(u.cliente_id)) ultimas.set(u.cliente_id, new Map());
+      ultimas.get(u.cliente_id).set(u.sistema_id, u);
+    }
+    /** @type {Map<number, Set<number>>} */
+    const cadastro = new Map();
+    for (const { cliente_id: c, sistema_id: s } of this.db.clientes.sistemasDeTodos()) {
+      if (!cadastro.has(c)) cadastro.set(c, new Set());
+      cadastro.get(c).add(s);
+    }
+
+    const grupos = { desatualizado: [], pendente: [], em_dia: [], sem_atualizaveis: [] };
+    /** Quantos clientes estão atrasados em cada sistema -- os "mais atrasados" do card. */
+    const atrasosPorSistema = new Map();
+    for (const { id, nome, cidade } of this.db.clientes.allBasic()) {
+      const doCliente = ultimas.get(id) || new Map();
+      const ids = new Set([...(cadastro.get(id) || []), ...doCliente.keys()]);
+      const sistemas = [];
+      for (const sistemaId of ids) {
+        const sistema = catalogo.get(sistemaId);
+        if (!contaParaVersao(sistema)) continue;
+        const { situacao, pelaData } = situacaoDoSistema(doCliente.get(sistemaId), sistema.ultima_versao);
+        sistemas.push({ sistema: sistema.nome, situacao, pelaData });
+        if (situacao === "Desatualizado") atrasosPorSistema.set(sistema.nome, (atrasosPorSistema.get(sistema.nome) || 0) + 1);
+      }
+      sistemas.sort((a, b) => a.sistema.localeCompare(b.sistema, "pt-BR"));
+      grupos[situacaoDoCliente(sistemas.map((s) => s.situacao))].push({ nome, cidade: cidade || "—", sistemas });
+    }
+    for (const lista of Object.values(grupos)) lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
+    return {
+      ...grupos,
+      sistemasMaisAtrasados: [...atrasosPorSistema]
+        .map(([sistema, total]) => ({ sistema, total }))
+        .sort((a, b) => b.total - a.total || a.sistema.localeCompare(b.sistema, "pt-BR")),
     };
   }
 
@@ -458,8 +520,11 @@ class AtualizacaoService {
     return this.db.atualizacoes.atualizadosNoMesPorSistema(mesStr);
   }
 
-  /** Clientes cuja ultima atualizacao passou de `limiteDias` (ou nunca aconteceu). */
-  _clientesDesatualizados(hoje, limiteDias) {
+  /**
+   * Clientes cujo último atendimento passou de `limiteDias` (ou nunca
+   * aconteceu). Não diz nada sobre versão -- ver _situacaoDosClientes.
+   */
+  _clientesSemAtendimento(hoje, limiteDias) {
     const ultimas = this.db.atualizacoes.ultimaDataPorCliente();
     const resultado = [];
     for (const { id, nome, cidade } of this.db.clientes.allBasic()) {

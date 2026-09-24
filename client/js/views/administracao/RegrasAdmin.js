@@ -24,8 +24,11 @@ export class RegrasAdmin extends FormularioRegras {
       <form class="card secao-card admin-form" data-role="form" novalidate>
         ${linhaRegraNumero({
           nome: "desatualizadoDias",
-          titulo: "Cliente desatualizado depois de",
-          ajuda: "Sem nenhuma atualização registrada por mais que isso, o cliente entra na lista de parados do Resumo.",
+          // O nome interno ficou "desatualizadoDias" (é a chave gravada no
+          // banco), mas a regra mede só tempo sem atendimento -- situação de
+          // versão é outra conta (ver o card Atualização dos Clientes).
+          titulo: "Sem atendimento depois de",
+          ajuda: "Sem nenhum atendimento registrado por mais que isso, o cliente entra na lista \"Sem atendimento\" do Resumo. Não muda a situação de versão.",
           unidade: "dias",
           valor: valores.desatualizadoDias,
           min: d.desatualizadoDias.min,

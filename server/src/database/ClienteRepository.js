@@ -79,6 +79,11 @@ class ClienteRepository extends BaseRepository {
       .all(sistemaId);
   }
 
+  /** Todas as marcações cliente x sistema do cadastro: [{ cliente_id, sistema_id }] -- Resumo. */
+  sistemasDeTodos() {
+    return this.conn.prepare("SELECT cliente_id, sistema_id FROM cliente_sistemas").all();
+  }
+
   /** Ids dos sistemas marcados num cliente, na ordem do cadastro. */
   sistemasDoCliente(clienteId) {
     return this.conn.prepare("SELECT sistema_id FROM cliente_sistemas WHERE cliente_id = ? ORDER BY ordem").all(clienteId).map((r) => r.sistema_id);

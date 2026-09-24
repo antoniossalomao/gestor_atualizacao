@@ -15,6 +15,30 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **"Em dia" passou a falar de versão, não de visita.** O card "Situação dos
+  Clientes" do Resumo chamava de em dia quem teve qualquer atendimento nos
+  últimos 60 dias. Um cliente atendido ontem com a NFe velha aparecia em
+  dia, e um sem visita há três meses, mas sem versão nova para receber,
+  aparecia desatualizado. Agora há duas coisas separadas:
+  - **Card "Atualização dos Clientes"**: Em dia, Desatualizados e Verificação
+    pendente, pela versão recebida em cada sistema comparada com a oficial.
+    Cada total abre a lista exata dos clientes que ele contou, e o card
+    mostra os sistemas com mais clientes atrasados. Quem só tem sistemas
+    fixos (B_Atualizador, Suporte Bredas) fica fora da conta.
+  - **Indicador "Sem Atendimento Há Mais de N Dias"** (era "Parados"): mede
+    só o tempo. O clique abria a aba Sistemas, que não mostrava esse
+    conjunto; agora abre a lista.
+  - **A mesma regra vale na aba Sistemas e na ficha.** Antes comparavam a
+    versão como texto (`===`), e quem recebeu uma versão mais nova que a
+    oficial aparecia como atrasado. Agora a comparação é por data.
+  - **Atendimento sem versão registrada é julgado pela data** do
+    atendimento contra a da oficial, e aparece como "(pela data)". Sem isso,
+    348 de 369 clientes de produção ficariam "pendentes", porque os
+    atendimentos de antes da versão oficial não gravaram versão. A versão
+    recebida continua "Não informada": nada é gravado retroativamente.
+  - Migração 2: `sistemas.controla_versao`. Decisões em
+    [ADR-0008](docs/adr/0008-situacao-de-versao-do-cliente.md).
+
 - **Um nome só e um símbolo que acompanha o tema.** A barra lateral dizia
   "ATUALIZADOR / Gestor de clientes", o login "ATUALIZADOR" e a aba do
   navegador "Gestor de Atualizações". Três nomes para a mesma coisa, e

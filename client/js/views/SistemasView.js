@@ -8,6 +8,7 @@ import { Modal } from "../components/Modal.js";
 import { emptyState } from "../components/EmptyState.js";
 import { escapeHtml, plural } from "../utils/html.js";
 import { prefs } from "../app/prefs.js";
+import { rotuloSituacao, AJUDA_PELA_DATA } from "../domain/situacao.js";
 
 /** Relatório por sistema, usando a data da última versão cadastrada pela equipe. */
 export class SistemasView extends View {
@@ -59,7 +60,7 @@ export class SistemasView extends View {
         { key: "cidade", label: "Cidade" },
         { key: "ultima", label: "Última Atualização", type: "date" },
         { key: "instalada", label: "Versão recebida" },
-        { key: "situacao", label: "Situação" },
+        { key: "situacao", label: "Situação", render: celulaSituacao },
       ],
       rowKey: (row) => row.cliente,
       caption: "Clientes por sistema",
@@ -106,6 +107,17 @@ export class SistemasView extends View {
       this.salvarBtn.disabled = invalida;
       if (!invalida) consultarComDebounce();
     });
+  }
+
+  /**
+   * Vindo do Resumo ("Mais clientes desatualizados"): abre já no sistema
+   * clicado. `refresh` escolhe ele no select se ainda estiver no catálogo.
+   * @param {{sistema?: string}} params
+   */
+  aplicarParams({ sistema } = {}) {
+    if (!sistema) return;
+    this.sistema = sistema;
+    this._salvarFiltros();
   }
 
   async refresh() {
@@ -187,6 +199,18 @@ export class SistemasView extends View {
  * JavaScript como antes -- com hex fixos, as linhas continuavam pintadas com
  * o cinza do tema escuro depois que o tema claro entrou.
  */
+/**
+ * "Em dia (pela data)" quando o atendimento não registrou versão e a
+ * situação foi deduzida pela data (ver services/situacaoVersao.js) -- a cor
+ * da linha é a mesma, mas o texto não pode fingir versão comprovada.
+ */
+function celulaSituacao(row) {
+  const span = document.createElement("span");
+  span.textContent = rotuloSituacao(row.situacao, row.pelaData);
+  if (row.pelaData) span.title = AJUDA_PELA_DATA;
+  return span;
+}
+
 function severidadeCor(situacao, index) {
   const base = index % 2 === 0 ? tokenHex("--zebra-a") : tokenHex("--zebra-b");
   if (situacao === "Nunca atualizado") return blendHex(base, tokenHex("--severidade-alta"), 0.28);
