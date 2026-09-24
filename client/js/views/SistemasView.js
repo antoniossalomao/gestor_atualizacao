@@ -1,6 +1,7 @@
 import { View } from "../app/View.js";
 import { SortableTable } from "../components/SortableTable.js";
 import { blendHex, tokenHex } from "../utils/color.js";
+import { debounce } from "../utils/debounce.js";
 import { isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { ApiError } from "../api/ApiClient.js";
 import { Modal } from "../components/Modal.js";
@@ -88,6 +89,14 @@ export class SistemasView extends View {
       this._salvarFiltros();
       this._reloadList();
     });
+    // Digitar uma data diferente da salva é uma consulta avulsa ("quem está
+    // desatualizado desde tal dia?"), sem precisar clicar em "Salvar versão"
+    // -- só reflete na tela e não grava nada. Debounced pra não recarregar a
+    // cada tecla enquanto a máscara ainda está sendo digitada.
+    const consultarComDebounce = debounce(() => {
+      this.dataCorte = this.dataCorteInput.value.trim();
+      this._reloadList();
+    }, 300);
     this.dataCorteInput.addEventListener("input", () => {
       this.dataCorteInput.value = mascaraDataBR(this.dataCorteInput.value);
       const valor = this.dataCorteInput.value.trim();
@@ -95,6 +104,7 @@ export class SistemasView extends View {
       this.dataHint.textContent = invalida ? "Formato esperado: dd/mm/aaaa" : "";
       this.dataCorteInput.setAttribute("aria-invalid", String(invalida));
       this.salvarBtn.disabled = invalida;
+      if (!invalida) consultarComDebounce();
     });
   }
 

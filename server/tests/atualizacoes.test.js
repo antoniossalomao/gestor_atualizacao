@@ -298,6 +298,42 @@ test("Referência oficial não atribui versões retroativamente", () => {
   } finally { cleanup(); }
 });
 
+test("Relatório por sistema - consulta avulsa por data não some com a versão oficial", () => {
+  // A tela Sistemas deixa digitar uma data diferente da oficial salva ("quem
+  // está desatualizado desde tal dia?"), sem precisar clicar em "Salvar
+  // versão" -- é uma pergunta pontual, não uma correção da referência da
+  // equipe. Isso não pode reaproveitar a comparação por versão (que exige
+  // versão capturada no atendimento): vira comparação por data pura, do
+  // jeito que já funcionava antes da versão oficial existir.
+  const { service, clientes, cleanup } = ambiente();
+  try {
+    clientes.create({ nome: "Sem Versão Capturada", sistemas: ["B_Vendas"] }, USUARIO);
+    service.create({ cliente: "Sem Versão Capturada", sistema: "B_Vendas", data: "05/09/2026" }, USUARIO);
+    clientes.salvarVersaoSistema("B_Vendas", "09/09/2026", USUARIO);
+    service.create({ cliente: "Sem Versão Capturada", sistema: "B_Vendas", data: "15/09/2026" }, USUARIO);
+
+    // Sem data explícita: usa a referência oficial e compara por versão --
+    // como o registro mais recente já carrega "versoes_sistemas", entra
+    // "Em dia" (a versão capturada bate com a oficial).
+    assert.equal(service.relatorioPorSistema("B_Vendas").find((r) => r.cliente === "Sem Versão Capturada").situacao, "Em dia");
+
+    // Mesma data da oficial, mas digitada explicitamente: não é avulsa,
+    // continua a comparação por versão.
+    assert.equal(
+      service.relatorioPorSistema("B_Vendas", "09/09/2026").find((r) => r.cliente === "Sem Versão Capturada").situacao,
+      "Em dia"
+    );
+
+    // Data diferente da oficial: consulta avulsa, vira comparação por data
+    // -- 20/09 é depois do último atendimento (15/09), logo "Desatualizado"
+    // por essa pergunta pontual, mesmo com a versão batendo com a oficial.
+    assert.equal(
+      service.relatorioPorSistema("B_Vendas", "20/09/2026").find((r) => r.cliente === "Sem Versão Capturada").situacao,
+      "Desatualizado"
+    );
+  } finally { cleanup(); }
+});
+
 test("Versões recebidas permanecem após nova oficial, edição e desfazer", () => {
   const { db, service, clientes, cleanup } = ambiente();
   try {

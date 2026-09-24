@@ -56,6 +56,19 @@ Para o agente C#, o equivalente é
     específico — a matriz usa o sistema da própria linha, a grade usa o
     primeiro sistema listado no atendimento (o resumo inteiro continua
     disponível no title, ao passar o mouse).
+  - **A comparação por versão tinha quebrado a consulta "quem está
+    desatualizado desde tal dia?"** que a tela Sistemas sempre ofereceu:
+    depois que uma versão oficial existe, `relatorioPorSistema` ignorava
+    por completo a data digitada e comparava só versão contra versão —
+    e não dava mais pra explorar um corte de data arbitrário sem sobrescrever
+    a referência oficial da equipe (que outras pessoas também usam). Agora
+    o serviço distingue as duas perguntas: sem data digitada (ou com a
+    mesma data já salva), continua comparando a versão recebida com a
+    oficial; com uma data DIFERENTE da salva, vira uma consulta avulsa por
+    data, do jeito simples de antes, sem tocar na referência. No front, o
+    campo de data da tela Sistemas passou a recarregar a lista sozinho ao
+    digitar (debounced), sem precisar clicar em "Salvar versão" pra ver o
+    resultado de uma data só de teste.
 
 - **Configurações virou uma tela, com a mesma cara do resto do app.** Era um
   modal de duas colunas com um desenho só dele (outra trilha de navegação,

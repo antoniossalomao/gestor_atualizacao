@@ -184,16 +184,22 @@ class AtualizacaoService {
   relatorioPorSistema(sistema, dataCorteStr) {
     const sistemaLimpo = (sistema || "").trim();
     if (!sistemaLimpo) throw new ValidationError("Informe o sistema.");
-    dataCorteStr = dataCorteStr || this.db.sistemas.versoes().find((s) => s.nome.toLowerCase() === sistemaLimpo.toLowerCase())?.data || "";
+    const oficial = this.db.sistemas.versoes().find((s) => sameSystem(s.nome, sistemaLimpo))?.data || "";
+    // Uma data digitada DIFERENTE da referência oficial é consulta avulsa
+    // ("quem está desatualizado desde tal dia?"), sem ligação com a versão
+    // publicada -- nesse caso compara só datas, pra lista inteira, do jeito
+    // simples de antes da versão oficial existir. Sem data nenhuma, cai na
+    // referência oficial salva (comportamento padrão da tela).
+    const consultaAvulsa = Boolean(dataCorteStr) && dataCorteStr !== oficial;
+    const dataCorteEfetiva = dataCorteStr || oficial;
     let dataCorte = null;
-    if (dataCorteStr) {
-      if (!dataValida(dataCorteStr)) {
+    if (dataCorteEfetiva) {
+      if (!dataValida(dataCorteEfetiva)) {
         throw new ValidationError("Campo 'Data de corte' precisa estar no formato dd/mm/aaaa.");
       }
-      dataCorte = parseData(dataCorteStr);
+      dataCorte = parseData(dataCorteEfetiva);
     }
 
-    const oficial = this.db.sistemas.versoes().find((s) => sameSystem(s.nome, sistemaLimpo))?.data || "";
     const registros = this.db.atualizacoes.exportAll();
     const resultado = [];
     for (const { nome, cidade, sistemas } of this.db.clientes.allBasicComSistemas()) {
@@ -202,11 +208,14 @@ class AtualizacaoService {
       const instalada = versaoDoRegistro(registro, sistemaLimpo);
       let situacao = "Sem informação";
       if (!registro) situacao = "Nunca atualizado";
-      else if (oficial) {
-        if (instalada) situacao = instalada === oficial ? "Em dia" : "Desatualizado";
-      } else if (dataCorte) {
+      else if (consultaAvulsa) {
+        // Consulta avulsa por data: não dá pra saber se a versão bate com a
+        // oficial (não é isso que foi pedido), só se o atendimento é de
+        // antes ou depois do corte digitado.
         const d = parseData(registro.data);
         situacao = !d ? "Nunca atualizado" : d < dataCorte ? "Desatualizado" : "Em dia";
+      } else if (oficial) {
+        situacao = instalada ? (instalada === oficial ? "Em dia" : "Desatualizado") : "Sem informação";
       } else situacao = "Sem referência";
       resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", instalada: instalada || "Não informada", oficial: oficial || "Não informada", situacao });
     }
