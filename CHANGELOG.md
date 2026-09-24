@@ -15,6 +15,23 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Um nome só e um símbolo que acompanha o tema.** A barra lateral dizia
+  "ATUALIZADOR / Gestor de clientes", o login "ATUALIZADOR" e a aba do
+  navegador "Gestor de Atualizações". Três nomes para a mesma coisa, e
+  "Atualizador" já é o nome do agente que roda no cliente. Agora é
+  **Gestor de Atualizações** em todo lugar, com "Bredas Sistemas" como
+  assinatura no login. Entre as duas propostas avaliadas (a outra era
+  "Bredas Gestão"), ficou a que já estava na aba, no README e no serviço do
+  Windows. Na barra o nome ocupa duas linhas, porque numa só era cortado
+  pelos 238px de largura.
+  - **O logo deixou de ser PNG.** O arquivo trazia o fundo escuro embutido
+    na imagem: no tema claro virava um quadrado preto, e não acompanhava a
+    cor de destaque escolhida nas Configurações. O símbolo (setas em ciclo
+    + raio) foi redesenhado em SVG inline (`simboloMarca()` em
+    `utils/icons.js`), com traço pensado para 16 px. O quadrado colorido em
+    volta agora vem do CSS. Há também `favicon.svg`, e o `favicon.png` foi
+    refeito a partir dele para as notificações.
+
 - **O banco parou de guardar listas em texto e de ligar cliente pelo nome.**
   Os sistemas de um atendimento e de um cliente eram texto separado por
   vírgula ("B_Vendas, B_NFe"), com um JSON de versões por cima, e o cliente

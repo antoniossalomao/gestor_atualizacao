@@ -1,4 +1,4 @@
-import { icon } from "../utils/icons.js";
+import { icon, simboloMarca } from "../utils/icons.js";
 import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
 import { SwrCache } from "./SwrCache.js";
@@ -314,10 +314,14 @@ export class App {
       <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
       <aside class="app-sidebar">
         <div class="app-brand">
-          <div class="app-brand__mark" aria-hidden="true">
-            <img src="/assets/logo.png" alt="" width="34" height="34" />
-          </div>
-          <div class="app-brand__text"><strong>ATUALIZADOR</strong><span>Gestor de clientes</span></div>
+          <div class="app-brand__mark" aria-hidden="true">${simboloMarca()}</div>
+          <!-- Um nome só em todo lugar (barra, login, aba do navegador). Antes
+               a barra dizia "ATUALIZADOR / Gestor de clientes" e a aba "Gestor
+               de Atualizações" -- e "Atualizador" é o nome do AGENTE que roda
+               no cliente, não do painel. Em duas linhas porque numa só o nome
+               não cabe nos 238px da barra; o descritor saiu pelo mesmo motivo
+               ("Bredas Sistemas" fica no login, onde há espaço). -->
+          <div class="app-brand__text"><strong>Gestor de<br />Atualizações</strong></div>
         </div>
         <!-- O botão de recolher também saiu: era um ícone sem rótulo cujo
              efeito só se descobre clicando, e "Menu lateral: Aberto /

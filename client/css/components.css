@@ -170,31 +170,21 @@
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  overflow: hidden;
   background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
 }
 
-.app-brand__mark img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.app-brand__mark svg {
+  width: 24px;
+  height: 24px;
 }
 
+/* Duas linhas de propósito (o <br> está em App.js): "Gestor de
+   Atualizações" numa linha só, a 18px, era cortado pela largura da barra. */
 .app-brand strong {
   display: block;
-  font: var(--peso-extra) 18px/1.1 var(--fonte-display);
+  font: var(--peso-extra) 16px/1.15 var(--fonte-display);
   letter-spacing: -0.015em;
-  white-space: nowrap;
-}
-
-.app-brand span {
-  display: block;
-  margin-top: 2px;
-  color: var(--cor-texto-fraco);
-  font-size: var(--txt-2xs);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
 }
 
 .app-sidebar__group-title {
@@ -5473,15 +5463,15 @@ hr.separator {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   width: 48px;
   height: 48px;
   border-radius: 11px;
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
 }
-.auth-screen__brand-mark img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.auth-screen__brand-mark svg {
+  width: 34px;
+  height: 34px;
 }
 
 .auth-screen__brand-name {
@@ -5540,22 +5530,17 @@ hr.separator {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   width: 44px;
   height: 44px;
   margin-bottom: var(--sp-4);
   border-radius: 9px;
   background: var(--cor-accent);
   color: var(--cor-sobre-accent);
-  font-family: var(--fonte-display);
-  font-size: 18px;
-  font-weight: var(--peso-extra);
 }
 
-.auth-card__logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.auth-card__logo svg {
+  width: 30px;
+  height: 30px;
 }
 
 .auth-card h2 {

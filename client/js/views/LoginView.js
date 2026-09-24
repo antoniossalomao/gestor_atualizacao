@@ -1,6 +1,6 @@
 import { ApiError } from "../api/ApiClient.js";
 import { marcarOcupado } from "../utils/guard.js";
-import { icon } from "../utils/icons.js";
+import { icon, simboloMarca } from "../utils/icons.js";
 
 /**
  * Tela cheia de autenticação -- funciona em dois modos:
@@ -41,9 +41,9 @@ export class LoginView {
     const brand = document.createElement("div");
     brand.className = "auth-screen__brand";
     brand.innerHTML = `
-      <div class="auth-screen__brand-mark"><img src="/assets/logo.png" alt="" width="48" height="48" /></div>
-      <strong class="auth-screen__brand-name">ATUALIZADOR</strong>
-      <p class="auth-screen__brand-tagline">Gestor de atualizações de clientes, num só lugar.</p>
+      <div class="auth-screen__brand-mark">${simboloMarca()}</div>
+      <strong class="auth-screen__brand-name">Gestor de Atualizações</strong>
+      <p class="auth-screen__brand-tagline">Bredas Sistemas · Atualizações e atendimento dos clientes, num só lugar.</p>
       <ul class="auth-screen__brand-list">
         <li>${icon("clientes")} Cadastro de clientes e sistemas</li>
         <li>${icon("atualizacoes")} Histórico de atualizações</li>
@@ -58,12 +58,12 @@ export class LoginView {
       <!-- O mesmo logo da barra lateral. Era um "GA" digitado à mão, então a
            primeira tela do sistema (a única que quem chega de fora sempre vê)
            era justamente a que não mostrava a marca que o resto do app usa. -->
-      <div class="auth-card__logo"><img src="/assets/logo.png" alt="" width="44" height="44" /></div>
+      <div class="auth-card__logo">${simboloMarca()}</div>
       <h2>${isSetup ? "Criar conta de administrador" : "Entrar"}</h2>
       <p class="auth-card__subtitle">${
         isSetup
           ? "Esta é a primeira vez que o sistema é aberto. Crie a conta principal para começar a usar."
-          : "Gestor de Atualizações de Clientes"
+          : "Gestor de Atualizações"
       }</p>
       <div class="auth-card__error"></div>
       <form>
