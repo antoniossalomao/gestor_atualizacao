@@ -10,7 +10,7 @@ Tornar o painel mais coerente com a operação: saber quem precisa de atualizaç
 
 A análise foi feita sobre o código atual das telas, componentes, serviços e repositórios. As observações visuais do usuário são requisitos deste plano. O desalinhamento dos meses, o número 121 e a aparência do ícone precisam ser reproduzidos no navegador durante a execução: nesta etapa não houve nova inspeção visual de todas as telas nem consulta ao banco de produção para confirmar esse valor.
 
-Há alterações em andamento no workspace, inclusive normalização dos relacionamentos de clientes, sistemas e atualizações e migrações do banco. A execução deverá partir do estado consolidado dessas alterações, sem sobrescrevê-las nem reconstruir o modelo antigo. Os documentos anteriores de planejamento não foram localizados pelos padrões pesquisados na árvore atual; este documento não presume que seus itens antigos ainda estejam pendentes.
+A normalização dos relacionamentos de clientes, sistemas e atualizações, com migrações numeradas, já está consolidada (commit `cba726c`). A execução parte desse esquema, sem reconstruir o modelo antigo. Os documentos anteriores de planejamento não foram localizados pelos padrões pesquisados na árvore atual; este documento não presume que seus itens antigos ainda estejam pendentes.
 
 Somente este documento é criado nesta etapa. Interface, regras, dados e configurações do painel permanecem sem alteração por este trabalho.
 
@@ -29,7 +29,7 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 
 | ID | Pedido | Diagnóstico atual | Direção proposta | Prioridade |
 |---|---|---|---|---|
-| I01 | Logo e nome sem identidade | Cabeçalho usa ATUALIZADOR / Gestor de clientes | Consolidar nome, assinatura e aplicações da marca | P1 |
+| I01 | Logo e nome sem identidade | Cabeçalho usa ATUALIZADOR / Gestor de clientes | ✅ Concluído em 24/09/2026 (seção 4) | P1 |
 | I02 | Situação dos clientes pouco útil | Em dia é calculado pelo complemento de clientes sem atualização recente | Separar versão de tempo sem atendimento | P0 |
 | I03 | Tendência desalinhada | SVG com margens fixas e rótulo final junto ao ponto | Corrigir calendário, eixos, margens e rótulos | P1 |
 | I04 | Sistemas fixos aparecem nos indicadores | Catálogo contém ambos, sem política explícita central de exclusão | Classificar sistemas sujeitos a versão | P0 |
@@ -85,38 +85,59 @@ Para volume de trabalho: um atendimento misto continua contando uma vez. Registr
 
 ### 3.3 Situação consolidada do cliente
 
-Proposta de grupos mutuamente exclusivos:
+Grupos mutuamente exclusivos (decididos):
 
-1. **Desatualizado:** existe sistema atualizável com versão recebida conhecida diferente da oficial conhecida.
-2. **Verificação pendente:** não há atraso confirmado, mas falta versão recebida ou referência oficial em algum sistema atualizável.
-3. **Em dia:** possui ao menos um sistema atualizável e todos têm versão recebida correspondente à oficial.
+1. **Desatualizado:** existe sistema atualizável com versão recebida conhecida **anterior** à oficial conhecida.
+2. **Verificação pendente:** não há atraso confirmado, mas falta versão recebida ou referência oficial em algum sistema atualizável, ou alguma versão não pode ser comparada como data.
+3. **Em dia:** possui ao menos um sistema atualizável e todos têm versão recebida **igual ou posterior** à oficial.
 4. **Sem sistemas atualizáveis:** possui apenas fixos ou nenhum sistema; fica fora do denominador de cobertura.
 
+Comparação por data, não por igualdade de texto. Hoje `matrizVersoes.js` usa `instalada === versaoAtiva`, o que marca como atrasado um cliente à frente da oficial (versão de teste, oficial rebaixada). Recebida posterior à oficial conta como Em dia. Versão em formato que não se converte em data vai para Verificação pendente, nunca para Em dia nem para Desatualizado.
+
+**Fonte da versão recebida (decidido):** somente a versão registrada em atendimento. O que o agente reporta não entra na classificação; aparece separado, com origem identificada (ver 9.3). Hoje a ficha deixa o agente sobrepor o atendimento (`matrizVersoes.js`, `agente?.ultimaVersao || versaoRegistrada(...)`) e casa agente com cliente por CNPJ/nome; isso deixa de afetar a situação.
+
 Nunca atualizado continua como detalhe por sistema. No consolidado, falta de evidência entra em Verificação pendente. Cliente com atraso confirmado e outro sistema sem informação conta uma vez em Desatualizado; a falta de informação aparece como detalhe secundário.
+
+**Risco a medir antes de desenhar o Resumo:** como histórico sem versão comprovada não recebe referência retroativa, Verificação pendente pode concentrar a maioria dos clientes. A etapa 0 conta quantos caem em cada grupo com dados reais. Se Pendente dominar, a entrega precisa antes de uma forma rápida de confirmar a versão atual de um cliente, sem registrar atendimento fictício; senão o novo card fica tão pouco útil quanto a rosca.
 
 - [ ] Compartilhar regra no servidor entre Resumo, Sistemas, Consulta e relatórios.
 - [ ] Retornar totais de clientes, elegíveis e fora da avaliação.
 - [ ] Garantir soma correta, sem duplicar cliente com vários sistemas.
 - [ ] Usar IDs e relacionamentos normalizados atuais, sem novas junções por nome livre.
 - [ ] Aproveitar cópias de versões já existentes, sem mecanismo concorrente.
-- [ ] Testar oficial alterada, versões ausentes, vários sistemas, fixos e legados.
+- [ ] Comparar versões como datas; recebida posterior à oficial conta Em dia.
+- [ ] Classificar só pela versão do atendimento; agente fica fora da regra.
+- [ ] Testar oficial alterada, oficial rebaixada, recebida à frente, formato não comparável, versões ausentes, vários sistemas, fixos e legados.
 
 ## 4. Identidade visual e nome principal — I01
 
-Direção recomendada para avaliação: **Bredas Gestão**, com descritor **Atualizações e atendimento**. Alternativa próxima do nome atual: **Gestor de Atualizações**, com Bredas como assinatura secundária. São propostas; a escolha de marca não está aprovada.
+**Concluído em 24/09/2026.** Foram avaliadas duas propostas, Bredas Gestão e Gestor de Atualizações, aplicadas em barra, login e aba do navegador. A escolhida foi **Gestor de Atualizações**, com **Bredas Sistemas** como assinatura secundária.
 
-O cabeçalho atual mistura ATUALIZADOR e Gestor de clientes, deixando incerto se o produto é o agente automático, um cadastro ou uma central de operação.
+O cabeçalho anterior misturava ATUALIZADOR e Gestor de clientes, deixando incerto se o produto era o agente automático, um cadastro ou uma central de operação.
 
-- [ ] Inventariar logo, favicon, login, sidebar, título do navegador e PDF.
-- [ ] Preparar duas propostas em contexto real antes de substituir arquivos.
-- [ ] Definir símbolo simples e reconhecível em 16–32 px, preferencialmente vetorial.
-- [ ] Verificar se os arquivos atuais permitem reutilização antes de produzir uma marca nova.
-- [ ] Definir tipografia, proporção símbolo/nome, espaçamento e tamanho mínimo.
-- [ ] Usar uma cor principal; reservar cores de alerta para estados operacionais.
-- [ ] Prever temas claro/escuro e sidebar aberta/recolhida.
-- [ ] Retirar descritor quando faltar espaço, sem distorcer logo ou cortar nome.
-- [ ] Atualizar nome acessível, título do navegador e login de forma consistente.
-- [ ] Documentar as aplicações escolhidas para evitar variações futuras.
+- [x] Inventariar logo, favicon, login, sidebar, título do navegador e PDF. O PDF do relatório não usa marca e continua assim.
+- [x] Preparar duas propostas em contexto real antes de substituir arquivos.
+- [x] Definir símbolo simples e reconhecível em 16–32 px, vetorial.
+- [x] Verificar reutilização: o conceito (setas + raio) foi mantido; o PNG não servia, porque tinha fundo escuro embutido.
+- [x] Definir tipografia, proporção símbolo/nome, espaçamento e tamanho mínimo.
+- [x] Usar uma cor principal (`--cor-accent`, que acompanha o realce escolhido).
+- [x] Prever temas claro/escuro e sidebar aberta/recolhida.
+- [x] Retirar descritor quando faltar espaço, sem distorcer logo ou cortar nome.
+- [x] Atualizar nome, título do navegador e login de forma consistente.
+- [x] Documentar as aplicações escolhidas (tabela abaixo).
+
+### Aplicações da marca
+
+| Onde | Como |
+|---|---|
+| Símbolo | `simboloMarca()` em `client/js/utils/icons.js`: SVG 32×32, traço 2.6, `currentColor`. Mesmo traçado em `assets/favicon.svg`; ao mudar um, mude o outro. |
+| Quadrado do símbolo | Fundo `--cor-accent` e desenho `--cor-sobre-accent`, no CSS. Nunca fundo embutido no desenho. |
+| Barra lateral aberta | Símbolo 34 px (desenho 24 px) + "Gestor de / Atualizações" em duas linhas, Sora extra 16 px. Sem descritor. |
+| Barra recolhida | Só o símbolo. |
+| Login (tela larga) | Símbolo 48 px, nome numa linha em `--txt-xl`, e a linha "Bredas Sistemas · Atualizações e atendimento dos clientes, num só lugar." |
+| Login (celular) | Símbolo 44 px no cartão; subtítulo "Gestor de Atualizações". |
+| Aba do navegador | "‹Tela› · Gestor de Atualizações"; `favicon.svg`, com `favicon.png` (64 px) como reserva e para as notificações. |
+| O que não usar | "ATUALIZADOR" como nome do painel: é o nome do agente. |
 
 Aceite: legibilidade em 390 px e desktop, sem deformação, fundo acidental, nome cortado ou assinaturas contraditórias.
 
@@ -323,7 +344,7 @@ Cadastro, Sistemas e Acessos já existem como subabas. O foco deve ser hierarqui
 - [ ] Compartilhar comparação de versões com Sistemas e relatório do cliente.
 - [ ] Separar componentes fixos dos sistemas atualizáveis.
 - [ ] Não confundir versão publicada do agente com oficial do histórico operacional.
-- [ ] Quando houver dados do agente, identificar origem e separar contato/falha da versão recebida em atendimento.
+- [ ] Quando houver dados do agente, mostrar em bloco próprio (versão reportada, último contato, falha), sem alterar a situação do sistema, que vem só do atendimento (3.3).
 - [ ] Histórico cronológico com observações expansíveis e relatório do atendimento.
 - [ ] Acrescentar próximos agendamentos se puder reutilizar consulta existente; caso contrário, entregar depois.
 - [ ] Acessos por máquina em lista compacta com cópia individual.
@@ -403,17 +424,16 @@ Aceite: filtro nunca grava; salvar não reescreve atendimento; sistemas aceitam 
 
 Nome, senha, sessões, pesquisa e restauração por seção já existem. O problema é prioridade e organização: várias abas cuidam de como a tela parece, em vez de como a pessoa trabalha.
 
-| Grupo | Conteúdo proposto | Escopo | Trabalho |
-|---|---|---|---|
-| Minha conta | Nome, senha, sessões e sair dos outros aparelhos | Pessoal | Reorganizar existente |
-| Trabalho diário | Tela inicial, filtros lembrados, lista/Kanban, linhas por página, responsável padrão quando autorizado | Pessoal | Parte existente; novas preferências pontuais |
-| Notificações | Tipos de evento, minhas tarefas/equipe, som opcional, desktop e duração | Pessoal | Ampliar eventos e política; reaproveitar controles |
-| Relatórios/exportação | Abertura da prévia, opções gerenciais de observações e impressão quando suportadas | Pessoal | Novas opções limitadas |
-| Interface/acessibilidade | Tema, densidade, texto, movimento, contraste e foco | Pessoal | Consolidar e reduzir destaque |
-| Regras da equipe | Prazos, arquivamento, fixos e padrões operacionais | Global/admin | Link para Administração; não duplicar formulários |
-| Sobre e ajuda | Versão do painel, atalhos e significado das situações | Informativo | Consolidar |
+**Escopo da primeira entrega (decidido): só reorganizar o que já existe.** Nenhuma preferência ou notificação nova. O mesmo vale para a Administração (11.2): reagrupar seções existentes; Dados reúne fluxos que já existem (importação, exportações).
 
-O chamado aprovado não deve virar um editor livre de campos nesta entrega. Preferências de relatório não podem reintroduzir seus campos removidos.
+| Grupo | Conteúdo | Escopo |
+|---|---|---|
+| Minha conta | Nome, senha, sessões e sair dos outros aparelhos | Pessoal |
+| Trabalho diário | Preferências já existentes de tela inicial, filtros, lista/Kanban e linhas por página | Pessoal |
+| Notificações | Controles já existentes, sem novos tipos de evento | Pessoal |
+| Interface/acessibilidade | Tema, densidade, texto, movimento, contraste e foco | Pessoal |
+| Regras da equipe | Link para Administração; não duplicar formulários | Global/admin |
+| Sobre e ajuda | Versão do painel, atalhos e significado das situações | Informativo |
 
 - [ ] Abrir em Minha conta ou Trabalho diário, não num catálogo de temas.
 - [ ] Recolher personalizações avançadas em subseção.
@@ -421,14 +441,10 @@ O chamado aprovado não deve virar um editor livre de campos nesta entrega. Pref
 - [ ] Reavaliar destaque de fonte, fundo decorativo, perfis visuais e largura ajustável.
 - [ ] Reaproveitar busca e restauração por seção.
 - [ ] Identificar ajuste pessoal versus global quando houver risco de confusão.
-- [ ] Definir persistência por usuário e comportamento em outro navegador.
-- [ ] Migrar preferências antigas preservando valores.
-- [ ] Validar valores e chaves no servidor.
-- [ ] Não oferecer opção de notificação que não altere comportamento real.
-- [ ] Se houver horário silencioso, definir fuso, eventos críticos e mensagens acumuladas.
-- [ ] Mostrar estado real da permissão de notificação de desktop, inclusive bloqueio.
-- [ ] Não acrescentar idioma/fuso decorativos sem suporte integral nas datas e relatórios.
-- [ ] Testar restauração, sincronização e conta sem acesso administrativo.
+- [ ] Preservar valores já salvos ao mover opções de lugar.
+- [ ] Testar restauração e conta sem acesso administrativo.
+
+Ficam para evolução (seção 13.5): novos tipos de notificação, som, horário silencioso, preferências de relatório/exportação, responsável padrão, persistência de preferências por usuário no servidor e sincronização entre navegadores.
 
 Segurança futura: encerramento por inatividade administrável e autenticação em dois fatores podem ser úteis, mas exigem servidor, recuperação e testes próprios. Não são apenas controles novos na interface e ficam fora da primeira revisão visual.
 
@@ -471,43 +487,54 @@ Uma aba dedicada pode reunir período, cliente, sistema e responsável, com filt
 
 Recomendação: seção em Dados, não nova aba principal. Listar clientes sem sistemas, atendimentos sem versão, sistemas sem oficial e possíveis duplicidades. Correção deve mostrar os registros envolvidos; não consolidar ou excluir automaticamente por semelhança de nomes.
 
+### 13.5 Preferências e notificações — adiadas da seção 12
+
+- [ ] Tipos de evento, minhas tarefas/equipe, som opcional; não oferecer opção que não altere comportamento real.
+- [ ] Horário silencioso: definir fuso, eventos críticos e mensagens acumuladas.
+- [ ] Estado real da permissão de notificação de desktop, inclusive bloqueio.
+- [ ] Preferências de relatório sem reintroduzir campos removidos do chamado; o chamado não vira editor livre.
+- [ ] Persistência por usuário no servidor, validação de chaves e migração das preferências locais.
+- [ ] Não acrescentar idioma/fuso decorativos sem suporte integral nas datas e relatórios.
+
 ### Fora da prioridade atual
 
 Chat interno, CRM completo, financeiro, grande editor de dashboards e automações sem revisão. Aumentariam escopo antes de resolver os problemas operacionais identificados.
 
 ## 14. Sequência de execução
 
-| Etapa | Entrega verificável | Dependência | Esforço relativo |
-|---|---|---|---|
-| 0 | Baseline, capturas e dados sintéticos | Consolidar alterações atuais | Pequeno |
-| 1 | Fixos, classificação única e filtro/oficial separados | Esquema atual e regras da seção 3 | Grande |
-| 2 | Indicadores úteis e tendência correta | Etapa 1 | Médio |
-| 3 | Botões, filtros, planilhas, Clientes e Agendamentos | Padrões e APIs existentes | Médio |
-| 4 | Relatórios e ficha revisados | Etapas 1 e 3 | Médio |
-| 5 | Administração e Configurações | Inventário de regras/permissões | Grande |
-| 6 | Identidade aplicada e revisão visual | Escolha de marca; componentes estáveis | Médio |
-| 7 | Central de pendências | Etapas 1, 2 e 3 | Grande; opcional |
+Numeração única: as etapas abaixo são a ordem de execução e cada uma é uma entrega verificável. Esforços são relativos, não prazos: migrações e permissões precisam estar consolidadas antes de estimar horas/dias com confiança. A marca (E9) já foi aplicada antes da ordem prevista; se E5 mudar o padrão de botões ou da barra lateral, conferir de novo a tabela "Aplicações da marca" da seção 4.
 
-A definição visual da marca pode começar na etapa 0; aplicação global fica para componentes estabilizados. Último acesso e Arquivar podem ser corrigidos cedo. Esforços são relativos, não prazos fechados: migrações e permissões precisam ser consolidadas antes de estimar horas/dias com confiança.
+| Etapa | Entrega | Pedidos | Dependência | Esforço |
+|---|---|---|---|---|
+| E0 | Baseline: capturas, dados sintéticos e **contagem real por grupo da 3.3** | — | — | Pequeno |
+| E1 | Correções rápidas e independentes | I05, I06 (só Excluir e ações sem borda), I11, I12, I17 | — | Pequeno |
+| E2 | Sistemas fixos e situação consolidada no servidor | I04, I02 (regra) | E0 | Grande |
+| E3 | Oficiais separadas dos filtros em Sistemas | I16 | E2 | Médio |
+| E4 | Resumo: card de situação, Sem atendimento, destinos dos cliques e tendência | I02, I03 | E2 | Médio |
+| E5 | Padrão de botões e toolbars; Atualizações com filtros recolhíveis e planilhas reposicionadas | I06, I07, I08 | E1 | Médio |
+| E6 | Agendamentos (toolbar, filtros rápidos) e Clientes (acessos na linha, Grupo/Rede) | I10, I13, I14 | E5 | Médio |
+| E7 | Ficha do cliente e relatórios | I09, I15 | E2, E5 | Médio |
+| E8 | Administração e Configurações (só reorganizar) | I18, I19 | — | Médio |
+| E9 | ✅ Identidade escolhida e aplicada (antecipada, 24/09/2026) | I01 | — | Médio |
+| E10 | Validação visual completa, README/ajuda, CHANGELOG | — | Todas | Pequeno |
+| E11 | Central de pendências, em entrega independente | I20 | E2, E4, E6 e uso real | Grande; opcional |
+
+Se E0 mostrar que Verificação pendente concentra a maioria dos clientes, E2 inclui a forma rápida de confirmar a versão atual (3.3) antes de E4.
 
 ### Checklist mestre
 
-- [ ] E0 — registrar baseline e preservar alterações de outros trabalhos.
-- [ ] E1 — unificar situação e excluir fixos das métricas de versão.
-- [ ] E2 — separar oficiais e filtros em Sistemas.
-- [ ] E3 — revisar Resumo e destinos dos indicadores.
-- [ ] E4 — corrigir meses, calendário e valores do gráfico.
-- [ ] E5 — padronizar bordas, ícones e toolbars.
-- [ ] E6 — recolher datas e reposicionar planilhas.
-- [ ] E7 — revisar Agendamentos, remover conversão e recuperar Arquivar.
-- [ ] E8 — acessos na linha e Grupo/Rede compacto.
-- [ ] E9 — revisar ficha e retirar CNPJ apenas do contexto solicitado.
-- [ ] E10 — redesenhar relatórios conservando o texto aprovado.
-- [ ] E11 — corrigir Último acesso e reorganizar Administração.
-- [ ] E12 — reorganizar Configurações e implementar opções operacionais priorizadas.
-- [ ] E13 — escolher e aplicar identidade.
-- [ ] E14 — concluir validação visual, funcional e documentação.
-- [ ] E15 — avaliar Central de pendências em entrega independente.
+- [ ] E0 — baseline, dados sintéticos e contagem por grupo com dados reais.
+- [ ] E1 — alerta sem fundo escuro, borda em Excluir, remover Converter, recuperar Arquivar, Último acesso capitalizado.
+- [ ] E2 — `controla_versao`, comparação por data, fonte só atendimento, regra única no servidor; ADR.
+- [ ] E3 — gerenciador de oficiais separado dos filtros.
+- [ ] E4 — Resumo e tendência corrigidos; clique e indicador com a mesma população.
+- [ ] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados.
+- [ ] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto.
+- [ ] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado.
+- [ ] E8 — Administração e Configurações reagrupadas, sem preferências novas.
+- [x] E9 — identidade escolhida e aplicada (antecipada; 24/09/2026).
+- [ ] E10 — validação completa e documentação.
+- [ ] E11 — Central de pendências.
 
 ## 15. Validação e critérios gerais de aceite
 
@@ -518,6 +545,8 @@ A definição visual da marca pode começar na etapa 0; aplicação global fica 
 - [ ] Cliente somente com fixos não entra na fila nem no denominador de versões.
 - [ ] Cliente com vários sistemas conta uma vez na situação consolidada.
 - [ ] Informação ausente não produz Em dia.
+- [ ] Recebida posterior à oficial conta Em dia; formato não comparável vai para Verificação pendente.
+- [ ] Versão reportada pelo agente não altera a situação do cliente.
 - [ ] Tempo sem atendimento não altera situação de versão.
 - [ ] Meses vazios aparecem; clique e indicador têm a mesma população.
 - [ ] Exportação e relatório incluem todas as páginas do recorte.
@@ -531,13 +560,14 @@ A definição visual da marca pode começar na etapa 0; aplicação global fica 
 - [ ] Arquivar concluída funciona e ela pode ser encontrada depois.
 - [ ] Converter não aparece em nenhum caminho de Agendamentos.
 - [ ] Acessos abre no cliente correto; copiar é ação separada.
-- [ ] Configurações alteram comportamento real e persistem no escopo correto.
+- [ ] Opções de Configurações movidas de lugar mantêm os valores já salvos.
 - [ ] Falha de rede, sessão expirada e conflito não produzem sucesso falso.
 - [ ] Importação falha não deixa alteração parcial sem resultado explícito.
 
 ### Visual e acessibilidade
 
-- [ ] Inspecionar 390, 768, 1280 e 1440 px, zoom 200%, sidebar aberta/recolhida.
+- [ ] Nas etapas intermediárias: 390 px e desktop, tema claro e escuro.
+- [ ] Em E10: 390, 768, 1280 e 1440 px, zoom 200%, sidebar aberta/recolhida.
 - [ ] Conferir temas claro/escuro e contraste elevado disponível.
 - [ ] Conferir bordas, foco, desabilitados, teclado e alvos de toque.
 - [ ] No celular, informação essencial não depende de tabela cortada: usar resumo, blocos ou expansão quando necessário.
@@ -549,8 +579,10 @@ A definição visual da marca pode começar na etapa 0; aplicação global fica 
 ### Engenharia e entrega
 
 - [ ] Revalidar estado dos arquivos antes de editar e preservar alterações alheias.
-- [ ] Rodar `npm run check`, testes pertinentes e `git diff --check` a partir de `web`.
-- [ ] Cobrir regras e autorização das APIs de sistemas, importação, arquivamento e preferências.
+- [ ] Rodar `npm run check`, `npm test` e `git diff --check` a partir de `web` ao fim de cada etapa.
+- [ ] Cobrir regras e autorização das APIs de sistemas, importação e arquivamento.
+- [ ] ADR na seção 4 de `DOCUMENTACAO_CONSOLIDADA.md` para a situação consolidada (comparação por data, fonte só atendimento) e para `controla_versao`.
+- [ ] CHANGELOG a cada etapa com mudança visível.
 - [ ] Testar navegador com banco descartável e dados representativos.
 - [ ] Registrar antes/depois: sintaxe e testes automatizados não comprovam aparência.
 - [ ] Testar papéis admin, operador e consulta.
@@ -578,17 +610,26 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 
 ## 17. Decisões para revisão nas etapas correspondentes
 
+### Decididas (24/09/2026)
+
+| Decisão | Resultado |
+|---|---|
+| Recebida mais nova que a oficial | Em dia; desatualizado só quando anterior à oficial |
+| Fonte da versão para a situação | Só o atendimento; agente aparece separado |
+| Escopo de Configurações/Administração | Só reorganizar; novidades em 13.5 |
+| Central de pendências | Mantida como E11, opcional e independente |
+| Nome/símbolo | Gestor de Atualizações, assinatura Bredas Sistemas; símbolo vetorial (seção 4) |
+
+### Em aberto
+
 Não impedem as correções objetivas. Resolver cada uma quando afetar a entrega, apresentando proposta concreta para visualizar.
 
 | Decisão | Recomendação inicial |
 |---|---|
-| Nome/símbolo | Avaliar Bredas Gestão contra Gestor de Atualizações |
-| Situação no Resumo | Barra e totais clicáveis, substituindo rosca |
+| Situação no Resumo | Barra e totais clicáveis, substituindo rosca; depende da contagem de E0 |
 | Sistemas fixos | Classificação no catálogo, administrável |
 | Arquivar pendente | Manter apenas concluídas nesta entrega |
 | Importação de operador | Preservar permissão com entrada discreta |
 | Datas em Sistemas | Filtro recolhível e gerenciador separado |
-| Configurações | Conta, operação, eventos e relatórios primeiro |
-| Nova aba | Central de pendências após corrigir regras e validar uso |
 
 O resultado esperado é um painel mais útil, com menos ambiguidade. Novas abas vêm depois de indicadores, filtros e ações principais representarem corretamente o trabalho da equipe.

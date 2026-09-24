@@ -13,8 +13,9 @@ automaticamente; misturá-los aqui dentro quebraria essa integração.
 | [`DOCUMENTACAO_CONSOLIDADA.md`](DOCUMENTACAO_CONSOLIDADA.md) | Documento único: resumo executivo, arquitetura do painel web, arquitetura do agente C#, decisões de arquitetura (ADRs) e como verificar tudo | Você chegou agora e quer ler (ou apresentar) o projeto inteiro, de qualquer ângulo |
 | [`MELHORIAS.md`](MELHORIAS.md) | O que já foi entregue e o que ainda falta, reconciliado contra o código | Você quer saber o que priorizar a seguir |
 | [`OPERACAO.md`](OPERACAO.md) | Runbook, organizado **por sintoma** | Deu problema **agora** e você precisa resolver |
+| [`PLANEJAMENTO_REVISAO_COMPLETA_PAINEL.md`](PLANEJAMENTO_REVISAO_COMPLETA_PAINEL.md) | Plano da revisão do painel (24/09/2026): regras de situação, etapas E0–E11 e critérios de aceite | Você vai executar ou revisar uma etapa dessa revisão |
 
-Três arquivos, não quatro — o índice que você está lendo é o quarto.
+Quatro arquivos, não cinco — o índice que você está lendo é o quinto.
 
 ## Qual documento responde o quê
 
