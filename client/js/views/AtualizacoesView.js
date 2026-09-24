@@ -70,7 +70,7 @@ export class AtualizacoesView extends View {
           <button type="button" class="btn" data-action="export">${iconHtml("download")} Exportar (.xlsx)</button>
           <button type="button" class="btn btn--ghost" data-action="relatorio-periodo">Relatório do período</button>
           <button type="button" class="btn btn--ghost" data-action="relatorio" disabled>${iconHtml("copiar")} Relatório do Cliente</button>
-          <button type="button" class="btn btn--danger btn--ghost" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
+          <button type="button" class="btn btn--danger" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
           <input type="file" accept=".xlsx,.xls" data-role="file-input" hidden />
         </div>
         <div class="view-actions__right">
@@ -81,7 +81,7 @@ export class AtualizacoesView extends View {
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
             <span class="form-actions__hint text-muted" data-role="modo"></span>
           </div>
           <div class="form-actions__right">

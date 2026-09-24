@@ -79,7 +79,7 @@ export function linhaUsuario(u, { ehVoce }) {
     <td data-label="Último acesso">${acesso}</td>
     <td data-label="" class="admin-tabela__acoes">${
       !ehVoce &&
-      html`<button type="button" class="btn btn--small btn--ghost btn--danger" data-action="remover" data-id="${u.id}">Remover acesso</button>`
+      html`<button type="button" class="btn btn--small btn--danger" data-action="remover" data-id="${u.id}">Remover acesso</button>`
     }</td>`;
 }
 
@@ -100,7 +100,7 @@ export function linhaBackup(b) {
       <a class="btn btn--small btn--ghost" href="/api/backups/${encodeURIComponent(b.arquivo)}/download" download="${b.arquivo}">
         ${iconHtml("download")} Baixar
       </a>
-      <button type="button" class="btn btn--small btn--ghost btn--danger" data-action="restaurar" data-arquivo="${b.arquivo}"
+      <button type="button" class="btn btn--small btn--danger" data-action="restaurar" data-arquivo="${b.arquivo}"
               ${b.integro === false && confiavel('disabled title="Cópia corrompida não pode ser restaurada."')}>Restaurar</button>
     </td>`;
 }

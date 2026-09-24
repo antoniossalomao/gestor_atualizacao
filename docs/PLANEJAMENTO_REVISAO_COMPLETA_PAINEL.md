@@ -195,9 +195,9 @@ Aceite: 0, 1, 2, 6 e 12 meses; série zerada; máximo 121; máximo no primeiro/�
 ## 6. Botões, tabelas e espaço — I06
 
 - [ ] Definir variantes: primário, secundário com borda, perigo com borda e ação compacta com borda.
-- [ ] Retirar `btn--ghost` das ações que precisam se apresentar como botões, especialmente Excluir.
-- [ ] Manter borda perceptível em repouso, não apenas no hover.
-- [ ] Distinguir ação destrutiva por rótulo e cor, não só por ícone.
+- [x] Retirar `btn--ghost` das ações que precisam se apresentar como botões, especialmente Excluir. Feito no E1 (escopo parcial do I06): 10 botões `btn--danger` que também tinham `btn--ghost` (Excluir em Clientes/Atualizações/Agendamentos, Encerrar sessão(ões), Restaurar tudo/backup, Remover acesso) — `btn--ghost` zerava a borda de `btn--danger` em repouso e disputava a cor do hover.
+- [x] Manter borda perceptível em repouso, não apenas no hover. `btn--danger` sozinho já usa `--cor-borda-forte` em repouso; sem o `btn--ghost` por cima, a borda aparece.
+- [x] Distinguir ação destrutiva por rótulo e cor, não só por ícone. Já valia (rótulo + `btn--danger`); confirmado que nenhum desses botões dependia só do ícone `alerta`.
 - [ ] Padronizar altura, raio, espessura do traço e distância ícone/texto.
 - [ ] Revisar linhas, formulários, modais e rodapés; evitar substituição global cega.
 - [ ] Manter nome acessível e dica para ícones sem texto.

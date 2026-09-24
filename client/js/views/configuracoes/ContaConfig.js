@@ -88,7 +88,7 @@ export class ContaConfig {
           ${tituloCartao({
             titulo: "Onde sua conta está aberta",
             descricao: "Cada navegador em que você entrou e ainda não saiu.",
-            acoes: html`<button type="button" class="btn btn--small btn--ghost btn--danger" data-action="encerrar-outras" disabled>
+            acoes: html`<button type="button" class="btn btn--small btn--danger" data-action="encerrar-outras" disabled>
               Encerrar as outras</button>`,
           })}
           <div data-role="sessoes"><p class="cfg-sessoes__resumo">Carregando…</p></div>
@@ -112,7 +112,7 @@ export class ContaConfig {
                 <span class="cfg-group__title">Voltar ao padrão</span>
                 <span class="cfg-group__help" data-role="resumo"></span>
               </div>
-              <button type="button" class="btn btn--small btn--ghost btn--danger" data-action="restaurar-tudo">
+              <button type="button" class="btn btn--small btn--danger" data-action="restaurar-tudo">
                 ${iconHtml("restaurar")} Restaurar tudo</button>
             </div>
           </div>

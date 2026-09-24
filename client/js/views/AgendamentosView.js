@@ -81,7 +81,7 @@ export class AgendamentosView extends View {
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
             <span class="form-actions__hint text-muted" data-role="modo"></span>
           </div>
           <div class="form-actions__right">

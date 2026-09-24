@@ -45,7 +45,7 @@ export class ClientesView extends View {
       <div class="view-actions">
         <div class="view-actions__left">
           <button type="button" class="btn" data-action="acessos" disabled>${iconHtml("acessos")} Acessos</button>
-          <button type="button" class="btn btn--danger btn--ghost" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
+          <button type="button" class="btn btn--danger" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
         </div>
         <div class="view-actions__right">
           <button type="button" class="btn btn--accent" data-action="toggle-form">+ Novo Cliente</button>
@@ -75,7 +75,7 @@ export class ClientesView extends View {
 
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger btn--ghost" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
           </div>
           <div class="form-actions__right">
             <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
