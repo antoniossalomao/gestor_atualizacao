@@ -30,9 +30,9 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 | ID | Pedido | Diagnóstico atual | Direção proposta | Prioridade |
 |---|---|---|---|---|
 | I01 | Logo e nome sem identidade | Cabeçalho usa ATUALIZADOR / Gestor de clientes | ✅ Concluído em 24/09/2026 (seção 4) | P1 |
-| I02 | Situação dos clientes pouco útil | Em dia é calculado pelo complemento de clientes sem atualização recente | Separar versão de tempo sem atendimento | P0 |
+| I02 | Situação dos clientes pouco útil | Em dia é calculado pelo complemento de clientes sem atualização recente | ✅ Concluído em 24/09/2026 (seções 3.3 e 5.1; ADR-0008) | P0 |
 | I03 | Tendência desalinhada | SVG com margens fixas e rótulo final junto ao ponto | Corrigir calendário, eixos, margens e rótulos | P1 |
-| I04 | Sistemas fixos aparecem nos indicadores | Catálogo contém ambos, sem política explícita central de exclusão | Classificar sistemas sujeitos a versão | P0 |
+| I04 | Sistemas fixos aparecem nos indicadores | Catálogo contém ambos, sem política explícita central de exclusão | Classificar sistemas sujeitos a versão. ◐ Parte mínima feita (migração 2); falta tela e API | P0 |
 | I05 | Fundo escuro no alerta | Estilos próprios do ícone e do estado is-alert | Ícone simples e apresentação coerente | P1 |
 | I06 | Excluir e outros botões sem borda | Uso de btn--ghost em ações | Contorno visível e estados padronizados | P1 |
 | I07 | Datas poluem Atualizações | De/Até e atalhos ficam permanentemente na toolbar | Filtros recolhíveis e chips do recorte ativo | P1 |
@@ -68,11 +68,12 @@ Exemplo: cliente atendido ontem com NFe 22/09 fica desatualizado quando a oficia
 
 Recomendação: atributo persistido no catálogo, por exemplo `controla_versao`, inicialmente falso para B_Atualizador e Suporte Bredas. O nome técnico deve acompanhar o esquema normalizado atual. Não espalhar listas independentes no cliente e no servidor.
 
-- [ ] Identificar ambos pelo cadastro canônico, aproveitando aliases já normalizados.
-- [ ] Criar migração idempotente, preservando IDs, vínculos e histórico.
-- [ ] Manter os sistemas fixos no cadastro de sistemas usados pelo cliente.
-- [ ] Excluir dos gráficos por sistema e dos denominadores de cobertura de versões.
-- [ ] Excluir de listas e contagens de clientes desatualizados por versão.
+- [x] Identificar ambos pelo cadastro canônico, aproveitando aliases já normalizados (`SistemaRepository.resolver`).
+- [x] Criar migração idempotente, preservando IDs, vínculos e histórico (migração 2, `sistemas.controla_versao`).
+- [x] Manter os sistemas fixos no cadastro de sistemas usados pelo cliente.
+- [x] Excluir dos denominadores de cobertura de versões (card do Resumo).
+- [ ] Excluir do gráfico "Atualizações Por Sistema Este Mês".
+- [x] Excluir de listas e contagens de clientes desatualizados por versão.
 - [ ] Excluir da seleção padrão da aba Sistemas e do gerenciador de versões oficiais.
 - [ ] Na ficha, apresentar em Serviços/componentes fixos, sem estado de atraso.
 - [ ] Não apagar atendimentos, anotações ou referências antigas já registradas.
@@ -87,27 +88,28 @@ Para volume de trabalho: um atendimento misto continua contando uma vez. Registr
 
 Grupos mutuamente exclusivos (decididos):
 
-1. **Desatualizado:** existe sistema atualizável com versão recebida conhecida **anterior** à oficial conhecida.
-2. **Verificação pendente:** não há atraso confirmado, mas falta versão recebida ou referência oficial em algum sistema atualizável, ou alguma versão não pode ser comparada como data.
-3. **Em dia:** possui ao menos um sistema atualizável e todos têm versão recebida **igual ou posterior** à oficial.
+1. **Desatualizado:** existe sistema atualizável com versão recebida **anterior** à oficial (ou, sem versão registrada, atendido antes da data da oficial).
+2. **Verificação pendente:** não há atraso confirmado, mas algum sistema atualizável nunca teve atendimento, não tem oficial cadastrada ou tem data de atendimento inválida.
+3. **Em dia:** possui ao menos um sistema atualizável e todos têm versão recebida **igual ou posterior** à oficial (ou, sem versão registrada, atendimento na data da oficial ou depois).
 4. **Sem sistemas atualizáveis:** possui apenas fixos ou nenhum sistema; fica fora do denominador de cobertura.
 
-Comparação por data, não por igualdade de texto. Hoje `matrizVersoes.js` usa `instalada === versaoAtiva`, o que marca como atrasado um cliente à frente da oficial (versão de teste, oficial rebaixada). Recebida posterior à oficial conta como Em dia. Versão em formato que não se converte em data vai para Verificação pendente, nunca para Em dia nem para Desatualizado.
+Comparação por data, não por igualdade de texto. Hoje `matrizVersoes.js` usa `instalada === versaoAtiva`, o que marca como atrasado um cliente à frente da oficial (versão de teste, oficial rebaixada). Recebida posterior à oficial conta como Em dia. Versão em formato que não se converte em data é tratada como versão ausente (regra "pela data" abaixo).
 
 **Fonte da versão recebida (decidido):** somente a versão registrada em atendimento. O que o agente reporta não entra na classificação; aparece separado, com origem identificada (ver 9.3). Hoje a ficha deixa o agente sobrepor o atendimento (`matrizVersoes.js`, `agente?.ultimaVersao || versaoRegistrada(...)`) e casa agente com cliente por CNPJ/nome; isso deixa de afetar a situação.
 
 Nunca atualizado continua como detalhe por sistema. No consolidado, falta de evidência entra em Verificação pendente. Cliente com atraso confirmado e outro sistema sem informação conta uma vez em Desatualizado; a falta de informação aparece como detalhe secundário.
 
-**Risco a medir antes de desenhar o Resumo:** como histórico sem versão comprovada não recebe referência retroativa, Verificação pendente pode concentrar a maioria dos clientes. A etapa 0 conta quantos caem em cada grupo com dados reais. Se Pendente dominar, a entrega precisa antes de uma forma rápida de confirmar a versão atual de um cliente, sem registrar atendimento fictício; senão o novo card fica tão pouco útil quanto a rosca.
+**Medido em 24/09/2026 (E0), numa cópia do banco de produção:** com a regra estrita, 21 desatualizados, 348 pendentes e 0 em dia, de 369 clientes. Havia 1.275 sistemas com atendimento sem versão, registrados antes de existir a versão oficial. **Decidido: atendimento sem versão é julgado pela data** do atendimento contra a data da oficial, marcado "(pela data)" na tela. A versão recebida continua "Não informada": nada é gravado retroativamente. A ação "confirmar versão atual" deixou de ser pré-requisito. Detalhes em `docs/adr/0008-situacao-de-versao-do-cliente.md`.
 
-- [ ] Compartilhar regra no servidor entre Resumo, Sistemas, Consulta e relatórios.
-- [ ] Retornar totais de clientes, elegíveis e fora da avaliação.
-- [ ] Garantir soma correta, sem duplicar cliente com vários sistemas.
-- [ ] Usar IDs e relacionamentos normalizados atuais, sem novas junções por nome livre.
-- [ ] Aproveitar cópias de versões já existentes, sem mecanismo concorrente.
-- [ ] Comparar versões como datas; recebida posterior à oficial conta Em dia.
-- [ ] Classificar só pela versão do atendimento; agente fica fora da regra.
-- [ ] Testar oficial alterada, oficial rebaixada, recebida à frente, formato não comparável, versões ausentes, vários sistemas, fixos e legados.
+- [x] Compartilhar regra no servidor entre Resumo, Sistemas, situação do cliente e relatório do cliente (`services/situacaoVersao.js`).
+- [ ] A matriz da ficha (`matrizVersoes.js`, aba Consultar Cliente) ainda compara com a versão publicada do agente usando `===`. Fica para a revisão da ficha (9.3).
+- [x] Retornar totais de clientes, elegíveis e fora da avaliação.
+- [x] Garantir soma correta, sem duplicar cliente com vários sistemas.
+- [x] Usar IDs e relacionamentos normalizados atuais, sem novas junções por nome livre.
+- [x] Aproveitar cópias de versões já existentes, sem mecanismo concorrente.
+- [x] Comparar versões como datas; recebida posterior à oficial conta Em dia.
+- [x] Classificar só pela versão do atendimento; agente fica fora da regra.
+- [x] Testar oficial alterada, recebida à frente, formato não comparável, versões ausentes, vários sistemas, fixos e legados (`server/tests/situacaoVersao.test.js`).
 
 ## 4. Identidade visual e nome principal — I01
 
@@ -147,21 +149,23 @@ Aceite: legibilidade em 390 px e desktop, sem deformação, fundo acidental, nom
 
 Substituir a rosca genérica por um card **Atualização dos clientes**, com barra horizontal de distribuição e três totais clicáveis: Em dia, Desatualizados e Verificação pendente. Informar quantos clientes são elegíveis e quantos não participam da avaliação. O gráfico é auxiliar; os valores e ações precisam funcionar sem ele.
 
-- [ ] Aplicar categorias da seção 3.3, em vez do prazo de 60 dias.
-- [ ] Mostrar número e percentual com denominador explícito.
-- [ ] Abrir lista com o mesmo filtro ao clicar em cada situação.
-- [ ] Mostrar até três sistemas com mais clientes desatualizados e Ver todos.
-- [ ] Estado vazio deve orientar a cadastrar sistemas, oficiais ou atendimentos conforme o problema.
-- [ ] Não mostrar 100% em dia quando não houver clientes elegíveis.
-- [ ] Não misturar falha/offline de agente com versão registrada em atendimento.
-- [ ] Conferir que a população aberta pelo clique corresponde à contagem.
+**Feito em 24/09/2026 (I02).** Cada total abre uma gaveta com a lista exata. Os nomes de sistema levam à aba Sistemas já filtrada.
+
+- [x] Aplicar categorias da seção 3.3, em vez do prazo de 60 dias.
+- [x] Mostrar número e percentual com denominador explícito.
+- [x] Abrir lista com o mesmo filtro ao clicar em cada situação (as listas vêm na mesma resposta do `/resumo`).
+- [x] Mostrar até três sistemas com mais clientes desatualizados e Ver todos.
+- [ ] Estado vazio orientando conforme o problema. Hoje é uma mensagem única (sistemas nos clientes + oficial em Sistemas).
+- [x] Não mostrar 100% em dia quando não houver clientes elegíveis.
+- [x] Não misturar falha/offline de agente com versão registrada em atendimento.
+- [x] Conferir que a população aberta pelo clique corresponde à contagem (verificado no navegador com dados sintéticos).
 
 ### 5.2 Sem atendimento há mais de 60 dias
 
-- [ ] Renomear indicador para **Sem atendimento há mais de 60 dias**, usando o prazo configurado.
-- [ ] Separar Nunca atendidos de clientes com atendimento antigo.
-- [ ] Corrigir destino do clique: hoje abre Sistemas sem reproduzir o conjunto contado.
-- [ ] Abrir lista com cliente, último atendimento e dias; responsável somente se houver fonte definida.
+- [x] Renomear indicador para **Sem atendimento há mais de 60 dias**, usando o prazo configurado (e o texto da regra na Administração).
+- [x] Separar Nunca atendidos de clientes com atendimento antigo (vêm primeiro na lista, com "Nunca").
+- [x] Corrigir destino do clique: hoje abre Sistemas sem reproduzir o conjunto contado.
+- [x] Abrir lista com cliente, último atendimento e dias; responsável somente se houver fonte definida.
 - [ ] Remover fundo escuro arredondado do ícone de alerta.
 - [ ] Usar ícone simples e cor discreta, coerente com os demais indicadores.
 - [ ] Não tratar acompanhamento preventivo como falha crítica do sistema.
@@ -506,11 +510,11 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 
 | Etapa | Entrega | Pedidos | Dependência | Esforço |
 |---|---|---|---|---|
-| E0 | Baseline: capturas, dados sintéticos e **contagem real por grupo da 3.3** | — | — | Pequeno |
+| E0 | ✅ Contagem real por grupo da 3.3 (24/09/2026). Capturas "antes" ainda por fazer | — | — | Pequeno |
 | E1 | Correções rápidas e independentes | I05, I06 (só Excluir e ações sem borda), I11, I12, I17 | — | Pequeno |
-| E2 | Sistemas fixos e situação consolidada no servidor | I04, I02 (regra) | E0 | Grande |
+| E2 | ◐ Situação consolidada no servidor feita; sistemas fixos só na parte mínima | I04, I02 (regra) | E0 | Grande |
 | E3 | Oficiais separadas dos filtros em Sistemas | I16 | E2 | Médio |
-| E4 | Resumo: card de situação, Sem atendimento, destinos dos cliques e tendência | I02, I03 | E2 | Médio |
+| E4 | ◐ Card de situação e Sem atendimento feitos; falta a tendência | I02, I03 | E2 | Médio |
 | E5 | Padrão de botões e toolbars; Atualizações com filtros recolhíveis e planilhas reposicionadas | I06, I07, I08 | E1 | Médio |
 | E6 | Agendamentos (toolbar, filtros rápidos) e Clientes (acessos na linha, Grupo/Rede) | I10, I13, I14 | E5 | Médio |
 | E7 | Ficha do cliente e relatórios | I09, I15 | E2, E5 | Médio |
@@ -519,15 +523,15 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E10 | Validação visual completa, README/ajuda, CHANGELOG | — | Todas | Pequeno |
 | E11 | Central de pendências, em entrega independente | I20 | E2, E4, E6 e uso real | Grande; opcional |
 
-Se E0 mostrar que Verificação pendente concentra a maioria dos clientes, E2 inclui a forma rápida de confirmar a versão atual (3.3) antes de E4.
+E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída decidida foi julgar pela data o atendimento sem versão (3.3), e não criar a ação de confirmar versão.
 
 ### Checklist mestre
 
-- [ ] E0 — baseline, dados sintéticos e contagem por grupo com dados reais.
+- [x] E0 — contagem por grupo com dados reais (24/09/2026).
 - [ ] E1 — alerta sem fundo escuro, borda em Excluir, remover Converter, recuperar Arquivar, Último acesso capitalizado.
-- [ ] E2 — `controla_versao`, comparação por data, fonte só atendimento, regra única no servidor; ADR.
+- [x] E2 — `controla_versao` (mínimo), comparação por data, fonte só atendimento, regra única no servidor; ADR-0008. Falta o resto do I04 (3.2).
 - [ ] E3 — gerenciador de oficiais separado dos filtros.
-- [ ] E4 — Resumo e tendência corrigidos; clique e indicador com a mesma população.
+- [ ] E4 — Resumo feito (card e Sem atendimento, com clique e indicador na mesma população); falta a tendência (I03).
 - [ ] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados.
 - [ ] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto.
 - [ ] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado.
@@ -581,7 +585,7 @@ Se E0 mostrar que Verificação pendente concentra a maioria dos clientes, E2 in
 - [ ] Revalidar estado dos arquivos antes de editar e preservar alterações alheias.
 - [ ] Rodar `npm run check`, `npm test` e `git diff --check` a partir de `web` ao fim de cada etapa.
 - [ ] Cobrir regras e autorização das APIs de sistemas, importação e arquivamento.
-- [ ] ADR na seção 4 de `DOCUMENTACAO_CONSOLIDADA.md` para a situação consolidada (comparação por data, fonte só atendimento) e para `controla_versao`.
+- [x] ADR para a situação consolidada e `controla_versao`: `docs/adr/0008-situacao-de-versao-do-cliente.md`, listado na seção 4 de `DOCUMENTACAO_CONSOLIDADA.md`.
 - [ ] CHANGELOG a cada etapa com mudança visível.
 - [ ] Testar navegador com banco descartável e dados representativos.
 - [ ] Registrar antes/depois: sintaxe e testes automatizados não comprovam aparência.
@@ -619,6 +623,8 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 | Escopo de Configurações/Administração | Só reorganizar; novidades em 13.5 |
 | Central de pendências | Mantida como E11, opcional e independente |
 | Nome/símbolo | Gestor de Atualizações, assinatura Bredas Sistemas; símbolo vetorial (seção 4) |
+| Atendimento sem versão registrada | Julgado pela data do atendimento contra a da oficial, marcado "(pela data)" (ADR-0008) |
+| Sistemas fixos agora | Parte mínima do I04 junto com o I02 (migração 2); tela e API depois |
 
 ### Em aberto
 
