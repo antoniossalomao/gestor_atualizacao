@@ -136,11 +136,15 @@ class ApiRouter {
 
     // Sistemas
     api.get("/sistemas", sistemas.list);
+    api.get("/sistemas/versoes", sistemas.versoes);
+    api.put("/sistemas/:nome/versao", requireRole("operador", "admin"), sistemas.salvarVersao);
     api.post("/sistemas", requireRole("operador", "admin"), sistemas.create);
     api.delete("/sistemas/:nome", requireRole("operador", "admin"), sistemas.remove);
 
     // Atualizações
     api.get("/atualizacoes", atualizacoes.list);
+    api.get("/atualizacoes/relatorio", atualizacoes.relatorio);
+    api.get("/atualizacoes/situacao-cliente/:nome", atualizacoes.situacaoCliente);
     api.get("/atualizacoes/responsaveis", atualizacoes.distinctResponsaveis);
     api.get("/atualizacoes/last-by-client/:nome", atualizacoes.lastForClient);
     api.get("/atualizacoes/recent-by-client/:nome", atualizacoes.recentForClient);

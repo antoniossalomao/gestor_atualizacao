@@ -66,7 +66,7 @@ class AtualizacaoRepository extends BaseRepository {
     const offset = Math.max(0, (page - 1) * pageSize);
     const orderBy = buildOrderBy(SORT_MAP, sortBy, sortDir, `${DATE_SORT_EXPR} DESC, id DESC`);
     const sql = `
-      SELECT id, ${COLUMNS.join(", ")}, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table}
+      SELECT id, ${COLUMNS.join(", ")}, versoes_sistemas, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table}
       ${where}
       ORDER BY ${orderBy}
       LIMIT @limit OFFSET @offset
@@ -96,20 +96,20 @@ class AtualizacaoRepository extends BaseRepository {
 
   /** @param {Record<string, string>} data um valor por chave em COLUMNS */
   insert(data) {
-    const columns = COLUMNS.join(", ");
-    const placeholders = COLUMNS.map((c) => `@${c}`).join(", ");
-    this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`).run(data);
+    const columns = [...COLUMNS, "versoes_sistemas"].join(", ");
+    const placeholders = [...COLUMNS, "versoes_sistemas"].map((c) => `@${c}`).join(", ");
+    this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`).run({ ...data, versoes_sistemas: data.versoes_sistemas ?? null });
   }
 
   find(id) {
-    return this.conn.prepare(`SELECT id, ${COLUMNS.join(", ")}, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table} WHERE id = ?`).get(id);
+    return this.conn.prepare(`SELECT id, ${COLUMNS.join(", ")}, versoes_sistemas, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table} WHERE id = ?`).get(id);
   }
 
   /** Devolve quantas linhas mudaram -- 0 quer dizer que o id nao existe (mais). */
   update(id, data, revisaoEsperada = null, usuarioNome = "") {
-    const assignments = [...COLUMNS.map((c) => `${c} = @${c}`), "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
+    const assignments = [...[...COLUMNS, "versoes_sistemas"].map((c) => `${c} = @${c}`), "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
     return this.conn.prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)`)
-      .run({ ...data, id, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome }).changes;
+      .run({ ...data, versoes_sistemas: data.versoes_sistemas ?? null, id, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome }).changes;
   }
 
   /** Todos os registros, na ordem de exportacao (botao Exportar .xlsx). */
@@ -136,13 +136,13 @@ class AtualizacaoRepository extends BaseRepository {
     if (limpos.length === 0) return [];
     const marcadores = limpos.map(() => "?").join(", ");
     return this.conn
-      .prepare(`SELECT id, ${COLUMNS.join(", ")} FROM ${this.table} WHERE id IN (${marcadores})`)
+      .prepare(`SELECT id, ${COLUMNS.join(", ")}, versoes_sistemas FROM ${this.table} WHERE id IN (${marcadores})`)
       .all(...limpos);
   }
 
   exportAll(search = "", responsavel = "Todos", periodo = {}) {
     const { where, params } = this._filtros(search, responsavel, periodo);
-    const sql = `SELECT ${COLUMNS.join(", ")} FROM ${this.table} ${where} ORDER BY ${DATE_SORT_EXPR} DESC`;
+    const sql = `SELECT ${COLUMNS.join(", ")}, versoes_sistemas FROM ${this.table} ${where} ORDER BY ${DATE_SORT_EXPR} DESC, id DESC`;
     return this.conn.prepare(sql).all(params);
   }
 
@@ -299,7 +299,7 @@ class AtualizacaoRepository extends BaseRepository {
    */
   recentUpdatesForClient(nome, limit = 5) {
     const sql = `
-      SELECT id, data, sistema, versao, motivo, responsavel, maquinas, obs FROM ${this.table}
+      SELECT id, data, sistema, versao, motivo, responsavel, maquinas, obs, versoes_sistemas FROM ${this.table}
       WHERE cliente = @nome ORDER BY ${DATE_SORT_EXPR} DESC, id DESC LIMIT @limit
     `;
     return this.conn.prepare(sql).all({ nome, limit });
@@ -312,7 +312,7 @@ class AtualizacaoRepository extends BaseRepository {
    */
   latestVersionBySystem() {
     const rows = this.conn
-      .prepare(`SELECT sistema, versao, data FROM ${this.table} WHERE sistema != '' AND data != '' ORDER BY ${DATE_SORT_EXPR} DESC, id DESC`)
+      .prepare(`SELECT sistema, versao, data, versoes_sistemas FROM ${this.table} WHERE sistema != '' AND data != '' ORDER BY ${DATE_SORT_EXPR} DESC, id DESC`)
       .all();
     const latest = new Map();
     const sistemasConhecidos = this.conn.prepare("SELECT nome FROM sistemas ORDER BY nome").all().map((row) => row.nome);
@@ -320,7 +320,7 @@ class AtualizacaoRepository extends BaseRepository {
       for (const sistema of splitSystems(row.sistema)) {
         const canonical = sistemasConhecidos.find((known) => sameSystem(sistema, known));
         if (canonical && !latest.has(canonical)) {
-          latest.set(canonical, { sistema: canonical, versao: row.versao || "Não informada", data: row.data });
+          latest.set(canonical, { sistema: canonical, versao: versaoDoRegistro(row, canonical) || "Não informada", data: row.data });
         }
       }
     }
@@ -373,4 +373,14 @@ function titleCase(text) {
   return text.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
 }
 
-module.exports = { AtualizacaoRepository, DATE_SORT_EXPR, COLUMNS, titleCase };
+function versaoDoRegistro(row, sistema) {
+  if (!row) return "";
+  if (row.versoes_sistemas != null) {
+    const mapa = JSON.parse(row.versoes_sistemas);
+    const chave = Object.keys(mapa).find((s) => sameSystem(s, sistema));
+    return chave ? mapa[chave] || "" : "";
+  }
+  // Uma versão legada só é inequívoca quando o registro tem um único sistema.
+  return splitSystems(row.sistema).length === 1 ? row.versao || "" : "";
+}
+module.exports = { AtualizacaoRepository, DATE_SORT_EXPR, COLUMNS, titleCase, splitSystems, sameSystem, versaoDoRegistro };

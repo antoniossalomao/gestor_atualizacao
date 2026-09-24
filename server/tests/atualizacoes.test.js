@@ -250,11 +250,11 @@ test("AtualizacaoService - relatório por sistema", async (t) => {
       assert.equal(por["Nunca"], "Nunca atualizado");
     });
 
-    await t.test("sem data de corte, quem tem atualização é só 'Atualizado'", () => {
+    await t.test("sem referência oficial ou corte, não presume que o cliente está em dia", () => {
       const r = env.service.relatorioPorSistema("B_Vendas");
       const por = Object.fromEntries(r.map((x) => [x.cliente, x.situacao]));
-      assert.equal(por["Em Dia"], "Atualizado");
-      assert.equal(por["Atrasado"], "Atualizado", "sem corte não há como estar atrasado");
+      assert.equal(por["Em Dia"], "Sem referência");
+      assert.equal(por["Atrasado"], "Sem referência", "sem corte não há como estar atrasado");
       assert.equal(por["Nunca"], "Nunca atualizado");
     });
 
@@ -273,4 +273,77 @@ test("AtualizacaoService - relatório por sistema", async (t) => {
   } finally {
     env.cleanup();
   }
+});
+
+test("Referência oficial não atribui versões retroativamente", () => {
+  const { db, service, clientes, cleanup } = ambiente();
+  try {
+    for (const [nome, data] of [["Anterior", "08/09/2026"], ["Igual", "09/09/2026"], ["Posterior", "10/09/2026"], ["Sem registro", ""]]) {
+      clientes.create({ nome, sistemas: ["B_Vendas"] }, USUARIO);
+      if (data) service.create({ cliente: nome, sistema: "B_Vendas", data }, USUARIO);
+    }
+    clientes.salvarVersaoSistema("B_Vendas", "09/09/2026", USUARIO);
+    clientes.salvarVersaoSistema("B_NFe", "22/09/2026", USUARIO);
+    const rows = service.relatorioPorSistema("B_Vendas");
+    assert.equal(rows.find((r) => r.cliente === "Anterior").situacao, "Sem informação");
+    assert.equal(rows.find((r) => r.cliente === "Igual").situacao, "Sem informação");
+    assert.equal(rows.find((r) => r.cliente === "Posterior").situacao, "Sem informação");
+    assert.equal(rows.find((r) => r.cliente === "Sem registro").situacao, "Nunca atualizado");
+    assert.equal(db.sistemas.versoes().find((s) => s.nome === "B_NFe").data, "22/09/2026");
+    assert.throws(() => clientes.salvarVersaoSistema("B_Vendas", "31/02/2026", USUARIO));
+    assert.throws(() => clientes.salvarVersaoSistema("B_Vendas", 123, USUARIO));
+    assert.throws(() => clientes.salvarVersaoSistema("Inexistente", "09/09/2026", USUARIO));
+    clientes.salvarVersaoSistema("B_Vendas", "", USUARIO);
+    assert.equal(service.relatorioPorSistema("B_Vendas").find((r) => r.cliente === "Anterior").situacao, "Sem referência");
+  } finally { cleanup(); }
+});
+
+test("Versões recebidas permanecem após nova oficial, edição e desfazer", () => {
+  const { db, service, clientes, cleanup } = ambiente();
+  try {
+    clientes.create({ nome: "Loja", sistemas: ["B_NFe", "B_Vendas"] }, USUARIO);
+    clientes.salvarVersaoSistema("B_NFe", "22/09/2026", USUARIO);
+    clientes.salvarVersaoSistema("B_Vendas", "09/09/2026", USUARIO);
+    const criado = service.create({ cliente: "Loja", sistema: "B_NFe, B_Vendas", data: "24/09/2026", responsavel: "Teste" }, USUARIO);
+    assert.deepEqual(JSON.parse(criado.versoes_sistemas), { B_NFe: "22/09/2026", B_Vendas: "09/09/2026" });
+    const id = ultimoId(db);
+    assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").situacao, "Em dia");
+    clientes.salvarVersaoSistema("B_NFe", "24/09/2026", USUARIO);
+    assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").situacao, "Desatualizado");
+    assert.equal(service.relatorioPorSistema("B_NFe")[0].instalada, "22/09/2026");
+    service.update(id, { ...criado, obs: "Corrigida" }, USUARIO);
+    assert.equal(db.atualizacoes.find(id).versoes_sistemas, criado.versoes_sistemas);
+    const { registros } = service.deleteMany([id], USUARIO);
+    service.create({ ...registros[0], restaurarVersoes: true }, USUARIO);
+    assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").instalada, "22/09/2026");
+    service.create({ cliente: "Loja", sistema: "B_NFe", data: "24/09/2026" }, USUARIO);
+    assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").instalada, "24/09/2026");
+    assert.equal(service.relatorioPorSistema("B_NFe")[0].situacao, "Em dia");
+    assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_Vendas").instalada, "09/09/2026");
+    const antigo = service.create({ cliente: "Antigo", sistema: "B_NFe", data: "01/09/2026" }, USUARIO);
+    assert.equal(JSON.parse(antigo.versoes_sistemas).B_NFe, null);
+  } finally { cleanup(); }
+});
+
+test("Relatório por período e Excel respeitam filtros e contam clientes distintos", async () => {
+  const { service, clientes, cleanup } = ambiente();
+  try {
+    clientes.salvarVersaoSistema("B_NFe", "22/09/2026", USUARIO);
+    service.create({ cliente: "Loja", sistema: "B_NFe, B_Vendas", data: "24/09/2026", responsavel: "Ana" }, USUARIO);
+    service.create({ cliente: "Loja", sistema: "B_NFe", data: "25/09/2026", responsavel: "Ana" }, USUARIO);
+    service.create({ cliente: "Outra", sistema: "B_NFe", data: "01/08/2026", responsavel: "Bia" }, USUARIO);
+    const periodo = { desde: "01/09/2026", ate: "30/09/2026" };
+    const r = service.relatorioPeriodo("", "Ana", periodo);
+    assert.equal(r.total, 2);
+    assert.equal(r.clientes, 1);
+    assert.equal(r.porSistema.find((s) => s.nome === "B_NFe").total, 2);
+    assert.equal(r.porSistema.find((s) => s.nome === "B_Vendas").total, 1);
+    assert.throws(() => service.relatorioPeriodo("", "Todos", { desde: "30/09/2026", ate: "01/09/2026" }));
+    const ExcelJS = require("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await service.exportXlsxBuffer("", "Ana", periodo));
+    assert.equal(workbook.worksheets[0].rowCount, 3);
+    assert.ok(workbook.worksheets[0].autoFilter);
+    assert.equal(workbook.getWorksheet("Resumo").getCell("B6").value, 2);
+  } finally { cleanup(); }
 });

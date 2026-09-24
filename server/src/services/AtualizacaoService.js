@@ -1,4 +1,5 @@
 const ExcelJS = require("exceljs");
+const { splitSystems, sameSystem, versaoDoRegistro } = require("../database/AtualizacaoRepository");
 
 const { COLUMNS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
 const { REGRAS } = require("../config/regrasEquipe");
@@ -45,6 +46,8 @@ class AtualizacaoService {
 
   create(input, usuario) {
     const data = this._validate(input);
+    data.versoes_sistemas = this._capturarVersoes(data, input);
+    this._resumirVersoes(data);
     this.db.atualizacoes.insert(data);
     this.historico.registrar(usuario, "criar", "atualizacao", `Atualização de "${data.cliente}" (${data.sistema || "sem sistema"})`);
     this._marcarSuporteBredasSeNecessario(data, usuario);
@@ -63,6 +66,12 @@ class AtualizacaoService {
   update(id, input, usuario) {
     const data = this._validate(input);
     const antes = this.db.atualizacoes.find(id);
+    // Editar observações ou datas não reaplica versões oficiais novas.
+    if (antes?.versoes_sistemas != null) {
+      const mapa = JSON.parse(antes.versoes_sistemas);
+      data.versoes_sistemas = JSON.stringify(Object.fromEntries(splitSystems(data.sistema).map((s) => [s, mapa[s] || null])));
+      this._resumirVersoes(data);
+    }
     const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
     if (this.db.atualizacoes.update(id, data, revisaoEsperada, usuario?.nome || "") === 0) {
       const agora = this.db.atualizacoes.find(id);
@@ -175,6 +184,7 @@ class AtualizacaoService {
   relatorioPorSistema(sistema, dataCorteStr) {
     const sistemaLimpo = (sistema || "").trim();
     if (!sistemaLimpo) throw new ValidationError("Informe o sistema.");
+    dataCorteStr = dataCorteStr || this.db.sistemas.versoes().find((s) => s.nome.toLowerCase() === sistemaLimpo.toLowerCase())?.data || "";
     let dataCorte = null;
     if (dataCorteStr) {
       if (!dataValida(dataCorteStr)) {
@@ -183,26 +193,92 @@ class AtualizacaoService {
       dataCorte = parseData(dataCorteStr);
     }
 
-    const ultimas = this.db.atualizacoes.lastDateByClientAndSistema(sistemaLimpo);
+    const oficial = this.db.sistemas.versoes().find((s) => sameSystem(s.nome, sistemaLimpo))?.data || "";
+    const registros = this.db.atualizacoes.exportAll();
     const resultado = [];
     for (const { nome, cidade, sistemas } of this.db.clientes.allBasicComSistemas()) {
-      const usaSistema = (sistemas || "")
-        .split(",")
-        .map((s) => s.trim())
-        .includes(sistemaLimpo);
-      if (!usaSistema) continue;
-
-      const dataStr = ultimas[nome];
-      const d = dataStr ? parseData(dataStr) : null;
-      let situacao;
-      if (!d) situacao = "Nunca atualizado";
-      else if (dataCorte) situacao = d < dataCorte ? "Desatualizado" : "Em dia";
-      else situacao = "Atualizado";
-
-      resultado.push({ cliente: nome, cidade: cidade || "—", ultima: dataStr || "Nunca", situacao });
+      if (!splitSystems(sistemas).some((s) => sameSystem(s, sistemaLimpo))) continue;
+      const registro = registros.find((r) => r.cliente === nome && splitSystems(r.sistema).some((s) => sameSystem(s, sistemaLimpo)));
+      const instalada = versaoDoRegistro(registro, sistemaLimpo);
+      let situacao = "Sem informação";
+      if (!registro) situacao = "Nunca atualizado";
+      else if (oficial) {
+        if (instalada) situacao = instalada === oficial ? "Em dia" : "Desatualizado";
+      } else if (dataCorte) {
+        const d = parseData(registro.data);
+        situacao = !d ? "Nunca atualizado" : d < dataCorte ? "Desatualizado" : "Em dia";
+      } else situacao = "Sem referência";
+      resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", instalada: instalada || "Não informada", oficial: oficial || "Não informada", situacao });
     }
     resultado.sort((a, b) => a.cliente.localeCompare(b.cliente, "pt-BR"));
     return resultado;
+  }
+
+  _capturarVersoes(data, input) {
+    // Desfazer uma exclusão conserva a cópia devolvida pela API, inclusive legados.
+    if (input.restaurarVersoes === true) {
+      if (input.versoes_sistemas == null) return null;
+      let mapa;
+      try { mapa = JSON.parse(input.versoes_sistemas); } catch { throw new ValidationError("Versões inválidas."); }
+      if (!mapa || Array.isArray(mapa) || typeof mapa !== "object") throw new ValidationError("Versões inválidas.");
+      const entradas = splitSystems(data.sistema).map((s) => {
+        const valor = mapa[s] ?? null;
+        if (valor !== null && (typeof valor !== "string" || valor.length > 100)) throw new ValidationError("Versões inválidas.");
+        return [s, valor];
+      });
+      return JSON.stringify(Object.fromEntries(entradas));
+    }
+    const oficiais = this.db.sistemas.versoes();
+    const atendimento = parseData(data.data);
+    return JSON.stringify(Object.fromEntries(splitSystems(data.sistema).map((sistema) => {
+      const oficial = oficiais.find((s) => sameSystem(s.nome, sistema))?.data;
+      // Não atribuir uma versão publicada depois da data do atendimento.
+      const disponivel = oficial && atendimento && parseData(oficial) <= atendimento;
+      return [sistema, disponivel ? oficial : (!oficial && splitSystems(data.sistema).length === 1 ? data.versao || null : null)];
+    })));
+  }
+
+  _resumirVersoes(data) {
+    if (data.versoes_sistemas == null) return;
+    const entries = Object.entries(JSON.parse(data.versoes_sistemas));
+    const valores = [...new Set(entries.map(([, v]) => v))];
+    data.versao = valores.length === 1 ? valores[0] || "" : entries.map(([s, v]) => `${s}: ${v || "Não informada"}`).join("; ");
+  }
+
+  relatorioPeriodo(search = "", responsavel = "Todos", periodo = {}) {
+    for (const data of [periodo.desde, periodo.ate]) {
+      if (data && !dataValida(data)) throw new ValidationError("Período inválido.");
+    }
+    if (periodo.desde && periodo.ate && parseData(periodo.desde) > parseData(periodo.ate)) throw new ValidationError("A data inicial deve ser anterior à final.");
+    const registros = this.db.atualizacoes.exportAll(search, responsavel, periodo);
+    const contar = (extrair) => {
+      const mapa = new Map();
+      for (const registro of registros) for (const nome of new Set(extrair(registro))) {
+        const chave = nome.trim().toLowerCase();
+        const item = mapa.get(chave) || { nome: nome.trim(), total: 0 };
+        item.total++;
+        mapa.set(chave, item);
+      }
+      return [...mapa.values()].sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome));
+    };
+    return { filtros: { search, responsavel, ...periodo }, total: registros.length,
+      clientes: new Set(registros.map((r) => r.cliente.trim().toLowerCase())).size,
+      porSistema: contar((r) => splitSystems(r.sistema).length ? splitSystems(r.sistema) : ["Não informado"]),
+      porResponsavel: contar((r) => [r.responsavel || "Não informado"]), registros };
+  }
+
+  situacaoCliente(nome) {
+    const cliente = this.db.clientes.getByNome(nome);
+    const historico = this.db.atualizacoes.recentUpdatesForClient(nome, -1);
+    const sistemas = new Set([...splitSystems(cliente?.sistemas), ...historico.flatMap((r) => splitSystems(r.sistema))]);
+    const oficiais = this.db.sistemas.versoes();
+    return [...sistemas].sort().map((sistema) => {
+      const registro = historico.find((r) => splitSystems(r.sistema).some((s) => sameSystem(s, sistema)));
+      const instalada = versaoDoRegistro(registro, sistema);
+      const oficial = oficiais.find((s) => sameSystem(s.nome, sistema))?.data || "";
+      const situacao = !registro ? "Nunca atualizado" : !instalada ? "Sem informação" : !oficial ? "Sem referência" : instalada === oficial ? "Em dia" : "Desatualizado";
+      return { sistema, instalada, oficial, situacao, data: registro?.data || "" };
+    });
   }
 
   _validate(input) {
@@ -417,6 +493,17 @@ class AtualizacaoService {
     for (const row of this.db.atualizacoes.exportAll(search, responsavel, periodo)) {
       ws.addRow(COLUMNS.map((c) => row[c.key]));
     }
+    ws.views = [{ state: "frozen", ySplit: 1 }];
+    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: ws.rowCount, column: COLUMNS.length } };
+    ws.columns.forEach((col, i) => { col.width = [32, 30, 40, 24, 16, 30, 14, 60][i] || 24; });
+    ws.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+    ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF24476B" } };
+    ws.eachRow((row) => { row.alignment = { vertical: "top", wrapText: true }; });
+    const resumo = this.relatorioPeriodo(search, responsavel, periodo);
+    const meta = workbook.addWorksheet("Resumo");
+    meta.addRows([["Relatório de atualizações"], ["De", periodo.desde || "Sem limite"], ["Até", periodo.ate || "Sem limite"], ["Busca", search || "Todas"], ["Responsável", responsavel], ["Atendimentos", resumo.total], ["Clientes distintos", resumo.clientes], [], ["Sistema", "Atendimentos"], ...resumo.porSistema.map((r) => [r.nome, r.total]), [], ["Responsável", "Atendimentos"], ...resumo.porResponsavel.map((r) => [r.nome, r.total])]);
+    meta.columns = [{ width: 38 }, { width: 35 }];
+    meta.getRow(1).font = { bold: true, size: 16 };
     return workbook.xlsx.writeBuffer();
   }
 }

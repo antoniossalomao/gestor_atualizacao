@@ -11,6 +11,14 @@ class SistemaRepository extends BaseRepository {
     return "sistemas";
   }
 
+  versoes() {
+    return this.conn.prepare("SELECT nome, ultima_versao AS data FROM sistemas ORDER BY nome").all();
+  }
+
+  salvarVersao(nome, data) {
+    return this.conn.prepare("UPDATE sistemas SET ultima_versao = ? WHERE lower(nome) = lower(?)").run(data, nome).changes;
+  }
+
   list() {
     return this.conn.prepare("SELECT nome FROM sistemas ORDER BY nome").all().map((r) => r.nome);
   }

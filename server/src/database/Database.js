@@ -89,7 +89,7 @@ class Database {
     // estava em uso -- ALTER TABLE falha (silenciosamente ignorado aqui)
     // se a coluna ja existir, o que deixa essa migracao segura de rodar
     // toda vez que o servidor sobe.
-    for (const coluna of ["maquinas", "obs"]) {
+    for (const coluna of ["maquinas", "obs", "versoes_sistemas"]) {
       try {
         conn.exec(`ALTER TABLE atualizacoes ADD COLUMN ${coluna} TEXT`);
       } catch (e) {
@@ -141,6 +141,9 @@ class Database {
         nome TEXT NOT NULL UNIQUE
       )
     `);
+    if (!conn.prepare("PRAGMA table_info(sistemas)").all().some((col) => col.name === "ultima_versao")) {
+      conn.exec("ALTER TABLE sistemas ADD COLUMN ultima_versao TEXT NOT NULL DEFAULT ''");
+    }
     const semSistemas = conn.prepare("SELECT COUNT(*) AS total FROM sistemas").get().total === 0;
     if (semSistemas) {
       const insert = conn.prepare("INSERT OR IGNORE INTO sistemas (nome) VALUES (?)");

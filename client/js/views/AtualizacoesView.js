@@ -10,7 +10,8 @@ import { debounce } from "../utils/debounce.js";
 import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { icon, iconHtml } from "../utils/icons.js";
 import { html, plural, copyToClipboard } from "../utils/html.js";
-import { relatorioDeAtualizacao, relatorioDoCliente } from "../domain/relatorio.js";
+import { abrirRelatorio } from "../components/RelatorioModal.js";
+import { relatorioDeAtualizacao, relatorioDoCliente, relatorioSituacao, relatorioDoPeriodo } from "../domain/relatorio.js";
 import { emptyState } from "../components/EmptyState.js";
 import { withBusyButton, marcarOcupado } from "../utils/guard.js";
 import { baixarBlob } from "../utils/arquivo.js";
@@ -66,6 +67,7 @@ export class AtualizacoesView extends View {
         <div class="view-actions__left">
           <button type="button" class="btn" data-action="import">${iconHtml("upload")} Importar (.xlsx)</button>
           <button type="button" class="btn" data-action="export">${iconHtml("download")} Exportar (.xlsx)</button>
+          <button type="button" class="btn btn--ghost" data-action="relatorio-periodo">Relatório do período</button>
           <button type="button" class="btn btn--ghost" data-action="relatorio" disabled>${iconHtml("copiar")} Relatório do Cliente</button>
           <button type="button" class="btn btn--danger btn--ghost" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
           <input type="file" accept=".xlsx,.xls" data-role="file-input" hidden />
@@ -326,6 +328,7 @@ export class AtualizacoesView extends View {
       this._submit();
     });
     this.updateBtn?.addEventListener("click", () => this.updateRecord());
+    this.container.querySelector('[data-action="relatorio-periodo"]').addEventListener("click", () => this.abrirRelatorioPeriodo());
     this.relatorioBtn?.addEventListener("click", () => this.abrirRelatorio());
     this.deleteBtn?.addEventListener("click", () => this.deleteRecord());
     exportBtn.addEventListener("click", withBusyButton(exportBtn, () => this.exportXlsx()));
@@ -609,6 +612,11 @@ export class AtualizacoesView extends View {
   _pintarModo() {
     const modo = this.form.querySelector('[data-role="modo"]');
     const isEdit = this.selectedId != null;
+    this.fields.versao.readOnly = !isEdit || this.selectedRow?.versoes_sistemas != null;
+    this.fields.versao.placeholder = "Preenchida com as versões oficiais ao salvar";
+    this.form.querySelector("#atu-versao-hint").textContent = isEdit
+      ? "As versões recebidas são preservadas. Um novo atendimento deve ser registrado como nova atualização."
+      : "Cada sistema informado recebe sua versão oficial cadastrada em Sistemas. Sem referência, a versão fica não informada.";
     if (modo) modo.textContent = isEdit ? `Registro #${this.selectedId}` : "";
     if (this.addBtn) this.addBtn.hidden = isEdit;
     if (this.updateBtn) {
@@ -708,8 +716,7 @@ export class AtualizacoesView extends View {
       return;
     }
     const id = this.selectedId;
-    const dadosAntes = {};
-    for (const col of COLUMNS) dadosAntes[col.key] = this.fields[col.key].value.trim();
+    const dadosAntes = { ...this.selectedRow, restaurarVersoes: true };
 
     const liberar = marcarOcupado(this.deleteBtn);
     try {
@@ -789,7 +796,7 @@ export class AtualizacoesView extends View {
           // o banco atribui um novo.
           for (const registro of registros) {
             const { id, ...dados } = registro;
-            await this.api.post("/atualizacoes", dados);
+            await this.api.post("/atualizacoes", { ...dados, restaurarVersoes: true });
           }
           this._invalidar();
           await this._reloadList();
@@ -909,7 +916,8 @@ export class AtualizacoesView extends View {
 
     const liberar = marcarOcupado(this.relatorioBtn);
     try {
-      const [cliente, historico] = await Promise.all([
+      const [situacao, cliente, historico] = await Promise.all([
+        this.api.get(`/atualizacoes/situacao-cliente/${encodeURIComponent(nome)}`),
         // Cliente não cadastrado na aba Clientes não é erro -- a importação de
         // planilha avisa que isso acontece, e o registro de atualização existe
         // do mesmo jeito. Vem nulo, e o relatório sai sem código nem cidade em
@@ -921,7 +929,7 @@ export class AtualizacoesView extends View {
           { key: "relatorio:historico" }
         ),
       ]);
-      this._modalRelatorio(registro, cliente, historico);
+      this._modalRelatorio(registro, cliente, historico, situacao);
     } catch (err) {
       if (err?.cancelled) return;
       Modal.alert("Erro", errorMessage(err), "error");
@@ -930,71 +938,36 @@ export class AtualizacoesView extends View {
     }
   }
 
-  _modalRelatorio(registro, cliente, historico) {
+  async abrirRelatorioPeriodo() {
+    try {
+      const resumo = await this.api.get("/atualizacoes/relatorio", { search: this.busca, responsavel: this.responsavel, desde: this.desde, ate: this.ate });
+      abrirRelatorio({ tipos: [{ valor: "periodo", nome: "Resumo do período filtrado" }], gerar: () => relatorioDoPeriodo(resumo) });
+    } catch (err) { Modal.alert("Erro", errorMessage(err), "error"); }
+  }
+
+  _modalRelatorio(registro, cliente, historico, situacao) {
     const registros = Array.isArray(historico) ? historico : [];
     const posicao = registros.findIndex((r) => r.id === registro.id);
-    const textos = {
-      atualizacao: relatorioDeAtualizacao(registro, {
-        // O histórico vem do mais recente para o mais antigo, então a
-        // atualização anterior é simplesmente a próxima da lista.
-        anterior: posicao >= 0 ? registros[posicao + 1] : null,
-      }),
-      cliente: relatorioDoCliente(registro.cliente, registros, cliente),
-    };
-
-    const { box, close } = Modal.abrirCaixa({ largura: 640 });
-    // Sufixo aleatório no `name` dos radios: dois relatórios abertos ao mesmo
-    // tempo não deveriam acontecer, mas se acontecerem os grupos não se
-    // misturam -- é o mesmo cuidado que Modal._open já toma com o id do título.
-    const sufixo = Math.random().toString(36).slice(2, 8);
-    const tituloId = `relatorio-titulo-${sufixo}`;
-    box.setAttribute("aria-labelledby", tituloId);
-    box.innerHTML = html`
-      <div class="relatorio">
-        <h3 class="modal-box__title" id="${tituloId}">Relatório</h3>
-        <div class="segmented" role="radiogroup" aria-label="Conteúdo do relatório">
-          <label class="cfg-group__option">
-            <input type="radio" name="rel-${sufixo}" value="atualizacao" checked />
-            <span>Esta atualização</span>
-          </label>
-          <label class="cfg-group__option">
-            <input type="radio" name="rel-${sufixo}" value="cliente" />
-            <span>Histórico do cliente</span>
-          </label>
-        </div>
-        <textarea class="input relatorio__texto" data-role="texto" readonly spellcheck="false"
-                  aria-label="Texto do relatório"></textarea>
-        <div class="modal-box__actions">
-          <button type="button" class="btn" data-action="fechar">Fechar</button>
-          <button type="button" class="btn btn--accent" data-action="copiar">Copiar</button>
-        </div>
-      </div>
-    `;
-
-    const area = box.querySelector('[data-role="texto"]');
-    area.value = textos.atualizacao;
-    for (const radio of box.querySelectorAll('input[type="radio"]')) {
-      radio.addEventListener("change", () => {
-        if (radio.checked) area.value = textos[radio.value];
-      });
-    }
-
-    const copiar = box.querySelector('[data-action="copiar"]');
-    copiar.addEventListener("click", async () => {
-      if (await copyToClipboard(area.value)) {
-        close();
-        toast.success("Relatório copiado.");
-        return;
-      }
-      // Sem área de transferência (pode acontecer em HTTP puro, ver
-      // copyToClipboard) o modal FICA ABERTO, com o texto já selecionado:
-      // fechar aqui jogaria fora a única cópia que a pessoa tem.
-      area.focus();
-      area.select();
-      toast.error("Não foi possível copiar. O texto está selecionado — use Ctrl+C.");
+    const anteriores = posicao >= 0 ? registros.slice(posicao + 1) : [];
+    const sistemas = String(registro.sistema || "").split(/,|\s+e\s+/i).map((s) => s.trim());
+    const mapa = Object.fromEntries(sistemas.map((sistema) => {
+      const anterior = anteriores.find((r) => String(r.sistema || "").split(/,|\s+e\s+/i).some((s) => s.trim().toLowerCase() === sistema.toLowerCase()));
+      const versoes = anterior?.versoes_sistemas ? JSON.parse(anterior.versoes_sistemas) : null;
+      return [sistema, versoes ? versoes[sistema] : anterior && String(anterior.sistema).split(/,|\s+e\s+/i).length === 1 ? anterior.versao : null];
+    }));
+    abrirRelatorio({
+      tipos: [{ valor: "atualizacao", nome: "Atendimento selecionado" }, { valor: "cliente", nome: "Situação e histórico do cliente" }],
+      periodo: true,
+      gerar: (tipo, { desde, ate }) => {
+        if (tipo === "atualizacao") return relatorioDeAtualizacao(registro, { cliente, anterior: { sistema: sistemas.length === 1 ? sistemas[0] : "", versao: sistemas.length === 1 ? mapa[sistemas[0]] : "", versoes_sistemas: JSON.stringify(mapa) } });
+        const filtrados = registros.filter((r) => {
+          const iso = r.data?.split("/").reverse().join("-");
+          return (!desde && !ate) || (iso && (!desde || iso >= desde) && (!ate || iso <= ate));
+        });
+        const intervalo = desde || ate ? `\n\nHistórico: ${desde ? desde.split("-").reverse().join("/") : "Início"} até ${ate ? ate.split("-").reverse().join("/") : "Sem limite"}` : "";
+        return `CLIENTE — ${registro.cliente}\n${[cliente?.codigo && `Código: ${cliente.codigo}`, cliente?.cidade].filter(Boolean).join(" · ")}\n\n${relatorioSituacao(situacao)}${intervalo}\n\n${relatorioDoCliente(registro.cliente, filtrados, cliente)}`;
+      },
     });
-    box.querySelector('[data-action="fechar"]').addEventListener("click", () => close());
-    copiar.focus();
   }
 
   _invalidar() {
@@ -1002,6 +975,7 @@ export class AtualizacoesView extends View {
     // O Resumo e o inventário de versões contam atualizações: mudou aqui,
     // mudou lá. Invalidar de fora é o que mantém as abas coerentes entre si.
     this.cache?.invalidar("resumo");
+    this.cache?.invalidar("sistemas:");
     this.cache?.invalidar("versoes:");
   }
 

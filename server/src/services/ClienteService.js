@@ -139,6 +139,18 @@ class ClienteService {
     return { afetados, total: registros.length };
   }
 
+  salvarVersaoSistema(nome, data, usuario) {
+    const { dataValida } = require("../shared/validation");
+    if (typeof data !== "string" || (data !== "" && !dataValida(data))) {
+      throw new ValidationError("Informe uma data válida no formato dd/mm/aaaa.");
+    }
+    const antes = this.db.sistemas.versoes().find((s) => s.nome.toLowerCase() === nome.toLowerCase());
+    if (!antes) throw new NotFoundError("Sistema não encontrado.");
+    this.db.sistemas.salvarVersao(antes.nome, data);
+    this.historico.registrar(usuario, "atualizar", "sistema", `Última versão de ${antes.nome}: ${data || "não informada"}`, { antes, depois: { nome: antes.nome, data } });
+    return { nome: antes.nome, data };
+  }
+
   listSistemas() {
     return this.db.sistemas.list();
   }

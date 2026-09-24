@@ -15,6 +15,31 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Sistemas ganhou uma "versão oficial" por sistema, e cada atendimento
+  guarda a versão que o cliente recebeu naquela data.** Antes a "versão"
+  de um atendimento era um texto solto, sem ligação com o que estava
+  publicado; agora, ao criar um atendimento, cada sistema informado recebe
+  uma cópia (`versoes_sistemas`) da versão oficial cadastrada em Sistemas —
+  mas só se ela já existia na data do atendimento (uma versão publicada
+  depois não é atribuída retroativamente). Editar depois (observações,
+  datas) não reaplica versões novas; sistemas acrescentados na edição ficam
+  sem versão, porque só um novo atendimento registra de fato uma
+  atualização. Desfazer uma exclusão preserva as versões que o registro já
+  tinha, inclusive as legadas (registro com um único sistema, de antes
+  dessa mudança). Histórico e importações antigos não recebem a versão
+  oficial de volta — não haveria como saber qual era, na época.
+  - A tela **Sistemas** ganhou "Em dia" / "Desatualizado" / "Nunca
+    atualizado" / "Sem referência" (sem versão oficial cadastrada) / "Sem
+    informação" (tem atendimento, mas sem versão capturada), comparando a
+    versão recebida com a oficial em vez de só comparar datas.
+  - A ficha do cliente (**Consulta**) ganhou a mesma situação por sistema.
+  - **Atualizações** ganhou "Relatório do período" (usa os filtros da tela:
+    busca, responsável, datas) com totais por sistema e por responsável,
+    prévia, cópia de texto e impressão/PDF — junto dos relatórios de
+    atendimento e de situação do cliente que já existiam. O Excel exportado
+    passou a acrescentar resumo, filtros e cabeçalhos formatados numa aba
+    além dos registros crus.
+
 - **Configurações virou uma tela, com a mesma cara do resto do app.** Era um
   modal de duas colunas com um desenho só dele (outra trilha de navegação,
   outro cabeçalho, outro rodapé), apertado em 880px com a tela desfocada
