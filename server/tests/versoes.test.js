@@ -102,7 +102,7 @@ test("VersaoService - validação da versão publicada", async (t) => {
     });
 
     await t.test("grupo piloto exige códigos de clientes cadastrados", () => {
-      env.db.clientes.insert("CLI-001", "Cliente piloto", "Recife", "B_Vendas", null);
+      env.db.clientes.insert("CLI-001", "Cliente piloto", "Recife", [], null);
       assert.throws(() => env.service._validate({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto" }), /ao menos um cliente/);
       assert.throws(() => env.service._validate({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto", codigosPiloto: '["INEXISTENTE"]' }), /não cadastrado/);
       assert.deepEqual(JSON.parse(env.service._validate({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto", codigosPiloto: '["cli-001", "CLI-001"]' }).codigosClientesJson), ["CLI-001"]);
@@ -136,7 +136,7 @@ test("VersaoService - validação da versão publicada", async (t) => {
 test("VersaoService - piloto, promoção e rollback", async (t) => {
   const env = ambiente();
   try {
-    env.db.clientes.insert("CLI-001", "Cliente piloto", "Recife", "B_Vendas", null);
+    env.db.clientes.insert("CLI-001", "Cliente piloto", "Recife", [], null);
     const producaoId = publicar(env, "B_Vendas", "1.0.0");
     const piloto = env.db.versoes.insert({ ...cadastro(env, "B_Vendas", "2.0.0"), alcance: "piloto", codigosClientesJson: JSON.stringify(["CLI-001"]) });
     env.service.publish(piloto.id, ADMIN);

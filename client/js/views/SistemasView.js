@@ -1,28 +1,22 @@
 import { View } from "../app/View.js";
 import { SortableTable } from "../components/SortableTable.js";
 import { blendHex, tokenHex } from "../utils/color.js";
+import { debounce } from "../utils/debounce.js";
 import { isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { ApiError } from "../api/ApiClient.js";
 import { Modal } from "../components/Modal.js";
-import { debounce } from "../utils/debounce.js";
 import { emptyState } from "../components/EmptyState.js";
 import { escapeHtml, plural } from "../utils/html.js";
 import { prefs } from "../app/prefs.js";
 
-/**
- * Relatório por sistema: filtra clientes que usam um sistema específico
- * (ex.: NFCe) e mostra a última atualização de cada um naquele sistema, com
- * uma data de corte opcional para marcar quem ficou para trás depois de uma
- * mudança grande do sistema numa certa data. Não existia no app original --
- * os dados já existem em Atualizações/Clientes, isto junta as duas coisas com
- * um filtro focado.
- */
+/** Relatório por sistema, usando a data da última versão cadastrada pela equipe. */
 export class SistemasView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
     const salvo = prefs.get("sistemas:filtros", {});
     this.sistema = salvo.sistema || "";
-    this.dataCorte = salvo.dataCorte || "";
+    this.dataCorte = "";
+    this.versoes = [];
     this._buildDom();
   }
 
@@ -42,13 +36,17 @@ export class SistemasView extends View {
             <div class="field__hint" aria-hidden="true"></div>
           </div>
           <div class="field">
-            <label class="field__label" for="sis-corte">Desatualizado antes de</label>
+            <label class="field__label" for="sis-corte">Data da última versão</label>
             <input type="text" class="input" id="sis-corte" data-role="data-corte"
-                   placeholder="dd/mm/aaaa (opcional)" aria-describedby="sis-corte-hint" />
+                   placeholder="dd/mm/aaaa" aria-describedby="sis-corte-hint" />
             <div class="field__hint" id="sis-corte-hint" data-role="data-hint"></div>
           </div>
+          <div class="field" style="min-width: 0;">
+            <label class="field__label" aria-hidden="true">&nbsp;</label>
+            <button type="button" class="btn" style="align-self: flex-start;" data-action="salvar-versao">Salvar versão</button>
+            <div class="field__hint" aria-hidden="true"></div>
+          </div>
           <div class="toolbar-spacer"></div>
-          <button type="button" class="btn btn--accent" data-action="gerar-agendamentos">Gerar Agendamentos em Lote</button>
           <span class="result-count" data-role="count" aria-live="polite"></span>
         </div>
         <div data-role="table"></div>
@@ -60,6 +58,7 @@ export class SistemasView extends View {
         { key: "cliente", label: "Cliente" },
         { key: "cidade", label: "Cidade" },
         { key: "ultima", label: "Última Atualização", type: "date" },
+        { key: "instalada", label: "Versão recebida" },
         { key: "situacao", label: "Situação" },
       ],
       rowKey: (row) => row.cliente,
@@ -77,44 +76,71 @@ export class SistemasView extends View {
 
     this.sistemaFilter = this.container.querySelector('[data-role="sistema-filter"]');
     this.dataCorteInput = this.container.querySelector('[data-role="data-corte"]');
-    this.gerarBtn = this.container.querySelector('[data-action="gerar-agendamentos"]');
-    this.gerarBtn.hidden = this.user?.role === "consulta";
-    this.gerarBtn.addEventListener("click", () => this._gerarAgendamentos());
     this.dataHint = this.container.querySelector('[data-role="data-hint"]');
     this.dataCorteInput.value = this.dataCorte;
 
+    this.salvarBtn = this.container.querySelector('[data-action="salvar-versao"]');
+    this.salvarBtn.hidden = this.user?.role === "consulta";
+    this.dataCorteInput.readOnly = this.user?.role === "consulta";
+    this.salvarBtn.addEventListener("click", () => this._salvarVersao());
     this.sistemaFilter.addEventListener("change", () => {
       this.sistema = this.sistemaFilter.value;
+      this._usarReferencia();
       this._salvarFiltros();
       this._reloadList();
     });
-    const reload = debounce(() => this._reloadList(), 250);
+    // Digitar uma data diferente da salva é uma consulta avulsa ("quem está
+    // desatualizado desde tal dia?"), sem precisar clicar em "Salvar versão"
+    // -- só reflete na tela e não grava nada. Debounced pra não recarregar a
+    // cada tecla enquanto a máscara ainda está sendo digitada.
+    const consultarComDebounce = debounce(() => {
+      this.dataCorte = this.dataCorteInput.value.trim();
+      this._reloadList();
+    }, 300);
     this.dataCorteInput.addEventListener("input", () => {
       this.dataCorteInput.value = mascaraDataBR(this.dataCorteInput.value);
       const valor = this.dataCorteInput.value.trim();
       const invalida = Boolean(valor) && !isValidDateBR(valor);
       this.dataHint.textContent = invalida ? "Formato esperado: dd/mm/aaaa" : "";
       this.dataCorteInput.setAttribute("aria-invalid", String(invalida));
-      if (!invalida) {
-        this.dataCorte = valor;
-        this._salvarFiltros();
-        reload();
-      }
+      this.salvarBtn.disabled = invalida;
+      if (!invalida) consultarComDebounce();
     });
   }
 
   async refresh() {
-    await this.swr(
-      "sistemas",
-      () => this.api.get("/sistemas", null, { key: "sistemas" }),
-      (sistemas) => {
-        this.sistemaFilter.innerHTML = sistemas.map((s) => `<option>${escapeHtml(s)}</option>`).join("");
-        if (sistemas.includes(this.sistema)) this.sistemaFilter.value = this.sistema;
-        else if (sistemas.includes("NFCe")) this.sistemaFilter.value = "NFCe";
-        this.sistema = this.sistemaFilter.value;
-      }
-    );
+    this.versoes = await this.api.get("/sistemas/versoes", null, { key: "sistemas:versoes" });
+    this.sistemaFilter.innerHTML = this.versoes.map((s) => `<option value="${escapeHtml(s.nome)}">${escapeHtml(s.nome)}${s.data ? ` — ${escapeHtml(s.data)}` : ""}</option>`).join("");
+    if (this.versoes.some((s) => s.nome === this.sistema)) this.sistemaFilter.value = this.sistema;
+    this.sistema = this.sistemaFilter.value;
+    this._usarReferencia();
     await this._reloadList();
+  }
+
+  _usarReferencia() {
+    this.dataCorte = this.versoes.find((s) => s.nome === this.sistema)?.data || "";
+    this.dataCorteInput.value = this.dataCorte;
+    this.dataHint.textContent = "";
+    this.dataCorteInput.setAttribute("aria-invalid", "false");
+    this.salvarBtn.disabled = !this.sistema;
+  }
+
+  async _salvarVersao() {
+    const data = this.dataCorteInput.value.trim();
+    if (data && !isValidDateBR(data)) return;
+    this.salvarBtn.disabled = true;
+    this.sistemaFilter.disabled = true;
+    try {
+      await this.api.put(`/sistemas/${encodeURIComponent(this.sistema)}/versao`, { data });
+      this.cache?.invalidar("sistemas:");
+      await this.refresh();
+      this.dataHint.textContent = "Referência salva para a equipe.";
+    } catch (err) {
+      Modal.alert("Erro", errorMessage(err), "error");
+    } finally {
+      this.salvarBtn.disabled = false;
+      this.sistemaFilter.disabled = false;
+    }
   }
 
   async _reloadList() {
@@ -149,29 +175,7 @@ export class SistemasView extends View {
   }
 
   _salvarFiltros() {
-    prefs.set("sistemas:filtros", { sistema: this.sistema, dataCorte: this.dataCorte });
-  }
-
-  async _gerarAgendamentos() {
-    const clientes = (this.rows || []).filter((row) => row.situacao !== "Em dia").map((row) => row.cliente);
-    if (clientes.length === 0) {
-      Modal.alert("Agendamentos", "Nenhum cliente defasado neste recorte.", "info");
-      return;
-    }
-    const ok = await Modal.confirm("Gerar agendamentos em lote", `Criar ${plural(clientes.length, "tarefa")} para os clientes defasados em ${this.sistema}?`, { confirmLabel: "Gerar", danger: false });
-    if (!ok) return;
-    try {
-      const resultado = await this.api.post("/agendamentos/gerar-lote", {
-        clientes,
-        sistema: this.sistema,
-        dataCorte: this.dataCorte,
-        responsavel: this.user?.nome || "",
-      });
-      this.cache?.invalidar("agendamentos:");
-      Modal.alert("Agendamentos criados", `${plural(resultado.criados, "tarefa")} criada para acompanhamento.`, "success");
-    } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
-    }
+    prefs.set("sistemas:filtros", { sistema: this.sistema });
   }
 }
 

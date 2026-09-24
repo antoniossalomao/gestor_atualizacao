@@ -267,14 +267,13 @@ test("AgendamentoService - responsável canônico", async (t) => {
       // Sem isso, o campo Responsável de uma aba divergia do da outra.
       env.db.atualizacoes.insert({
         cliente: "Cliente Teste",
-        sistema: "B_Vendas",
         versao: "1.0",
         data: "01/01/2026",
         responsavel: "Camila",
         maquinas: 1,
         motivo: "",
         obs: "",
-      });
+      }, env.db.sistemas.resolverOuCriar(["B_Vendas"]));
 
       const criada = criar(env.service, env.db, { tarefa: "Com responsável", responsavel: "CAMILA" });
       assert.equal(criada.responsavel, "Camila");

@@ -14,6 +14,7 @@ const { UsuarioRepository } = require("./UsuarioRepository");
 const { HistoricoRepository } = require("./HistoricoRepository");
 const { VersaoRepository } = require("./VersaoRepository");
 const { ConfiguracaoSistemaRepository } = require("./ConfiguracaoSistemaRepository");
+const { MIGRACOES, criarVisoes } = require("./migracoes");
 
 /**
  * Abre a conexao SQLite, garante o schema (criando/migrando tabelas) e
@@ -70,8 +71,81 @@ class Database {
     this.configuracoesSistema = new ConfiguracaoSistemaRepository(this.conn);
   }
 
-  /** Cria as tabelas se nao existirem; adiciona colunas/tabelas novas de forma idempotente. */
+  /**
+   * Deixa o esquema na versão atual: o legado (só em banco ainda na versão
+   * 0), depois as migrações numeradas que faltarem, a manutenção de todo boot
+   * e as visões de leitura.
+   */
   _migrate() {
+    const versao = this.conn.pragma("user_version", { simple: true });
+    if (versao === 0) this._esquemaLegado();
+    this._migracoesVersionadas(versao);
+    this._manutencaoDeBoot();
+    criarVisoes(this.conn);
+  }
+
+  _migracoesVersionadas(versaoAtual) {
+    const pendentes = MIGRACOES.filter((m) => m.versao > versaoAtual);
+    if (pendentes.length === 0) return;
+    // Migração que move dado é a hora em que um backup mais faz falta. O
+    // backup normal (`_backup`) só roda DEPOIS de abrir o banco, ou seja,
+    // depois de migrado -- este é o do estado de antes.
+    if (this._temDados()) this._copiaAntesDeMigrar();
+    for (const migracao of pendentes) {
+      this.conn.transaction(() => {
+        migracao.aplicar(this.conn);
+        this.conn.pragma(`user_version = ${migracao.versao}`);
+      })();
+      console.log(`Migracao ${migracao.versao} aplicada: ${migracao.descricao}.`);
+    }
+  }
+
+  _temDados() {
+    return this.conn.prepare("SELECT (SELECT COUNT(*) FROM atualizacoes) + (SELECT COUNT(*) FROM clientes) AS n").get().n > 0;
+  }
+
+  /**
+   * Cópia do banco antes de uma migração, na pasta de backups e no mesmo
+   * formato de nome dos outros -- aparece na tela de Backups e pode ser
+   * restaurada por lá. Diferente de `_backup`, falha aqui DERRUBA a subida:
+   * migrar sem ter a cópia de antes é justamente o risco que ela existe para
+   * cobrir.
+   */
+  _copiaAntesDeMigrar() {
+    this.conn.pragma("wal_checkpoint(TRUNCATE)");
+    const dir = path.join(path.dirname(this.path), "backups");
+    fs.mkdirSync(dir, { recursive: true });
+    const { name, ext } = path.parse(this.path);
+    const arquivo = nomeLivre(dir, name, timestamp(), ext);
+    fs.copyFileSync(this.path, path.join(dir, arquivo));
+    const verificacoes = this._lerVerificacoesBackup(dir);
+    verificacoes[arquivo] = this._verificarIntegridadeBackup(path.join(dir, arquivo));
+    this._salvarVerificacoesBackup(dir, verificacoes);
+    if (!verificacoes[arquivo]) throw new Error(`A copia de seguranca antes da migracao (${arquivo}) falhou na verificacao de integridade. Migracao cancelada.`);
+    console.log(`Backup antes da migracao: ${arquivo}`);
+  }
+
+  /** O que precisa ser conferido a cada subida, qualquer que seja a versão do esquema. */
+  _manutencaoDeBoot() {
+    // Se nenhuma conta tem o papel de admin (banco recem-criado ou alguem
+    // rebaixou o ultimo admin direto no banco), promove a conta mais antiga
+    // -- garante que sempre exista pelo menos um admin, sem passo manual.
+    const semAdmin = this.conn.prepare("SELECT COUNT(*) AS total FROM usuarios WHERE role = 'admin'").get().total === 0;
+    if (semAdmin) {
+      this.conn.exec("UPDATE usuarios SET role = 'admin' WHERE id = (SELECT MIN(id) FROM usuarios)");
+    }
+    this._backfillSistemaDasVersoes();
+  }
+
+  /**
+   * O esquema como ele cresceu até a versão 0: tabelas criadas se não
+   * existirem e colunas acrescentadas com ALTER TABLE idempotente. Roda só
+   * em banco que ainda não passou pelas migrações numeradas (um banco novo,
+   * ou um de antes delas) -- depois disso, o esquema muda só por
+   * `migracoes.js`. Não acrescente nada aqui: uma coluna nova é uma
+   * migração nova.
+   */
+  _esquemaLegado() {
     const conn = this.conn;
 
     conn.exec(`
@@ -89,7 +163,7 @@ class Database {
     // estava em uso -- ALTER TABLE falha (silenciosamente ignorado aqui)
     // se a coluna ja existir, o que deixa essa migracao segura de rodar
     // toda vez que o servidor sobe.
-    for (const coluna of ["maquinas", "obs"]) {
+    for (const coluna of ["maquinas", "obs", "versoes_sistemas"]) {
       try {
         conn.exec(`ALTER TABLE atualizacoes ADD COLUMN ${coluna} TEXT`);
       } catch (e) {
@@ -141,6 +215,9 @@ class Database {
         nome TEXT NOT NULL UNIQUE
       )
     `);
+    if (!conn.prepare("PRAGMA table_info(sistemas)").all().some((col) => col.name === "ultima_versao")) {
+      conn.exec("ALTER TABLE sistemas ADD COLUMN ultima_versao TEXT NOT NULL DEFAULT ''");
+    }
     const semSistemas = conn.prepare("SELECT COUNT(*) AS total FROM sistemas").get().total === 0;
     if (semSistemas) {
       const insert = conn.prepare("INSERT OR IGNORE INTO sistemas (nome) VALUES (?)");
@@ -189,14 +266,6 @@ class Database {
       conn.exec("UPDATE usuarios SET role = 'operador' WHERE role NOT IN ('admin', 'operador', 'consulta')");
     } catch {
       /* tabela pode ainda estar sendo criada */
-    }
-
-    // Se nenhuma conta tem o papel de admin ainda (banco recem-migrado),
-    // promove automaticamente a conta mais antiga -- garante que sempre
-    // exista pelo menos um admin, sem exigir passo manual.
-    const semAdmin = conn.prepare("SELECT COUNT(*) AS total FROM usuarios WHERE role = 'admin'").get().total === 0;
-    if (semAdmin) {
-      conn.exec("UPDATE usuarios SET role = 'admin' WHERE id = (SELECT MIN(id) FROM usuarios)");
     }
 
     // Tabela nova: histórico de ações (quem criou/editou/excluiu o quê).
@@ -398,7 +467,8 @@ class Database {
       )
     `);
 
-    this._backfillSistemaDasVersoes();
+    // Legado, e por isso roda antes da migração 1: lê `clientes.sistemas`,
+    // a lista em texto que ela transforma em tabela.
     this._backfillSuporteBredas();
   }
 

@@ -1,3 +1,4 @@
+import { splitSistemas } from "./matrizVersoes.js";
 import { plural } from "../utils/html.js";
 
 /**
@@ -5,9 +6,9 @@ import { plural } from "../utils/html.js";
  *
  * Três decisões valem para os dois formatos:
  *
- *  - **Só o que já está gravado.** Nenhum campo novo no cadastro, nenhuma
- *    coluna nova no banco -- e por isso os 900+ registros antigos, importados
- *    de planilha, geram relatório exatamente como os de hoje.
+ *  - **Só o que já está gravado.** Versões recebidas vêm da cópia salva no
+ *    atendimento. Registros legados preservam o texto original; a versão
+ *    oficial atual não reescreve o histórico.
  *  - **Campo vazio não vira linha.** Quase metade do histórico não tem
  *    responsável preenchido; um relatório com "Por: —" em toda linha é pior
  *    que um relatório mais curto. A linha simplesmente some.
@@ -20,19 +21,29 @@ import { plural } from "../utils/html.js";
  * Relatório de UMA atualização.
  *
  * @param {object} registro linha da grid (id, cliente, sistema, versao, ...)
- * @param {{anterior?: object|null}} [contexto]
- *   `anterior` é a atualização imediatamente anterior do mesmo cliente: é
- *   dela que sai a "versão anterior", sem precisar de campo novo nenhum.
+ * @param {{anterior?: object|null, cliente?: object|null}} [contexto]
+ *   `anterior` contém as últimas versões anteriores dos mesmos sistemas,
+ *   encontradas no histórico do cliente.
  */
-export function relatorioDeAtualizacao(registro, { anterior = null } = {}) {
+export function relatorioDeAtualizacao(registro, { anterior = null, cliente = null } = {}) {
   const linhas = [];
-  const titulo = `ATUALIZAÇÃO #${registro.id}`;
+  const titulo = "ATUALIZAÇÃO";
   linhas.push(registro.data ? `${titulo} — ${registro.data}` : titulo);
   linhas.push("");
 
   linhas.push(`Cliente: ${texto(registro.cliente)}`);
   campo(linhas, "Sistemas", registro.sistema);
-  campo(linhas, "Versão", versaoComAnterior(registro.versao, anterior));
+  if (registro.versoes_sistemas != null) {
+    const mapa = JSON.parse(registro.versoes_sistemas);
+    for (const [sistema, versao] of Object.entries(mapa)) {
+      const antiga = versaoRegistrada(anterior, sistema);
+      campo(linhas, sistema, versao ? `${versao}${antiga && antiga !== versao ? ` (anterior: ${antiga})` : ""}` : "Não informada");
+    }
+  } else {
+    const sistemas = splitSistemas(registro.sistema);
+    const comparavel = sistemas.length === 1 && splitSistemas(anterior?.sistema).some((s) => s.toLowerCase() === sistemas[0].toLowerCase());
+    campo(linhas, "Versão", versaoComAnterior(registro.versao, comparavel ? anterior : null));
+  }
   campo(linhas, "Máquinas", registro.maquinas);
   campo(linhas, "Por", registro.responsavel);
   campo(linhas, "Obs", registro.obs);
@@ -61,7 +72,7 @@ export function relatorioDoCliente(nome, historico, cliente = null) {
     resumo.push(`última em ${ultima.data}${tempo ? ` (${tempo})` : ""}`);
   }
   linhas.push(resumo.join(" · "));
-  campo(linhas, "Sistemas do cliente", cliente?.sistemas);
+  campo(linhas, "Sistemas do cliente", Array.isArray(cliente?.sistemas) ? cliente.sistemas.join(", ") : cliente?.sistemas);
 
   if (registros.length === 0) {
     linhas.push("", "Nenhuma atualização registrada para este cliente.");
@@ -70,8 +81,13 @@ export function relatorioDoCliente(nome, historico, cliente = null) {
 
   for (const registro of registros) {
     linhas.push("");
-    const versao = texto(registro.versao) ? ` (v${texto(registro.versao)})` : "";
+    const versao = registro.versoes_sistemas == null && texto(registro.versao) ? ` (v${texto(registro.versao)})` : "";
     linhas.push(`${texto(registro.data) || "Sem data"} — ${texto(registro.sistema) || "Sistema não informado"}${versao}`);
+
+    if (registro.versoes_sistemas != null) {
+      const mapa = JSON.parse(registro.versoes_sistemas);
+      for (const [sistema, versaoRecebida] of Object.entries(mapa)) campo(linhas, sistema, versaoRecebida || "Não informada");
+    }
 
     // Responsável, motivo e máquinas numa linha só, separados por "·": são
     // três dados curtos, e uma linha para cada faria um histórico de vinte
@@ -137,4 +153,31 @@ function haQuantoTempo(dataBR) {
   if (meses < 12) return `há ${meses} ${meses === 1 ? "mês" : "meses"}`;
   const anos = Math.floor(meses / 12);
   return `há ${anos} ${anos === 1 ? "ano" : "anos"}`;
+}
+
+/** Versão registrada no atendimento, nunca a referência oficial atual. */
+export function versaoRegistrada(registro, sistema) {
+  if (!registro) return "";
+  if (registro.versoes_sistemas != null) {
+    const mapa = JSON.parse(registro.versoes_sistemas);
+    const chave = Object.keys(mapa).find((s) => s.toLowerCase() === sistema.toLowerCase());
+    return chave ? mapa[chave] || "" : "";
+  }
+  return splitSistemas(registro.sistema).length === 1 ? registro.versao || "" : "";
+}
+
+export function relatorioSituacao(situacao) {
+  return ["SITUAÇÃO ATUAL DOS SISTEMAS", ...situacao.map((s) => `${s.sistema}: ${s.situacao}\nRecebida: ${s.instalada || "Não informada"} · Oficial: ${s.oficial || "Não informada"}${s.data ? ` · Atendimento: ${s.data}` : ""}`)].join("\n\n");
+}
+
+export function relatorioDoPeriodo(resumo) {
+  const f = resumo.filtros;
+  return ["RELATÓRIO DE ATUALIZAÇÕES POR PERÍODO",
+    `Período: ${f.desde || "Início do histórico"} até ${f.ate || "Sem limite final"}\nResponsável: ${f.responsavel}\nBusca: ${f.search || "Todas"}`,
+    `${plural(resumo.total, "atendimento")} · ${plural(resumo.clientes, "cliente distinto")}`,
+    ["POR SISTEMA", ...resumo.porSistema.map((s) => `${s.nome}: ${s.total}`)].join("\n"),
+    ["POR RESPONSÁVEL", ...resumo.porResponsavel.map((s) => `${s.nome}: ${s.total}`)].join("\n"),
+    "Um atendimento pode envolver vários sistemas. As contagens por sistema podem superar o total de atendimentos.",
+    ...resumo.registros.map((r) => `${r.data || "Sem data"} — ${r.cliente}\n${r.sistema || "Sistema não informado"} · ${r.versao || "Versão não informada"}${r.responsavel ? ` · ${r.responsavel}` : ""}`)
+  ].join("\n\n");
 }

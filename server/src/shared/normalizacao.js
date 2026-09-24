@@ -7,8 +7,9 @@
  * da aba Sistemas compara string exata, então 60 clientes apareciam como
  * "Nunca atualizado" em B_NFe só porque alguém digitou "B_NFE".
  *
- * Aqui ficam as duas peças que resolvem isso, usadas TANTO pela migração de
- * uma vez (scripts/normalizar-historico.js) QUANTO por toda gravação nova
+ * Aqui ficam as duas peças que resolvem isso, usadas TANTO pela migração que
+ * levou o histórico para tabelas (database/migracoes.js -- por isso o módulo
+ * mora em shared/, e não em services/) QUANTO por toda gravação nova
  * (AtualizacaoService), para o problema não voltar a crescer:
  *
  *  - `normalizarSistemas`: quebra o texto nos separadores que as pessoas

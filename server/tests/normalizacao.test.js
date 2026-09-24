@@ -1,5 +1,5 @@
 /*
- * Testes de src/services/normalizacao.js -- a peca que impede o campo "Sistema"
+ * Testes de src/shared/normalizacao.js -- a peca que impede o campo "Sistema"
  * de voltar a ter 144 grafias para 14 sistemas.
  *
  * Vale testar porque o modo de falha e' silencioso: nada da erro quando a
@@ -18,7 +18,7 @@ const {
   normalizarSistemas,
   normalizarResponsavel,
   canonizarResponsaveis,
-} = require("../src/services/normalizacao");
+} = require("../src/shared/normalizacao");
 
 /** O catálogo oficial, como viria da tabela `sistemas`. */
 const CATALOGO = [

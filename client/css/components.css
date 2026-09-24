@@ -6714,3 +6714,28 @@ h1, h2, h3, strong {
     flex-direction: column;
   }
 }
+
+/* Relatórios: prévia legível e impressão sem navegação do painel. */
+.relatorio-modal { text-align: left; }
+.relatorio-previa { margin: 16px 0; padding: 24px; border: 1px solid var(--cor-borda-forte); border-radius: 10px; overflow-wrap: anywhere; }
+.relatorio-previa header { padding-bottom: 12px; border-bottom: 2px solid currentColor; }
+.relatorio-previa h2 { font-size: 1.25rem; margin: 0 0 8px; }
+.relatorio-previa section { margin-top: 20px; break-inside: avoid; }
+.relatorio-previa h4 { margin: 0 0 6px; font-size: .95rem; }
+.relatorio-previa p { margin: 4px 0; white-space: pre-wrap; }
+.relatorio-controles .toolbar { flex-wrap: wrap; }
+.relatorio-controles .field { min-width: 0; }
+@media (max-width: 600px) {
+  .relatorio-previa { padding: 12px; }
+  .relatorio-controles .field { width: 100%; }
+  .relatorio-controles.modal-box__actions { flex-wrap: wrap; }
+}
+@media print {
+  @page { margin: 16mm; }
+  body.imprimindo-relatorio { overflow: visible !important; height: auto !important; background: white !important; }
+  body.imprimindo-relatorio > :not(.relatorio-imprimir) { display: none !important; }
+  .relatorio-imprimir { position: static !important; display: block !important; overflow: visible !important; padding: 0 !important; background: white !important; }
+  .relatorio-imprimir .modal-box { width: 100% !important; max-width: none !important; max-height: none !important; overflow: visible !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; border: 0 !important; background: white !important; color: black !important; }
+  .relatorio-imprimir .relatorio-controles { display: none !important; }
+  .relatorio-imprimir .relatorio-previa { border: 0; padding: 0; margin: 0; }
+}

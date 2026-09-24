@@ -37,18 +37,14 @@ function ambiente() {
   return { db, cleanup };
 }
 
+/** Grava direto no repositório: os sistemas vão por id, resolvidos no catálogo como o serviço faz. */
 function inserir(db, campos) {
-  db.atualizacoes.insert({
-    cliente: "",
-    sistema: "",
-    versao: "",
-    responsavel: "",
-    data: "",
-    motivo: "",
-    maquinas: "",
-    obs: "",
-    ...campos,
-  });
+  const { sistema = "", ...resto } = campos;
+  const sistemas = db.sistemas.resolverOuCriar(sistema.split(",").map((s) => s.trim()).filter(Boolean));
+  db.atualizacoes.insert(
+    { cliente: "", versao: "", responsavel: "", data: "", motivo: "", maquinas: "", obs: "", ...resto },
+    sistemas
+  );
 }
 
 test("AtualizacaoRepository - ordenação por data", async (t) => {

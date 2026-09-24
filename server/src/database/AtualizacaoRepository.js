@@ -1,6 +1,5 @@
 const { BaseRepository } = require("./BaseRepository");
 const { buildOrderBy } = require("../shared/sortHelper");
-const { SISTEMA_APELIDOS } = require("../config/constants");
 
 // Datas sao guardadas como texto "dd/mm/aaaa"; esta expressao SQL as
 // converte para "aaaammdd" para permitir ordenacao cronologica (ordenar o
@@ -19,8 +18,27 @@ function paraOrdenavel(texto) {
   return m ? `${m[3]}${m[2]}${m[1]}` : null;
 }
 
-/** Colunas de verdade da tabela (sem contar o "id", que e automatico). */
+/**
+ * Campos de um atendimento como a API os entrega. "sistema" não é mais
+ * coluna da tabela: vem montado pela visão `atualizacoes_v` a partir de
+ * `atualizacao_sistemas` (ver migracoes.js).
+ */
 const COLUMNS = ["cliente", "sistema", "versao", "responsavel", "data", "motivo", "maquinas", "obs"];
+
+/** Colunas gravadas na tabela `atualizacoes` em si. */
+const COLUNAS_DA_TABELA = ["cliente", "cliente_id", "versao", "responsavel", "data", "motivo", "maquinas", "obs", "versoes_por_sistema"];
+
+// Sem cliente_id informado, o vínculo sai do nome -- nome exato, senão
+// ignorando caixa e espaço nas pontas (a regra de ClienteRepository.
+// resolverNome). Assim nenhum caminho de gravação deixa um atendimento de um
+// cliente cadastrado sem vínculo só por não ter resolvido o id antes.
+const VALOR = {
+  cliente_id:
+    "COALESCE(@cliente_id, (SELECT id FROM clientes WHERE nome = @cliente), (SELECT id FROM clientes WHERE lower(trim(nome)) = lower(trim(@cliente)) ORDER BY id LIMIT 1))",
+};
+const valorDe = (c) => VALOR[c] || `@${c}`;
+
+const LEITURA = `id, ${COLUMNS.join(", ")}, versoes_sistemas, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor`;
 
 /** Colunas que a tela pode pedir para ordenar, e a expressao SQL segura correspondente. */
 const SORT_MAP = {
@@ -35,9 +53,15 @@ const SORT_MAP = {
   obs: "obs COLLATE NOCASE",
 };
 
+// Um atendimento pertence a um cliente pelo id; o nome só decide quando não
+// há vínculo (cliente excluído, ou atendimento lançado para um nome sem
+// cadastro) -- sem esse segundo caso, o relatório de um desses atendimentos
+// na tela de Atualizações voltaria vazio.
+const DO_CLIENTE = "(a.cliente_id = (SELECT id FROM clientes WHERE nome = @nome) OR (a.cliente_id IS NULL AND a.cliente = @nome))";
+
 /**
  * Historico de atualizacoes de sistemas por cliente (aba Atualizacoes).
- * Equivalente de "AtualizacaoRepository" em gestor/database.py.
+ * Le da visao `atualizacoes_v`; grava em `atualizacoes` + `atualizacao_sistemas`.
  */
 class AtualizacaoRepository extends BaseRepository {
   get table() {
@@ -61,16 +85,11 @@ class AtualizacaoRepository extends BaseRepository {
     // escolhido ali precisa achar tambem os salvos como "CAMILA" ou " camila ".
     const { where, params } = this._filtros(search, responsavel, { desde, ate });
 
-    const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table} ${where}`).get(params).total;
+    const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM atualizacoes_v ${where}`).get(params).total;
 
     const offset = Math.max(0, (page - 1) * pageSize);
     const orderBy = buildOrderBy(SORT_MAP, sortBy, sortDir, `${DATE_SORT_EXPR} DESC, id DESC`);
-    const sql = `
-      SELECT id, ${COLUMNS.join(", ")}, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table}
-      ${where}
-      ORDER BY ${orderBy}
-      LIMIT @limit OFFSET @offset
-    `;
+    const sql = `SELECT ${LEITURA} FROM atualizacoes_v ${where} ORDER BY ${orderBy} LIMIT @limit OFFSET @offset`;
     const rows = this.conn.prepare(sql).all({ ...params, limit: pageSize, offset });
     return { rows, total, page, pageSize };
   }
@@ -94,34 +113,54 @@ class AtualizacaoRepository extends BaseRepository {
     return [...vistos.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }
 
-  /** @param {Record<string, string>} data um valor por chave em COLUMNS */
-  insert(data) {
-    const columns = COLUMNS.join(", ");
-    const placeholders = COLUMNS.map((c) => `@${c}`).join(", ");
-    this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`).run(data);
+  /**
+   * @param {Record<string, any>} data campos de COLUNAS_DA_TABELA
+   * @param {{id: number, versao: string|null}[]} sistemas na ordem informada
+   * @returns {number} o id criado
+   */
+  insert(data, sistemas) {
+    const colunas = COLUNAS_DA_TABELA.join(", ");
+    const valores = COLUNAS_DA_TABELA.map(valorDe).join(", ");
+    return this.conn.transaction(() => {
+      const id = Number(this.conn.prepare(`INSERT INTO ${this.table} (${colunas}) VALUES (${valores})`).run(this._valores(data)).lastInsertRowid);
+      this._gravarSistemas(id, sistemas);
+      return id;
+    })();
   }
 
   find(id) {
-    return this.conn.prepare(`SELECT id, ${COLUMNS.join(", ")}, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table} WHERE id = ?`).get(id);
+    return this.conn.prepare(`SELECT ${LEITURA}, versoes_por_sistema FROM atualizacoes_v WHERE id = ?`).get(id);
+  }
+
+  /** Versão recebida em cada sistema de um atendimento: [{ id, versao }] na ordem gravada. */
+  sistemasDe(id) {
+    return this.conn
+      .prepare("SELECT sistema_id AS id, versao FROM atualizacao_sistemas WHERE atualizacao_id = ? ORDER BY ordem")
+      .all(id);
   }
 
   /** Devolve quantas linhas mudaram -- 0 quer dizer que o id nao existe (mais). */
-  update(id, data, revisaoEsperada = null, usuarioNome = "") {
-    const assignments = [...COLUMNS.map((c) => `${c} = @${c}`), "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
-    return this.conn.prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)`)
-      .run({ ...data, id, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome }).changes;
+  update(id, data, sistemas, revisaoEsperada = null, usuarioNome = "") {
+    const assignments = [...COLUNAS_DA_TABELA.map((c) => `${c} = ${valorDe(c)}`), "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
+    return this.conn.transaction(() => {
+      const changes = this.conn
+        .prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)`)
+        .run({ ...this._valores(data), id, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome }).changes;
+      if (changes) this._gravarSistemas(id, sistemas);
+      return changes;
+    })();
   }
 
-  /** Todos os registros, na ordem de exportacao (botao Exportar .xlsx). */
-  /**
-   * Linhas para a exportacao .xlsx, com os MESMOS filtros da listagem.
-   *
-   * Antes este metodo ignorava qualquer filtro e devolvia a tabela inteira:
-   * quem filtrava doze registros na tela e clicava em "Exportar" recebia um
-   * arquivo com todos os quatro mil -- exatamente o oposto do que pediu ao
-   * filtrar. As clausulas sao montadas pelo mesmo helper de `list`, para as
-   * duas nunca divergirem.
-   */
+  _valores(data) {
+    return Object.fromEntries(COLUNAS_DA_TABELA.map((c) => [c, data[c] ?? (c === "versoes_por_sistema" ? 0 : c === "cliente_id" ? null : "")]));
+  }
+
+  _gravarSistemas(id, sistemas) {
+    this.conn.prepare("DELETE FROM atualizacao_sistemas WHERE atualizacao_id = ?").run(id);
+    const ligar = this.conn.prepare("INSERT INTO atualizacao_sistemas (atualizacao_id, sistema_id, ordem, versao) VALUES (?, ?, ?, ?)");
+    sistemas.forEach((s, i) => ligar.run(id, s.id, i, s.versao ?? null));
+  }
+
   /**
    * Os registros completos de uma lista de ids.
    *
@@ -136,13 +175,22 @@ class AtualizacaoRepository extends BaseRepository {
     if (limpos.length === 0) return [];
     const marcadores = limpos.map(() => "?").join(", ");
     return this.conn
-      .prepare(`SELECT id, ${COLUMNS.join(", ")} FROM ${this.table} WHERE id IN (${marcadores})`)
+      .prepare(`SELECT id, ${COLUMNS.join(", ")}, versoes_sistemas FROM atualizacoes_v WHERE id IN (${marcadores})`)
       .all(...limpos);
   }
 
+  /**
+   * Linhas para a exportacao .xlsx, com os MESMOS filtros da listagem.
+   *
+   * Antes este metodo ignorava qualquer filtro e devolvia a tabela inteira:
+   * quem filtrava doze registros na tela e clicava em "Exportar" recebia um
+   * arquivo com todos os quatro mil -- exatamente o oposto do que pediu ao
+   * filtrar. As clausulas sao montadas pelo mesmo helper de `list`, para as
+   * duas nunca divergirem.
+   */
   exportAll(search = "", responsavel = "Todos", periodo = {}) {
     const { where, params } = this._filtros(search, responsavel, periodo);
-    const sql = `SELECT ${COLUMNS.join(", ")} FROM ${this.table} ${where} ORDER BY ${DATE_SORT_EXPR} DESC`;
+    const sql = `SELECT ${COLUMNS.join(", ")}, versoes_sistemas FROM atualizacoes_v ${where} ORDER BY ${DATE_SORT_EXPR} DESC, id DESC`;
     return this.conn.prepare(sql).all(params);
   }
 
@@ -206,89 +254,59 @@ class AtualizacaoRepository extends BaseRepository {
     return rows.reverse();
   }
 
-  /** Mapa { cliente: data da atualizacao mais recente }, usado para achar quem esta parado. */
-  lastDateByClient() {
+  /** Mapa { id do cliente: data da atualizacao mais recente }, usado para achar quem esta parado. */
+  ultimaDataPorCliente() {
     const rows = this.conn
-      .prepare(`SELECT cliente, data FROM ${this.table} WHERE data != '' ORDER BY ${DATE_SORT_EXPR} DESC`)
+      .prepare(
+        `SELECT cliente_id, data FROM (
+           SELECT cliente_id, data, ROW_NUMBER() OVER (PARTITION BY cliente_id ORDER BY ${DATE_SORT_EXPR} DESC, id DESC) AS n
+             FROM ${this.table} WHERE cliente_id IS NOT NULL AND data != ''
+         ) WHERE n = 1`
+      )
       .all();
-    const ultimas = {};
-    for (const { cliente, data } of rows) {
-      // So guarda a primeira ocorrencia de cada cliente: como a consulta ja
-      // vem da mais recente para a mais antiga, a primeira e a data mais
-      // recente dele -- as ocorrencias seguintes (mais antigas) sao ignoradas.
-      if (!(cliente in ultimas)) ultimas[cliente] = data;
-    }
-    return ultimas;
+    return new Map(rows.map((r) => [r.cliente_id, r.data]));
   }
 
   /**
-   * Mapa { cliente: quantidade de máquinas }, lido do campo "maquinas" (texto
-   * livre, mas por convenção sempre um número) da atualização mais recente
-   * de cada cliente. Cliente sem nenhuma atualização, ou cujo campo
-   * "maquinas" está vazio/não é um número, não aparece no mapa -- quem
-   * chama trata isso como 0 (ver ClienteService).
+   * Mapa { id do cliente: quantidade de máquinas }, lido do campo "maquinas"
+   * (texto livre, mas por convenção sempre um número) da atualização mais
+   * recente de cada cliente. Cliente sem nenhuma atualização, ou cujo campo
+   * "maquinas" está vazio/não é um número, não aparece no mapa -- quem chama
+   * trata isso como 0 (ver ClienteService).
    */
-  lastMaquinasByClient() {
+  maquinasPorCliente() {
     const rows = this.conn
-      .prepare(`SELECT cliente, maquinas FROM ${this.table} WHERE data != '' ORDER BY ${DATE_SORT_EXPR} DESC`)
+      .prepare(
+        `SELECT cliente_id, maquinas FROM (
+           SELECT cliente_id, maquinas, ROW_NUMBER() OVER (PARTITION BY cliente_id ORDER BY ${DATE_SORT_EXPR} DESC, id DESC) AS n
+             FROM ${this.table} WHERE cliente_id IS NOT NULL AND data != ''
+         ) WHERE n = 1`
+      )
       .all();
-    const vistos = new Set();
-    const maquinas = {};
-    for (const { cliente, maquinas: valor } of rows) {
-      if (vistos.has(cliente)) continue;
-      vistos.add(cliente);
-      const n = parseInt(valor, 10);
-      if (!Number.isNaN(n)) maquinas[cliente] = n;
+    const mapa = new Map();
+    for (const { cliente_id: id, maquinas } of rows) {
+      const n = parseInt(maquinas, 10);
+      if (!Number.isNaN(n)) mapa.set(id, n);
     }
-    return maquinas;
+    return mapa;
   }
 
-  /** Quantidade de máquinas (ver lastMaquinasByClient) de um único cliente -- usado pela Consulta/edição de cliente. */
-  lastMaquinasForClient(nome) {
+  /** Quantidade de máquinas (ver maquinasPorCliente) de um único cliente. */
+  maquinasDoCliente(clienteId) {
     const row = this.conn
-      .prepare(`SELECT maquinas FROM ${this.table} WHERE cliente = ? AND data != '' ORDER BY ${DATE_SORT_EXPR} DESC LIMIT 1`)
-      .get(nome);
+      .prepare(`SELECT maquinas FROM ${this.table} WHERE cliente_id = ? AND data != '' ORDER BY ${DATE_SORT_EXPR} DESC, id DESC LIMIT 1`)
+      .get(clienteId);
     const n = row ? parseInt(row.maquinas, 10) : NaN;
     return Number.isNaN(n) ? 0 : n;
-  }
-
-  /**
-   * Mapa { cliente: data da atualizacao mais recente } filtrado por um
-   * sistema especifico -- variante de lastDateByClient() usada pelo
-   * relatorio "por sistema" (ex.: quais clientes de NFCe estao atrasados).
-   *
-   * O campo "sistema" NAO guarda um valor único por registro -- na prática
-   * as pessoas anotam ali a lista inteira de sistemas tocados naquela
-   * atualização (ex.: "B_Vendas, NFCe, B_NFE, B_Importa"), do mesmo jeito
-   * que "clientes.sistemas" -- confirmado direto no banco: nenhum registro
-   * tem "sistema" igual a exatamente "NFCe", mas dezenas têm "NFCe" como um
-   * dos itens da lista. Por isso o filtro aqui não é "sistema = X", e sim
-   * "X está entre os itens separados por vírgula" (mesma lógica usada em
-   * AtualizacaoService.relatorioPorSistema para clientes.sistemas). Também
-   * aceita apelidos/variações antigas de nome (SISTEMA_APELIDOS) -- ex.:
-   * uma atualização anotada como "B_NFCe" conta pra quem pede "NFCe".
-   */
-  lastDateByClientAndSistema(sistema) {
-    const alvo = new Set([sistema, ...(SISTEMA_APELIDOS[sistema] || [])]);
-    const rows = this.conn
-      .prepare(`SELECT cliente, sistema, data FROM ${this.table} WHERE data != '' ORDER BY ${DATE_SORT_EXPR} DESC`)
-      .all();
-    const ultimas = {};
-    for (const { cliente, sistema: sistemaTexto, data } of rows) {
-      if (cliente in ultimas) continue;
-      const tokens = sistemaTexto.split(",").map((s) => s.trim());
-      if (tokens.some((t) => alvo.has(t))) ultimas[cliente] = data;
-    }
-    return ultimas;
   }
 
   /** Registro mais recente de um cliente especifico (aba Consultar Cliente). */
   lastUpdateForClient(nome) {
     const sql = `
-      SELECT data, versao, motivo, responsavel, maquinas, obs FROM ${this.table}
-      WHERE cliente = ? ORDER BY ${DATE_SORT_EXPR} DESC, id DESC LIMIT 1
+      SELECT a.data, a.versao, a.motivo, a.responsavel, a.maquinas, a.obs FROM ${this.table} a
+      WHERE ${DO_CLIENTE} ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC LIMIT 1
     `;
-    return this.conn.prepare(sql).get(nome) || null;
+    return this.conn.prepare(sql).get({ nome }) || null;
   }
 
   /**
@@ -299,36 +317,99 @@ class AtualizacaoRepository extends BaseRepository {
    */
   recentUpdatesForClient(nome, limit = 5) {
     const sql = `
-      SELECT id, data, sistema, versao, motivo, responsavel, maquinas, obs FROM ${this.table}
-      WHERE cliente = @nome ORDER BY ${DATE_SORT_EXPR} DESC, id DESC LIMIT @limit
+      SELECT a.id, a.data, a.sistema, a.versao, a.motivo, a.responsavel, a.maquinas, a.obs, a.versoes_sistemas FROM atualizacoes_v a
+      WHERE ${DO_CLIENTE} ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC LIMIT @limit
     `;
     return this.conn.prepare(sql).all({ nome, limit });
   }
 
   /**
-   * Retorna a atualização mais recente de cada sistema.
-   * O campo sistema pode conter vários nomes separados por vírgula, então
-   * cada registro é expandido antes de comparar suas datas.
+   * Último atendimento de cada cliente EM UM sistema, com a versão que ele
+   * recebeu ali: [{ cliente_id, data, versao }]. É o que decide a situação
+   * na tela Sistemas.
+   */
+  ultimaPorClienteNoSistema(sistemaId) {
+    return this.conn
+      .prepare(
+        `SELECT cliente_id, data, versao FROM (
+           SELECT a.cliente_id, a.data, x.versao,
+                  ROW_NUMBER() OVER (PARTITION BY a.cliente_id ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC) AS n
+             FROM ${this.table} a JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
+            WHERE x.sistema_id = ? AND a.cliente_id IS NOT NULL
+         ) WHERE n = 1`
+      )
+      .all(sistemaId);
+  }
+
+  /**
+   * Último atendimento de um cliente em cada sistema que já passou por ele:
+   * [{ sistema_id, sistema, data, versao }]. Usado na situação do cliente.
+   */
+  ultimaPorSistemaDoCliente(nome) {
+    return this.conn
+      .prepare(
+        `SELECT sistema_id, sistema, data, versao FROM (
+           SELECT x.sistema_id, s.nome AS sistema, a.data, x.versao,
+                  ROW_NUMBER() OVER (PARTITION BY x.sistema_id ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC) AS n
+             FROM ${this.table} a
+             JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
+             JOIN sistemas s ON s.id = x.sistema_id
+            WHERE ${DO_CLIENTE}
+         ) WHERE n = 1`
+      )
+      .all({ nome });
+  }
+
+  /**
+   * A atualização mais recente de cada sistema do catálogo ativo, com a
+   * versão registrada nela para aquele sistema.
    */
   latestVersionBySystem() {
-    const rows = this.conn
-      .prepare(`SELECT sistema, versao, data FROM ${this.table} WHERE sistema != '' AND data != '' ORDER BY ${DATE_SORT_EXPR} DESC, id DESC`)
-      .all();
-    const latest = new Map();
-    const sistemasConhecidos = this.conn.prepare("SELECT nome FROM sistemas ORDER BY nome").all().map((row) => row.nome);
-    for (const row of rows) {
-      for (const sistema of splitSystems(row.sistema)) {
-        const canonical = sistemasConhecidos.find((known) => sameSystem(sistema, known));
-        if (canonical && !latest.has(canonical)) {
-          latest.set(canonical, { sistema: canonical, versao: row.versao || "Não informada", data: row.data });
-        }
-      }
-    }
-    return sistemasConhecidos.map((sistema) => latest.get(sistema) || {
-      sistema,
-      versao: "Não informada",
-      data: "Não registrada",
-    });
+    return this.conn
+      .prepare(
+        `SELECT s.nome AS sistema, coalesce(u.versao, 'Não informada') AS versao, coalesce(u.data, 'Não registrada') AS data
+           FROM sistemas s
+           LEFT JOIN (
+             SELECT sistema_id, versao, data FROM (
+               SELECT x.sistema_id, x.versao, a.data,
+                      ROW_NUMBER() OVER (PARTITION BY x.sistema_id ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC) AS n
+                 FROM ${this.table} a JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
+                WHERE a.data != ''
+             ) WHERE n = 1
+           ) u ON u.sistema_id = s.id
+          WHERE s.ativo = 1
+          ORDER BY s.nome`
+      )
+      .all()
+      .map((r) => ({ ...r, versao: r.versao || "Não informada" }));
+  }
+
+  /**
+   * Quantos clientes (de cada sistema do catálogo ativo) tiveram a ÚLTIMA
+   * atualização daquele sistema neste mês -- só contando quem tem o sistema
+   * marcado no cadastro. Contar linhas pelo texto de "sistema" dava uma sopa
+   * de combinações ("B_Vendas, B_NFe") em vez de um total por sistema.
+   * @param {string} mesStr formato "mm/aaaa"
+   */
+  atualizadosNoMesPorSistema(mesStr) {
+    return this.conn
+      .prepare(
+        `SELECT s.nome AS label, COUNT(u.cliente_id) AS total
+           FROM sistemas s
+           LEFT JOIN (
+             SELECT cliente_id, sistema_id, data FROM (
+               SELECT a.cliente_id, x.sistema_id, a.data,
+                      ROW_NUMBER() OVER (PARTITION BY a.cliente_id, x.sistema_id ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC) AS n
+                 FROM ${this.table} a JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
+                WHERE a.cliente_id IS NOT NULL AND a.data != ''
+             ) WHERE n = 1 AND substr(data, 4, 7) = @mes
+           ) u ON u.sistema_id = s.id
+              AND EXISTS (SELECT 1 FROM cliente_sistemas cs WHERE cs.cliente_id = u.cliente_id AND cs.sistema_id = s.id)
+          WHERE s.ativo = 1
+          GROUP BY s.id
+          ORDER BY total DESC, s.nome`
+      )
+      .all({ mes: mesStr });
   }
 
   /**
@@ -352,20 +433,12 @@ class AtualizacaoRepository extends BaseRepository {
   }
 }
 
-/** Divide registros antigos que listam mais de um sistema no mesmo campo. */
+/** "a, b, c" -> ["a", "b", "c"] -- o texto de sistemas que a visão monta. */
 function splitSystems(text) {
   return String(text || "")
-    .split(/,|\s+e\s+/i)
+    .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-/** Compara nomes de sistema sem diferença de caixa, acentos ou prefixo B_. */
-function sameSystem(left, right) {
-  const normalize = (value) => String(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const a = normalize(left);
-  const b = normalize(right);
-  return a === b || (a.startsWith("b") && a.slice(1) === b) || (b.startsWith("b") && b.slice(1) === a);
 }
 
 /** "camila silva" -> "Camila Silva" (equivalente simples de str.title() do Python). */
@@ -373,4 +446,4 @@ function titleCase(text) {
   return text.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
 }
 
-module.exports = { AtualizacaoRepository, DATE_SORT_EXPR, COLUMNS, titleCase };
+module.exports = { AtualizacaoRepository, DATE_SORT_EXPR, COLUMNS, titleCase, splitSystems };

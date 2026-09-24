@@ -242,13 +242,28 @@ test("Consultar Cliente - matriz de versões", async (t) => {
     const linha = montarMatrizVersoes(
       { nome: "Y", sistemas: ["B_Vendas"] },
       [
-        { sistema: "B_Vendas, B_NFe", versao: "2026.09.01", data: "15/09/2026" },
+        {
+          sistema: "B_Vendas, B_NFe",
+          versao: "B_Vendas: 2026.09.01; B_NFe: 2026.09.01",
+          versoes_sistemas: JSON.stringify({ B_Vendas: "2026.09.01", B_NFe: "2026.09.01" }),
+          data: "15/09/2026",
+        },
         { sistema: "B_Vendas", versao: "2026.01.01", data: "01/01/2026" },
       ],
       painel
     ).find((l) => l.sistema === "B_Vendas");
     assert.equal(linha.instalada, "2026.09.01");
     assert.equal(linha.estadoLabel, "Atualizado");
+  });
+
+  await t.test("registro com vários sistemas e SEM versoes_sistemas (legado): versão ambígua, não instalada", () => {
+    const linha = montarMatrizVersoes(
+      { nome: "Y", sistemas: ["B_Vendas"] },
+      [{ sistema: "B_Vendas, B_NFe", versao: "2026.09.01", data: "15/09/2026" }],
+      painel
+    ).find((l) => l.sistema === "B_Vendas");
+    assert.equal(linha.instalada, null, "não dá pra saber qual dos dois sistemas era essa versão");
+    assert.equal(linha.estadoLabel, "Não instalado");
   });
 
   await t.test("com agente: a versão e o estado vêm dele, não do registro manual", () => {

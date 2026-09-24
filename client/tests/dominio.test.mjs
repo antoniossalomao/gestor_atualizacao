@@ -40,7 +40,7 @@ test("domain/relatorio - relatorioDeAtualizacao", async (t) => {
     assert.equal(
       texto,
       [
-        "ATUALIZAÇÃO #42 — 09/09/2026",
+        "ATUALIZAÇÃO — 09/09/2026",
         "",
         "Cliente: Mercado Central",
         "Sistemas: B_Vendas, B_NFe",
@@ -56,7 +56,7 @@ test("domain/relatorio - relatorioDeAtualizacao", async (t) => {
     // Quase metade do histórico não tem responsável preenchido. Um relatório
     // com "Por: —" em toda linha é pior que um relatório mais curto.
     const texto = relatorioDeAtualizacao({ id: 7, cliente: "Padaria do Zé" });
-    assert.equal(texto, ["ATUALIZAÇÃO #7", "", "Cliente: Padaria do Zé"].join("\n"));
+    assert.equal(texto, ["ATUALIZAÇÃO", "", "Cliente: Padaria do Zé"].join("\n"));
     assert.doesNotMatch(texto, /undefined|null|—/);
   });
 
@@ -67,13 +67,14 @@ test("domain/relatorio - relatorioDeAtualizacao", async (t) => {
 
   await t.test("sem data, o título não fica com travessão solto", () => {
     const texto = relatorioDeAtualizacao({ id: 9, cliente: "X" });
-    assert.match(texto, /^ATUALIZAÇÃO #9\n/);
+    assert.match(texto, /^ATUALIZAÇÃO\n/);
     assert.doesNotMatch(texto.split("\n")[0], /—/);
   });
 
-  await t.test("mostra a versão anterior quando ela existe e é diferente", () => {
+  await t.test("não compara versão legada de sistemas diferentes ou ambíguos", () => {
     const texto = relatorioDeAtualizacao(completo, { anterior: { versao: "3.1.0" } });
-    assert.match(texto, /^Versão: 3\.2\.1 \(anterior: 3\.1\.0\)$/m);
+    assert.match(texto, /^Versão: 3\.2\.1$/m);
+    assert.doesNotMatch(texto, /anterior/);
   });
 
   await t.test("não mostra 'anterior' quando é a mesma versão -- seria ruído", () => {
@@ -374,4 +375,11 @@ test("domain/notificacoes - totalDe", async (t) => {
     assert.equal(totalDe(null), 0);
     assert.equal(totalDe(undefined), 0);
   });
+});
+
+test("Relatório usa cópia recebida e versão anterior do mesmo sistema", () => {
+  const texto = relatorioDeAtualizacao({ id: 50, cliente: "Loja", sistema: "B_NFe, B_Vendas", motivo: "Rotina", versoes_sistemas: JSON.stringify({ B_NFe: "22/09/2026", B_Vendas: "09/09/2026" }) }, { anterior: { versoes_sistemas: JSON.stringify({ B_NFe: "15/09/2026", B_Vendas: "09/09/2026" }) } });
+  assert.match(texto, /B_NFe: 22\/09\/2026 \(anterior: 15\/09\/2026\)/);
+  assert.match(texto, /^B_Vendas: 09\/09\/2026$/m);
+  assert.doesNotMatch(texto, /Motivo:|Código:|Cidade:|ATUALIZAÇÃO #/);
 });

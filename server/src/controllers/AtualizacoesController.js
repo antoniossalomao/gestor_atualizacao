@@ -29,6 +29,15 @@ class AtualizacoesController {
     this.atualizacaoService = atualizacaoService;
   }
 
+  relatorio = (req, res, next) => {
+    try { res.json(this.atualizacaoService.relatorioPeriodo(String(req.query.search || ""), String(req.query.responsavel || "Todos"), periodo(req.query))); }
+    catch (err) { next(err); }
+  };
+
+  situacaoCliente = (req, res) => {
+    res.json(this.atualizacaoService.situacaoCliente(req.params.nome));
+  };
+
   list = (req, res) => {
     const { search = "", responsavel = "Todos" } = req.query;
     res.json(this.atualizacaoService.list(search, responsavel, { ...parsePaginacao(req.query), ...periodo(req.query) }));

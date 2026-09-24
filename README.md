@@ -22,8 +22,18 @@ escolha deliberada, não uma limitação.
 sistemas atualizados, versão, responsável, data, motivo, quantas máquinas e
 observações. Busca por qualquer campo, filtro por responsável e por período,
 seleção em lote (`Shift` + clique em duas linhas marca tudo entre elas),
-importação e exportação em `.xlsx`, e **"Gerar Relatório"**, que monta o texto
-do atendimento pronto para colar num chamado.
+importação e exportação em `.xlsx`, relatórios de atendimento, situação e histórico
+do cliente (com período), e **Relatório do período** usando os filtros da tela.
+Os relatórios têm prévia, cópia de texto e impressão/salvar PDF. O Excel mantém
+os registros na primeira aba e acrescenta resumo, filtros e cabeçalhos formatados.
+
+Ao criar um atendimento, cada sistema informado recebe uma cópia da versão
+oficial cadastrada em Sistemas. Alterar a versão oficial depois não muda essa
+cópia: o cliente só recebe a nova versão ao registrar outro atendimento.
+Editar ou desfazer a exclusão preserva as versões recebidas. Sistemas acrescentados
+na edição ficam sem versão; use um novo atendimento para registrar uma atualização.
+Histórico e importações antigos não recebem a versão oficial retroativamente.
+Uma referência posterior à data do atendimento também não é atribuída.
 
 **Clientes** — cadastro com código, cidade, grupo/rede (para clientes com
 várias unidades sob a mesma bandeira) e quais sistemas cada um usa. O botão
@@ -41,8 +51,10 @@ tendência dos últimos 12 meses, quantos clientes estão em dia e quantos
 estão para trás, e o tempo médio que uma tarefa leva entre ser criada e ser
 concluída, por pessoa.
 
-**Sistemas** — responde "quais clientes de NFCe ainda não atualizaram desde
-a mudança grande de tal data?". Filtra por sistema e por uma data de corte.
+**Sistemas** — cadastro da data da versão oficial de cada sistema e acompanhamento
+da versão recebida por cada cliente. Mostra Em dia, Desatualizado, Nunca atualizado,
+Sem referência ou Sem informação conforme os registros disponíveis. Versões legadas
+com um único sistema são aproveitadas; registros ambíguos não presumem uma versão.
 
 **Consulta** — a ficha de um cliente: dados de cadastro, sistemas, acessos
 remotos e as últimas atualizações dele.
@@ -179,8 +191,11 @@ em `client/`.
 Para começar com dados que já existem, copie o `gestao.db` para dentro de
 `server/data/`, ou aponte a variável `DB_PATH` do `.env` direto para o
 arquivo onde ele estiver. Nada precisa ser convertido: as migrações rodam
-sozinhas a cada início do servidor e são idempotentes — tabelas e colunas
-que faltarem são criadas, o que já existe fica como está.
+sozinhas no início do servidor. Cada uma é numerada e roda uma vez só
+(`PRAGMA user_version` guarda a última aplicada), numa transação; antes de
+aplicar uma migração pendente, o servidor copia o banco para `backups/` —
+essa cópia aparece na tela de Backups e pode ser restaurada por lá. Ver
+[ADR-0007](docs/adr/0007-esquema-normalizado-e-migracoes-versionadas.md).
 
 ## Variáveis de ambiente (`.env`)
 

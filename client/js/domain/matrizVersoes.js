@@ -1,4 +1,5 @@
 import { tempoRelativo, formatarDataHora } from "../utils/date.js";
+import { versaoRegistrada } from "./relatorio.js";
 
 /**
  * Matriz de versões da ficha do cliente (aba Consultar Cliente): uma linha por
@@ -88,8 +89,10 @@ export function montarMatrizVersoes(cliente, historico, painelVersoes) {
       const histReg = registros.find((h) => splitSistemas(h.sistema).some((s) => mesmo(s, sistema)));
 
       // O que o agente reportou ganha do que alguém digitou à mão: é o que
-      // está de fato rodando na máquina.
-      const instalada = agente?.ultimaVersao || histReg?.versao || null;
+      // está de fato rodando na máquina. `histReg.versao` é o resumo de TODOS
+      // os sistemas daquele atendimento (ex.: "B_Vendas: 1; B_NFe: 2") -- pega
+      // a versão deste sistema específico, não a string inteira.
+      const instalada = agente?.ultimaVersao || versaoRegistrada(histReg, sistema) || null;
 
       return {
         sistema,

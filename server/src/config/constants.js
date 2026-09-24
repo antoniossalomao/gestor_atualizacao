@@ -61,16 +61,6 @@ const SISTEMAS_CONHECIDOS = [
 const SISTEMA_SUPORTE_BREDAS = "Suporte Bredas";
 const OBS_SUPORTE_BREDAS = "adicionado o suporte bredas";
 
-// Apelidos/variacoes de nome encontradas no historico real de
-// atualizacoes (campo "sistema", texto livre) para o mesmo sistema de
-// "clientes.sistemas" -- ex.: "B_NFCe" foi usado por um tempo no lugar de
-// "NFCe" antes de virar consistente. Usado só pelo relatório por sistema
-// (AtualizacaoService.relatorioPorSistema), pra não tratar como "nunca
-// atualizado" um cliente cuja atualização só foi anotada com o nome antigo.
-const SISTEMA_APELIDOS = {
-  NFCe: ["B_NFCe"],
-};
-
 // DESATUALIZADO_DIAS, BACKUP_KEEP e AGENDAMENTO_ARQUIVAR_DIAS moravam aqui.
 // Viraram regras da equipe, editaveis na tela Administracao -- ver
 // config/regrasEquipe.js.
@@ -88,7 +78,6 @@ module.exports = {
   SISTEMAS_CONHECIDOS,
   SISTEMA_SUPORTE_BREDAS,
   OBS_SUPORTE_BREDAS,
-  SISTEMA_APELIDOS,
   FILTRO_ARQUIVADAS,
 };
 

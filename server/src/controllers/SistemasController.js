@@ -5,6 +5,16 @@ class SistemasController {
     this.clienteService = clienteService;
   }
 
+  versoes = (req, res) => {
+    res.json(this.clienteService.db.sistemas.versoes());
+  };
+
+  salvarVersao = (req, res, next) => {
+    try {
+      res.json(this.clienteService.salvarVersaoSistema(req.params.nome, req.body?.data, req.session.user));
+    } catch (err) { next(err); }
+  };
+
   list = (req, res) => {
     res.json(this.clienteService.listSistemas());
   };

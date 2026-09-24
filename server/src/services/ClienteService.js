@@ -22,9 +22,9 @@ class ClienteService {
     const { rows, total, page, pageSize } = this.db.clientes.list(search, paginacao);
     // Um mapa só (não uma consulta por linha) com a quantidade de máquinas
     // de cada cliente, lida da atualização mais recente dele -- ver
-    // AtualizacaoRepository.lastMaquinasByClient.
-    const maquinasPorCliente = this.db.atualizacoes.lastMaquinasByClient();
-    return { rows: rows.map((row) => toClienteDTO(row, maquinasPorCliente[row.nome] ?? 0)), total, page, pageSize };
+    // AtualizacaoRepository.maquinasPorCliente.
+    const maquinasPorCliente = this.db.atualizacoes.maquinasPorCliente();
+    return { rows: rows.map((row) => toClienteDTO(row, maquinasPorCliente.get(row.id) ?? 0)), total, page, pageSize };
   }
 
   names() {
@@ -43,13 +43,13 @@ class ClienteService {
   getById(id) {
     const row = this.db.clientes.getById(id);
     if (!row) throw new NotFoundError("Cliente não encontrado.");
-    return toClienteDTO(row, this.db.atualizacoes.lastMaquinasForClient(row.nome));
+    return toClienteDTO(row, this.db.atualizacoes.maquinasDoCliente(row.id));
   }
 
   getByNome(nome) {
     const row = this.db.clientes.getByNome(nome);
     if (!row) return null;
-    return toClienteDTO(row, this.db.atualizacoes.lastMaquinasForClient(row.nome));
+    return toClienteDTO(row, this.db.atualizacoes.maquinasDoCliente(row.id));
   }
 
   /**
@@ -57,29 +57,29 @@ class ClienteService {
    * @param {{id:number, nome:string}|null} usuario quem está fazendo a ação (para o histórico)
    */
   create(input, usuario) {
-    const { nome, codigo, cidade, sistemasTexto, grupo } = this._validate(input);
+    const { nome, codigo, cidade, sistemas, grupo } = this._validate(input);
     // Bloqueia nome duplicado ANTES de inserir: dois clientes com o mesmo
-    // nome fariam a Consulta e o Resumo enxergarem so um deles (o
-    // historico de atualizacoes/agendamentos liga pelo NOME, nao por id).
+    // nome seriam indistinguiveis nas telas que listam por nome, e o vinculo
+    // de um atendimento digitado pelo nome escolheria um deles as cegas.
     if (this.db.clientes.nameExists(nome)) {
       throw new ValidationError(`Já existe um cliente chamado '${nome}'.`);
     }
-    this.db.clientes.insert(codigo, nome, cidade, sistemasTexto, grupo);
+    const id = this.db.clientes.insert(codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo);
     this.historico.registrar(usuario, "criar", "cliente", `Cliente "${nome}"`);
-    return toClienteDTO(this.db.clientes.getByNome(nome), this.db.atualizacoes.lastMaquinasForClient(nome));
+    return toClienteDTO(this.db.clientes.getById(id), this.db.atualizacoes.maquinasDoCliente(id));
   }
 
   update(id, input, usuario) {
     const existente = this.db.clientes.getById(id);
     if (!existente) throw new NotFoundError("Cliente não encontrado.");
-    const { nome, codigo, cidade, sistemasTexto, grupo } = this._validate(input);
+    const { nome, codigo, cidade, sistemas, grupo } = this._validate(input);
     if (this.db.clientes.nameExists(nome, id)) {
       throw new ValidationError(`Já existe um cliente chamado '${nome}'.`);
     }
-    // A propagacao do rename para atualizacoes/agendamentos acontece
-    // dentro de ClienteRepository.update (regra critica de integridade).
+    // O nome copiado nos atendimentos/agendamentos ligados acompanha o
+    // rename dentro de ClienteRepository.update.
     const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
-    if (this.db.clientes.update(id, codigo, nome, cidade, sistemasTexto, grupo, revisaoEsperada, usuario?.nome || "") === 0) {
+    if (this.db.clientes.update(id, codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo, revisaoEsperada, usuario?.nome || "") === 0) {
       const agora = this.db.clientes.getById(id);
       if (agora && revisaoEsperada != null) throw new ConflictError(`Este cliente foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, toClienteDTO(agora));
       throw new NotFoundError("Cliente não encontrado.");
@@ -88,7 +88,12 @@ class ClienteService {
       existente.nome !== nome ? `Cliente "${existente.nome}" renomeado para "${nome}"` : `Cliente "${nome}"`;
     const depois = this.db.clientes.getById(id);
     this.historico.registrar(usuario, "atualizar", "cliente", descricao, { antes: toClienteDTO(existente), depois: toClienteDTO(depois) });
-    return toClienteDTO(this.db.clientes.getById(id), this.db.atualizacoes.lastMaquinasForClient(nome));
+    return toClienteDTO(this.db.clientes.getById(id), this.db.atualizacoes.maquinasDoCliente(id));
+  }
+
+  /** Ids dos sistemas marcados, na ordem -- ver SistemaRepository.resolverOuCriar. */
+  _idsDosSistemas(nomes) {
+    return this.db.sistemas.resolverOuCriar(nomes).map((s) => s.id);
   }
 
   delete(id, usuario) {
@@ -131,12 +136,25 @@ class ClienteService {
     if (registros.length === 0) {
       throw new NotFoundError("Nenhum dos clientes selecionados existe mais. A lista pode estar desatualizada.");
     }
-    const afetados = this.db.clientes.addSistemaToMany(registros.map((r) => r.id), limpo);
+    const [sistema] = this.db.sistemas.resolverOuCriar([limpo]);
+    const afetados = this.db.clientes.addSistemaToMany(registros.map((r) => r.id), sistema.id);
     if (afetados > 0) {
       const nomes = registros.slice(0, 3).map((r) => r.nome).join(", ") + (registros.length > 3 ? ` e mais ${registros.length - 3}` : "");
       this.historico.registrar(usuario, "atualizar", "cliente", `Sistema "${limpo}" adicionado a ${afetados} cliente(s) de uma vez (${nomes})`);
     }
     return { afetados, total: registros.length };
+  }
+
+  salvarVersaoSistema(nome, data, usuario) {
+    const { dataValida } = require("../shared/validation");
+    if (typeof data !== "string" || (data !== "" && !dataValida(data))) {
+      throw new ValidationError("Informe uma data válida no formato dd/mm/aaaa.");
+    }
+    const antes = this.db.sistemas.versoes().find((s) => s.nome.toLowerCase() === nome.toLowerCase());
+    if (!antes) throw new NotFoundError("Sistema não encontrado.");
+    this.db.sistemas.salvarVersao(antes.nome, data);
+    this.historico.registrar(usuario, "atualizar", "sistema", `Última versão de ${antes.nome}: ${data || "não informada"}`, { antes, depois: { nome: antes.nome, data } });
+    return { nome: antes.nome, data };
   }
 
   listSistemas() {
@@ -154,13 +172,13 @@ class ClienteService {
   }
 
   /**
-   * Remove um sistema do catálogo -- e, junto, tira ele da lista de
-   * qualquer cliente que o tivesse marcado (ver
-   * ClienteRepository.removeSistemaDeTodos).
+   * Tira um sistema do catálogo -- e, junto, desmarca ele de qualquer
+   * cliente que o tivesse (ver SistemaRepository.remove).
    *
-   * O que NÃO é tocado, de propósito: atualizações já registradas
-   * (`atualizacoes.sistema`) e versões já publicadas
-   * (`versoes_atualizador.sistema`) continuam com o nome antigo. São
+   * O que NÃO é tocado, de propósito: o sistema continua existindo, inativo,
+   * e os atendimentos já registrados (`atualizacao_sistemas`) e as versões
+   * já publicadas (`versoes_atualizador.sistema`) continuam apontando para
+   * ele. São
    * registros do que JÁ aconteceu -- uma atualização feita ano passado no
    * sistema "Sped" continua tendo sido, de fato, no "Sped", mesmo que hoje
    * ele não seja mais oferecido para clientes novos. Apagar esse rastro
@@ -173,7 +191,7 @@ class ClienteService {
     if (!limpo) throw new ValidationError("Informe o nome do sistema.");
     const removido = this.db.sistemas.remove(limpo);
     if (!removido) throw new NotFoundError(`O sistema "${limpo}" não está cadastrado.`);
-    const clientesAfetados = this.db.clientes.removeSistemaDeTodos(limpo);
+    const { clientesAfetados } = removido;
     this.historico.registrar(
       usuario,
       "excluir",
@@ -191,8 +209,8 @@ class ClienteService {
     const codigo = (input.codigo || "").trim();
     const cidade = (input.cidade || "").trim();
     const grupo = (input.grupo || "").trim();
-    const sistemasTexto = Array.isArray(input.sistemas) ? input.sistemas.join(", ") : "";
-    return { nome, codigo, cidade, sistemasTexto, grupo };
+    const sistemas = Array.isArray(input.sistemas) ? input.sistemas.map((s) => String(s || "").trim()).filter(Boolean) : [];
+    return { nome, codigo, cidade, sistemas, grupo };
   }
 
   /** Acessos remotos (AnyDesk / Suporte Bredas) das máquinas de um cliente -- aba Clientes, botão "Acessos". */
@@ -245,10 +263,10 @@ class ClienteService {
 }
 
 /**
- * Converte a linha crua do banco (sistemas como texto "a, b, c") num objeto
- * de API (sistemas como array). "maquinas" não é uma coluna de clientes --
- * vem calculada à parte (ver AtualizacaoRepository.lastMaquinasByClient/
- * lastMaquinasForClient) e é só anexada aqui.
+ * Converte a linha da visão `clientes_v` (sistemas como texto "a, b, c") num
+ * objeto de API (sistemas como array). "maquinas" não é uma coluna de
+ * clientes -- vem calculada à parte (ver AtualizacaoRepository.
+ * maquinasPorCliente/maquinasDoCliente) e é só anexada aqui.
  */
 function toClienteDTO(row, maquinas = 0) {
   if (!row) return null;

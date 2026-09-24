@@ -15,6 +15,95 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **O banco parou de guardar listas em texto e de ligar cliente pelo nome.**
+  Os sistemas de um atendimento e de um cliente eram texto separado por
+  vírgula ("B_Vendas, B_NFe"), com um JSON de versões por cima, e o cliente
+  de um atendimento/agendamento era o nome dele. Toda tela reinterpretava
+  esse texto com as mesmas regras de grafia, espalhadas em seis arquivos, e
+  o catálogo não garantia nada: `B_NFCe` (100 usos), `B_Sped` (53), `CTe`,
+  `B_Rat` e outros estavam no histórico sem existir na tabela de sistemas,
+  e a situação do cliente chegava a listar `NFCe` e `B_NFCe` como dois
+  sistemas. Agora há `atualizacao_sistemas` (um sistema por linha, com a
+  versão recebida), `cliente_sistemas` e `cliente_id` de verdade.
+  - **Sistemas que saíram do catálogo viram inativos**, e não somem do
+    histórico: não aparecem nas telas de cadastro, e cadastrar o mesmo nome
+    de novo reativa o sistema com o histórico junto. "Excluir" um sistema
+    agora desativa em vez de apagar. As grafias de um mesmo sistema
+    (`B_NFE`/`B_NFe`, `DFE`/`B_DFe`, `NFCe`/`B_NFCe`) viraram um só.
+  - **Renomear um cliente** não precisa mais reescrever o nome em outras
+    tabelas para não perder o histórico. Os 57 atendimentos de clientes já
+    excluídos ficam com o nome como estava, e passam a pertencer ao cliente
+    se alguém cadastrá-lo de novo com esse nome.
+  - O esquema passou a mudar por **migrações numeradas**, que rodam uma vez
+    só, numa transação, com um backup do banco feito antes (aparece na tela
+    de Backups). O `ALTER TABLE` a cada boot servia para acrescentar coluna,
+    não para mover dado de uma coluna para uma tabela.
+  - A API continua entregando os mesmos campos, montados por visões
+    (`atualizacoes_v`, `clientes_v`), por isso o front-end não mudou. Um
+    ensaio numa cópia do banco de produção comparou o código antigo com o
+    novo: relatório por sistema, Resumo e última versão por sistema saíram
+    iguais. A única mudança de resultado, além das grafias corrigidas, é que
+    a quantidade de máquinas de um cliente com dois atendimentos no MESMO
+    dia agora vem sempre do último registrado; antes a escolha entre os dois
+    era arbitrária.
+  - Detalhes e o que ficou de fora de propósito (datas em texto,
+    responsável em texto): [ADR-0007](docs/adr/0007-esquema-normalizado-e-migracoes-versionadas.md).
+
+- **Sistemas ganhou uma "versão oficial" por sistema, e cada atendimento
+  guarda a versão que o cliente recebeu naquela data.** Antes a "versão"
+  de um atendimento era um texto solto, sem ligação com o que estava
+  publicado; agora, ao criar um atendimento, cada sistema informado recebe
+  uma cópia (`versoes_sistemas`) da versão oficial cadastrada em Sistemas —
+  mas só se ela já existia na data do atendimento (uma versão publicada
+  depois não é atribuída retroativamente). Editar depois (observações,
+  datas) não reaplica versões novas; sistemas acrescentados na edição ficam
+  sem versão, porque só um novo atendimento registra de fato uma
+  atualização. Desfazer uma exclusão preserva as versões que o registro já
+  tinha, inclusive as legadas (registro com um único sistema, de antes
+  dessa mudança). Histórico e importações antigos não recebem a versão
+  oficial de volta — não haveria como saber qual era, na época.
+  - A tela **Sistemas** ganhou "Em dia" / "Desatualizado" / "Nunca
+    atualizado" / "Sem referência" (sem versão oficial cadastrada) / "Sem
+    informação" (tem atendimento, mas sem versão capturada), comparando a
+    versão recebida com a oficial em vez de só comparar datas.
+  - A ficha do cliente (**Consulta**) ganhou a mesma situação por sistema.
+  - **Atualizações** ganhou "Relatório do período" (usa os filtros da tela:
+    busca, responsável, datas) com totais por sistema e por responsável,
+    prévia, cópia de texto e impressão/PDF — junto dos relatórios de
+    atendimento e de situação do cliente que já existiam. O Excel exportado
+    passou a acrescentar resumo, filtros e cabeçalhos formatados numa aba
+    além dos registros crus.
+  - Ajustes de acabamento depois do primeiro uso: a tela Sistemas perdeu a
+    coluna "Versão oficial" da grade (ela já aparecia sozinha, igual pra
+    toda a lista, acima da tabela) e o aviso vermelho repetindo a mesma
+    informação; o select de sistema parou de mostrar "— Sem referência"
+    para quem ainda não tem data cadastrada; o botão "Salvar versão"
+    ficou do tamanho do texto, e não mais esticado aos 200px mínimos do
+    campo ao lado (herdava a largura por estar dentro de um `.field`); e o
+    botão "Gerar Agendamentos em Lote" saiu dessa tela (a rota
+    `/agendamentos/gerar-lote` continua existindo, só não tem mais gatilho
+    aqui). A Matriz de Versões da ficha do cliente comparava a mesma versão
+    resumida ("B_Vendas: 1; B_NFe: 2") contra TODAS as linhas de sistema, em
+    vez da versão de cada um; e a grade de Atualizações cortava esse mesmo
+    resumo no meio, porque a coluna é estreita demais para ele. As duas
+    passaram a usar `versaoRegistrada()` para pegar a versão de um sistema
+    específico — a matriz usa o sistema da própria linha, a grade usa o
+    primeiro sistema listado no atendimento (o resumo inteiro continua
+    disponível no title, ao passar o mouse).
+  - **A comparação por versão tinha quebrado a consulta "quem está
+    desatualizado desde tal dia?"** que a tela Sistemas sempre ofereceu:
+    depois que uma versão oficial existe, `relatorioPorSistema` ignorava
+    por completo a data digitada e comparava só versão contra versão —
+    e não dava mais pra explorar um corte de data arbitrário sem sobrescrever
+    a referência oficial da equipe (que outras pessoas também usam). Agora
+    o serviço distingue as duas perguntas: sem data digitada (ou com a
+    mesma data já salva), continua comparando a versão recebida com a
+    oficial; com uma data DIFERENTE da salva, vira uma consulta avulsa por
+    data, do jeito simples de antes, sem tocar na referência. No front, o
+    campo de data da tela Sistemas passou a recarregar a lista sozinho ao
+    digitar (debounced), sem precisar clicar em "Salvar versão" pra ver o
+    resultado de uma data só de teste.
+
 - **Configurações virou uma tela, com a mesma cara do resto do app.** Era um
   modal de duas colunas com um desenho só dele (outra trilha de navegação,
   outro cabeçalho, outro rodapé), apertado em 880px com a tela desfocada

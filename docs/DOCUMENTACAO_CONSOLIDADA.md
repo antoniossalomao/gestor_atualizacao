@@ -766,8 +766,10 @@ entrar na equipe amanhã é canonizado pela primeira grafia gravada. Roda no cad
 faxina. Um nome que não casa com nada é mantido intacto de propósito: inventar destino para o
 desconhecido estragaria em silêncio a primeira atualização de um sistema novo.
 
-O histórico já gravado foi acertado por `scripts/normalizar-historico.js`, com as mesmas funções
-(simulação por padrão, `--aplicar` numa transação só). Resultado medido: 650 atualizações com
+O histórico já gravado foi acertado por um script de faxina de uma vez só
+(`scripts/normalizar-historico.js`, removido em set/2026 quando a migração 1 levou os sistemas
+para tabelas de ligação — ver [ADR-0007](adr/0007-esquema-normalizado-e-migracoes-versionadas.md)),
+com as mesmas funções. Resultado medido na época: 650 atualizações com
 sistema reescrito, 36 com responsável, 1 agendamento; as grafias fora do catálogo caíram de 144
 (1.164 ocorrências) para 6 (10 ocorrências), todas as seis deliberadamente ignoradas (`CTe`,
 `DFE`, `B_Rat`, `B_Vet`, `B_SYNC`, `B_DFe` — não são sistemas). Cinco sistemas entraram no
