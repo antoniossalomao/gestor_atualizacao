@@ -330,7 +330,7 @@ Melhorias posteriores: reagendamento com motivo, lembrete de retorno e checklist
 
 - [x] Retirar Acessos da toolbar global (25/09/2026).
 - [x] Acrescentar Gerenciar acessos diretamente na linha de cada cliente (25/09/2026).
-- [x] Unificar acessos na linha em um único botão "Acessos remotos", com cópia individual e gestão integradas no modal (25/09/2026).
+- [x] Manter Copiar acessos separado: a ação atual de cópia não substitui a gestão (25/09/2026).
 - [x] Usar menu de linha quando ficha, acessos, edição e exclusão não couberem (25/09/2026).
 - [x] Passar o ID da linha para a ação, sem depender de seleção prévia (25/09/2026).
 - [x] Evitar propagação do clique que abra simultaneamente o formulário (25/09/2026).

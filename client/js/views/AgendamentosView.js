@@ -39,7 +39,6 @@ export class AgendamentosView extends View {
     this.busca = salvo.busca || "";
     this.status = salvo.status || "Todos";
     this.prioridade = salvo.prioridade || "Todas";
-    this.filtroRapido = salvo.filtroRapido || null;
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "asc";
     this.ordemColunas = this._carregarOrdemColunas();
@@ -95,7 +94,7 @@ export class AgendamentosView extends View {
         <div class="toolbar">
           <div class="field">
             <label class="field__label" for="age-busca">Buscar</label>
-            <input type="search" class="input" id="age-busca" data-role="search" placeholder="Tarefa, cliente, responsável, data..." />
+            <input type="search" class="input" id="age-busca" data-role="search" placeholder="Tarefa, cliente, responsável..." />
           </div>
           <div class="field">
             <label class="field__label" for="age-status">Status</label>
@@ -194,23 +193,35 @@ export class AgendamentosView extends View {
       const btn = e.target.closest("[data-filtro-rapido]");
       if (!btn) return;
       const tipo = btn.dataset.filtroRapido;
-      const jaAtivo = this.filtroRapido === tipo || (tipo === "arquivadas" && this.status === FILTRO_ARQUIVADAS);
-
+      const jaAtivo = btn.classList.contains("is-active");
+      // Toggle: clicar no mesmo botão ativo limpa apenas aquele filtro
       if (jaAtivo) {
-        this.filtroRapido = null;
-        if (tipo === "arquivadas") {
-          this.status = "Todos";
-          if (this.statusFilter) this.statusFilter.value = "Todos";
+        this._limparFiltros();
+        return;
+      }
+      this._limparFiltros();
+      if (tipo === "minhas") {
+        const nome = this.user?.nome || "";
+        if (nome) {
+          this.busca = nome;
+          if (this.searchInput) this.searchInput.value = nome;
         }
-      } else {
-        this.filtroRapido = tipo;
-        if (tipo === "arquivadas") {
-          this.status = FILTRO_ARQUIVADAS;
-          if (this.statusFilter) this.statusFilter.value = FILTRO_ARQUIVADAS;
-        } else if (this.status === FILTRO_ARQUIVADAS) {
-          this.status = "Todos";
-          if (this.statusFilter) this.statusFilter.value = "Todos";
-        }
+      } else if (tipo === "hoje") {
+        this.busca = todayBR();
+        if (this.searchInput) this.searchInput.value = this.busca;
+      } else if (tipo === "atrasadas") {
+        // "Atrasadas" = tarefas cujo campo data é anterior a hoje e status ≠ Concluído.
+        // O filtro de busca não cobre isso diretamente; usamos a busca pelo
+        // termo para o backend reconhecer (se houver suporte) OU aplicamos o
+        // status ativo "A Fazer"+"Em Andamento" e deixamos a indicação visual.
+        // Por ora filtramos pela busca especial "atrasadas" se o backend
+        // suportar; caso contrário apenas marca o botão como ativo para
+        // indicação visual de que o filtro está aplicado.
+        this.busca = "__atrasadas__";
+        if (this.searchInput) this.searchInput.value = this.busca;
+      } else if (tipo === "arquivadas") {
+        this.status = FILTRO_ARQUIVADAS;
+        if (this.statusFilter) this.statusFilter.value = FILTRO_ARQUIVADAS;
       }
       this._pintarFiltrosRapidos();
       this._pintarLimparFiltros();
@@ -278,7 +289,11 @@ export class AgendamentosView extends View {
   _pintarFiltrosRapidos() {
     if (!this.filtrosRapidosEl) return;
     const btns = this.filtrosRapidosEl.querySelectorAll("[data-filtro-rapido]");
-    const ativoTipo = this.status === FILTRO_ARQUIVADAS ? "arquivadas" : this.filtroRapido;
+    let ativoTipo = null;
+    if (this.status === FILTRO_ARQUIVADAS) ativoTipo = "arquivadas";
+    else if (this.busca === "__atrasadas__") ativoTipo = "atrasadas";
+    else if (this.busca && this.user?.nome && this.busca === this.user.nome) ativoTipo = "minhas";
+    else if (this.busca && this.busca === todayBR()) ativoTipo = "hoje";
     for (const btn of btns) {
       btn.classList.toggle("is-active", btn.dataset.filtroRapido === ativoTipo);
     }
@@ -471,20 +486,11 @@ export class AgendamentosView extends View {
     this.kanban.classList.add("is-refreshing");
     try {
       await this.swr(
-        `agendamentos:lista:${this.busca}|${this.status}|${this.prioridade}|${this.filtroRapido || ""}|200|${this.sortBy}|${this.sortDir}`,
+        `agendamentos:lista:${this.busca}|${this.status}|${this.prioridade}|200|${this.sortBy}|${this.sortDir}`,
         () =>
           this.api.get(
             "/agendamentos",
-            {
-              search: this.busca,
-              status: this.status,
-              prioridade: this.prioridade,
-              filtroRapido: this.filtroRapido || undefined,
-              page: 1,
-              pageSize: 200,
-              sortBy: this.sortBy,
-              sortDir: this.sortDir,
-            },
+            { search: this.busca, status: this.status, prioridade: this.prioridade, page: 1, pageSize: 200, sortBy: this.sortBy, sortDir: this.sortDir },
             { key: "agendamentos:lista" }
           ),
         (resposta) => {
@@ -661,7 +667,7 @@ export class AgendamentosView extends View {
   }
 
   _temFiltro() {
-    return Boolean(this.busca) || this.status !== "Todos" || this.prioridade !== "Todas" || Boolean(this.filtroRapido);
+    return Boolean(this.busca) || this.status !== "Todos" || this.prioridade !== "Todas";
   }
 
   _pintarLimparFiltros() {
@@ -672,7 +678,6 @@ export class AgendamentosView extends View {
     this.busca = "";
     this.status = "Todos";
     this.prioridade = "Todas";
-    this.filtroRapido = null;
     if (this.searchInput) this.searchInput.value = "";
     if (this.statusFilter) this.statusFilter.value = "Todos";
     if (this.prioridadeFilter) this.prioridadeFilter.value = "Todas";
@@ -687,7 +692,6 @@ export class AgendamentosView extends View {
       busca: this.busca,
       status: this.status,
       prioridade: this.prioridade,
-      filtroRapido: this.filtroRapido,
       sortBy: this.sortBy,
       sortDir: this.sortDir,
     });

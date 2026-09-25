@@ -53,34 +53,17 @@ class AgendamentoRepository extends BaseRepository {
    * Uma página de tarefas, pendentes primeiro (ordenadas por data),
    * concluidas no final. Devolve `{ rows, total, page, pageSize }`.
    */
-  list(search = "", status = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, prioridade, filtroRapido, usuarioNome } = {}) {
+  list(search = "", status = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, prioridade } = {}) {
     const clauses = [];
     const params = {};
     if (search) {
-      clauses.push("(tarefa LIKE @like OR cliente LIKE @like OR responsavel LIKE @like OR data LIKE @like OR sistema LIKE @like OR obs LIKE @like)");
+      clauses.push("(tarefa LIKE @like OR cliente LIKE @like OR responsavel LIKE @like)");
       params.like = `%${search}%`;
     }
-    if (filtroRapido === "hoje") {
-      const hoje = new Date();
-      const dd = String(hoje.getDate()).padStart(2, "0");
-      const mm = String(hoje.getMonth() + 1).padStart(2, "0");
-      const yyyy = hoje.getFullYear();
-      clauses.push("data = @filtroHoje");
-      params.filtroHoje = `${dd}/${mm}/${yyyy}`;
-    } else if (filtroRapido === "atrasadas") {
-      const hoje = new Date();
-      const cutoff = `${hoje.getFullYear()}${String(hoje.getMonth() + 1).padStart(2, "0")}${String(hoje.getDate()).padStart(2, "0")}`;
-      clauses.push("status NOT IN ('Concluído', 'Sem resposta') AND data != '' AND " + DATE_SORT_EXPR + " < @filtroAtrasadasCutoff");
-      params.filtroAtrasadasCutoff = cutoff;
-    } else if (filtroRapido === "minhas" && usuarioNome) {
-      clauses.push("lower(responsavel) = lower(@usuarioNome)");
-      params.usuarioNome = usuarioNome;
-    }
-
     // "Arquivadas" nao e um status -- e o pedido de ver justamente o que sai
     // da lista. Por isso ele SUBSTITUI o recorte por status em vez de se
     // somar a ele: pedir "Arquivadas" e pedir todas as arquivadas.
-    if (status === FILTRO_ARQUIVADAS || filtroRapido === "arquivadas") {
+    if (status === FILTRO_ARQUIVADAS) {
       clauses.push("arquivado_em IS NOT NULL");
     } else {
       clauses.push("arquivado_em IS NULL");

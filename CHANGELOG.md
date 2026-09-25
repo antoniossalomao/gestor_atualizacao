@@ -18,22 +18,20 @@ Para o agente C#, o equivalente é
 - **Revisão do painel, E7:** ficha do cliente (`ConsultaView`) revisada:
   remoção de referências a CNPJ no subtítulo e nos campos de cadastro; cabeçalho
   compacto exibindo Código, Cidade e Grupo/Rede (quando preenchido); resumo
-  compacto com card de Última atualização (tempo relativo formatado); separação clara
+  compacto com último atendimento relativo e situação de sistemas; separação clara
   entre sistemas atualizáveis (classificados pela regra oficial do servidor/ADR-0008),
   componentes fixos sem status de atraso e bloco dedicado de telemetria de agentes
   instalados (sem interferir na situação de versão do cliente). Na linha do tempo de
-  atendimentos, adicionado botão para copiar o relatório ("Copiar Relatório") no formato
-  padrão. O modal de relatórios (`RelatorioModal`) substituiu o seletor por abas curtas
-  (Atendimento e Cliente), cabeçalho discreto com botão fechar, filtro de histórico
-  recolhível e prévia com rodapé estável de ações (Fechar, Imprimir/Salvar PDF e Copiar texto).
+  atendimentos, adicionado botão para copiar o chamado no formato padrão. O modal de
+  relatórios (`RelatorioModal`) substituiu o seletor por abas curtas (Atendimento e
+  Cliente), cabeçalho discreto com botão fechar, filtro de histórico recolhível e
+  prévia com rodapé estável de ações (Fechar, Imprimir/Salvar PDF e Copiar texto).
 
 - **Revisão do painel, E6:** agendamentos integrados à grade com toolbar unificada,
   criação rápida de tarefas e filtros de status discretos (Pendentes, Concluídos e
-  Arquivados). Suporte a filtros rápidos de data e responsabilidade no backend e frontend
-  (`hoje`, `atrasadas`, `minhas` e `arquivadas`), e busca textual incluindo data, sistema
-  e observações. Na aba Clientes, a gestão de acessos foi unificada diretamente na linha
-  de cada cliente em um único botão "Acessos remotos", a coluna Grupo/Rede foi compactada
-  com truncamento controlado e o campo de cadastro foi reorganizado junto a Código e Cidade.
+  Arquivados). Na aba Clientes, a gestão de acessos foi movida diretamente para a
+  linha de cada cliente ("Gerenciar acessos"), a coluna Grupo/Rede foi compactada com
+  truncamento controlado e o campo de cadastro foi reorganizado junto a Código e Cidade.
 
 - **Revisão do painel, E5:** padronização do sistema de botões e toolbars
   (variantes `btn--primary`, `btn--secondary`, `btn--danger`, altura mínima 38px/32px

@@ -9,15 +9,8 @@ class AgendamentosController {
   }
 
   list = (req, res) => {
-    const { search = "", status = "Todos", prioridade, filtroRapido } = req.query;
-    res.json(
-      this.agendamentoService.list(search, status, {
-        ...parsePaginacao(req.query),
-        prioridade,
-        filtroRapido,
-        usuarioNome: req.session.user?.nome,
-      })
-    );
+    const { search = "", status = "Todos", prioridade } = req.query;
+    res.json(this.agendamentoService.list(search, status, { ...parsePaginacao(req.query), prioridade }));
   };
 
   lembretes = (req, res) => {
