@@ -1657,6 +1657,26 @@ select {
   flex: 1;
 }
 
+.sistemas-toolbar > button { align-self: flex-end; }
+.sistemas-referencia { margin: 0 0 var(--sp-4); color: var(--cor-texto-sub); font-size: var(--txt-sm); }
+.sistemas-filtros { display: flex; align-items: flex-end; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.sistemas-filtros[hidden], .sistemas-oficiais[hidden] { display: none; }
+.sistemas-filtros .field { max-width: 310px; }
+.sistemas-oficiais { margin-bottom: var(--sp-5); padding: var(--sp-4); border: 1px solid var(--cor-borda); border-radius: var(--raio-md); }
+.sistemas-oficiais__cabecalho, .sistemas-oficiais__row { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); }
+.sistemas-oficiais__cabecalho { margin-bottom: var(--sp-3); }
+.sistemas-oficiais__cabecalho h2 { margin: 0; font-size: var(--txt-lg); }
+.sistemas-oficiais__cabecalho p { margin: var(--sp-1) 0 0; color: var(--cor-texto-sub); font-size: var(--txt-sm); }
+.sistemas-oficiais__row { padding: var(--sp-3) 0; border-top: 1px solid var(--cor-borda); }
+.sistemas-oficiais__row > div:first-child { display: grid; gap: var(--sp-1); }
+.sistemas-oficiais__row small { color: var(--cor-texto-sub); }
+.sistemas-oficiais__acoes { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.sistemas-oficiais__acoes .input { width: 140px; }
+@media (max-width: 700px) {
+  .sistemas-oficiais__cabecalho, .sistemas-oficiais__row { align-items: flex-start; flex-direction: column; }
+  .sistemas-toolbar .field, .sistemas-toolbar .field:has(input[type="search"]) { min-width: 100%; }
+}
+
 .result-count {
   /* Alinha a linha de base com a borda inferior dos campos ao lado (que têm
      padding de 9px) -- sem isto, o texto solto fica alguns pixels mais alto,

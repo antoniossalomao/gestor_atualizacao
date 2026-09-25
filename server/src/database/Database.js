@@ -402,6 +402,8 @@ class Database {
       ["clientes", "atualizado_em", "TEXT"],
       ["clientes", "atualizado_por", "TEXT"],
       ["historico", "detalhes_json", "TEXT"],
+      ["sistemas", "ultima_versao_autor", "TEXT"],
+      ["sistemas", "ultima_versao_em", "TEXT"],
     ]) {
       try {
         conn.exec(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${tipo}`);

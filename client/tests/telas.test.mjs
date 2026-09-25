@@ -28,6 +28,19 @@ import { cartaoPerfil, linhaSessao, listaSessoes, previaTabela, listaAtalhos, re
 import { cabecalhoSecao, tituloCartao } from "../js/templates/secao.js";
 import { descreverAparelho } from "../js/domain/aparelho.js";
 import { descricaoPapel } from "../js/domain/pessoa.js";
+import { filtrarClientesDoSistema } from "../js/domain/filtrosSistemas.js";
+
+test("Sistemas: situação e busca filtram clientes sem mudar seus dados", () => {
+  const rows = [
+    { cliente: "Água Azul", cidade: "Uberaba", situacao: "Em dia" },
+    { cliente: "Loja B", cidade: "Araxá", situacao: "Desatualizado" },
+    { cliente: "Loja C", cidade: "Uberlândia", situacao: "Sem referência" },
+  ];
+  assert.deepEqual(filtrarClientesDoSistema(rows, "Em dia", "agua"), [rows[0]]);
+  assert.deepEqual(filtrarClientesDoSistema(rows, "Desatualizados", "araxá"), [rows[1]]);
+  assert.deepEqual(filtrarClientesDoSistema(rows, "Sem informação"), [rows[2]]);
+  assert.equal(rows[0].situacao, "Em dia");
+});
 
 const MALICIOSO = '"><img src=x onerror=alert(1)>';
 const texto = (v) => String(v);

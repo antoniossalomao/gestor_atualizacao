@@ -15,6 +15,13 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Revisão do painel, E3:** a aba Sistemas separa os filtros de consulta do
+  painel Versões oficiais. A data de consulta agora filtra o último atendimento
+  e nunca substitui a referência oficial na classificação. A tabela ganhou
+  filtros de situação e busca, mostra a oficial e abre a ficha do cliente. O
+  gerenciador tem edição por linha, autor e data das alterações futuras e
+  bloqueio de gravação quando outra pessoa mudou a referência antes do Salvar.
+
 - **Revisão do painel, E2:** componentes fixos saíram do gráfico por sistema,
   da seleção de Sistemas e das referências oficiais. A ficha os reúne em
   Serviços/componentes fixos, sem atraso. A API bloqueia nova referência e

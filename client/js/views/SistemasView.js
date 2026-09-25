@@ -2,118 +2,142 @@ import { View } from "../app/View.js";
 import { SortableTable } from "../components/SortableTable.js";
 import { blendHex, tokenHex } from "../utils/color.js";
 import { debounce } from "../utils/debounce.js";
-import { isValidDateBR, mascaraDataBR } from "../utils/date.js";
+import { formatarDataHora, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { ApiError } from "../api/ApiClient.js";
 import { Modal } from "../components/Modal.js";
 import { emptyState } from "../components/EmptyState.js";
 import { escapeHtml, plural } from "../utils/html.js";
 import { prefs } from "../app/prefs.js";
 import { rotuloSituacao, AJUDA_PELA_DATA } from "../domain/situacao.js";
+import { filtrarClientesDoSistema } from "../domain/filtrosSistemas.js";
 
-/** Relatório por sistema, usando a data da última versão cadastrada pela equipe. */
+/** Consulta por sistema; a referência oficial só pode ser editada no painel próprio. */
 export class SistemasView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
     const salvo = prefs.get("sistemas:filtros", {});
     this.sistema = salvo.sistema || "";
-    this.dataCorte = "";
+    this.situacao = salvo.situacao || "Todos";
+    this.busca = salvo.busca || "";
+    this.atendimentoAntesDe = salvo.atendimentoAntesDe || "";
     this.versoes = [];
+    this.rows = [];
     this._buildDom();
   }
 
   _buildDom() {
     this.container.innerHTML = `
       <div class="card">
-        <div class="toolbar">
+        <div class="toolbar sistemas-toolbar">
           <div class="field">
             <label class="field__label" for="sis-filtro">Sistema</label>
             <select class="input" id="sis-filtro" data-role="sistema-filter"></select>
-            <!-- Hint vazio de propósito: o campo ao lado (Desatualizado antes
-                 de) tem uma linha de erro embaixo do input, o que o deixa mais
-                 alto. Como o toolbar alinha os campos pela base, sem este
-                 espaço reservado aqui também, o rótulo e o select deste campo
-                 ficavam alguns pixels mais baixos que os do campo vizinho, um
-                 desalinhamento visível. -->
-            <div class="field__hint" aria-hidden="true"></div>
           </div>
           <div class="field">
-            <label class="field__label" for="sis-corte">Data da última versão</label>
-            <input type="text" class="input" id="sis-corte" data-role="data-corte"
-                   placeholder="dd/mm/aaaa" aria-describedby="sis-corte-hint" />
-            <div class="field__hint" id="sis-corte-hint" data-role="data-hint"></div>
+            <label class="field__label" for="sis-situacao">Situação</label>
+            <select class="input" id="sis-situacao" data-role="situacao-filter">
+              <option>Todos</option><option>Em dia</option><option>Desatualizados</option><option>Sem informação</option>
+            </select>
           </div>
-          <div class="field" style="min-width: 0;">
-            <label class="field__label" aria-hidden="true">&nbsp;</label>
-            <button type="button" class="btn" style="align-self: flex-start;" data-action="salvar-versao">Salvar versão</button>
-            <div class="field__hint" aria-hidden="true"></div>
+          <div class="field">
+            <label class="field__label" for="sis-busca">Buscar cliente ou cidade</label>
+            <input class="input" id="sis-busca" data-role="busca" type="search" autocomplete="off" />
           </div>
+          <button type="button" class="btn" data-action="filtros" aria-expanded="false" aria-controls="sis-filtros">Filtros</button>
+          <button type="button" class="btn" data-action="oficiais" aria-expanded="false" aria-controls="sis-oficiais">Versões oficiais</button>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
         </div>
+        <p class="sistemas-referencia" data-role="referencia"></p>
+        <div id="sis-filtros" class="sistemas-filtros" hidden>
+          <div class="field">
+            <label class="field__label" for="sis-antes">Último atendimento antes de</label>
+            <input class="input" id="sis-antes" data-role="atendimento-antes" placeholder="dd/mm/aaaa" inputmode="numeric" aria-describedby="sis-antes-ajuda" />
+            <div class="field__hint" id="sis-antes-ajuda" data-role="data-hint">Filtra a data do atendimento; a situação continua usando a versão oficial.</div>
+          </div>
+          <button type="button" class="btn" data-action="limpar-data">Limpar data</button>
+        </div>
+        <section id="sis-oficiais" class="sistemas-oficiais" aria-label="Versões oficiais" hidden>
+          <div class="sistemas-oficiais__cabecalho">
+            <div><h2>Versões oficiais</h2><p>Novos atendimentos recebem a referência vigente. As versões recebidas nos atendimentos anteriores permanecem. Deixe o campo vazio para limpar a referência.</p></div>
+            <button type="button" class="btn" data-action="fechar-oficiais">Fechar</button>
+          </div>
+          <div data-role="oficiais-lista"></div>
+        </section>
         <div data-role="table"></div>
-      </div>
-    `;
+      </div>`;
 
     this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
       columns: [
         { key: "cliente", label: "Cliente" },
-        { key: "cidade", label: "Cidade" },
-        { key: "ultima", label: "Última Atualização", type: "date" },
+        { key: "ultima", label: "Último atendimento", type: "date" },
         { key: "instalada", label: "Versão recebida" },
+        { key: "oficial", label: "Oficial" },
         { key: "situacao", label: "Situação", render: celulaSituacao },
+        { key: "cidade", label: "Cidade" },
       ],
       rowKey: (row) => row.cliente,
       caption: "Clientes por sistema",
       rowStyle: (row, index) => ({ background: severidadeCor(row.situacao, index) }),
-      selectable: false,
-      emptyNode: () =>
-        emptyState({
-          titulo: "Nenhum cliente usa este sistema",
-          descricao: "Ou o cadastro em Clientes ainda não foi marcado com este sistema.",
-          icone: "sistemas",
-          acao: { label: "Ir para Clientes", onClick: () => this.navigate("clientes") },
-        }),
+      onSelect: (row) => this.navigate("consulta", { cliente: row.cliente }),
+      emptyNode: () => emptyState({
+        titulo: "Nenhum cliente para os filtros",
+        descricao: "Ajuste a situação, a busca ou a data. Se o sistema não tiver clientes, vincule-os na tela Clientes.",
+        icone: "sistemas",
+      }),
     });
 
     this.sistemaFilter = this.container.querySelector('[data-role="sistema-filter"]');
-    this.dataCorteInput = this.container.querySelector('[data-role="data-corte"]');
+    this.situacaoFilter = this.container.querySelector('[data-role="situacao-filter"]');
+    this.buscaInput = this.container.querySelector('[data-role="busca"]');
+    this.dataInput = this.container.querySelector('[data-role="atendimento-antes"]');
     this.dataHint = this.container.querySelector('[data-role="data-hint"]');
-    this.dataCorteInput.value = this.dataCorte;
+    this.situacaoFilter.value = this.situacao;
+    this.buscaInput.value = this.busca;
+    this.dataInput.value = this.atendimentoAntesDe;
 
-    this.salvarBtn = this.container.querySelector('[data-action="salvar-versao"]');
-    this.salvarBtn.hidden = this.user?.role === "consulta";
-    this.dataCorteInput.readOnly = this.user?.role === "consulta";
-    this.salvarBtn.addEventListener("click", () => this._salvarVersao());
     this.sistemaFilter.addEventListener("change", () => {
       this.sistema = this.sistemaFilter.value;
-      this._usarReferencia();
+      this._salvarFiltros();
+      this._mostrarReferencia();
+      this._reloadList();
+    });
+    this.situacaoFilter.addEventListener("change", () => {
+      this.situacao = this.situacaoFilter.value;
+      this._salvarFiltros();
+      this._filtrarRows();
+    });
+    const buscar = debounce(() => {
+      this.busca = this.buscaInput.value.trim();
+      this._salvarFiltros();
+      this._filtrarRows();
+    }, 180);
+    this.buscaInput.addEventListener("input", buscar);
+    const consultar = debounce(() => {
+      this.atendimentoAntesDe = this.dataInput.value.trim();
+      this._salvarFiltros();
+      this._reloadList();
+    }, 300);
+    this.dataInput.addEventListener("input", () => {
+      this.dataInput.value = mascaraDataBR(this.dataInput.value);
+      const invalida = Boolean(this.dataInput.value) && !isValidDateBR(this.dataInput.value);
+      this.dataInput.setAttribute("aria-invalid", String(invalida));
+      this.dataHint.textContent = invalida ? "Informe uma data válida em dd/mm/aaaa." : "Filtra a data do atendimento; a situação continua usando a versão oficial.";
+      if (!invalida) consultar();
+    });
+    this.container.querySelector('[data-action="limpar-data"]').addEventListener("click", () => {
+      this.dataInput.value = "";
+      this.atendimentoAntesDe = "";
+      this.dataInput.setAttribute("aria-invalid", "false");
       this._salvarFiltros();
       this._reloadList();
     });
-    // Digitar uma data diferente da salva é uma consulta avulsa ("quem está
-    // desatualizado desde tal dia?"), sem precisar clicar em "Salvar versão"
-    // -- só reflete na tela e não grava nada. Debounced pra não recarregar a
-    // cada tecla enquanto a máscara ainda está sendo digitada.
-    const consultarComDebounce = debounce(() => {
-      this.dataCorte = this.dataCorteInput.value.trim();
-      this._reloadList();
-    }, 300);
-    this.dataCorteInput.addEventListener("input", () => {
-      this.dataCorteInput.value = mascaraDataBR(this.dataCorteInput.value);
-      const valor = this.dataCorteInput.value.trim();
-      const invalida = Boolean(valor) && !isValidDateBR(valor);
-      this.dataHint.textContent = invalida ? "Formato esperado: dd/mm/aaaa" : "";
-      this.dataCorteInput.setAttribute("aria-invalid", String(invalida));
-      this.salvarBtn.disabled = invalida;
-      if (!invalida) consultarComDebounce();
-    });
+    this.container.querySelector('[data-action="filtros"]').addEventListener("click", () => this._alternar("filtros"));
+    this.container.querySelector('[data-action="oficiais"]').addEventListener("click", () => this._alternar("oficiais"));
+    this.container.querySelector('[data-action="fechar-oficiais"]').addEventListener("click", () => this._fecharOficiais());
+    this.container.querySelector('[data-role="oficiais-lista"]').addEventListener("click", (e) => this._acaoOficial(e));
   }
 
-  /**
-   * Vindo do Resumo ("Mais clientes desatualizados"): abre já no sistema
-   * clicado. `refresh` escolhe ele no select se ainda estiver no catálogo.
-   * @param {{sistema?: string}} params
-   */
   aplicarParams({ sistema } = {}) {
     if (!sistema) return;
     this.sistema = sistema;
@@ -122,63 +146,104 @@ export class SistemasView extends View {
 
   async refresh() {
     this.versoes = await this.api.get("/sistemas/versoes", null, { key: "sistemas:versoes" });
-    this.sistemaFilter.innerHTML = this.versoes.map((s) => `<option value="${escapeHtml(s.nome)}">${escapeHtml(s.nome)}${s.data ? ` — ${escapeHtml(s.data)}` : ""}</option>`).join("");
+    this.sistemaFilter.innerHTML = this.versoes.map((s) => `<option value="${escapeHtml(s.nome)}">${escapeHtml(s.nome)}</option>`).join("");
     if (this.versoes.some((s) => s.nome === this.sistema)) this.sistemaFilter.value = this.sistema;
     this.sistema = this.sistemaFilter.value;
     this._salvarFiltros();
-    this._usarReferencia();
+    this._mostrarReferencia();
+    this._renderOficiais();
     await this._reloadList();
   }
 
-  _usarReferencia() {
-    this.dataCorte = this.versoes.find((s) => s.nome === this.sistema)?.data || "";
-    this.dataCorteInput.value = this.dataCorte;
-    this.dataHint.textContent = "";
-    this.dataCorteInput.setAttribute("aria-invalid", "false");
-    this.salvarBtn.disabled = !this.sistema;
+  _mostrarReferencia() {
+    const oficial = this.versoes.find((s) => s.nome === this.sistema)?.data;
+    this.container.querySelector('[data-role="referencia"]').textContent = this.sistema
+      ? `Versão oficial de ${this.sistema}: ${oficial || "não cadastrada"}`
+      : "Nenhum sistema atualizável cadastrado.";
   }
 
-  async _salvarVersao() {
-    const data = this.dataCorteInput.value.trim();
-    if (data && !isValidDateBR(data)) return;
-    this.salvarBtn.disabled = true;
-    this.sistemaFilter.disabled = true;
+  _alternar(tipo) {
+    const botao = this.container.querySelector(`[data-action="${tipo}"]`);
+    const painel = this.container.querySelector(`#sis-${tipo}`);
+    painel.hidden = !painel.hidden;
+    botao.setAttribute("aria-expanded", String(!painel.hidden));
+    if (tipo === "oficiais" && !painel.hidden) this._renderOficiais();
+    if (!painel.hidden) painel.querySelector("input, button")?.focus();
+  }
+
+  _fecharOficiais() {
+    this.container.querySelector("#sis-oficiais").hidden = true;
+    this.container.querySelector('[data-action="oficiais"]').setAttribute("aria-expanded", "false");
+    this._renderOficiais(); // descarta qualquer edição sem gravar
+    this.container.querySelector('[data-action="oficiais"]').focus();
+  }
+
+  _renderOficiais() {
+    const lista = this.container.querySelector('[data-role="oficiais-lista"]');
+    lista.innerHTML = this.versoes.map((s, i) => `
+      <div class="sistemas-oficiais__row" data-index="${i}">
+        <div><strong>${escapeHtml(s.nome)}</strong><span data-role="valor">${escapeHtml(s.data || "Sem referência")}</span>
+          <small>${s.alteradaEm ? `Alterada por ${escapeHtml(s.autor || "não informado")} em ${escapeHtml(formatarDataHora(s.alteradaEm))}` : "Autor e data não registrados"}</small></div>
+        <div class="sistemas-oficiais__acoes">
+          <input class="input" data-role="edicao" aria-label="Versão oficial de ${escapeHtml(s.nome)}" placeholder="dd/mm/aaaa" inputmode="numeric" hidden />
+          <button type="button" class="btn" data-action="editar" ${this.user?.role === "consulta" ? "hidden" : ""}>Editar</button>
+          <button type="button" class="btn btn--accent" data-action="salvar" hidden>Salvar</button>
+          <button type="button" class="btn" data-action="cancelar" hidden>Cancelar</button>
+        </div>
+      </div>`).join("");
+    if (this.versoes.length === 0) lista.textContent = "Nenhum sistema atualizável cadastrado.";
+  }
+
+  async _acaoOficial(e) {
+    const botao = e.target.closest("button[data-action]");
+    const linha = botao?.closest("[data-index]");
+    if (!linha) return;
+    const sistema = this.versoes[Number(linha.dataset.index)];
+    const campo = linha.querySelector('[data-role="edicao"]');
+    if (botao.dataset.action === "editar") {
+      campo.value = sistema.data || "";
+      for (const acao of ["editar", "salvar", "cancelar"]) linha.querySelector(`[data-action="${acao}"]`).hidden = acao === "editar";
+      campo.hidden = false;
+      campo.focus();
+      return;
+    }
+    if (botao.dataset.action === "cancelar") { this._renderOficiais(); return; }
+    if (botao.dataset.action !== "salvar") return;
+    const data = mascaraDataBR(campo.value.trim());
+    if (data && !isValidDateBR(data)) {
+      campo.setAttribute("aria-invalid", "true");
+      campo.focus();
+      return;
+    }
+    botao.disabled = true;
     try {
-      await this.api.put(`/sistemas/${encodeURIComponent(this.sistema)}/versao`, { data });
-      this.cache?.invalidar("sistemas:");
+      await this.api.put(`/sistemas/${encodeURIComponent(sistema.nome)}/versao`, { data, versaoEsperada: sistema.data || "" });
+      this.cache?.invalidar();
       await this.refresh();
-      this.dataHint.textContent = "Referência salva para a equipe.";
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      if (err.status === 409) {
+        this.cache?.invalidar();
+        try { await this.refresh(); } catch { /* a mensagem de conflito continua sendo a informação principal */ }
+      }
+      Modal.alert("Não foi possível salvar", errorMessage(err), "error");
     } finally {
-      this.salvarBtn.disabled = !this.sistema;
-      this.sistemaFilter.disabled = false;
+      botao.disabled = false;
     }
   }
 
   async _reloadList() {
     if (!this.sistema) {
-      this.table.setRows([]);
-      this.container.querySelector('[data-role="count"]').textContent = "";
+      this.rows = [];
+      this._filtrarRows();
       return;
     }
-    if (this.dataCorte && !isValidDateBR(this.dataCorte)) return;
-
+    if (this.atendimentoAntesDe && !isValidDateBR(this.atendimentoAntesDe)) return;
     this.table.setRefreshing(true);
     try {
       await this.swr(
-        `sistemas:lista:${this.sistema}|${this.dataCorte}`,
-        () =>
-          this.api.get(
-            "/atualizacoes/por-sistema",
-            { sistema: this.sistema, dataCorte: this.dataCorte },
-            { key: "sistemas:lista" }
-          ),
-        (rows) => {
-          this.rows = rows;
-          this.table.setRows(rows);
-          this.container.querySelector('[data-role="count"]').textContent = plural(rows.length, "cliente");
-        }
+        `sistemas:lista:${this.sistema}|${this.atendimentoAntesDe}`,
+        () => this.api.get("/atualizacoes/por-sistema", { sistema: this.sistema, atendimentoAntesDe: this.atendimentoAntesDe }, { key: "sistemas:lista" }),
+        (rows) => { this.rows = rows; this._filtrarRows(); }
       );
     } catch (err) {
       if (!err?.cancelled) Modal.alert("Erro", errorMessage(err), "error");
@@ -187,24 +252,17 @@ export class SistemasView extends View {
     }
   }
 
+  _filtrarRows() {
+    const rows = filtrarClientesDoSistema(this.rows, this.situacao, this.busca);
+    this.table.setRows(rows);
+    this.container.querySelector('[data-role="count"]').textContent = plural(rows.length, "cliente");
+  }
+
   _salvarFiltros() {
-    prefs.set("sistemas:filtros", { sistema: this.sistema });
+    prefs.set("sistemas:filtros", { sistema: this.sistema, situacao: this.situacao, busca: this.busca, atendimentoAntesDe: this.atendimentoAntesDe });
   }
 }
 
-/**
- * Fundo levemente tingido: vermelho mais forte para "Nunca atualizado" e
- * "Desatualizado", verde discreto para "Em dia".
- *
- * As cores vêm dos tokens do tema (`tokenHex`), não de hex fixos no
- * JavaScript como antes -- com hex fixos, as linhas continuavam pintadas com
- * o cinza do tema escuro depois que o tema claro entrou.
- */
-/**
- * "Em dia (pela data)" quando o atendimento não registrou versão e a
- * situação foi deduzida pela data (ver services/situacaoVersao.js) -- a cor
- * da linha é a mesma, mas o texto não pode fingir versão comprovada.
- */
 function celulaSituacao(row) {
   const span = document.createElement("span");
   span.textContent = rotuloSituacao(row.situacao, row.pelaData);

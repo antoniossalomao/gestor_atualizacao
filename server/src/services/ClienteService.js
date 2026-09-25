@@ -145,7 +145,7 @@ class ClienteService {
     return { afetados, total: registros.length };
   }
 
-  salvarVersaoSistema(nome, data, usuario) {
+  salvarVersaoSistema(nome, data, usuario, versaoEsperada) {
     const { dataValida } = require("../shared/validation");
     if (typeof data !== "string" || (data !== "" && !dataValida(data))) {
       throw new ValidationError("Informe uma data válida no formato dd/mm/aaaa.");
@@ -153,8 +153,12 @@ class ClienteService {
     const sistema = this.db.sistemas.resolver(nome);
     if (!sistema?.ativo) throw new NotFoundError("Sistema não encontrado.");
     if (!sistema.controla_versao) throw new ValidationError(`"${sistema.nome}" é um componente fixo e não recebe versão oficial.`);
+    if (typeof versaoEsperada !== "string") throw new ValidationError("Informe a referência anterior para evitar sobrescrever outra edição.");
+    if (sistema.ultima_versao !== versaoEsperada) throw new ConflictError("A versão oficial mudou desde que você abriu a edição. Recarregue a lista antes de salvar.");
     const antes = { nome: sistema.nome, data: sistema.ultima_versao || "" };
-    this.db.sistemas.salvarVersao(sistema.nome, data);
+    if (!this.db.sistemas.salvarVersaoSeAtual(sistema.nome, data, versaoEsperada, usuario?.nome || "")) {
+      throw new ConflictError("A versão oficial foi alterada por outra pessoa. Recarregue a lista antes de salvar.");
+    }
     this.historico.registrar(usuario, "atualizar", "sistema", `Última versão de ${sistema.nome}: ${data || "não informada"}`, { antes, depois: { nome: sistema.nome, data } });
     return { nome: sistema.nome, data };
   }

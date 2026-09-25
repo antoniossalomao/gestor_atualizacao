@@ -32,11 +32,18 @@ class SistemaRepository extends BaseRepository {
   }
 
   versoes() {
-    return this.conn.prepare("SELECT nome, ultima_versao AS data FROM sistemas WHERE ativo = 1 AND controla_versao = 1 ORDER BY nome").all();
+    return this.conn.prepare("SELECT nome, ultima_versao AS data, ultima_versao_autor AS autor, ultima_versao_em AS alteradaEm FROM sistemas WHERE ativo = 1 AND controla_versao = 1 ORDER BY nome").all();
   }
 
   salvarVersao(nome, data) {
     return this.conn.prepare("UPDATE sistemas SET ultima_versao = ? WHERE lower(nome) = lower(?) AND ativo = 1 AND controla_versao = 1").run(data, nome).changes;
+  }
+
+  salvarVersaoSeAtual(nome, data, esperada, autor) {
+    return this.conn.prepare(`UPDATE sistemas
+      SET ultima_versao = @data, ultima_versao_autor = @autor, ultima_versao_em = @em
+      WHERE lower(nome) = lower(@nome) AND ativo = 1 AND controla_versao = 1 AND ultima_versao = @esperada`)
+      .run({ nome, data, esperada, autor, em: new Date().toISOString() }).changes;
   }
 
   /** Classificação e referência preservada, inclusive dos inativos do histórico. */

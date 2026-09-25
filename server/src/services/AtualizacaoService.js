@@ -183,51 +183,30 @@ class AtualizacaoService {
   /**
    * Clientes que usam um sistema especifico, com a data da ultima
    * atualizacao NAQUELE sistema e uma situacao calculada a partir de uma
-   * data de corte opcional. Usado pela aba de relatorio por sistema (ex.:
-   * "quais clientes de NFCe nao atualizaram desde a mudanca grande de tal
-   * data").
+   * Data opcional filtra a última data de atendimento. A classificação de
+   * versão continua usando exclusivamente a referência oficial cadastrada.
    * @param {string} sistema
-   * @param {string} [dataCorteStr] dd/mm/aaaa -- sem ela, so mostra a ultima data (sem marcar "Desatualizado")
+   * @param {string} [atendimentoAntesDe] dd/mm/aaaa
    */
-  relatorioPorSistema(sistema, dataCorteStr) {
+  relatorioPorSistema(sistema, atendimentoAntesDe) {
     const sistemaLimpo = (sistema || "").trim();
     if (!sistemaLimpo) throw new ValidationError("Informe o sistema.");
     const alvo = this.db.sistemas.resolver(sistemaLimpo);
     if (alvo && (!alvo.ativo || !contaParaVersao(alvo))) return [];
     const oficial = alvo?.ultima_versao || "";
-    // Uma data digitada DIFERENTE da referência oficial é consulta avulsa
-    // ("quem está desatualizado desde tal dia?"), sem ligação com a versão
-    // publicada -- nesse caso compara só datas, pra lista inteira, do jeito
-    // simples de antes da versão oficial existir. Sem data nenhuma, cai na
-    // referência oficial salva (comportamento padrão da tela).
-    const consultaAvulsa = Boolean(dataCorteStr) && dataCorteStr !== oficial;
-    const dataCorteEfetiva = dataCorteStr || oficial;
-    let dataCorte = null;
-    if (dataCorteEfetiva) {
-      if (!dataValida(dataCorteEfetiva)) {
-        throw new ValidationError("Campo 'Data de corte' precisa estar no formato dd/mm/aaaa.");
-      }
-      dataCorte = parseData(dataCorteEfetiva);
+    if (atendimentoAntesDe && !dataValida(atendimentoAntesDe)) {
+      throw new ValidationError("Campo 'Último atendimento antes de' precisa estar no formato dd/mm/aaaa.");
     }
+    const limiteAtendimento = atendimentoAntesDe ? parseData(atendimentoAntesDe) : null;
     if (!alvo) return [];
 
     const ultimas = new Map(this.db.atualizacoes.ultimaPorClienteNoSistema(alvo.id).map((r) => [r.cliente_id, r]));
     const resultado = [];
     for (const { id, nome, cidade } of this.db.clientes.clientesDoSistema(alvo.id)) {
       const registro = ultimas.get(id);
+      if (limiteAtendimento && (!registro?.data || !parseData(registro.data) || parseData(registro.data) >= limiteAtendimento)) continue;
       const instalada = registro?.versao || "";
-      let situacao;
-      let pelaData = false;
-      if (registro && consultaAvulsa) {
-        // Consulta avulsa por data: não dá pra saber se a versão bate com a
-        // oficial (não é isso que foi pedido), só se o atendimento é de
-        // antes ou depois do corte digitado.
-        const d = parseData(registro.data);
-        situacao = !d ? "Nunca atualizado" : d < dataCorte ? "Desatualizado" : "Em dia";
-      } else {
-        // Mesma regra do Resumo e da ficha (ver situacaoVersao.js).
-        ({ situacao, pelaData } = situacaoDoSistema(registro, oficial));
-      }
+      const { situacao, pelaData } = situacaoDoSistema(registro, oficial);
       resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", instalada: instalada || "Não informada", oficial: oficial || "Não informada", situacao, pelaData });
     }
     resultado.sort((a, b) => a.cliente.localeCompare(b.cliente, "pt-BR"));

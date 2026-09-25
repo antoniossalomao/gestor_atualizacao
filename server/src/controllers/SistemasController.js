@@ -21,7 +21,7 @@ class SistemasController {
 
   salvarVersao = (req, res, next) => {
     try {
-      res.json(this.clienteService.salvarVersaoSistema(req.params.nome, req.body?.data, req.session.user));
+      res.json(this.clienteService.salvarVersaoSistema(req.params.nome, req.body?.data, req.session.user, req.body?.versaoEsperada));
     } catch (err) { next(err); }
   };
 

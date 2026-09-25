@@ -32,7 +32,7 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 | I01 | Logo e nome sem identidade | Cabeçalho usa ATUALIZADOR / Gestor de clientes | ✅ Concluído em 24/09/2026 (seção 4) | P1 |
 | I02 | Situação dos clientes pouco útil | Em dia é calculado pelo complemento de clientes sem atualização recente | ✅ Concluído em 24/09/2026 (seções 3.3 e 5.1; ADR-0008) | P0 |
 | I03 | Tendência desalinhada | SVG com margens fixas e rótulo final junto ao ponto | Corrigir calendário, eixos, margens e rótulos | P1 |
-| I04 | Sistemas fixos aparecem nos indicadores | Catálogo contém ambos, sem política explícita central de exclusão | Classificar sistemas sujeitos a versão. ◐ Parte mínima feita (migração 2); falta tela e API | P0 |
+| I04 | Sistemas fixos aparecem nos indicadores | Catálogo contém ambos, sem política explícita central de exclusão | ✅ Concluído em E2: classificação administrável, exclusões e API (seção 3.2) | P0 |
 | I05 | Fundo escuro no alerta | Estilos próprios do ícone e do estado is-alert | Ícone simples e apresentação coerente | P1 |
 | I06 | Excluir e outros botões sem borda | Uso de btn--ghost em ações | Contorno visível e estados padronizados | P1 |
 | I07 | Datas poluem Atualizações | De/Até e atalhos ficam permanentemente na toolbar | Filtros recolhíveis e chips do recorte ativo | P1 |
@@ -44,7 +44,7 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 | I13 | Acessos grande em Clientes | Topo tem gestão; linha tem cópia, que é outra função | Gerenciar pela linha; manter cópia distinta | P1 |
 | I14 | Grupo/Rede grande | Campo e coluna competem com informação principal | Reduzir largura nos dois contextos | P1 |
 | I15 | Melhorar ficha e retirar CNPJ | Consulta já tem subabas e renderiza CNPJ | Hierarquia compacta e retirada da ficha | P1 |
-| I16 | Separar filtro e versão oficial | Mesmo campo consulta ao digitar e grava ao salvar | Gerenciador de oficiais separado dos filtros | P0 |
+| I16 | Separar filtro e versão oficial | Mesmo campo consulta ao digitar e grava ao salvar | ✅ Concluído em E3: consulta e gerenciador separados (seção 10) | P0 |
 | I17 | Último acesso em minúscula | Template usa tempoRelativo diretamente | Capitalização local da célula | P2 |
 | I18 | Melhorar Administração | Recursos importantes já existem em várias seções | Reorganizar por finalidade e acrescentar Dados | P1 |
 | I19 | Configurações excessivamente visuais | Conta/segurança existem, mas apresentação ocupa várias abas | Priorizar conta e rotina operacional | P1 |
@@ -369,29 +369,31 @@ Abaixo, referência de leitura: `Versão oficial de B_NFe: 22/09/2026`. Edição
 
 ### 10.1 Consulta
 
-- [ ] Situação: Todos, Em dia, Desatualizados, Sem informação; demais estados quando aplicáveis.
-- [ ] Busca por cliente/cidade sem alterar versão.
-- [ ] Oferecer Último atendimento antes de em Filtros, com data opcional.
-- [ ] A data filtra o atendimento; não substitui a oficial usada na classificação de versão.
-- [ ] Retirar ambiguidade atual: digitar consulta, mas o mesmo campo pode salvar referência.
-- [ ] Colunas: Cliente, Último atendimento, Versão recebida, Oficial e Situação; cidade secundária/opcional.
-- [ ] Abrir ficha na linha para investigar pendência.
-- [ ] Excluir fixos da seleção principal de controle.
-- [ ] Preservar filtros ao voltar, sem manter oficial antiga em cache.
+- [x] Situação: Todos, Em dia, Desatualizados, Sem informação.
+- [x] Busca por cliente/cidade sem alterar versão.
+- [x] Oferecer Último atendimento antes de em Filtros, com data opcional. Sem atendimento fica fora desse recorte de data; aparece em Sem informação quando não há data aplicada.
+- [x] A data filtra o atendimento; não substitui a oficial usada na classificação de versão.
+- [x] Retirar ambiguidade atual: a consulta não tem ação de salvar referência.
+- [x] Colunas: Cliente, Último atendimento, Versão recebida, Oficial e Situação; cidade secundária.
+- [x] Abrir ficha na linha para investigar pendência.
+- [x] Excluir fixos da seleção principal de controle.
+- [x] Preservar filtros ao voltar, buscando a referência oficial atual a cada entrada.
 
 ### 10.2 Gerenciador de oficiais
 
-- [ ] Uma linha por sistema atualizável, com versão salva.
-- [ ] Mostrar autor/data da alteração quando disponíveis; prever persistência se ausentes.
-- [ ] Edição explícita por linha com Salvar/Cancelar e validação de data.
-- [ ] Explicar: novos atendimentos usam a oficial; os existentes preservam versões recebidas.
-- [ ] Referência ausente não pode implicar Em dia.
-- [ ] Preservar papéis atuais de gravação; consulta apenas visualiza.
-- [ ] Invalidar Resumo, Sistemas, Consulta e relatórios após mudança.
-- [ ] Detectar edição concorrente antes de sobrescrever uma oficial alterada por outra pessoa.
-- [ ] Fechar painel ou trocar seleção não pode gravar alterações.
+- [x] Uma linha por sistema atualizável, com versão salva.
+- [x] Mostrar autor/data da alteração quando disponíveis; duas colunas novas passam a registrar alterações futuras, e referências antigas mostram autor/data não registrados.
+- [x] Edição explícita por linha com Salvar/Cancelar e validação de data.
+- [x] Explicar: novos atendimentos usam a oficial; os existentes preservam versões recebidas.
+- [x] Referência ausente não implica Em dia (`Sem referência` no servidor).
+- [x] Preservar papéis atuais de gravação; consulta apenas visualiza.
+- [x] Invalidar os dados locais de Resumo, Sistemas, Consulta e relatórios após mudança.
+- [x] Detectar edição concorrente antes de sobrescrever uma oficial alterada por outra pessoa (comparação atômica com a referência anterior; HTTP 409).
+- [x] Fechar painel ou trocar seleção não grava alterações.
 
 Aceite: filtro nunca grava; salvar não reescreve atendimento; sistemas aceitam oficiais diferentes; limpar oficial não torna todos os clientes atualizados.
+
+**Validado em E3 (25/09/2026):** testes de API cobrem autoria, referência anterior obrigatória e conflito HTTP 409; os testes de serviço cobrem filtro de atendimento sem substituir a oficial e preservação da versão recebida. No navegador, em 1280 e 390 px, o filtro não enviou PUT, a edição atualizou a referência mostrada, não houve erro de JavaScript nem rolagem horizontal.
 
 ## 11. Usuários e Administração — I17, I18
 
@@ -515,7 +517,7 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E0 | ✅ Contagem real por grupo da 3.3 (24/09/2026). Capturas "antes" ainda por fazer | — | — | Pequeno |
 | E1 | ✅ Correções rápidas e independentes (25/09/2026); navegador conferido em 390/1280 px, revisão visual completa segue em E10 | I05, I06 (só Excluir e ações sem borda), I11, I12, I17 | — | Pequeno |
 | E2 | ✅ Regra de versão e classificação dos componentes fixos concluídas (25/09/2026); revisão geral da ficha permanece em E7 | I04, I02 (regra) | E0 | Grande |
-| E3 | Oficiais separadas dos filtros em Sistemas | I16 | E2 | Médio |
+| E3 | ✅ Oficiais separadas dos filtros em Sistemas (25/09/2026) | I16 | E2 | Médio |
 | E4 | ◐ Card de situação e Sem atendimento feitos; falta a tendência | I02, I03 | E2 | Médio |
 | E5 | Padrão de botões e toolbars; Atualizações com filtros recolhíveis e planilhas reposicionadas | I06, I07, I08 | E1 | Médio |
 | E6 | Agendamentos (toolbar, filtros rápidos) e Clientes (acessos na linha, Grupo/Rede) | I10, I13, I14 | E5 | Médio |
@@ -532,7 +534,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 - [x] E0 — contagem por grupo com dados reais (24/09/2026).
 - [x] E1 — alerta sem fundo escuro, borda em Excluir, remover Converter, recuperar Arquivar, Último acesso capitalizado.
 - [x] E2 — `controla_versao`, exclusões dos fixos, classificação só por admin, comparação por data, fonte só atendimento e regra única no servidor; ADR-0008. Validados API, histórico e gráfico mensal.
-- [ ] E3 — gerenciador de oficiais separado dos filtros.
+- [x] E3 — consulta com filtros próprios e gerenciador de oficiais separado, com autoria e proteção contra edição concorrente.
 - [ ] E4 — Resumo feito (card e Sem atendimento, com clique e indicador na mesma população); falta a tendência (I03).
 - [ ] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados.
 - [ ] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto.
@@ -628,7 +630,7 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 | Atendimento sem versão registrada | Julgado pela data do atendimento contra a da oficial, marcado "(pela data)" (ADR-0008) |
 | Quem decide a situação do cliente | O B_Vendas, quando o cliente tem (fixo no código); sem ele, todos os sistemas |
 | Nome do indicador de tempo | "Sem atualização há mais de N dias" (não "atendimento") |
-| Sistemas fixos agora | Parte mínima do I04 junto com o I02 (migração 2); tela e API depois |
+| Sistemas fixos agora | Classificação, exclusões, tela administrativa e API concluídas em E2 |
 
 ### Em aberto
 
