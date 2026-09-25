@@ -14,10 +14,11 @@ import { emptyState } from "../components/EmptyState.js";
  * cima da tela, não uma aba fixa.
  */
 export class AcessosModal {
-  /** @param {import('../api/ApiClient').ApiClient} api @param {{id:number, nome:string}} cliente */
-  constructor(api, cliente) {
+  /** @param {import('../api/ApiClient').ApiClient} api @param {{id:number, nome:string}} cliente @param {{role?:string}} [options] */
+  constructor(api, cliente, options = {}) {
     this.api = api;
     this.cliente = cliente;
+    this.role = options.role || "operador";
     this.editingId = null;
   }
 
@@ -30,6 +31,7 @@ export class AcessosModal {
       <h3 class="modal-box__title" id="acessos-titulo">Acessos — ${escapeHtml(this.cliente.nome)}</h3>
       <p class="modal-box__message">AnyDesk e Suporte Bredas de cada máquina deste cliente.</p>
       <div class="users-list" data-role="list"></div>
+      ${this.role === "consulta" ? "" : `
       <button type="button" class="btn btn--small" data-action="toggle-form" aria-expanded="false" aria-controls="nova-maquina">
         ${icon("plus")} Nova Máquina
       </button>
@@ -45,6 +47,7 @@ export class AcessosModal {
           <button type="button" class="btn btn--ghost" data-action="cancelar-edicao" hidden>Cancelar edição</button>
         </div>
       </form>
+      `}
       <div class="modal-box__actions">
         <button type="button" class="btn" data-action="close">Fechar</button>
       </div>
@@ -56,22 +59,24 @@ export class AcessosModal {
     this.list = box.querySelector('[data-role="list"]');
     this.form = box.querySelector('[data-role="form"]');
     this.toggleBtn = box.querySelector('[data-action="toggle-form"]');
-    this.salvarBtn = this.form.querySelector('[data-action="salvar"]');
-    this.cancelarEdicaoBtn = this.form.querySelector('[data-action="cancelar-edicao"]');
+    this.salvarBtn = this.form?.querySelector('[data-action="salvar"]');
+    this.cancelarEdicaoBtn = this.form?.querySelector('[data-action="cancelar-edicao"]');
     this.fields = {
-      maquina: this.form.querySelector('[data-field="maquina"]'),
-      anydesk: this.form.querySelector('[data-field="anydesk"]'),
-      suporteBredas: this.form.querySelector('[data-field="suporteBredas"]'),
-      observacoes: this.form.querySelector('[data-field="observacoes"]'),
+      maquina: this.form?.querySelector('[data-field="maquina"]'),
+      anydesk: this.form?.querySelector('[data-field="anydesk"]'),
+      suporteBredas: this.form?.querySelector('[data-field="suporteBredas"]'),
+      observacoes: this.form?.querySelector('[data-field="observacoes"]'),
     };
 
-    this.toggleBtn.addEventListener("click", () => {
-      const visible = !this.form.hidden;
-      if (visible) this._resetForm();
-      else this._toggleForm(true);
-    });
-    this.cancelarEdicaoBtn.addEventListener("click", () => this._resetForm());
-    this.form.addEventListener("submit", (e) => {
+    if (this.toggleBtn && this.form) {
+      this.toggleBtn.addEventListener("click", () => {
+        const visible = !this.form.hidden;
+        if (visible) this._resetForm();
+        else this._toggleForm(true);
+      });
+    }
+    this.cancelarEdicaoBtn?.addEventListener("click", () => this._resetForm());
+    this.form?.addEventListener("submit", (e) => {
       e.preventDefault();
       this._submit();
     });
@@ -117,20 +122,22 @@ export class AcessosModal {
       }
       row.appendChild(info);
 
-      const acoes = document.createElement("div");
-      acoes.className = "form-actions";
-      const editar = document.createElement("button");
-      editar.type = "button";
-      editar.className = "btn btn--small btn--ghost";
-      editar.textContent = "Editar";
-      editar.addEventListener("click", () => this._editar(a));
-      const remover = document.createElement("button");
-      remover.type = "button";
-      remover.className = "btn btn--small btn--danger";
-      remover.textContent = "Remover";
-      remover.addEventListener("click", () => this._remover(a, remover));
-      acoes.append(editar, remover);
-      row.appendChild(acoes);
+      if (this.role !== "consulta") {
+        const acoes = document.createElement("div");
+        acoes.className = "form-actions";
+        const editar = document.createElement("button");
+        editar.type = "button";
+        editar.className = "btn btn--small btn--ghost";
+        editar.textContent = "Editar";
+        editar.addEventListener("click", () => this._editar(a));
+        const remover = document.createElement("button");
+        remover.type = "button";
+        remover.className = "btn btn--small btn--danger";
+        remover.textContent = "Remover";
+        remover.addEventListener("click", () => this._remover(a, remover));
+        acoes.append(editar, remover);
+        row.appendChild(acoes);
+      }
 
       list.appendChild(row);
     }

@@ -330,7 +330,7 @@ Melhorias posteriores: reagendamento com motivo, lembrete de retorno e checklist
 
 - [x] Retirar Acessos da toolbar global (25/09/2026).
 - [x] Acrescentar Gerenciar acessos diretamente na linha de cada cliente (25/09/2026).
-- [x] Manter Copiar acessos separado: a ação atual de cópia não substitui a gestão (25/09/2026).
+- [x] Unificar acessos na linha em um único botão "Acessos remotos", com cópia individual e gestão integradas no modal (25/09/2026).
 - [x] Usar menu de linha quando ficha, acessos, edição e exclusão não couberem (25/09/2026).
 - [x] Passar o ID da linha para a ação, sem depender de seleção prévia (25/09/2026).
 - [x] Evitar propagação do clique que abra simultaneamente o formulário (25/09/2026).
@@ -352,12 +352,12 @@ Cadastro, Sistemas e Acessos já existem como subabas. O foco deve ser hierarqui
 - [x] Cabeçalho com nome, código e cidade; grupo apenas quando preenchido (25/09/2026).
 - [x] Remover CNPJ do subtítulo e dos campos da ficha (25/09/2026).
 - [x] Não remover identificação por CNPJ dos agentes em Distribuição: é outro uso (25/09/2026).
-- [x] Resumo compacto: última atualização relativa em destaque (sem redundâncias de contagem) e dados cadastrais (25/09/2026).
+- [x] Resumo compacto: último atendimento, sistemas desatualizados e informação pendente (25/09/2026).
 - [x] Compartilhar comparação de versões com Sistemas e relatório do cliente (25/09/2026).
 - [x] Separar componentes fixos dos sistemas atualizáveis (25/09/2026).
 - [x] Não confundir versão publicada do agente com oficial do histórico operacional (25/09/2026).
 - [x] Quando houver dados do agente, mostrar em bloco próprio (versão reportada, último contato, falha), sem alterar a situação do sistema, que vem só do atendimento (25/09/2026).
-- [x] Histórico cronológico com observações expansíveis e botão Copiar Relatório no padrão aprovado (25/09/2026).
+- [x] Histórico cronológico com observações expansíveis e relatório do atendimento (25/09/2026).
 - [x] Acrescentar próximos agendamentos se puder reutilizar consulta existente; caso contrário, entregar depois (25/09/2026).
 - [x] Acessos por máquina em lista compacta com cópia individual (25/09/2026).
 - [x] Estados vazios curtos, sem vários campos preenchidos com travessões (25/09/2026).

@@ -29,9 +29,11 @@ Para o agente C#, o equivalente é
 
 - **Revisão do painel, E6:** agendamentos integrados à grade com toolbar unificada,
   criação rápida de tarefas e filtros de status discretos (Pendentes, Concluídos e
-  Arquivados). Na aba Clientes, a gestão de acessos foi movida diretamente para a
-  linha de cada cliente ("Gerenciar acessos"), a coluna Grupo/Rede foi compactada com
-  truncamento controlado e o campo de cadastro foi reorganizado junto a Código e Cidade.
+  Arquivados). Suporte a filtros rápidos de data e responsabilidade no backend e frontend
+  (`hoje`, `atrasadas`, `minhas` e `arquivadas`), e busca textual incluindo data, sistema
+  e observações. Na aba Clientes, a gestão de acessos foi unificada diretamente na linha
+  de cada cliente em um único botão "Acessos remotos", a coluna Grupo/Rede foi compactada
+  com truncamento controlado e o campo de cadastro foi reorganizado junto a Código e Cidade.
 
 - **Revisão do painel, E5:** padronização do sistema de botões e toolbars
   (variantes `btn--primary`, `btn--secondary`, `btn--danger`, altura mínima 38px/32px

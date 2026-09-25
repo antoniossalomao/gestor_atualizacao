@@ -211,18 +211,36 @@ export class ConsultaView extends View {
     const resumoPanel = this.detailBox.querySelector('[data-role="resumo-panel"]');
     const ultimaData = historico?.[0]?.data || null;
     const tempoUltima = ultimaData ? haQuantoTempo(ultimaData) : "";
-    const ultimoTexto = ultimaData ? `${ultimaData}${tempoUltima ? ` (${tempoUltima})` : ""}` : "Nenhuma atualização";
+    const ultimoTexto = ultimaData ? `${ultimaData}${tempoUltima ? ` (${tempoUltima})` : ""}` : "Nenhum atendimento";
 
-    const resumoCompacto = document.createElement("div");
-    resumoCompacto.className = "resumo-compacto";
-    resumoCompacto.style.cssText = "margin-bottom:var(--sp-4); max-width:320px;";
-    resumoCompacto.innerHTML = html`
+    const atualizaveis = (situacaoSistemas || []).filter((s) => !s.fixo);
+    const emDia = atualizaveis.filter((s) => s.situacao === "Em dia").length;
+    const atrasados = atualizaveis.filter((s) => s.situacao === "Desatualizado").length;
+    const pendentes = atualizaveis.filter((s) => s.situacao !== "Em dia" && s.situacao !== "Desatualizado").length;
+
+    let statusTexto = "Sem sistemas";
+    if (atualizaveis.length > 0) {
+      const partes = [];
+      if (emDia > 0) partes.push(`${emDia} em dia`);
+      if (atrasados > 0) partes.push(`${atrasados} ${plural(atrasados, "desatualizado")}`);
+      if (pendentes > 0) partes.push(`${pendentes} ${plural(pendentes, "pendente")}`);
+      statusTexto = partes.join(" · ") || "Todos em dia";
+    }
+
+    const statsGrid = document.createElement("div");
+    statsGrid.className = "resumo-compacto-grid";
+    statsGrid.style.cssText = "display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:var(--sp-3); margin-bottom:var(--sp-4);";
+    statsGrid.innerHTML = html`
       <div class="card stat-card" style="padding:var(--sp-3); margin:0;">
-        <div class="stat-card__label" style="font-size:var(--txt-xs); color:var(--cor-texto-fraco); text-transform:uppercase; font-weight:var(--peso-forte);">Última atualização</div>
+        <div class="stat-card__label" style="font-size:var(--txt-xs); color:var(--cor-texto-fraco); text-transform:uppercase; font-weight:var(--peso-forte);">Último atendimento</div>
         <div class="stat-card__value" style="font-size:var(--txt-base); font-weight:var(--peso-medio); margin-top:4px;">${ultimoTexto}</div>
       </div>
+      <div class="card stat-card" style="padding:var(--sp-3); margin:0;">
+        <div class="stat-card__label" style="font-size:var(--txt-xs); color:var(--cor-texto-fraco); text-transform:uppercase; font-weight:var(--peso-forte);">Situação dos sistemas</div>
+        <div class="stat-card__value" style="font-size:var(--txt-base); font-weight:var(--peso-medio); margin-top:4px;">${statusTexto}</div>
+      </div>
     `;
-    resumoPanel.appendChild(resumoCompacto);
+    resumoPanel.appendChild(statsGrid);
 
     const cadastro = document.createElement("div");
     cadastro.className = "info-grid";
@@ -286,8 +304,8 @@ export class ConsultaView extends View {
       topoLinha.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--sp-2);";
       topoLinha.innerHTML = html`
         <strong style="font-size:var(--txt-base);">${registro.data || "Sem data"} — ${registro.sistema || "Sistema não informado"}</strong>
-        <button type="button" class="btn btn--small btn--ghost" data-action="copiar-relatorio" data-index="${indice}" title="Copiar relatório formatado para a área de transferência">
-          ${iconHtml("copiar")} Copiar Relatório
+        <button type="button" class="btn btn--small btn--ghost" data-action="copiar-chamado" data-index="${indice}" title="Copiar chamado formatado para área de transferência">
+          ${iconHtml("copiar")} Copiar Chamado
         </button>
       `;
       grid.appendChild(topoLinha);
@@ -303,15 +321,15 @@ export class ConsultaView extends View {
     });
 
     caixa.addEventListener("click", async (e) => {
-      const btn = e.target.closest('[data-action="copiar-relatorio"]');
+      const btn = e.target.closest('[data-action="copiar-chamado"]');
       if (!btn) return;
       const idx = Number(btn.dataset.index);
       const reg = historico[idx];
       if (!reg) return;
       const anterior = historico[idx + 1] || null;
-      const textoRelatorio = relatorioDeAtualizacao(reg, { cliente, anterior });
-      if (await copyToClipboard(textoRelatorio)) {
-        toast.success("Relatório copiado para a área de transferência.");
+      const textoChamado = relatorioDeAtualizacao(reg, { cliente, anterior });
+      if (await copyToClipboard(textoChamado)) {
+        toast.success("Chamado copiado para a área de transferência.");
       }
     });
   }

@@ -286,15 +286,7 @@ export class ClientesView extends View {
       this.toggleForm(true);
     }
     if (botao.dataset.rowAction === "ficha") this.navigate("consulta", { cliente: row.nome });
-    if (botao.dataset.rowAction === "acesso") {
-      try {
-        const acessos = await this.api.get(`/clientes/${row.id}/acessos`);
-        const texto = acessos.flatMap((a) => [a.anydesk, a.suporte_bredas || a.suporteBredas]).filter(Boolean).join("\n");
-        if (!texto) return Modal.alert("Acessos", "Este cliente ainda não possui acesso remoto cadastrado.", "info");
-        if (await copyToClipboard(texto)) toast.success("Acessos remotos copiados.");
-      } catch { toast.error("Não foi possível copiar os acessos."); }
-    }
-    if (botao.dataset.rowAction === "gerenciar-acesso") {
+    if (botao.dataset.rowAction === "acessos" || botao.dataset.rowAction === "gerenciar-acesso" || botao.dataset.rowAction === "acesso") {
       this.abrirAcessos(row.id, row.nome);
     }
   }
@@ -488,7 +480,7 @@ export class ClientesView extends View {
       Modal.alert("Seleção", "Selecione um cliente na tabela primeiro.", "warning");
       return;
     }
-    new AcessosModal(this.api, { id, nome }).open();
+    new AcessosModal(this.api, { id, nome }, { role: this.user?.role }).open();
   }
 
   _readForm() {
@@ -729,8 +721,7 @@ function acoesCliente(row, role) {
   const wrap = document.createElement("div");
   wrap.className = "row-actions";
   const botoes = [
-    ["acesso", "chave", "Copiar acessos"],
-    ...(role === "consulta" ? [] : [["gerenciar-acesso", "acessos", "Gerenciar acessos"]]),
+    ["acessos", "acessos", "Acessos remotos"],
     ["ficha", "olho", "Abrir Ficha 360°"],
     ...(role === "consulta" ? [] : [["editar", "editar", "Editar"]]),
   ];
