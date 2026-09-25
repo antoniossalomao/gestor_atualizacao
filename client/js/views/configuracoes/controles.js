@@ -31,6 +31,7 @@ export function montarControle(item, acoes) {
   if (item.tipo === "alternar") return alternar(item);
   if (item.tipo === "acao") return acao(item);
   if (item.tipo === "atalhos") return atalhos(item);
+  if (item.tipo === "info") return info(item);
   return segmentado(item);
 }
 
@@ -303,5 +304,14 @@ function perfis({ aoAplicarPerfil }) {
   };
   sincronizar();
   el.appendChild(grade);
+  return { el, sincronizar };
+}
+
+/**
+ * Item meramente informativo (título + texto explicativo de apoio).
+ */
+function info(item) {
+  const el = linha(item);
+  const sincronizar = () => {};
   return { el, sincronizar };
 }

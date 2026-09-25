@@ -1,4 +1,5 @@
 import { View } from "../app/View.js";
+import { prefs } from "../app/prefs.js";
 import { theme } from "../app/theme.js";
 import { aparencia, reaplicarAparencia, PERFIS } from "../app/appearance.js";
 import { Modal } from "../components/Modal.js";
@@ -12,6 +13,7 @@ import { resultadosBusca } from "../templates/configuracoes.js";
 import { definirAbas, chavesDaAba } from "./configuracoes/ajustes.js";
 import { SecaoAjustes } from "./configuracoes/SecaoAjustes.js";
 import { ContaConfig } from "./configuracoes/ContaConfig.js";
+import { RegrasEquipeConfig } from "./configuracoes/RegrasEquipeConfig.js";
 
 /**
  * Tela Configurações -- as preferências de quem está usando.
@@ -71,6 +73,28 @@ export class ConfiguracoesView extends View {
       definirSidebar: (recolhida) => ctx.definirSidebar?.(recolhida),
     });
 
+    // Migra preferências salvas de chaves antigas para as novas seções
+    const ALIASES = {
+      conta: "conta",
+      navegacao: "trabalho",
+      tabelas: "trabalho",
+      rotina: "trabalho",
+      trabalho: "trabalho",
+      aparencia: "interface",
+      acessibilidade: "interface",
+      interface: "interface",
+      notificacoes: "notificacoes",
+      regras: "regras-equipe",
+      "regras-equipe": "regras-equipe",
+      atalhos: "ajuda",
+      sobre: "ajuda",
+      ajuda: "ajuda",
+    };
+    const salva = prefs.get("configuracoes:aba", "conta");
+    if (ALIASES[salva] && ALIASES[salva] !== salva) {
+      prefs.set("configuracoes:aba", ALIASES[salva]);
+    }
+
     this.tela = new TelaComAbas(container, {
       abas: this.abas,
       rotulo: "Seções das configurações",
@@ -107,7 +131,31 @@ export class ConfiguracoesView extends View {
 
   /** `navigate("configuracoes", { aba: "tabelas", ajuste: "densidade" })` */
   aplicarParams({ aba, ajuste } = {}) {
-    this.tela.escolher(aba);
+    let abaDestino = aba;
+    if (ajuste) {
+      const abaComAjuste = this.abas.find((a) => a.cartoes?.some((c) => c.itens?.some((i) => i.id === ajuste)))?.key;
+      if (abaComAjuste) abaDestino = abaComAjuste;
+    }
+    if (abaDestino) {
+      const ALIASES = {
+        conta: "conta",
+        navegacao: "trabalho",
+        tabelas: "trabalho",
+        rotina: "trabalho",
+        trabalho: "trabalho",
+        aparencia: "interface",
+        acessibilidade: "interface",
+        interface: "interface",
+        notificacoes: "notificacoes",
+        regras: "regras-equipe",
+        "regras-equipe": "regras-equipe",
+        atalhos: "ajuda",
+        sobre: "ajuda",
+        ajuda: "ajuda",
+      };
+      abaDestino = ALIASES[abaDestino] || abaDestino;
+      this.tela.escolher(abaDestino);
+    }
     this._ajustePendente = ajuste || null;
   }
 
@@ -126,7 +174,7 @@ export class ConfiguracoesView extends View {
 
   _criarAba(key, painel) {
     const aba = this.abas.find((a) => a.key === key);
-    if (aba.manual) {
+    if (key === "conta") {
       return new ContaConfig(painel, this.api, {
         usuario: this.user,
         navigate: this.navigate,
@@ -138,6 +186,12 @@ export class ConfiguracoesView extends View {
           const n = aparencia.diferencas().size;
           return n === 0 ? "Tudo como vem de fábrica." : `${n} ${n === 1 ? "ajuste está" : "ajustes estão"} fora do padrão.`;
         },
+      });
+    }
+    if (key === "regras-equipe") {
+      return new RegrasEquipeConfig(painel, this.api, {
+        usuario: this.user,
+        navigate: this.navigate,
       });
     }
     return new SecaoAjustes(painel, aba, {

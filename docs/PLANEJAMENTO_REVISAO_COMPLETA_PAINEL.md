@@ -422,17 +422,17 @@ Aceite: filtro nunca grava; salvar não reescreve atendimento; sistemas aceitam 
 | Auditoria | Histórico de alterações e filtros | Existe |
 | Diagnóstico | Saúde e falhas relevantes do servidor | Existe |
 
-- [ ] Reduzir descrições longas e cabeçalhos repetidos.
-- [ ] Mostrar estado resumido sem buscar diagnóstico pesado ao abrir Usuários.
-- [ ] Identificar formulários que afetam toda a equipe.
-- [ ] Salvar por formulário/seção com indicação de alterações pendentes.
-- [ ] Proteger contra perda de edição ao sair da seção.
-- [ ] Manter segredos mascarados e fora do Histórico.
-- [ ] Não transformar infraestrutura e segredos de implantação em preferências pessoais.
-- [ ] Reaproveitar auditoria existente, sem outra lista de histórico concorrente.
-- [ ] Backup saudável precisa considerar verificação, não só existência de arquivo.
-- [ ] Ações de restauração/exclusão permanecem em seu contexto, com consequência clara.
-- [ ] Autorizar na API, além de esconder controles na tela.
+- [x] Reduzir descrições longas e cabeçalhos repetidos.
+- [x] Mostrar estado resumido sem buscar diagnóstico pesado ao abrir Usuários.
+- [x] Identificar formulários que afetam toda a equipe.
+- [x] Salvar por formulário/seção com indicação de alterações pendentes.
+- [x] Proteger contra perda de edição ao sair da seção.
+- [x] Manter segredos mascarados e fora do Histórico.
+- [x] Não transformar infraestrutura e segredos de implantação em preferências pessoais.
+- [x] Reaproveitar auditoria existente, sem outra lista de histórico concorrente.
+- [x] Backup saudável precisa considerar verificação, não só existência de arquivo.
+- [x] Ações de restauração/exclusão permanecem em seu contexto, com consequência clara.
+- [x] Autorizar na API, além de esconder controles na tela.
 
 ## 12. Configurações para a rotina — I19
 
@@ -449,14 +449,14 @@ Nome, senha, sessões, pesquisa e restauração por seção já existem. O probl
 | Regras da equipe | Link para Administração; não duplicar formulários | Global/admin |
 | Sobre e ajuda | Versão do painel, atalhos e significado das situações | Informativo |
 
-- [ ] Abrir em Minha conta ou Trabalho diário, não num catálogo de temas.
-- [ ] Recolher personalizações avançadas em subseção.
-- [ ] Manter tema, texto, densidade e acessibilidade fáceis de encontrar.
-- [ ] Reavaliar destaque de fonte, fundo decorativo, perfis visuais e largura ajustável.
-- [ ] Reaproveitar busca e restauração por seção.
-- [ ] Identificar ajuste pessoal versus global quando houver risco de confusão.
-- [ ] Preservar valores já salvos ao mover opções de lugar.
-- [ ] Testar restauração e conta sem acesso administrativo.
+- [x] Abrir em Minha conta ou Trabalho diário, não num catálogo de temas.
+- [x] Recolher personalizações avançadas em subseção.
+- [x] Manter tema, texto, densidade e acessibilidade fáceis de encontrar.
+- [x] Reavaliar destaque de fonte, fundo decorativo, perfis visuais e largura ajustável.
+- [x] Reaproveitar busca e restauração por seção.
+- [x] Identificar ajuste pessoal versus global quando houver risco de confusão.
+- [x] Preservar valores já salvos ao mover opções de lugar.
+- [x] Testar restauração e conta sem acesso administrativo.
 
 Ficam para evolução (seção 13.5): novos tipos de notificação, som, horário silencioso, preferências de relatório/exportação, responsável padrão, persistência de preferências por usuário no servidor e sincronização entre navegadores.
 
@@ -528,7 +528,7 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E5 | ✅ Padrão de botões e toolbars; filtros recolhíveis; exportar/importar reposicionados (25/09/2026) | I06, I07, I08 | E1 | Médio |
 | E6 | ✅ Agendamentos (toolbar, filtros rápidos) e Clientes (acessos na linha, Grupo/Rede) (25/09/2026) | I10, I13, I14 | E5 | Médio |
 | E7 | ✅ Ficha do cliente e relatórios (25/09/2026) | I09, I15 | E2, E5 | Médio |
-| E8 | Administração e Configurações (só reorganizar) | I18, I19 | — | Médio |
+| E8 | ✅ Administração e Configurações reorganizadas por finalidade (25/09/2026) | I18, I19 | — | Médio |
 | E9 | ✅ Identidade escolhida e aplicada (antecipada, 24/09/2026) | I01 | — | Médio |
 | E10 | Validação visual completa, README/ajuda, CHANGELOG | — | Todas | Pequeno |
 | E11 | Central de pendências, em entrega independente | I20 | E2, E4, E6 e uso real | Grande; opcional |
@@ -545,7 +545,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 - [x] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados (25/09/2026).
 - [x] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto (25/09/2026).
 - [x] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado (25/09/2026).
-- [ ] E8 — Administração e Configurações reagrupadas, sem preferências novas.
+- [x] E8 — Administração e Configurações reagrupadas por finalidade, sem preferências novas (25/09/2026).
 - [x] E9 — identidade escolhida e aplicada (antecipada; 24/09/2026).
 - [ ] E10 — validação completa e documentação.
 - [ ] E11 — Central de pendências.
@@ -574,7 +574,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 - [ ] Arquivar concluída funciona e ela pode ser encontrada depois.
 - [ ] Converter não aparece em nenhum caminho de Agendamentos.
 - [ ] Acessos abre no cliente correto; copiar é ação separada.
-- [ ] Opções de Configurações movidas de lugar mantêm os valores já salvos.
+- [x] Opções de Configurações movidas de lugar mantêm os valores já salvos.
 - [ ] Falha de rede, sessão expirada e conflito não produzem sucesso falso.
 - [ ] Importação falha não deixa alteração parcial sem resultado explícito.
 

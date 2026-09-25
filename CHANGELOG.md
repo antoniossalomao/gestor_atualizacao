@@ -15,6 +15,25 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Revisão do painel, E8:** reorganização das telas de Administração e Configurações por finalidade de uso (I18 e I19):
+  - *Administração (`AdministracaoView`)*: reestruturada em 7 seções por finalidade de operação:
+    1. **Pessoas e permissões** (`UsuariosAdmin`): usuários, papéis e gestão de contas;
+    2. **Operação** (`OperacaoAdmin`): unificação de prazos (dias até desatualizado e arquivamento de tarefas) e classificação dos sistemas (atualizável vs componente fixo);
+    3. **Dados** (`DadosAdmin`): centralização de exportação completa de atendimentos (.xlsx), importação em lote com validações e download do banco SQLite de agora;
+    4. **Integrações** (`IntegracoesAdmin`): alertas externos via Discord Webhook com teste imediato, liga/desliga do Atualizador e conectividade;
+    5. **Backups e recuperação** (`BackupsAdmin`): cópias do banco com verificação de integridade, restauração protegida e política configurável de retenção de cópias automáticas;
+    6. **Auditoria** (`HistoricoView`): auditoria completa de alterações com cabeçalho limpo e contextualizado;
+    7. **Diagnóstico** (`SaudeAdmin`): saúde do servidor, integridade do banco e status de processos.
+    Redução de descrições repetitivas, migração transparente de abas legadas na sessão e atualização dos atalhos da paleta.
+  - *Configurações (`ConfiguracoesView`)*: reorganização das preferências pessoais em 6 seções claras:
+    1. **Minha conta** (`ContaConfig`): abertura padrão com perfil, troca de senha, sessões ativas e backup de preferências;
+    2. **Trabalho diário**: tela inicial, período de abertura, paginação, menu lateral, persistência de filtros e confirmação de logout;
+    3. **Notificações**: avisos na tela (posição e duração), contador no título da aba e notificações no Windows;
+    4. **Interface e acessibilidade**: tema, realce, contraste, tamanho do texto, densidade de linhas com prévia ao vivo e personalização avançada recolhida (fontes, texturas e ultrawide);
+    5. **Regras da equipe** (`RegrasEquipeConfig`): orientação clara da separação entre escolhas pessoais e regras globais, com atalho direto para a Administração;
+    6. **Sobre e ajuda**: versão do painel, guia conciso das situações de versão dos sistemas e catálogo completo de atalhos de teclado.
+    Todas as 24 chaves de preferências salvas no navegador foram estritamente preservadas.
+
 - **Revisão do painel, E7:** ficha do cliente (`ConsultaView`) revisada:
   remoção de referências a CNPJ no subtítulo e nos campos de cadastro; cabeçalho
   compacto exibindo Código, Cidade e Grupo/Rede (quando preenchido); resumo
