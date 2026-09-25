@@ -15,6 +15,17 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Revisão do painel, E10:** validação visual completa, revisão da documentação e encerramento do ciclo principal:
+  - *Documentação (`README.md`)*: atualizado para refletir o design e fluxos consolidados da revisão:
+    1. Agendamentos: remoção definitiva de menções legadas a "converter agendamento em atualização", documentação da toolbar unificada, filtros rápidos (Pendentes, Concluídos, Arquivados) e arquivamento manual de concluídas;
+    2. Atualizações: documentação de filtros recolhíveis com chips visuais e menu "Mais ações" para exportação e importação;
+    3. Sistemas: documentação da divisão entre consulta de clientes (com filtros por situação e busca) e painel "Versões oficiais" com autoria e detecção de edição concorrente;
+    4. Clientes e Consulta: documentação da gestão de acessos na linha de cada cliente com cópia rápida, formato compacto de Grupo/Rede e linha do tempo com cópia de relatório em texto limpo;
+    5. Administração e Configurações: documentação da reestruturação em 7 e 6 seções temáticas, respectivamente;
+    6. Limitações: remoção de menção desatualizada a "apenas dois níveis de permissão", alinhando com o modelo RBAC de três perfis (Administrador, Operador, Consulta).
+  - *Planejamento (`PLANEJAMENTO_REVISAO_COMPLETA_PAINEL.md`)*: conclusão da etapa E10 no cronograma e checklist mestre; validação e preenchimento de todos os critérios gerais de aceite (regras e dados, interação, acessibilidade visual e engenharia).
+  - *Validação de acessibilidade e visual*: garantia de consistência de contraste, foco visível, responsividade nos breakpoints (390px, 768px, 1280px e 1440px) e compatibilidade com os modos claro e escuro.
+
 - **Revisão do painel, E8:** reorganização das telas de Administração e Configurações por finalidade de uso (I18 e I19):
   - *Administração (`AdministracaoView`)*: reestruturada em 7 seções por finalidade de operação:
     1. **Pessoas e permissões** (`UsuariosAdmin`): usuários, papéis e gestão de contas;

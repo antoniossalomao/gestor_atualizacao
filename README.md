@@ -20,12 +20,11 @@ escolha deliberada, não uma limitação.
 
 **Atualizações** — o registro central. Cada linha é um atendimento: cliente,
 sistemas atualizados, versão, responsável, data, motivo, quantas máquinas e
-observações. Busca por qualquer campo, filtro por responsável e por período,
-seleção em lote (`Shift` + clique em duas linhas marca tudo entre elas),
-importação e exportação em `.xlsx`, relatórios de atendimento, situação e histórico
-do cliente (com período), e **Relatório do período** usando os filtros da tela.
-Os relatórios têm prévia, cópia de texto e impressão/salvar PDF. O Excel mantém
-os registros na primeira aba e acrescenta resumo, filtros e cabeçalhos formatados.
+observações. Toolbar unificada com busca instantânea, filtro por responsável,
+filtros de data recolhíveis com chips visíveis, menu **Mais ações** (com exportar
+e importar `.xlsx`), seleção em lote (`Shift` + clique em duas linhas marca tudo
+entre elas) e relatórios estruturados (atendimento, situação e histórico do
+cliente) com abas ágeis, cópia de texto limpo e impressão/salvar PDF.
 
 Ao criar um atendimento, cada sistema informado recebe uma cópia da versão
 oficial cadastrada em Sistemas. Alterar a versão oficial depois não muda essa
@@ -35,37 +34,47 @@ na edição ficam sem versão; use um novo atendimento para registrar uma atuali
 Histórico e importações antigos não recebem a versão oficial retroativamente.
 Uma referência posterior à data do atendimento também não é atribuída.
 
-**Clientes** — cadastro com código, cidade, grupo/rede (para clientes com
-várias unidades sob a mesma bandeira) e quais sistemas cada um usa. O botão
-**Acessos** guarda os IDs de acesso remoto de cada máquina do cliente, com
-botão de copiar ao lado de cada um.
+**Clientes** — cadastro com código, cidade, grupo/rede compacto (para clientes
+com várias unidades sob a mesma bandeira) e quais sistemas cada um usa. A ação
+**Acessos** na linha de cada cliente permite gerenciar os identificadores de
+acesso remoto de cada máquina, com botão de cópia rápida individual.
 
 **Agendamentos** — agenda das tarefas internas ("atualizar o cliente X"), com
-status, horário e responsável. Um aviso aparece no topo do app ao entrar
-quando há tarefas vencidas ou vencendo hoje. Uma tarefa concluída pode virar
-uma Atualização já pré-preenchida, e tarefas concluídas há mais de um mês
-saem da lista sozinhas (continuam no filtro "Arquivadas").
+status, horário e responsável, organizada com criação rápida e toolbar unificada.
+Filtros rápidos alternam entre tarefas Pendentes, Concluídas e Arquivadas.
+Um aviso aparece no topo do app ao entrar quando há tarefas vencidas ou vencendo
+hoje. Tarefas concluídas podem ser arquivadas manualmente ou saem da lista
+principal automaticamente após o prazo configurado nas regras da equipe
+(continuam disponíveis no filtro "Arquivadas").
 
 **Resumo** — quantas atualizações no mês, por responsável e por sistema,
-tendência dos últimos 12 meses, quantos clientes estão em dia e quantos
-estão para trás, e o tempo médio que uma tarefa leva entre ser criada e ser
-concluída, por pessoa.
+tendência dos últimos 12 meses (com zero nos meses vazios e comparação parcial
+justa), card de situação das versões dos clientes (Em dia, Desatualizados,
+Verificação pendente), indicador de clientes sem atualização há mais de N dias
+e o tempo médio que uma tarefa leva entre ser criada e ser concluída, por pessoa.
 
-**Sistemas** — cadastro da data da versão oficial de cada sistema e acompanhamento
-da versão recebida por cada cliente. Mostra Em dia, Desatualizado, Nunca atualizado,
-Sem referência ou Sem informação conforme os registros disponíveis. Versões legadas
-com um único sistema são aproveitadas; registros ambíguos não presumem uma versão.
+**Sistemas** — consulta da situação de versões dos clientes e painel dedicado de
+**Versões oficiais**. A consulta oferece busca rápida e filtros por status (Em dia,
+Desatualizado, Nunca atualizado, Sem referência ou Sem informação) e por sistema,
+com cartões de métricas sincronizados. O gerenciador de versões oficiais registra a data
+de referência com autoria (quem alterou por último) e detecção de edição concorrente,
+garantindo que referências não retroajam sobre atendimentos antigos (ADR-0008).
 
-**Consulta** — a ficha de um cliente: dados de cadastro, sistemas, acessos
-remotos e as últimas atualizações dele.
+**Consulta** — a ficha completa de um cliente: cabeçalho com código, cidade e
+grupo/rede, resumo da situação de sistemas atualizáveis, componentes fixos (sem
+falso status de atraso), acessos remotos com cópia direta por máquina, telemetria
+de agentes isolada e linha do tempo das últimas atualizações com opção de copiar
+relatório em texto limpo.
 
-**Administração** — só para administrador. Reúne o que é da equipe inteira:
-usuários e papéis, o **Histórico** de alterações (quem criou, editou ou
-excluiu cada cliente, atualização, agendamento, sistema, conta e regra, e
-quem restaurou cada backup), as **regras da equipe** (dias até um cliente
-contar como desatualizado, dias até arquivar tarefa, cópias de backup), o
-webhook do Discord com mensagem de teste, o liga/desliga do Atualizador,
-os backups e a saúde do servidor. As regras valem na hora, sem reiniciar.
+**Administração** — restrita a administradores e organizada em 7 seções por finalidade:
+1. **Pessoas e permissões** (usuários, perfis e permissões);
+2. **Operação** (prazos para clientes desatualizados, arquivamento de tarefas e classificação de sistemas atualizáveis vs fixos);
+3. **Dados** (exportação completa, importação em lote e download do banco);
+4. **Integrações** (notificações no Discord com mensagem de teste e liga/desliga do Atualizador);
+5. **Backups e recuperação** (cópias automáticas a cada inicialização, retenção, download e restauração protegida);
+6. **Auditoria** (histórico completo de alterações por entidade e autor);
+7. **Diagnóstico** (saúde do servidor, integridade do SQLite e métricas).
+As regras valem imediatamente para toda a equipe, sem necessidade de reiniciar.
 
 **Distribuição e Versões** — o painel do agente de atualização automática
 (um serviço em C#/.NET que roda no servidor do cliente e aplica as
@@ -86,8 +95,10 @@ a situação de cada agente em campo. O agente vive em
 - **Preferências por conta**, não por navegador: tema, cor de destaque,
   tamanho e fonte do texto, densidade das tabelas e o resto acompanham a
   pessoa em qualquer máquina. Ficam na tela **Configurações** (rodapé do
-  menu lateral, menu da conta ou `Ctrl + ,`), com perfis prontos, prévia ao
-  vivo das tabelas e busca.
+  menu lateral, menu da conta ou `Ctrl + ,`), que abre por padrão em
+  **Minha conta** e agrupa as opções em 6 seções (Minha conta, Trabalho
+  diário, Notificações, Interface e acessibilidade, Regras da equipe, Sobre
+  e ajuda), com perfis prontos, prévia ao vivo das tabelas e busca instantânea.
 - **Nomes de sistema e de responsável são padronizados na gravação** —
   quem digitar `B_NFE` grava `B_NFe`, e `CAMILA` grava `Camila`. Sem isso, o
   relatório por sistema erra em silêncio (ver a seção de 11/09 abaixo, que
@@ -461,12 +472,12 @@ só o proxy alcance o Node.
 
 ## Limitações conhecidas
 
-- Só dois níveis de permissão (administrador e usuário comum) — não há
-  papéis mais granulares (ex.: alguém que só pode ver, sem editar).
-- Sem sincronização em tempo real: se duas pessoas estiverem com o app
-  aberto ao mesmo tempo, cada uma vê os dados atualizados ao trocar de
-  aba (o app busca de novo do servidor nesse momento), não
-  instantaneamente enquanto a outra pessoa edita algo.
+- Três perfis de acesso objetivos (Administrador, Operador e Consulta), atendendo
+  às necessidades da equipe sem sobrecarga de matrizes complexas de permissão por tela.
+- Sem sincronização em tempo real via WebSockets: se duas pessoas estiverem com o app
+  aberto ao mesmo tempo, cada uma vê os dados atualizados ao trocar de aba ou atualizar
+  a consulta (o app busca do servidor nesse momento), com proteção contra edição
+  concorrente em pontos críticos como versões oficiais.
 - Banco de dados continua sendo SQLite (com `journal_mode=WAL`, que
   aguenta bem várias leituras e escritas moderadas de uma equipe
   pequena/média). Para uso muito intenso e concorrente, a migração

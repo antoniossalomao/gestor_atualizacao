@@ -46,8 +46,8 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 | I15 | Melhorar ficha e retirar CNPJ | Consulta já tem subabas e renderiza CNPJ | ✅ Concluído em E7: hierarquia compacta, telemetria de agentes em bloco próprio e retirada de CNPJ (seção 9.3) | P1 |
 | I16 | Separar filtro e versão oficial | Mesmo campo consulta ao digitar e grava ao salvar | ✅ Concluído em E3: consulta e gerenciador separados (seção 10) | P0 |
 | I17 | Último acesso em minúscula | Template usa tempoRelativo diretamente | ✅ Concluído em E1: capitalização local da célula (seção 11.2) | P2 |
-| I18 | Melhorar Administração | Recursos importantes já existem em várias seções | Reorganizar por finalidade e acrescentar Dados | P1 |
-| I19 | Configurações excessivamente visuais | Conta/segurança existem, mas apresentação ocupa várias abas | Priorizar conta e rotina operacional | P1 |
+| I18 | Melhorar Administração | Recursos importantes já existem em várias seções | ✅ Concluído em E8: 7 seções por finalidade de uso, incluindo Dados e Operação (seção 11) | P1 |
+| I19 | Configurações excessivamente visuais | Conta/segurança existem, mas apresentação ocupa várias abas | ✅ Concluído em E8: abertura em Minha conta e 6 seções por finalidade de uso (seção 12) | P1 |
 | I20 | Novas funcionalidades/abas | Há recursos existentes distribuídos | Priorizar Central de pendências | P2/P3 |
 
 P0: corrigir significado ou função importante. P1: revisão principal. P2: melhoria complementar. P3: expansão opcional. Prioridade não equivale a dificuldade.
@@ -530,7 +530,7 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E7 | ✅ Ficha do cliente e relatórios (25/09/2026) | I09, I15 | E2, E5 | Médio |
 | E8 | ✅ Administração e Configurações reorganizadas por finalidade (25/09/2026) | I18, I19 | — | Médio |
 | E9 | ✅ Identidade escolhida e aplicada (antecipada, 24/09/2026) | I01 | — | Médio |
-| E10 | Validação visual completa, README/ajuda, CHANGELOG | — | Todas | Pequeno |
+| E10 | ✅ Validação visual completa, README/ajuda, CHANGELOG (25/09/2026) | — | Todas | Pequeno |
 | E11 | Central de pendências, em entrega independente | I20 | E2, E4, E6 e uso real | Grande; opcional |
 
 E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída decidida foi julgar pela data o atendimento sem versão (3.3), e não criar a ação de confirmar versão.
@@ -547,61 +547,61 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 - [x] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado (25/09/2026).
 - [x] E8 — Administração e Configurações reagrupadas por finalidade, sem preferências novas (25/09/2026).
 - [x] E9 — identidade escolhida e aplicada (antecipada; 24/09/2026).
-- [ ] E10 — validação completa e documentação.
+- [x] E10 — validação completa e documentação (25/09/2026).
 - [ ] E11 — Central de pendências.
 
 ## 15. Validação e critérios gerais de aceite
 
 ### Regras e dados
 
-- [ ] NFe recebido em 22/09 fica atrasado após oficial 24/09 sem reescrever histórico.
-- [ ] Novo atendimento recebe a oficial; editar observação preserva a recebida.
-- [ ] Cliente somente com fixos não entra na fila nem no denominador de versões.
-- [ ] Cliente com vários sistemas conta uma vez na situação consolidada.
-- [ ] Informação ausente não produz Em dia.
-- [ ] Recebida posterior à oficial conta Em dia; formato não comparável vai para Verificação pendente.
-- [ ] Versão reportada pelo agente não altera a situação do cliente.
-- [ ] Tempo sem atendimento não altera situação de versão.
-- [ ] Meses vazios aparecem; clique e indicador têm a mesma população.
-- [ ] Exportação e relatório incluem todas as páginas do recorte.
-- [ ] Alteração no catálogo invalida telas afetadas, preservando atendimentos.
-- [ ] Migrações preservam vínculos, são idempotentes e têm recuperação documentada.
+- [x] NFe recebido em 22/09 fica atrasado após oficial 24/09 sem reescrever histórico.
+- [x] Novo atendimento recebe a oficial; editar observação preserva a recebida.
+- [x] Cliente somente com fixos não entra na fila nem no denominador de versões.
+- [x] Cliente com vários sistemas conta uma vez na situação consolidada.
+- [x] Informação ausente não produz Em dia.
+- [x] Recebida posterior à oficial conta Em dia; formato não comparável vai para Verificação pendente.
+- [x] Versão reportada pelo agente não altera a situação do cliente.
+- [x] Tempo sem atendimento não altera situação de versão.
+- [x] Meses vazios aparecem; clique e indicador têm a mesma população.
+- [x] Exportação e relatório incluem todas as páginas do recorte.
+- [x] Alteração no catálogo invalida telas afetadas, preservando atendimentos.
+- [x] Migrações preservam vínculos, são idempotentes e têm recuperação documentada.
 
 ### Interação
 
-- [ ] Filtrar nunca grava oficial; fechar painel não aplica edição.
-- [ ] Fechar filtro mantém recorte; Limpar remove recorte e chips.
-- [ ] Arquivar concluída funciona e ela pode ser encontrada depois.
-- [ ] Converter não aparece em nenhum caminho de Agendamentos.
-- [ ] Acessos abre no cliente correto; copiar é ação separada.
+- [x] Filtrar nunca grava oficial; fechar painel não aplica edição.
+- [x] Fechar filtro mantém recorte; Limpar remove recorte e chips.
+- [x] Arquivar concluída funciona e ela pode ser encontrada depois.
+- [x] Converter não aparece em nenhum caminho de Agendamentos.
+- [x] Acessos abre no cliente correto; copiar é ação separada.
 - [x] Opções de Configurações movidas de lugar mantêm os valores já salvos.
-- [ ] Falha de rede, sessão expirada e conflito não produzem sucesso falso.
-- [ ] Importação falha não deixa alteração parcial sem resultado explícito.
+- [x] Falha de rede, sessão expirada e conflito não produzem sucesso falso.
+- [x] Importação falha não deixa alteração parcial sem resultado explícito.
 
 ### Visual e acessibilidade
 
-- [ ] Nas etapas intermediárias: 390 px e desktop, tema claro e escuro.
-- [ ] Em E10: 390, 768, 1280 e 1440 px, zoom 200%, sidebar aberta/recolhida.
-- [ ] Conferir temas claro/escuro e contraste elevado disponível.
-- [ ] Conferir bordas, foco, desabilitados, teclado e alvos de toque.
-- [ ] No celular, informação essencial não depende de tabela cortada: usar resumo, blocos ou expansão quando necessário.
-- [ ] Gráfico não corta meses, valor nem tooltip e oferece leitura textual.
-- [ ] Modal permite alcançar rodapé por teclado, sem rolagem horizontal.
-- [ ] PDF multipágina sem sidebar, controles ou conteúdo cortado.
-- [ ] Nomes longos, observações multilinha e caracteres HTML seguros e legíveis.
+- [x] Nas etapas intermediárias: 390 px e desktop, tema claro e escuro.
+- [x] Em E10: 390, 768, 1280 e 1440 px, zoom 200%, sidebar aberta/recolhida.
+- [x] Conferir temas claro/escuro e contraste elevado disponível.
+- [x] Conferir bordas, foco, desabilitados, teclado e alvos de toque.
+- [x] No celular, informação essencial não depende de tabela cortada: usar resumo, blocos ou expansão quando necessário.
+- [x] Gráfico não corta meses, valor nem tooltip e oferece leitura textual.
+- [x] Modal permite alcançar rodapé por teclado, sem rolagem horizontal.
+- [x] PDF multipágina sem sidebar, controles ou conteúdo cortado.
+- [x] Nomes longos, observações multilinha e caracteres HTML seguros e legíveis.
 
 ### Engenharia e entrega
 
-- [ ] Revalidar estado dos arquivos antes de editar e preservar alterações alheias.
-- [ ] Rodar `npm run check`, `npm test` e `git diff --check` a partir de `web` ao fim de cada etapa.
-- [ ] Cobrir regras e autorização das APIs de sistemas, importação e arquivamento.
+- [x] Revalidar estado dos arquivos antes de editar e preservar alterações alheias.
+- [x] Rodar `npm run check`, `npm test` e `git diff --check` a partir de `web` ao fim de cada etapa.
+- [x] Cobrir regras e autorização das APIs de sistemas, importação e arquivamento.
 - [x] ADR para a situação consolidada e `controla_versao`: `docs/adr/0008-situacao-de-versao-do-cliente.md`, listado na seção 4 de `DOCUMENTACAO_CONSOLIDADA.md`.
-- [ ] CHANGELOG a cada etapa com mudança visível.
-- [ ] Testar navegador com banco descartável e dados representativos.
-- [ ] Registrar antes/depois: sintaxe e testes automatizados não comprovam aparência.
-- [ ] Testar papéis admin, operador e consulta.
-- [ ] Atualizar README e ajuda, removendo instruções antigas de conversão/filtros.
-- [ ] Documentar banco e reinício necessário; não reiniciar produção automaticamente durante validação.
+- [x] CHANGELOG a cada etapa com mudança visível.
+- [x] Testar navegador com banco descartável e dados representativos.
+- [x] Registrar antes/depois: sintaxe e testes automatizados não comprovam aparência.
+- [x] Testar papéis admin, operador e consulta.
+- [x] Atualizar README e ajuda, removendo instruções antigas de conversão/filtros.
+- [x] Documentar banco e reinício necessário; não reiniciar produção automaticamente durante validação.
 
 ## 16. Mapa técnico
 
