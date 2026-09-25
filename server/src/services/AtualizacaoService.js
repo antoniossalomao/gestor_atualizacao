@@ -195,7 +195,7 @@ class AtualizacaoService {
     if (alvo && (!alvo.ativo || !contaParaVersao(alvo))) return [];
     const oficial = alvo?.ultima_versao || "";
     if (atendimentoAntesDe && !dataValida(atendimentoAntesDe)) {
-      throw new ValidationError("Campo 'Último atendimento antes de' precisa estar no formato dd/mm/aaaa.");
+      throw new ValidationError("Campo 'Última atualização antes de' precisa estar no formato dd/mm/aaaa.");
     }
     const limiteAtendimento = atendimentoAntesDe ? parseData(atendimentoAntesDe) : null;
     if (!alvo) return [];
@@ -624,7 +624,7 @@ class AtualizacaoService {
     ws.eachRow((row) => { row.alignment = { vertical: "top", wrapText: true }; });
     const resumo = this.relatorioPeriodo(search, responsavel, periodo);
     const meta = workbook.addWorksheet("Resumo");
-    meta.addRows([["Relatório de atualizações"], ["De", periodo.desde || "Sem limite"], ["Até", periodo.ate || "Sem limite"], ["Busca", search || "Todas"], ["Responsável", responsavel], ["Atendimentos", resumo.total], ["Clientes distintos", resumo.clientes], [], ["Sistema", "Atendimentos"], ...resumo.porSistema.map((r) => [r.nome, r.total]), [], ["Responsável", "Atendimentos"], ...resumo.porResponsavel.map((r) => [r.nome, r.total])]);
+    meta.addRows([["Relatório de atualizações"], ["De", periodo.desde || "Sem limite"], ["Até", periodo.ate || "Sem limite"], ["Busca", search || "Todas"], ["Responsável", responsavel], ["Atualizações", resumo.total], ["Clientes distintos", resumo.clientes], [], ["Sistema", "Atualizações"], ...resumo.porSistema.map((r) => [r.nome, r.total]), [], ["Responsável", "Atualizações"], ...resumo.porResponsavel.map((r) => [r.nome, r.total])]);
     meta.columns = [{ width: 38 }, { width: 35 }];
     meta.getRow(1).font = { bold: true, size: 16 };
     return workbook.xlsx.writeBuffer();

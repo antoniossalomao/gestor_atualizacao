@@ -168,17 +168,17 @@ export function versaoRegistrada(registro, sistema) {
 }
 
 export function relatorioSituacao(situacao) {
-  return ["SITUAÇÃO ATUAL DOS SISTEMAS", ...situacao.map((s) => `${s.sistema}: ${rotuloSituacao(s.situacao, s.pelaData)}\nRecebida: ${s.instalada || "Não informada"} · Oficial: ${s.oficial || "Não informada"}${s.data ? ` · Atendimento: ${s.data}` : ""}`)].join("\n\n");
+  return ["SITUAÇÃO ATUAL DOS SISTEMAS", ...situacao.map((s) => `${s.sistema}: ${rotuloSituacao(s.situacao, s.pelaData)}\nRecebida: ${s.instalada || "Não informada"} · Oficial: ${s.oficial || "Não informada"}${s.data ? ` · Atualização: ${s.data}` : ""}`)].join("\n\n");
 }
 
 export function relatorioDoPeriodo(resumo) {
   const f = resumo.filtros;
   return ["RELATÓRIO DE ATUALIZAÇÕES POR PERÍODO",
     `Período: ${f.desde || "Início do histórico"} até ${f.ate || "Sem limite final"}\nResponsável: ${f.responsavel}\nBusca: ${f.search || "Todas"}`,
-    `${plural(resumo.total, "atendimento")} · ${plural(resumo.clientes, "cliente distinto")}`,
+    `${plural(resumo.total, "atualização")} · ${plural(resumo.clientes, "cliente distinto")}`,
     ["POR SISTEMA", ...resumo.porSistema.map((s) => `${s.nome}: ${s.total}`)].join("\n"),
     ["POR RESPONSÁVEL", ...resumo.porResponsavel.map((s) => `${s.nome}: ${s.total}`)].join("\n"),
-    "Um atendimento pode envolver vários sistemas. As contagens por sistema podem superar o total de atendimentos.",
+    "Uma atualização pode envolver vários sistemas. As contagens por sistema podem superar o total de atualizações.",
     ...resumo.registros.map((r) => `${r.data || "Sem data"} — ${r.cliente}\n${r.sistema || "Sistema não informado"} · ${r.versao || "Versão não informada"}${r.responsavel ? ` · ${r.responsavel}` : ""}`)
   ].join("\n\n");
 }

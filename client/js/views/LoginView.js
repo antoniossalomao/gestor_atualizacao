@@ -43,7 +43,7 @@ export class LoginView {
     brand.innerHTML = `
       <div class="auth-screen__brand-mark">${simboloMarca()}</div>
       <strong class="auth-screen__brand-name">Gestor de Atualizações</strong>
-      <p class="auth-screen__brand-tagline">Bredas Sistemas · Atualizações e atendimento dos clientes, num só lugar.</p>
+      <p class="auth-screen__brand-tagline">Bredas Sistemas · Atualizações dos clientes, num só lugar.</p>
       <ul class="auth-screen__brand-list">
         <li>${icon("clientes")} Cadastro de clientes e sistemas</li>
         <li>${icon("atualizacoes")} Histórico de atualizações</li>

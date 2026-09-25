@@ -235,7 +235,7 @@ test("AtualizacaoService - relatório por sistema", async (t) => {
     });
 
     await t.test("data de atendimento inválida é recusada", () => {
-      assert.throws(() => env.service.relatorioPorSistema("B_Vendas", "2026-01-01"), /Último atendimento antes de/);
+      assert.throws(() => env.service.relatorioPorSistema("B_Vendas", "2026-01-01"), /Última atualização antes de/);
     });
 
     await t.test("lista só quem usa o sistema", () => {

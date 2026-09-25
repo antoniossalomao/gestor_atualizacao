@@ -175,12 +175,12 @@ Substituir a rosca genérica por um card **Atualização dos clientes**, com bar
 
 ### 5.3 Tendência mensal
 
-**Concluído em E4 (25/09/2026).** A série do servidor conta atendimentos registrados, um por registro, inclusive os que tratam apenas de componente fixo. Mostra exatamente 12 meses consecutivos até o atual e não conta datas posteriores a hoje como realizadas. O número do mês corrente está no cabeçalho do gráfico, identificado como parcial; o indicador de variação compara os mesmos primeiros dias do mês atual e do anterior, limitando ambos ao comprimento do mês mais curto.
+**Concluído em E4 (25/09/2026).** A série do servidor conta atualizações registradas, uma por registro, inclusive as que tratam apenas de componente fixo. Mostra exatamente 12 meses consecutivos até o atual e não conta datas posteriores a hoje como realizadas. O número do mês corrente está no cabeçalho do gráfico, identificado como parcial; o indicador de variação compara os mesmos primeiros dias do mês atual e do anterior, limitando ambos ao comprimento do mês mais curto.
 
 - [x] Definir 12 meses consecutivos até o mês corrente.
 - [x] Preencher meses sem registros com zero, sem saltos no calendário.
 - [x] Excluir datas futuras da série de realizados; permanecem no histórico para correção.
-- [x] Definir unidade: atendimentos registrados, um por registro, inclusive atendimentos mistos e exclusivos de componentes fixos.
+- [x] Definir unidade: atualizações registradas, uma por registro, inclusive atualizações mistas e exclusivas de componentes fixos.
 - [x] Acrescentar folga superior ao eixo para o maior valor.
 - [x] Alinhar os meses na mesma linha-base e na posição dos respectivos pontos.
 - [x] Ajustar âncoras nas extremidades para não cortar mês/ano.
@@ -188,13 +188,17 @@ Substituir a rosca genérica por um card **Atualização dos clientes**, com bar
 - [x] Tirar número final flutuante e mostrar o total do mês corrente no cabeçalho; detalhes no tooltip.
 - [x] Número flutuante removido; sem colisão com linha, grade ou borda.
 - [x] Usar segmentos retos, sem curva que sugira valores negativos ou picos inexistentes.
-- [x] Oferecer tooltip por teclado/toque e leitura textual dos 12 valores em seção expansível.
+- [x] Oferecer tooltip por teclado/toque nos pontos do gráfico.
 - [x] Identificar mês corrente como parcial.
 - [x] Comparar percentuais somente entre períodos de igual duração; base zero omite a porcentagem.
 
 Aceite: 0, 1, 2, 6 e 12 meses; série zerada; máximo 121; máximo no primeiro/último ponto; zero alternado com picos; virada de ano; 390, 768, 1280 e 1440 px; sidebar aberta/recolhida.
 
 Validação E4: testes de banco cobrem virada de ano, meses sem registro, data futura e comparação de mês de 31 dias com anterior de 30. No navegador, cenários de 0/1/2/6/12 pontos, série zerada, máximo 121 nas pontas, zero alternado com picos, foco e setas do teclado, larguras 390/768/1280/1440 px e sidebar aberta/recolhida.
+
+**Ajuste após E4 (25/09/2026):** por decisão do usuário, a seção expansível “Ver valores dos 12 meses” foi removida; o gráfico ocupa a altura disponível no card, mantendo tooltip por mouse, toque e teclado. Os textos visíveis do painel, relatórios e exportação passaram a usar “atualização” em vez de “atendimento”. Os nomes internos e registros históricos permanecem intactos.
+
+Na consulta por sistema, a coluna “Oficial” foi retirada da tabela porque a versão oficial do sistema selecionado já aparece acima dela. A coluna da data passou a se chamar “Última atualização”.
 
 ## 6. Botões, tabelas e espaço — I06
 

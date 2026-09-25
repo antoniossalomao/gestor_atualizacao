@@ -229,7 +229,7 @@ export class AtualizacoesView extends View {
     this.form = this.container.querySelector('[data-role="form"]');
     this.drawer = new Drawer(this.form, {
       titulo: "Atualização",
-      descricao: "Registre um atendimento sem perder a lista de vista.",
+      descricao: "Registre uma atualização sem perder a lista de vista.",
     });
     this.container.querySelector('[data-action="nova-atualizacao"]').addEventListener("click", () => {
       this.clearForm();
@@ -610,7 +610,7 @@ export class AtualizacoesView extends View {
     this.fields.versao.readOnly = !isEdit || this.selectedRow?.versoes_sistemas != null;
     this.fields.versao.placeholder = "Preenchida com as versões oficiais ao salvar";
     this.form.querySelector("#atu-versao-hint").textContent = isEdit
-      ? "As versões recebidas são preservadas. Um novo atendimento deve ser registrado como nova atualização."
+      ? "As versões recebidas são preservadas. Registre uma nova atualização para manter o histórico."
       : "Cada sistema informado recebe sua versão oficial cadastrada em Sistemas. Sem referência, a versão fica não informada.";
     if (modo) modo.textContent = isEdit ? `Registro #${this.selectedId}` : "";
     if (this.addBtn) this.addBtn.hidden = isEdit;
@@ -623,9 +623,9 @@ export class AtualizacoesView extends View {
     if (this.deleteBtn) this.deleteBtn.disabled = !isEdit;
     if (this.drawer) {
       if (isEdit) {
-        this.drawer.setTitulo(`Editar Atualização #${this.selectedId}`, "Altere os dados deste atendimento.");
+        this.drawer.setTitulo(`Editar Atualização #${this.selectedId}`, "Altere os dados desta atualização.");
       } else {
-        this.drawer.setTitulo("Nova Atualização", "Registre um atendimento no histórico de clientes.");
+        this.drawer.setTitulo("Nova Atualização", "Registre uma atualização no histórico de clientes.");
       }
     }
   }
@@ -951,7 +951,7 @@ export class AtualizacoesView extends View {
       return [sistema, versoes ? versoes[sistema] : anterior && String(anterior.sistema).split(/,|\s+e\s+/i).length === 1 ? anterior.versao : null];
     }));
     abrirRelatorio({
-      tipos: [{ valor: "atualizacao", nome: "Atendimento selecionado" }, { valor: "cliente", nome: "Situação e histórico do cliente" }],
+      tipos: [{ valor: "atualizacao", nome: "Atualização selecionada" }, { valor: "cliente", nome: "Situação e histórico do cliente" }],
       periodo: true,
       gerar: (tipo, { desde, ate }) => {
         if (tipo === "atualizacao") return relatorioDeAtualizacao(registro, { cliente, anterior: { sistema: sistemas.length === 1 ? sistemas[0] : "", versao: sistemas.length === 1 ? mapa[sistemas[0]] : "", versoes_sistemas: JSON.stringify(mapa) } });

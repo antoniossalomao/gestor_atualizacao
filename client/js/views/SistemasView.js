@@ -51,15 +51,15 @@ export class SistemasView extends View {
         <p class="sistemas-referencia" data-role="referencia"></p>
         <div id="sis-filtros" class="sistemas-filtros" hidden>
           <div class="field">
-            <label class="field__label" for="sis-antes">Último atendimento antes de</label>
+            <label class="field__label" for="sis-antes">Última atualização antes de</label>
             <input class="input" id="sis-antes" data-role="atendimento-antes" placeholder="dd/mm/aaaa" inputmode="numeric" aria-describedby="sis-antes-ajuda" />
-            <div class="field__hint" id="sis-antes-ajuda" data-role="data-hint">Filtra a data do atendimento; a situação continua usando a versão oficial.</div>
+            <div class="field__hint" id="sis-antes-ajuda" data-role="data-hint">Filtra a data da atualização; a situação continua usando a versão oficial.</div>
           </div>
           <button type="button" class="btn" data-action="limpar-data">Limpar data</button>
         </div>
         <section id="sis-oficiais" class="sistemas-oficiais" aria-label="Versões oficiais" hidden>
           <div class="sistemas-oficiais__cabecalho">
-            <div><h2>Versões oficiais</h2><p>Novos atendimentos recebem a referência vigente. As versões recebidas nos atendimentos anteriores permanecem. Deixe o campo vazio para limpar a referência.</p></div>
+            <div><h2>Versões oficiais</h2><p>Novas atualizações recebem a referência vigente. As versões recebidas nas atualizações anteriores permanecem. Deixe o campo vazio para limpar a referência.</p></div>
             <button type="button" class="btn" data-action="fechar-oficiais">Fechar</button>
           </div>
           <div data-role="oficiais-lista"></div>
@@ -70,9 +70,8 @@ export class SistemasView extends View {
     this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
       columns: [
         { key: "cliente", label: "Cliente" },
-        { key: "ultima", label: "Último atendimento", type: "date" },
+        { key: "ultima", label: "Última atualização", type: "date" },
         { key: "instalada", label: "Versão recebida" },
-        { key: "oficial", label: "Oficial" },
         { key: "situacao", label: "Situação", render: celulaSituacao },
         { key: "cidade", label: "Cidade" },
       ],
@@ -122,7 +121,7 @@ export class SistemasView extends View {
       this.dataInput.value = mascaraDataBR(this.dataInput.value);
       const invalida = Boolean(this.dataInput.value) && !isValidDateBR(this.dataInput.value);
       this.dataInput.setAttribute("aria-invalid", String(invalida));
-      this.dataHint.textContent = invalida ? "Informe uma data válida em dd/mm/aaaa." : "Filtra a data do atendimento; a situação continua usando a versão oficial.";
+      this.dataHint.textContent = invalida ? "Informe uma data válida em dd/mm/aaaa." : "Filtra a data da atualização; a situação continua usando a versão oficial.";
       if (!invalida) consultar();
     });
     this.container.querySelector('[data-action="limpar-data"]').addEventListener("click", () => {

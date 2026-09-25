@@ -37,8 +37,8 @@ export class ResumoView extends View {
     this.container.innerHTML = html`
       <div class="stat-tiles">
         ${statTile("clientes", "clientes", "Clientes", "Ver clientes")}
-        ${statTile("atualizacoes", "atualizacoes", "Atendimentos", "Ver histórico")}
-        ${statTile("mes", "calendario", "Atendimentos Este Mês", "Ver o mês")}
+        ${statTile("atualizacoes", "atualizacoes", "Atualizações", "Ver histórico")}
+        ${statTile("mes", "calendario", "Atualizações Este Mês", "Ver o mês")}
         ${statTile("semAtendimento", "alerta", rotuloSemAtendimento(this.desatualizadoDias), "Ver a lista")}
       </div>
 
@@ -62,7 +62,7 @@ export class ResumoView extends View {
           <div data-role="situacao"></div>
         </div>
         <div class="card">
-          <div class="tendencia-cabecalho"><h2 class="card__title">Tendência Mensal de Atendimentos</h2><span data-role="tendencia-atual"></span></div>
+          <div class="tendencia-cabecalho"><h2 class="card__title">Tendência Mensal de Atualizações</h2><span data-role="tendencia-atual"></span></div>
           <div data-role="tendencia"></div>
         </div>
       </div>
@@ -181,7 +181,7 @@ export class ResumoView extends View {
 
     this.respTable.setRows(resumo.porResponsavel);
     this.sistemaChart.render(resumo.atualizadosMesPorSistema);
-    this.container.querySelector('[data-role="tendencia-atual"]').textContent = `${plural(resumo.mesCount, "atendimento")} neste mês (parcial)`;
+    this.container.querySelector('[data-role="tendencia-atual"]').textContent = `${plural(resumo.mesCount, "atualização")} neste mês (parcial)`;
     this.tendenciaChart.render(
       (resumo.atualizacoesPorMes || []).map((item) => ({ label: formatarMes(item.mes), total: item.total, parcial: item.mes === (resumo.atualizacoesPorMes || []).at(-1)?.mes }))
     );

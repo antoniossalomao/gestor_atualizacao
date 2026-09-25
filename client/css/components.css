@@ -928,6 +928,17 @@ kbd {
   grid-template-columns: minmax(280px, 340px) 1fr;
 }
 
+.card-row--aside > .card:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-row--aside [data-role="tendencia"] {
+  flex: 1;
+  min-width: 0;
+  min-height: 300px;
+}
+
 .section-heading {
   display: flex;
   align-items: center;
@@ -5321,6 +5332,9 @@ hr.separator {
  */
 .line-chart {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .tendencia-cabecalho { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp-2); }
@@ -5330,7 +5344,8 @@ hr.separator {
 .line-chart svg {
   display: block;
   width: 100%;
-  height: auto;
+  flex: 1;
+  min-height: 0;
   overflow: visible;
   /* Não usar `cursor: crosshair` -- o cursor nativo do SO (uma cruz/"+"
      enorme, sem relação com a escala do gráfico) duplicava o crosshair que já
@@ -5423,7 +5438,7 @@ hr.separator {
   display: flex;
   align-items: baseline;
   gap: 6px;
-  min-height: 26px;
+  flex: 0 0 26px;
   color: var(--cor-texto);
   visibility: hidden;
 }
@@ -5441,9 +5456,6 @@ hr.separator {
   font-size: var(--txt-xs);
 }
 
-.line-chart__dados { margin-top: var(--sp-2); color: var(--cor-texto-sub); font-size: var(--txt-sm); }
-.line-chart__dados summary { width: fit-content; cursor: pointer; }
-.line-chart__dados ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: var(--sp-1) var(--sp-4); padding-left: var(--sp-5); }
 .line-chart__ponto[role="button"]:focus-visible { outline: 2px solid var(--cor-accent); outline-offset: 3px; }
 
 /* ==========================================================================
