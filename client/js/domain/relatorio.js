@@ -135,7 +135,7 @@ function versaoComAnterior(versao, anterior) {
  * "há 2 dias" a partir de uma data dd/mm/aaaa. Devolve "" para data ausente,
  * malformada (o histórico importado tem dessas) ou no futuro.
  */
-function haQuantoTempo(dataBR) {
+export function haQuantoTempo(dataBR) {
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto(dataBR));
   if (!m) return "";
   const [, dia, mes, ano] = m;

@@ -15,6 +15,30 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Revisão do painel, E7:** ficha do cliente (`ConsultaView`) revisada:
+  remoção de referências a CNPJ no subtítulo e nos campos de cadastro; cabeçalho
+  compacto exibindo Código, Cidade e Grupo/Rede (quando preenchido); resumo
+  compacto com último atendimento relativo e situação de sistemas; separação clara
+  entre sistemas atualizáveis (classificados pela regra oficial do servidor/ADR-0008),
+  componentes fixos sem status de atraso e bloco dedicado de telemetria de agentes
+  instalados (sem interferir na situação de versão do cliente). Na linha do tempo de
+  atendimentos, adicionado botão para copiar o chamado no formato padrão. O modal de
+  relatórios (`RelatorioModal`) substituiu o seletor por abas curtas (Atendimento e
+  Cliente), cabeçalho discreto com botão fechar, filtro de histórico recolhível e
+  prévia com rodapé estável de ações (Fechar, Imprimir/Salvar PDF e Copiar texto).
+
+- **Revisão do painel, E6:** agendamentos integrados à grade com toolbar unificada,
+  criação rápida de tarefas e filtros de status discretos (Pendentes, Concluídos e
+  Arquivados). Na aba Clientes, a gestão de acessos foi movida diretamente para a
+  linha de cada cliente ("Gerenciar acessos"), a coluna Grupo/Rede foi compactada com
+  truncamento controlado e o campo de cadastro foi reorganizado junto a Código e Cidade.
+
+- **Revisão do painel, E5:** padronização do sistema de botões e toolbars
+  (variantes `btn--primary`, `btn--secondary`, `btn--danger`, altura mínima 38px/32px
+  e borda visível); filtros de data recolhíveis em Atualizações com chips visíveis e
+  indicador de filtros ativos; e menu "Mais ações" consolidando Exportar recorte e
+  Importar atendimentos com orientações de uso.
+
 - **Revisão do painel, E4:** tendência mensal do Resumo passa a mostrar 12
   meses consecutivos, com zero nos meses vazios e sem contar registros futuros
   como realizados. A unidade é atendimento registrado; o mês atual é parcial

@@ -37,13 +37,13 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 | I06 | Excluir e outros botões sem borda | Uso de btn--ghost em ações | ✅ Concluído em E1 e E5: contorno visível, min-height 38px/32px e toolbar padronizada (seção 6) | P1 |
 | I07 | Datas poluem Atualizações | De/Até e atalhos ficam permanentemente na toolbar | ✅ Concluído em E5: filtros de data recolhíveis, chips visíveis e botão com contagem (seção 7.1) | P1 |
 | I08 | Planilhas com destaque excessivo | Importar/exportar no topo operacional | ✅ Concluído em E5: menu Mais ações com exportar e importar integrados (seção 7.2) | P1 |
-| I09 | Seletor e tela de relatórios feios | Modal com select e prévia longa | Abas, hierarquia e rodapé estável | P1 |
+| I09 | Seletor e tela de relatórios feios | Modal com select e prévia longa | ✅ Concluído em E7: abas curtas, rodapé estável e filtro recolhível (seção 7.3) | P1 |
 | I10 | Agendamentos ocupa espaço | Faixa superior apenas para criar tarefa | ✅ Concluído em E6: criação junto à grade e filtros rápidos discretos (seção 8) | P1 |
 | I11 | Remover conversão | Botão, listener e método ainda existem | ✅ Concluído em E1: remoção de todos os caminhos de conversão (seção 8.1) | P1 |
 | I12 | Arquivar manualmente sumiu | Método e rota existem; recuperar acesso pela interface | ✅ Concluído em E1: ação explícita em tarefa concluída (seção 8.2) | P0 |
 | I13 | Acessos grande em Clientes | Topo tem gestão; linha tem cópia, que é outra função | ✅ Concluído em E6: gerenciar acessos diretamente na linha de cada cliente (seção 9.1) | P1 |
 | I14 | Grupo/Rede grande | Campo e coluna competem com informação principal | ✅ Concluído em E6: Grupo/Rede compacto no formulário e coluna limitada na grade (seção 9.2) | P1 |
-| I15 | Melhorar ficha e retirar CNPJ | Consulta já tem subabas e renderiza CNPJ | Hierarquia compacta e retirada da ficha | P1 |
+| I15 | Melhorar ficha e retirar CNPJ | Consulta já tem subabas e renderiza CNPJ | ✅ Concluído em E7: hierarquia compacta, telemetria de agentes em bloco próprio e retirada de CNPJ (seção 9.3) | P1 |
 | I16 | Separar filtro e versão oficial | Mesmo campo consulta ao digitar e grava ao salvar | ✅ Concluído em E3: consulta e gerenciador separados (seção 10) | P0 |
 | I17 | Último acesso em minúscula | Template usa tempoRelativo diretamente | ✅ Concluído em E1: capitalização local da célula (seção 11.2) | P2 |
 | I18 | Melhorar Administração | Recursos importantes já existem em várias seções | Reorganizar por finalidade e acrescentar Dados | P1 |
@@ -104,7 +104,7 @@ Nunca atualizado continua como detalhe por sistema. No consolidado, falta de evi
 **Medido em 24/09/2026 (E0), numa cópia do banco de produção:** com a regra estrita, 21 desatualizados, 348 pendentes e 0 em dia, de 369 clientes. Havia 1.275 sistemas com atendimento sem versão, registrados antes de existir a versão oficial. **Decidido: atendimento sem versão é julgado pela data** do atendimento contra a data da oficial, marcado "(pela data)" na tela. A versão recebida continua "Não informada": nada é gravado retroativamente. A ação "confirmar versão atual" deixou de ser pré-requisito. Detalhes em `docs/adr/0008-situacao-de-versao-do-cliente.md`.
 
 - [x] Compartilhar regra no servidor entre Resumo, Sistemas, situação do cliente e relatório do cliente (`services/situacaoVersao.js`).
-- [ ] A matriz da ficha (`matrizVersoes.js`, aba Consultar Cliente) ainda compara com a versão publicada do agente usando `===`. Fica para a revisão da ficha (9.3).
+- [x] Matriz da ficha revisada em E7: telemetria de agentes em bloco próprio sem sobrepor atendimento, e classificação de sistemas atualizáveis obtida da regra oficial do servidor/ADR-0008 (25/09/2026).
 - [x] Retornar totais de clientes, elegíveis e fora da avaliação.
 - [x] Garantir soma correta, sem duplicar cliente com vários sistemas.
 - [x] Usar IDs e relacionamentos normalizados atuais, sem novas junções por nome livre.
@@ -254,19 +254,19 @@ A prévia da importação pode ser entrega posterior: reposicionar botões não 
 
 Relatório por período, cópia, impressão/PDF e Excel formatado já existem. Melhorar acesso e apresentação, sem reconstruir recursos equivalentes.
 
-- [ ] Trocar select por abas curtas: Atendimento e Cliente.
-- [ ] Período permanece entrada própria, utilizável sem selecionar um cliente.
-- [ ] Não oferecer Atendimento sem registro selecionado.
-- [ ] Cabeçalho informa contexto e oferece fechar de forma discreta.
-- [ ] Prévia rolável com rodapé estável: Copiar e Imprimir/Salvar PDF.
-- [ ] Filtro de histórico somente na aba Cliente, recolhido inicialmente.
-- [ ] Diferenciar Situação atual de Histórico no período; o filtro não representa uma situação histórica reconstruída.
-- [ ] Reduzir repetição de títulos, caixa alta e espaços vazios.
-- [ ] Sistemas em tabela no desktop e blocos no celular, sem cortar informações.
-- [ ] Texto para copiar permanece simples, sem alinhamento manual com espaços.
-- [ ] PDF multipágina não pode cortar conteúdo nem incluir navegação e botões.
-- [ ] Copiar apresenta sucesso sem obrigatoriamente fechar o relatório.
-- [ ] Não reintroduzir campos retirados do chamado.
+- [x] Trocar select por abas curtas: Atendimento e Cliente (25/09/2026).
+- [x] Período permanece entrada própria, utilizável sem selecionar um cliente (25/09/2026).
+- [x] Não oferecer Atendimento sem registro selecionado (25/09/2026).
+- [x] Cabeçalho informa contexto e oferece fechar de forma discreta (25/09/2026).
+- [x] Prévia rolável com rodapé estável: Copiar e Imprimir/Salvar PDF (25/09/2026).
+- [x] Filtro de histórico somente na aba Cliente, recolhido inicialmente (25/09/2026).
+- [x] Diferenciar Situação atual de Histórico no período; o filtro não representa uma situação histórica reconstruída (25/09/2026).
+- [x] Reduzir repetição de títulos, caixa alta e espaços vazios (25/09/2026).
+- [x] Sistemas em tabela no desktop e blocos no celular, sem cortar informações (25/09/2026).
+- [x] Texto para copiar permanece simples, sem alinhamento manual com espaços (25/09/2026).
+- [x] PDF multipágina não pode cortar conteúdo nem incluir navegação e botões (25/09/2026).
+- [x] Copiar apresenta sucesso sem obrigatoriamente fechar o relatório (25/09/2026).
+- [x] Não reintroduzir campos retirados do chamado (25/09/2026).
 
 Formato obrigatório do chamado:
 
@@ -349,19 +349,19 @@ Melhorias posteriores: reagendamento com motivo, lembrete de retorno e checklist
 
 Cadastro, Sistemas e Acessos já existem como subabas. O foco deve ser hierarquia, consistência e informação útil.
 
-- [ ] Cabeçalho com nome, código e cidade; grupo apenas quando preenchido.
-- [ ] Remover CNPJ do subtítulo e dos campos da ficha.
-- [ ] Não remover identificação por CNPJ dos agentes em Distribuição: é outro uso.
-- [ ] Resumo compacto: último atendimento, sistemas desatualizados e informação pendente.
-- [ ] Compartilhar comparação de versões com Sistemas e relatório do cliente.
-- [ ] Separar componentes fixos dos sistemas atualizáveis.
-- [ ] Não confundir versão publicada do agente com oficial do histórico operacional.
-- [ ] Quando houver dados do agente, mostrar em bloco próprio (versão reportada, último contato, falha), sem alterar a situação do sistema, que vem só do atendimento (3.3).
-- [ ] Histórico cronológico com observações expansíveis e relatório do atendimento.
-- [ ] Acrescentar próximos agendamentos se puder reutilizar consulta existente; caso contrário, entregar depois.
-- [ ] Acessos por máquina em lista compacta com cópia individual.
-- [ ] Estados vazios curtos, sem vários campos preenchidos com travessões.
-- [ ] Preservar seleção e pesquisa ao voltar da ficha.
+- [x] Cabeçalho com nome, código e cidade; grupo apenas quando preenchido (25/09/2026).
+- [x] Remover CNPJ do subtítulo e dos campos da ficha (25/09/2026).
+- [x] Não remover identificação por CNPJ dos agentes em Distribuição: é outro uso (25/09/2026).
+- [x] Resumo compacto: último atendimento, sistemas desatualizados e informação pendente (25/09/2026).
+- [x] Compartilhar comparação de versões com Sistemas e relatório do cliente (25/09/2026).
+- [x] Separar componentes fixos dos sistemas atualizáveis (25/09/2026).
+- [x] Não confundir versão publicada do agente com oficial do histórico operacional (25/09/2026).
+- [x] Quando houver dados do agente, mostrar em bloco próprio (versão reportada, último contato, falha), sem alterar a situação do sistema, que vem só do atendimento (25/09/2026).
+- [x] Histórico cronológico com observações expansíveis e relatório do atendimento (25/09/2026).
+- [x] Acrescentar próximos agendamentos se puder reutilizar consulta existente; caso contrário, entregar depois (25/09/2026).
+- [x] Acessos por máquina em lista compacta com cópia individual (25/09/2026).
+- [x] Estados vazios curtos, sem vários campos preenchidos com travessões (25/09/2026).
+- [x] Preservar seleção e pesquisa ao voltar da ficha (25/09/2026).
 
 Aceite: nome longo, sem grupo, sem sistemas, apenas fixos, sem histórico, vários acessos e histórico extenso.
 
@@ -527,7 +527,7 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E4 | ✅ Resumo e tendência mensal concluídos (25/09/2026) | I02, I03 | E2 | Médio |
 | E5 | ✅ Padrão de botões e toolbars; filtros recolhíveis; exportar/importar reposicionados (25/09/2026) | I06, I07, I08 | E1 | Médio |
 | E6 | ✅ Agendamentos (toolbar, filtros rápidos) e Clientes (acessos na linha, Grupo/Rede) (25/09/2026) | I10, I13, I14 | E5 | Médio |
-| E7 | Ficha do cliente e relatórios | I09, I15 | E2, E5 | Médio |
+| E7 | ✅ Ficha do cliente e relatórios (25/09/2026) | I09, I15 | E2, E5 | Médio |
 | E8 | Administração e Configurações (só reorganizar) | I18, I19 | — | Médio |
 | E9 | ✅ Identidade escolhida e aplicada (antecipada, 24/09/2026) | I01 | — | Médio |
 | E10 | Validação visual completa, README/ajuda, CHANGELOG | — | Todas | Pequeno |
@@ -544,7 +544,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 - [x] E4 — Resumo com card de situação, Sem atendimento e tendência de 12 meses, unidade explícita e comparação parcial justa.
 - [x] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados (25/09/2026).
 - [x] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto (25/09/2026).
-- [ ] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado.
+- [x] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado (25/09/2026).
 - [ ] E8 — Administração e Configurações reagrupadas, sem preferências novas.
 - [x] E9 — identidade escolhida e aplicada (antecipada; 24/09/2026).
 - [ ] E10 — validação completa e documentação.
