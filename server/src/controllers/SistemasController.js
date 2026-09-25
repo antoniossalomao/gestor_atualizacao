@@ -9,6 +9,16 @@ class SistemasController {
     res.json(this.clienteService.db.sistemas.versoes());
   };
 
+  catalogo = (req, res) => {
+    res.json(this.clienteService.db.sistemas.catalogo());
+  };
+
+  classificar = (req, res, next) => {
+    try {
+      res.json(this.clienteService.classificarSistema(req.params.id, req.body?.controlaVersao, req.session.user));
+    } catch (err) { next(err); }
+  };
+
   salvarVersao = (req, res, next) => {
     try {
       res.json(this.clienteService.salvarVersaoSistema(req.params.nome, req.body?.data, req.session.user));

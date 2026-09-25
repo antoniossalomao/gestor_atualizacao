@@ -3,6 +3,7 @@ const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, horaValida } = require("../shared/validation");
 const { normalizarResponsavel } = require("../shared/normalizacao");
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
+const { contaParaVersao } = require("./situacaoVersao");
 
 /**
  * Regras de negocio da aba Agendamentos, em cima do AgendamentoRepository.
@@ -102,6 +103,10 @@ class AgendamentoService {
     const clientes = [...new Set((input.clientes || []).map((nome) => String(nome || "").trim()).filter(Boolean))];
     const sistema = String(input.sistema || "").trim();
     if (!sistema) throw new ValidationError("Informe o sistema do lote.");
+    const catalogado = this.db.sistemas.resolver(sistema);
+    if (catalogado && !contaParaVersao(catalogado)) {
+      throw new ValidationError(`"${catalogado.nome}" não controla versão e não gera agendamentos por atraso.`);
+    }
     if (clientes.length === 0) throw new ValidationError("Nenhum cliente foi selecionado para o lote.");
     if (clientes.length > 500) throw new ValidationError("O lote pode conter no máximo 500 clientes.");
     const hoje = new Date();

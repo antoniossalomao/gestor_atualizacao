@@ -108,6 +108,10 @@ test("AgendamentoService - concorrência otimista e geração em lote", () => {
     const lote = env.service.gerarLote({ clientes: ["Loja 1", "Loja 2", "Loja 1"], sistema: "B_Vendas", responsavel: "Teste" }, USUARIO);
     assert.equal(lote.criados, 2, "remove clientes duplicados antes da transação");
     assert.equal(env.db.agendamentos.list("Atualizar B_Vendas").total, 2);
+    assert.throws(
+      () => env.service.gerarLote({ clientes: ["Loja 1"], sistema: "B_Atualizador", responsavel: "Teste" }, USUARIO),
+      (erro) => erro.statusCode === 400 && /não controla versão/.test(erro.message)
+    );
   } finally { env.cleanup(); }
 });
 

@@ -146,6 +146,7 @@ test("Resumo - situação dos clientes", async (t) => {
       assert.ok(!doCliente.sistemas.some((x) => x.sistema === "Suporte Bredas"));
       const ficha = env.servico.situacaoCliente("Só Fixos");
       assert.ok(ficha.every((x) => x.contaNaSituacao === false));
+      assert.ok(ficha.every((x) => x.fixo && x.situacao === "Componente fixo" && x.oficial === ""));
     });
 
     await t.test("o card aponta o sistema com mais clientes atrasados", () => {

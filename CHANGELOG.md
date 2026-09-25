@@ -15,6 +15,15 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Revisão do painel, E2:** componentes fixos saíram do gráfico por sistema,
+  da seleção de Sistemas e das referências oficiais. A ficha os reúne em
+  Serviços/componentes fixos, sem atraso. A API bloqueia nova referência e
+  lotes de atualização por atraso, enquanto preserva atendimentos e
+  referências antigas. A classificação agora é administrada na aba própria,
+  com permissão de administrador. Totais e tendência do Resumo passaram a
+  dizer Atendimentos para refletir a contagem de registros, inclusive de
+  instalações e acessos.
+
 - **Revisão do painel, E1:** retirado o comando de converter agendamento em atualização;
   tarefas concluídas podem ser arquivadas pelo cartão ou pela gaveta e consultadas em
   Arquivadas; “Último acesso” na Administração começa com maiúscula. O alerta sem fundo

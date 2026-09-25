@@ -396,8 +396,8 @@ class AtualizacaoRepository extends BaseRepository {
                 WHERE a.data != ''
              ) WHERE n = 1
            ) u ON u.sistema_id = s.id
-          WHERE s.ativo = 1
-          ORDER BY s.nome`
+           WHERE s.ativo = 1 AND s.controla_versao = 1
+           ORDER BY s.nome`
       )
       .all()
       .map((r) => ({ ...r, versao: r.versao || "Não informada" }));
@@ -424,8 +424,8 @@ class AtualizacaoRepository extends BaseRepository {
              ) WHERE n = 1 AND substr(data, 4, 7) = @mes
            ) u ON u.sistema_id = s.id
               AND EXISTS (SELECT 1 FROM cliente_sistemas cs WHERE cs.cliente_id = u.cliente_id AND cs.sistema_id = s.id)
-          WHERE s.ativo = 1
-          GROUP BY s.id
+           WHERE s.ativo = 1 AND s.controla_versao = 1
+           GROUP BY s.id
           ORDER BY total DESC, s.nome`
       )
       .all({ mes: mesStr });

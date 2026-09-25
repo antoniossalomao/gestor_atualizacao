@@ -72,17 +72,19 @@ Recomendação: atributo persistido no catálogo, por exemplo `controla_versao`,
 - [x] Criar migração idempotente, preservando IDs, vínculos e histórico (migração 2, `sistemas.controla_versao`).
 - [x] Manter os sistemas fixos no cadastro de sistemas usados pelo cliente.
 - [x] Excluir dos denominadores de cobertura de versões (card do Resumo).
-- [ ] Excluir do gráfico "Atualizações Por Sistema Este Mês".
+- [x] Excluir do gráfico "Atualizações Por Sistema Este Mês" (`atualizadosNoMesPorSistema` filtra `controla_versao`).
 - [x] Excluir de listas e contagens de clientes desatualizados por versão.
-- [ ] Excluir da seleção padrão da aba Sistemas e do gerenciador de versões oficiais.
-- [ ] Na ficha, apresentar em Serviços/componentes fixos, sem estado de atraso.
-- [ ] Não apagar atendimentos, anotações ou referências antigas já registradas.
-- [ ] Impedir na API que sistema fixo receba nova referência oficial por engano.
-- [ ] Desconsiderar referência antiga eventualmente cadastrada nesses dois sistemas.
-- [ ] Não gerar agendamento de atualização por atraso desses sistemas.
-- [ ] Reservar alteração da classificação de sistema à administração.
+- [x] Excluir da seleção da aba Sistemas e da lista de referências oficiais (`/sistemas/versoes`).
+- [x] Na ficha, apresentar em Serviços/componentes fixos, sem estado de atraso; a revisão geral da matriz continua em E7.
+- [x] Não apagar atendimentos, anotações ou referências antigas já registradas.
+- [x] Impedir na API que sistema fixo receba nova referência oficial por engano.
+- [x] Desconsiderar referência antiga eventualmente cadastrada nesses sistemas; ao reclassificar como atualizável, a referência preservada volta a aparecer.
+- [x] Não gerar lote de agendamentos de atualização por atraso desses sistemas; tarefa manual de instalação/acesso continua possível.
+- [x] Reservar alteração da classificação de sistema à administração (aba Classificação, rota com papel `admin`).
 
 Para volume de trabalho: um atendimento misto continua contando uma vez. Registro exclusivamente de instalação/acesso a componente fixo pode continuar no histórico de atendimentos, mas não deve inflar uma série chamada Atualizações de sistemas. Explicitar essa distinção no indicador.
+
+**Feito em E2 (25/09/2026):** os totais e a tendência atuais do Resumo foram rotulados como **Atendimentos**, pois contam cada registro uma vez, inclusive os exclusivamente de componentes fixos. O gráfico **Atualizações Por Sistema Este Mês** lista somente sistemas atualizáveis. A definição e o tratamento dos meses vazios da tendência permanecem em E4 (5.3).
 
 ### 3.3 Situação consolidada do cliente
 
@@ -512,7 +514,7 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 |---|---|---|---|---|
 | E0 | ✅ Contagem real por grupo da 3.3 (24/09/2026). Capturas "antes" ainda por fazer | — | — | Pequeno |
 | E1 | ✅ Correções rápidas e independentes (25/09/2026); navegador conferido em 390/1280 px, revisão visual completa segue em E10 | I05, I06 (só Excluir e ações sem borda), I11, I12, I17 | — | Pequeno |
-| E2 | ◐ Situação consolidada no servidor feita; sistemas fixos só na parte mínima | I04, I02 (regra) | E0 | Grande |
+| E2 | ✅ Regra de versão e classificação dos componentes fixos concluídas (25/09/2026); revisão geral da ficha permanece em E7 | I04, I02 (regra) | E0 | Grande |
 | E3 | Oficiais separadas dos filtros em Sistemas | I16 | E2 | Médio |
 | E4 | ◐ Card de situação e Sem atendimento feitos; falta a tendência | I02, I03 | E2 | Médio |
 | E5 | Padrão de botões e toolbars; Atualizações com filtros recolhíveis e planilhas reposicionadas | I06, I07, I08 | E1 | Médio |
@@ -529,7 +531,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 
 - [x] E0 — contagem por grupo com dados reais (24/09/2026).
 - [x] E1 — alerta sem fundo escuro, borda em Excluir, remover Converter, recuperar Arquivar, Último acesso capitalizado.
-- [x] E2 — `controla_versao` (mínimo), comparação por data, fonte só atendimento, regra única no servidor; ADR-0008. Falta o resto do I04 (3.2).
+- [x] E2 — `controla_versao`, exclusões dos fixos, classificação só por admin, comparação por data, fonte só atendimento e regra única no servidor; ADR-0008. Validados API, histórico e gráfico mensal.
 - [ ] E3 — gerenciador de oficiais separado dos filtros.
 - [ ] E4 — Resumo feito (card e Sem atendimento, com clique e indicador na mesma população); falta a tendência (I03).
 - [ ] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados.

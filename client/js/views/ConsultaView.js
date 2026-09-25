@@ -156,12 +156,13 @@ export class ConsultaView extends View {
         toast.error("Cliente não encontrado.");
         return;
       }
-      const [historico, painelVersoes, acessos] = await Promise.all([
+      const [historico, painelVersoes, acessos, situacaoSistemas] = await Promise.all([
         this.api.get(`/atualizacoes/recent-by-client/${encodeURIComponent(nome)}`, { limit: 10 }, { key: "consulta:historico" }),
         this.api.get("/versoes/painel", null, { key: "consulta:painel" }).catch(() => null),
         this.api.get(`/clientes/${cliente.id}/acessos`, null, { key: "consulta:acessos" }).catch(() => []),
+        this.api.get(`/atualizacoes/situacao-cliente/${encodeURIComponent(nome)}`, null, { key: "consulta:situacao" }),
       ]);
-      this._renderDetail(cliente, historico, painelVersoes, acessos);
+      this._renderDetail(cliente, historico, painelVersoes, acessos, situacaoSistemas);
     } catch (erro) {
       if (erro?.cancelled) return; // outra seleção, mais nova, tomou o lugar
       toast.error("Não foi possível carregar os dados deste cliente.");
@@ -178,7 +179,7 @@ export class ConsultaView extends View {
     );
   }
 
-  _renderDetail(cliente, historico, painelVersoes, acessos = []) {
+  _renderDetail(cliente, historico, painelVersoes, acessos = [], situacaoSistemas = []) {
     this.detailBox.innerHTML = html`
       <div class="consulta-detail__name"></div>
       <div class="consulta-detail__subtitle"></div>
@@ -229,7 +230,7 @@ export class ConsultaView extends View {
     });
 
     // Matriz Comparativa de Versões (Feature 3.2): Sistema | Instalada | Publicada | Estado | Último contato
-    this._renderMatrizVersoes(cliente, historico, painelVersoes);
+    this._renderMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas);
 
     const caixa = this.detailBox.querySelector('[data-role="ultima"]');
     if (!historico || historico.length === 0) {
@@ -264,10 +265,13 @@ export class ConsultaView extends View {
   }
 
   /** As contas estão em domain/matrizVersoes.js e a marcação em templates/consulta.js -- os dois testados. */
-  _renderMatrizVersoes(cliente, historico, painelVersoes) {
+  _renderMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas = []) {
     const container = this.detailBox.querySelector('[data-role="versao-matriz"]');
-    const linhas = montarMatrizVersoes(cliente, historico, painelVersoes);
-    if (linhas.length === 0) {
+    const fixos = situacaoSistemas.filter((s) => s.fixo);
+    const nomesFixos = new Set(fixos.map((s) => s.sistema.toLocaleLowerCase("pt-BR")));
+    const linhas = montarMatrizVersoes(cliente, historico, painelVersoes)
+      .filter((linha) => !nomesFixos.has(linha.sistema.toLocaleLowerCase("pt-BR")));
+    if (linhas.length === 0 && fixos.length === 0) {
       container.replaceChildren(
         emptyState({
           titulo: "Nenhum sistema associado",
@@ -278,24 +282,40 @@ export class ConsultaView extends View {
       return;
     }
 
-    const tableWrap = document.createElement("div");
-    tableWrap.className = "table-wrap";
-    tableWrap.style.marginBottom = "var(--sp-2)";
+    container.replaceChildren();
+    if (linhas.length > 0) {
+      const tableWrap = document.createElement("div");
+      tableWrap.className = "table-wrap";
+      tableWrap.style.marginBottom = "var(--sp-2)";
 
-    const table = document.createElement("table");
-    table.className = "data-table";
-    table.innerHTML = CABECALHO_MATRIZ;
+      const table = document.createElement("table");
+      table.className = "data-table";
+      table.innerHTML = CABECALHO_MATRIZ;
 
-    const tbody = table.querySelector("tbody");
-    for (const linha of linhas) {
-      const tr = document.createElement("tr");
-      tr.className = "is-readonly";
-      tr.innerHTML = linhaMatrizVersoes(linha);
-      tbody.appendChild(tr);
+      const tbody = table.querySelector("tbody");
+      for (const linha of linhas) {
+        const tr = document.createElement("tr");
+        tr.className = "is-readonly";
+        tr.innerHTML = linhaMatrizVersoes(linha);
+        tbody.appendChild(tr);
+      }
+
+      tableWrap.appendChild(table);
+      container.appendChild(tableWrap);
     }
-
-    tableWrap.appendChild(table);
-    container.replaceChildren(tableWrap);
+    if (fixos.length > 0) {
+      const secao = document.createElement("section");
+      const titulo = document.createElement("h3");
+      titulo.textContent = "Serviços/componentes fixos";
+      const lista = document.createElement("ul");
+      for (const sistema of fixos) {
+        const item = document.createElement("li");
+        item.textContent = sistema.sistema;
+        lista.appendChild(item);
+      }
+      secao.append(titulo, lista);
+      container.appendChild(secao);
+    }
   }
 }
 

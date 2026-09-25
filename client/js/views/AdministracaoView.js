@@ -8,6 +8,7 @@ import { NotificacoesAdmin } from "./administracao/NotificacoesAdmin.js";
 import { AtualizadorAdmin } from "./administracao/AtualizadorAdmin.js";
 import { BackupsAdmin } from "./administracao/BackupsAdmin.js";
 import { SaudeAdmin } from "./administracao/SaudeAdmin.js";
+import { SistemasAdmin } from "./administracao/SistemasAdmin.js";
 
 /**
  * Tela Administração -- só para administrador (ver `papel` em App.TABS).
@@ -43,6 +44,7 @@ const ABAS = [
     cabecalho: { titulo: "Histórico de alterações", descricao: "Quem criou, editou ou excluiu o quê, e quando." },
   },
   { key: "regras", rotulo: "Regras da equipe", icone: "ajustes", Secao: RegrasAdmin },
+  { key: "classificacao", rotulo: "Classificação", icone: "sistemas", Secao: SistemasAdmin },
   { key: "notificacoes", rotulo: "Notificações", icone: "sino", Secao: NotificacoesAdmin },
   { key: "atualizador", rotulo: "Atualizador", icone: "distribuicao", Secao: AtualizadorAdmin },
   { key: "backups", rotulo: "Backups", icone: "backups", Secao: BackupsAdmin },

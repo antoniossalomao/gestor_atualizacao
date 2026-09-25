@@ -37,8 +37,8 @@ export class ResumoView extends View {
     this.container.innerHTML = html`
       <div class="stat-tiles">
         ${statTile("clientes", "clientes", "Clientes", "Ver clientes")}
-        ${statTile("atualizacoes", "atualizacoes", "Atualizações", "Ver histórico")}
-        ${statTile("mes", "calendario", "Atualizações Este Mês", "Ver o mês")}
+        ${statTile("atualizacoes", "atualizacoes", "Atendimentos", "Ver histórico")}
+        ${statTile("mes", "calendario", "Atendimentos Este Mês", "Ver o mês")}
         ${statTile("semAtendimento", "alerta", rotuloSemAtendimento(this.desatualizadoDias), "Ver a lista")}
       </div>
 
@@ -62,7 +62,7 @@ export class ResumoView extends View {
           <div data-role="situacao"></div>
         </div>
         <div class="card">
-          <h2 class="card__title">Tendência Mensal de Atualizações</h2>
+          <h2 class="card__title">Tendência Mensal de Atendimentos</h2>
           <div data-role="tendencia"></div>
         </div>
       </div>

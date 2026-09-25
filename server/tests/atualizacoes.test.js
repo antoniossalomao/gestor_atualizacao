@@ -368,6 +368,21 @@ test("Versões recebidas permanecem após nova oficial, edição e desfazer", ()
   } finally { cleanup(); }
 });
 
+test("Gráfico mensal e referências recentes ignoram componentes fixos sem apagar atendimentos", () => {
+  const { db, service, clientes, cleanup } = ambiente();
+  try {
+    clientes.create({ nome: "Loja Mista", sistemas: ["B_Vendas", "B_Atualizador"] }, USUARIO);
+    clientes.create({ nome: "Loja Fixa", sistemas: ["Suporte Bredas"] }, USUARIO);
+    service.create({ cliente: "Loja Mista", sistema: "B_Vendas, B_Atualizador", data: "25/09/2026" }, USUARIO);
+    service.create({ cliente: "Loja Fixa", sistema: "Suporte Bredas", data: "25/09/2026" }, USUARIO);
+    const grafico = db.atualizacoes.atualizadosNoMesPorSistema("09/2026");
+    assert.equal(grafico.find((s) => s.label === "B_Vendas").total, 1);
+    assert.ok(!grafico.some((s) => s.label === "B_Atualizador" || s.label === "Suporte Bredas"));
+    assert.ok(!service.latestVersionBySystem().some((s) => s.nome === "B_Atualizador" || s.nome === "Suporte Bredas"));
+    assert.equal(db.atualizacoes.count(), 2, "ambos os atendimentos continuam no histórico");
+  } finally { cleanup(); }
+});
+
 test("Relatório por período e Excel respeitam filtros e contam clientes distintos", async () => {
   const { service, clientes, cleanup } = ambiente();
   try {

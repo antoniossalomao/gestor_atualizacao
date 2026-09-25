@@ -137,6 +137,8 @@ class ApiRouter {
     // Sistemas
     api.get("/sistemas", sistemas.list);
     api.get("/sistemas/versoes", sistemas.versoes);
+    api.get("/sistemas/catalogo", requireRole("admin"), sistemas.catalogo);
+    api.patch("/sistemas/:id/classificacao", requireRole("admin"), sistemas.classificar);
     api.put("/sistemas/:nome/versao", requireRole("operador", "admin"), sistemas.salvarVersao);
     api.post("/sistemas", requireRole("operador", "admin"), sistemas.create);
     api.delete("/sistemas/:nome", requireRole("operador", "admin"), sistemas.remove);

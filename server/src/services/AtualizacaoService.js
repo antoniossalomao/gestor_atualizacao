@@ -193,6 +193,7 @@ class AtualizacaoService {
     const sistemaLimpo = (sistema || "").trim();
     if (!sistemaLimpo) throw new ValidationError("Informe o sistema.");
     const alvo = this.db.sistemas.resolver(sistemaLimpo);
+    if (alvo && (!alvo.ativo || !contaParaVersao(alvo))) return [];
     const oficial = alvo?.ultima_versao || "";
     // Uma data digitada DIFERENTE da referência oficial é consulta avulsa
     // ("quem está desatualizado desde tal dia?"), sem ligação com a versão
@@ -264,7 +265,7 @@ class AtualizacaoService {
       this._resumirVersoes(data, sistemas);
       return sistemas;
     }
-    const oficiais = new Map(this.db.sistemas.todos().map((s) => [s.id, s.ultima_versao]));
+    const oficiais = new Map(this.db.sistemas.todos().map((s) => [s.id, contaParaVersao(s) ? s.ultima_versao : ""]));
     const atendimento = parseData(data.data);
     const sistemas = lista.map((s) => {
       const oficial = oficiais.get(s.id);
@@ -352,12 +353,15 @@ class AtualizacaoService {
         const sistema = catalogo.get(id);
         const registro = ultimas.get(id);
         const instalada = registro?.versao || "";
-        const oficial = sistema.ultima_versao || "";
-        const { situacao, pelaData } = situacaoDoSistema(registro, oficial);
+        const contaNaSituacao = contaParaVersao(sistema);
+        const oficial = contaNaSituacao ? sistema.ultima_versao || "" : "";
+        const { situacao, pelaData } = contaNaSituacao
+          ? situacaoDoSistema(registro, oficial)
+          : { situacao: sistema.controla_versao ? "Sistema inativo" : "Componente fixo", pelaData: false };
         // `contaNaSituacao` falso = sistema fixo (B_Atualizador, Suporte
         // Bredas) ou fora do catálogo: a ficha mostra, mas ele não entra na
         // situação consolidada do cliente (a do Resumo).
-        return { sistema: sistema.nome, instalada, oficial, situacao, pelaData, contaNaSituacao: contaParaVersao(sistema), data: registro?.data || "" };
+        return { sistema: sistema.nome, instalada, oficial, situacao, pelaData, contaNaSituacao, fixo: !sistema.controla_versao, data: registro?.data || "" };
       })
       .sort((a, b) => (a.sistema < b.sistema ? -1 : a.sistema > b.sistema ? 1 : 0));
   }

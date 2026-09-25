@@ -125,6 +125,7 @@ export class SistemasView extends View {
     this.sistemaFilter.innerHTML = this.versoes.map((s) => `<option value="${escapeHtml(s.nome)}">${escapeHtml(s.nome)}${s.data ? ` — ${escapeHtml(s.data)}` : ""}</option>`).join("");
     if (this.versoes.some((s) => s.nome === this.sistema)) this.sistemaFilter.value = this.sistema;
     this.sistema = this.sistemaFilter.value;
+    this._salvarFiltros();
     this._usarReferencia();
     await this._reloadList();
   }
@@ -150,7 +151,7 @@ export class SistemasView extends View {
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
     } finally {
-      this.salvarBtn.disabled = false;
+      this.salvarBtn.disabled = !this.sistema;
       this.sistemaFilter.disabled = false;
     }
   }
