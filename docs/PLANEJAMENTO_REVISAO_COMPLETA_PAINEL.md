@@ -48,7 +48,7 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 | I17 | Último acesso em minúscula | Template usa tempoRelativo diretamente | ✅ Concluído em E1: capitalização local da célula (seção 11.2) | P2 |
 | I18 | Melhorar Administração | Recursos importantes já existem em várias seções | ✅ Concluído em E8: 7 seções por finalidade de uso, incluindo Dados e Operação (seção 11) | P1 |
 | I19 | Configurações excessivamente visuais | Conta/segurança existem, mas apresentação ocupa várias abas | ✅ Concluído em E8: abertura em Minha conta e 6 seções por finalidade de uso (seção 12) | P1 |
-| I20 | Novas funcionalidades/abas | Há recursos existentes distribuídos | Priorizar Central de pendências | P2/P3 |
+| I20 | Novas funcionalidades/abas | Acompanhamento de metas e versões críticas | Campanhas de atualização (E11) | P2/P3 |
 
 P0: corrigir significado ou função importante. P1: revisão principal. P2: melhoria complementar. P3: expansão opcional. Prioridade não equivale a dificuldade.
 
@@ -464,18 +464,22 @@ Segurança futura: encerramento por inatividade administrável e autenticação 
 
 ## 13. Sugestões de evolução — I20
 
-### 13.1 Campanhas de atualização — segunda etapa
+### 13.1 Campanhas de atualização — metas de versão e prazos críticos (E11)
 
-Pergunta: **como acompanhar um conjunto de clientes para uma versão específica?**
+Pergunta: **como acompanhar o avanço e a entrega de uma versão crítica ou prazo fiscal em todos os clientes?**
 
-- [ ] Selecionar sistema, versão-alvo e clientes.
-- [ ] Preservar versão-alvo da campanha quando outra oficial for cadastrada.
-- [ ] Mostrar pendentes, atendidos e impedimentos.
-- [ ] Reaproveitar agendamentos para execução e atendimentos para comprovação.
-- [ ] Definir se receber versão posterior conclui campanha; não presumir ordenação de textos/datas sem regra.
-- [ ] Evitar duplicar publicação automática de pacotes em Versões/Distribuição.
+Substitui a proposta anterior da Central de pendências. Permite criar metas temporárias focadas em um sistema e versão mínima (ex.: B_NFe 25/09/2026 para uma Nota Técnica da SEFAZ), monitorando em tempo real o percentual de clientes atualizados contra os pendentes.
 
-Requer entidade e regras novas. Entregar depois de validar a Central de pendências.
+- [ ] Nova aba no menu lateral: **Campanhas** (com ícone dedicado).
+- [ ] Criação de campanha: sistema, versão-alvo (dd/mm/aaaa), prazo limite opcional e título/descrição.
+- [ ] Reconhecimento automático via atendimentos: registrar atendimento normal em Atualizações com versão igual ou mais recente (ADR-0008) marca o cliente como atendido na campanha, sem baixa manual.
+- [ ] Imutabilidade da meta: novas versões oficiais cadastradas posteriormente em Sistemas não alteram a versão-alvo fixada na campanha.
+- [ ] Painel visual executivo: barra de progresso percentual, contagem de atualizados, pendentes e já agendados.
+- [ ] Tabela de clientes com filtros rápidos (Pendentes, Já agendados, Concluídos, Todos).
+- [ ] Ações na linha: botão rápido para criar agendamento direto para cliente pendente e botão de gerenciar acessos remotos.
+- [ ] Exportação de relatório em planilha (.xlsx) com a lista de clientes pendentes da campanha.
+- [ ] Ciclo de vida: campanha ativa e arquivamento/encerramento quando concluída.
+- [ ] Estrutura leve no banco SQLite: tabela `campanhas` com vínculos aos clientes daquele sistema (`clientes_sistemas`), sem duplicar tabelas de clientes.
 
 ### 13.2 Relatórios gerenciais
 
@@ -515,7 +519,7 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E8 | ✅ Administração e Configurações reorganizadas por finalidade (25/09/2026) | I18, I19 | — | Médio |
 | E9 | ✅ Identidade escolhida e aplicada (antecipada, 24/09/2026) | I01 | — | Médio |
 | E10 | ✅ Validação visual completa, README/ajuda, CHANGELOG (25/09/2026) | — | Todas | Pequeno |
-| E11 | Central de pendências, em entrega independente | I20 | E2, E4, E6 e uso real | Grande; opcional |
+| E11 | Campanhas de atualização (aba no menu lateral, metas de versão e progresso) | I20 | E2, E4, E6 | Médio |
 
 E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída decidida foi julgar pela data o atendimento sem versão (3.3), e não criar a ação de confirmar versão.
 
@@ -532,7 +536,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 - [x] E8 — Administração e Configurações reagrupadas por finalidade, sem preferências novas (25/09/2026).
 - [x] E9 — identidade escolhida e aplicada (antecipada; 24/09/2026).
 - [x] E10 — validação completa e documentação (25/09/2026).
-- [ ] E11 — Central de pendências.
+- [ ] E11 — Campanhas de atualização (aba no menu lateral, metas de versão e progresso).
 
 ## 15. Validação e critérios gerais de aceite
 
@@ -615,7 +619,7 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 | Recebida mais nova que a oficial | Em dia; desatualizado só quando anterior à oficial |
 | Fonte da versão para a situação | Só o atendimento; agente aparece separado |
 | Escopo de Configurações/Administração | Só reorganizar; novidades em 13.5 |
-| Central de pendências | Mantida como E11, opcional e independente |
+| Central de pendências | Substituída por Campanhas de Atualização (E11, aba no menu lateral) |
 | Nome/símbolo | Gestor de Atualizações, assinatura Bredas Sistemas; símbolo vetorial (seção 4) |
 | Atendimento sem versão registrada | Julgado pela data do atendimento contra a da oficial, marcado "(pela data)" (ADR-0008) |
 | Quem decide a situação do cliente | O B_Vendas, quando o cliente tem (fixo no código); sem ele, todos os sistemas |
