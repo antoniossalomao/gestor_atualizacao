@@ -42,20 +42,10 @@ export class ClientesView extends View {
 
   _buildDom() {
     this.container.innerHTML = html`
-      <div class="view-actions">
-        <div class="view-actions__left">
-          <button type="button" class="btn" data-action="acessos" disabled>${iconHtml("acessos")} Acessos</button>
-          <button type="button" class="btn btn--danger" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
-        </div>
-        <div class="view-actions__right">
-          <button type="button" class="btn btn--accent" data-action="toggle-form">+ Novo Cliente</button>
-        </div>
-      </div>
-
       <form class="card" id="clientes-form" data-role="form-card" hidden novalidate>
-        <div class="form-grid form-grid--2">
+        <div class="form-grid form-grid--3">
+          <div class="field field--full"><label class="field__label" for="cli-nome">Cliente</label><input type="text" class="input" id="cli-nome" data-field="nome" required /></div>
           <div class="field"><label class="field__label" for="cli-codigo">Código</label><input type="text" class="input" id="cli-codigo" data-field="codigo" /></div>
-          <div class="field"><label class="field__label" for="cli-nome">Cliente</label><input type="text" class="input" id="cli-nome" data-field="nome" required /></div>
           <div class="field"><label class="field__label" for="cli-cidade">Cidade</label><input type="text" class="input" id="cli-cidade" data-field="cidade" /></div>
           <div class="field">
             <label class="field__label" for="cli-grupo">Grupo/Rede</label>
@@ -96,6 +86,8 @@ export class ClientesView extends View {
           </div>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
+          <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
+          <button type="button" class="btn btn--accent btn--small" data-action="toggle-form">+ Novo Cliente</button>
         </div>
         <p class="text-muted bulk-hint">
           Dica: segure <kbd>Shift</kbd> e clique em duas linhas para selecionar tudo entre elas.
@@ -148,14 +140,24 @@ export class ClientesView extends View {
 
     this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
       columns: [
-        { key: "id", label: "ID", type: "numeric", largura: "70px" },
-        { key: "codigo", label: "Código" },
-        { key: "nome", label: "Cliente" },
-        { key: "cidade", label: "Cidade" },
-        { key: "grupo", label: "Grupo/Rede" },
+        { key: "id", label: "ID", type: "numeric", largura: "56px" },
+        { key: "codigo", label: "Código", largura: "80px" },
+        { key: "nome", label: "Cliente", largura: "26%" },
+        { key: "cidade", label: "Cidade", largura: "120px" },
+        {
+          key: "grupo",
+          label: "Grupo/Rede",
+          largura: "130px",
+          title: (row) => row.grupo || "",
+          render: (row) => {
+            const span = document.createElement("span");
+            span.textContent = row.grupo || "—";
+            return span;
+          },
+        },
         { key: "sistemasTexto", label: "Sistemas" },
-        { key: "maquinas", label: "Máquinas", type: "numeric" },
-        { key: "acoes", label: "Ações", largura: "136px", render: (row) => acoesCliente(row, this.user?.role) },
+        { key: "maquinas", label: "Máquinas", type: "numeric", largura: "75px" },
+        { key: "acoes", label: "Ações", largura: "140px", render: (row) => acoesCliente(row, this.user?.role) },
       ],
       onSelect: (row) => this._loadIntoForm(row),
       // Seleção múltipla: marcar um sistema em vários clientes de uma vez
@@ -227,8 +229,6 @@ export class ClientesView extends View {
       });
     }
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
-    this.acessosBtn = this.container.querySelector('[data-action="acessos"]');
-    this.acessosBtn.addEventListener("click", () => this.abrirAcessos());
 
     // -- lote --
     this.bulkBar = this.container.querySelector('[data-role="bulk"]');
@@ -277,10 +277,14 @@ export class ClientesView extends View {
   async _acaoRapida(e) {
     const botao = e.target.closest("[data-row-action]");
     if (!botao) return;
+    // Evita propagação do clique que abriria simultaneamente a seleção/drawer
+    e.stopPropagation();
     const row = this.table.rows.find((item) => String(item.id) === botao.dataset.id);
     if (!row) return;
-    this._loadIntoForm(row);
-    if (botao.dataset.rowAction === "editar") this.toggleForm(true);
+    if (botao.dataset.rowAction === "editar") {
+      this._loadIntoForm(row);
+      this.toggleForm(true);
+    }
     if (botao.dataset.rowAction === "ficha") this.navigate("consulta", { cliente: row.nome });
     if (botao.dataset.rowAction === "acesso") {
       try {
@@ -289,6 +293,9 @@ export class ClientesView extends View {
         if (!texto) return Modal.alert("Acessos", "Este cliente ainda não possui acesso remoto cadastrado.", "info");
         if (await copyToClipboard(texto)) toast.success("Acessos remotos copiados.");
       } catch { toast.error("Não foi possível copiar os acessos."); }
+    }
+    if (botao.dataset.rowAction === "gerenciar-acesso") {
+      this.abrirAcessos(row.id, row.nome);
     }
   }
 
@@ -466,7 +473,6 @@ export class ClientesView extends View {
     }
     if (this.modalDeleteBtn) this.modalDeleteBtn.hidden = !isEdit || this.user?.role === "consulta";
     if (this.deleteBtn) this.deleteBtn.disabled = !isEdit;
-    if (this.acessosBtn) this.acessosBtn.disabled = !isEdit;
     if (this.drawer) {
       if (isEdit) {
         this.drawer.setTitulo(`Editar Cliente #${this.selectedId}`, "Altere os dados e sistemas cadastrados deste cliente.");
@@ -476,13 +482,13 @@ export class ClientesView extends View {
     }
   }
 
-  /** Abre a janela de acessos remotos (AnyDesk / Suporte Bredas) do cliente selecionado. */
-  abrirAcessos() {
-    if (this.selectedId == null) {
+  /** Abre a janela de acessos remotos (AnyDesk / Suporte Bredas) do cliente selecionado ou informado diretamente. */
+  abrirAcessos(id = this.selectedId, nome = this.fields?.nome?.value?.trim()) {
+    if (id == null) {
       Modal.alert("Seleção", "Selecione um cliente na tabela primeiro.", "warning");
       return;
     }
-    new AcessosModal(this.api, { id: this.selectedId, nome: this.fields.nome.value.trim() }).open();
+    new AcessosModal(this.api, { id, nome }).open();
   }
 
   _readForm() {
@@ -722,7 +728,12 @@ export class ClientesView extends View {
 function acoesCliente(row, role) {
   const wrap = document.createElement("div");
   wrap.className = "row-actions";
-  const botoes = [["acesso", "chave", "Copiar acessos"], ["ficha", "olho", "Abrir Ficha 360°"], ...(role === "consulta" ? [] : [["editar", "editar", "Editar"]])];
+  const botoes = [
+    ["acesso", "chave", "Copiar acessos"],
+    ...(role === "consulta" ? [] : [["gerenciar-acesso", "acessos", "Gerenciar acessos"]]),
+    ["ficha", "olho", "Abrir Ficha 360°"],
+    ...(role === "consulta" ? [] : [["editar", "editar", "Editar"]]),
+  ];
   for (const [acao, nomeIcone, titulo] of botoes) {
     const botao = document.createElement("button");
     botao.type = "button";

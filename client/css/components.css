@@ -1866,6 +1866,44 @@ select {
   margin: var(--sp-1) 0;
 }
 
+/* Filtros rápidos discretos (I10 — Agendamentos) */
+.filtros-rapidos {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: calc(-1 * var(--sp-2));
+  margin-bottom: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.filtro-rapido {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 4px 10px;
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-medio);
+  font-family: var(--fonte);
+  color: var(--cor-texto-fraco);
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pilula);
+  cursor: pointer;
+  transition: all var(--transicao);
+}
+
+.filtro-rapido:hover {
+  color: var(--cor-texto);
+  border-color: var(--cor-borda-forte);
+  background: var(--cor-superficie-alta);
+}
+
+.filtro-rapido.is-active {
+  color: var(--cor-accent-texto, white);
+  background: var(--cor-accent);
+  border-color: var(--cor-accent);
+}
+
 /* ==========================================================================
    6. TABELAS E PAGINAÇÃO
    ========================================================================== */

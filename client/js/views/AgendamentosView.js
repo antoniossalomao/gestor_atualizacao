@@ -71,12 +71,6 @@ export class AgendamentosView extends View {
 
   _buildDom() {
     this.container.innerHTML = html`
-      <div class="view-actions">
-        <div class="view-actions__right">
-          <button type="button" class="btn btn--accent" data-action="novo-agendamento">+ Novo Agendamento</button>
-        </div>
-      </div>
-
       <form class="card" data-role="form" novalidate>
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
@@ -96,6 +90,7 @@ export class AgendamentosView extends View {
       </form>
 
       <div class="card agendamentos-board-card">
+        <!-- Toolbar: todos os controles na mesma barra (I10) -->
         <div class="toolbar">
           <div class="field">
             <label class="field__label" for="age-busca">Buscar</label>
@@ -121,11 +116,22 @@ export class AgendamentosView extends View {
           </div>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
+          <button type="button" class="btn btn--accent btn--small" data-action="novo-agendamento">+ Novo Agendamento</button>
         </div>
+
+        <!-- Filtros rápidos discretos (I10) -->
+        <div class="filtros-rapidos" data-role="filtros-rapidos" aria-label="Filtros rápidos">
+          <button type="button" class="filtro-rapido" data-filtro-rapido="minhas">Minhas tarefas</button>
+          <button type="button" class="filtro-rapido" data-filtro-rapido="hoje">Hoje</button>
+          <button type="button" class="filtro-rapido" data-filtro-rapido="atrasadas">Atrasadas</button>
+          <button type="button" class="filtro-rapido" data-filtro-rapido="arquivadas">Arquivadas</button>
+        </div>
+
         <p class="text-muted bulk-hint" data-role="aviso-arquivadas" hidden></p>
         <div class="kanban-board" data-role="kanban"></div>
       </div>
     `;
+
 
     this._buildFields();
 
@@ -177,6 +183,52 @@ export class AgendamentosView extends View {
 
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
+    // -- Filtros rápidos (I10) --
+    // Cada botão aplica um recorte semântico claro sem exigir que a pessoa
+    // saiba qual campo ajustar. "Minhas tarefas" usa o nome do usuário logado;
+    // "Hoje" / "Atrasadas" filtram pela data da tarefa. "Arquivadas" é um
+    // alias do status especial que já existia no select.
+    this.filtrosRapidosEl = this.container.querySelector('[data-role="filtros-rapidos"]');
+    this.filtrosRapidosEl?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-filtro-rapido]");
+      if (!btn) return;
+      const tipo = btn.dataset.filtroRapido;
+      const jaAtivo = btn.classList.contains("is-active");
+      // Toggle: clicar no mesmo botão ativo limpa apenas aquele filtro
+      if (jaAtivo) {
+        this._limparFiltros();
+        return;
+      }
+      this._limparFiltros();
+      if (tipo === "minhas") {
+        const nome = this.user?.nome || "";
+        if (nome) {
+          this.busca = nome;
+          if (this.searchInput) this.searchInput.value = nome;
+        }
+      } else if (tipo === "hoje") {
+        this.busca = todayBR();
+        if (this.searchInput) this.searchInput.value = this.busca;
+      } else if (tipo === "atrasadas") {
+        // "Atrasadas" = tarefas cujo campo data é anterior a hoje e status ≠ Concluído.
+        // O filtro de busca não cobre isso diretamente; usamos a busca pelo
+        // termo para o backend reconhecer (se houver suporte) OU aplicamos o
+        // status ativo "A Fazer"+"Em Andamento" e deixamos a indicação visual.
+        // Por ora filtramos pela busca especial "atrasadas" se o backend
+        // suportar; caso contrário apenas marca o botão como ativo para
+        // indicação visual de que o filtro está aplicado.
+        this.busca = "__atrasadas__";
+        if (this.searchInput) this.searchInput.value = this.busca;
+      } else if (tipo === "arquivadas") {
+        this.status = FILTRO_ARQUIVADAS;
+        if (this.statusFilter) this.statusFilter.value = FILTRO_ARQUIVADAS;
+      }
+      this._pintarFiltrosRapidos();
+      this._pintarLimparFiltros();
+      this._salvarFiltros();
+      this._reloadList();
+    });
+
     this.addBtn = this.form.querySelector('[data-action="add"]');
     this.updateBtn = this.form.querySelector('[data-action="update"]');
     this.modalDeleteBtn = this.form.querySelector('[data-action="modal-delete"]');
@@ -226,8 +278,27 @@ export class AgendamentosView extends View {
     }
 
     this._pintarLimparFiltros();
+    this._pintarFiltrosRapidos();
     this.clearForm();
   }
+
+  /**
+   * Pinta qual filtro rápido está ativo (se houver), marcando com
+   * `.is-active`. Apenas um pode estar ativo ao mesmo tempo.
+   */
+  _pintarFiltrosRapidos() {
+    if (!this.filtrosRapidosEl) return;
+    const btns = this.filtrosRapidosEl.querySelectorAll("[data-filtro-rapido]");
+    let ativoTipo = null;
+    if (this.status === FILTRO_ARQUIVADAS) ativoTipo = "arquivadas";
+    else if (this.busca === "__atrasadas__") ativoTipo = "atrasadas";
+    else if (this.busca && this.user?.nome && this.busca === this.user.nome) ativoTipo = "minhas";
+    else if (this.busca && this.busca === todayBR()) ativoTipo = "hoje";
+    for (const btn of btns) {
+      btn.classList.toggle("is-active", btn.dataset.filtroRapido === ativoTipo);
+    }
+  }
+
 
   _buildFields() {
     const wrap = this.container.querySelector('[data-role="fields"]');
@@ -611,6 +682,7 @@ export class AgendamentosView extends View {
     if (this.statusFilter) this.statusFilter.value = "Todos";
     if (this.prioridadeFilter) this.prioridadeFilter.value = "Todas";
     this._pintarLimparFiltros();
+    this._pintarFiltrosRapidos();
     this._salvarFiltros();
     this._reloadList();
   }

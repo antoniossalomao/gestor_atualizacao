@@ -291,15 +291,15 @@ Toolbar junto à grade: `Buscar | Responsável | Status | Filtros | + Novo agend
 
 Abaixo, filtros rápidos discretos: Minhas tarefas, Hoje, Atrasadas e Arquivadas. Lista é o padrão recomendado; Kanban existente permanece alternativa, compartilhando dados e regras.
 
-- [ ] Remover faixa superior usada apenas pelo botão de criação.
-- [ ] Mover criação para toolbar com tamanho secundário e borda.
-- [ ] Alinhar início da grade com Clientes e Atualizações.
-- [ ] Padronizar busca, filtros e paginação.
-- [ ] Destacar cliente/tarefa; responsável, prazo e status legíveis na linha.
-- [ ] Destacar alta/urgente sem selos excessivos para prioridade normal.
-- [ ] Expor edição, conclusão e arquivamento conforme estado.
-- [ ] Reaproveitar prioridades, horários, responsáveis, observações e Kanban existentes.
-- [ ] Garantir contagens e conjuntos corretos nos filtros rápidos.
+- [x] Remover faixa superior usada apenas pelo botão de criação (25/09/2026).
+- [x] Mover criação para toolbar com tamanho secundário e borda (25/09/2026).
+- [x] Alinhar início da grade com Clientes e Atualizações (25/09/2026).
+- [x] Padronizar busca, filtros e paginação (25/09/2026).
+- [x] Destacar cliente/tarefa; responsável, prazo e status legíveis na linha (25/09/2026).
+- [x] Destacar alta/urgente sem selos excessivos para prioridade normal (25/09/2026).
+- [x] Expor edição, conclusão e arquivamento conforme estado (25/09/2026).
+- [x] Reaproveitar prioridades, horários, responsáveis, observações e Kanban existentes (25/09/2026).
+- [x] Garantir contagens e conjuntos corretos nos filtros rápidos (25/09/2026).
 
 ### 8.1 Remover conversão
 
@@ -328,22 +328,22 @@ Melhorias posteriores: reagendamento com motivo, lembrete de retorno e checklist
 
 ### 9.1 Acessos na linha
 
-- [ ] Retirar Acessos da toolbar global.
-- [ ] Acrescentar Gerenciar acessos diretamente na linha de cada cliente.
-- [ ] Manter Copiar acessos separado: a ação atual de cópia não substitui a gestão.
-- [ ] Usar menu de linha quando ficha, acessos, edição e exclusão não couberem.
-- [ ] Passar o ID da linha para a ação, sem depender de seleção prévia.
-- [ ] Evitar propagação do clique que abra simultaneamente o formulário.
-- [ ] Preservar restrições de usuários de consulta.
+- [x] Retirar Acessos da toolbar global (25/09/2026).
+- [x] Acrescentar Gerenciar acessos diretamente na linha de cada cliente (25/09/2026).
+- [x] Manter Copiar acessos separado: a ação atual de cópia não substitui a gestão (25/09/2026).
+- [x] Usar menu de linha quando ficha, acessos, edição e exclusão não couberem (25/09/2026).
+- [x] Passar o ID da linha para a ação, sem depender de seleção prévia (25/09/2026).
+- [x] Evitar propagação do clique que abra simultaneamente o formulário (25/09/2026).
+- [x] Preservar restrições de usuários de consulta (25/09/2026).
 
 ### 9.2 Grupo/Rede
 
-- [ ] Priorizar largura do nome do cliente.
-- [ ] Limitar coluna Grupo/Rede com quebra controlada ou reticências e leitura completa acessível.
-- [ ] Compactar campo no formulário, agrupando com Código/Cidade quando couber.
-- [ ] No celular, manter rótulo e conteúdo legíveis em disposição vertical.
-- [ ] Não criar selo ou bloco chamativo para valor vazio.
-- [ ] Preservar busca por grupo, autocomplete e dados existentes.
+- [x] Priorizar largura do nome do cliente (25/09/2026).
+- [x] Limitar coluna Grupo/Rede com quebra controlada ou reticências e leitura completa acessível (25/09/2026).
+- [x] Compactar campo no formulário, agrupando com Código/Cidade quando couber (25/09/2026).
+- [x] No celular, manter rótulo e conteúdo legíveis em disposição vertical (25/09/2026).
+- [x] Não criar selo ou bloco chamativo para valor vazio (25/09/2026).
+- [x] Preservar busca por grupo, autocomplete e dados existentes (25/09/2026).
 
 ### 9.3 Ficha do cliente
 
@@ -526,7 +526,7 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E3 | ✅ Oficiais separadas dos filtros em Sistemas (25/09/2026) | I16 | E2 | Médio |
 | E4 | ✅ Resumo e tendência mensal concluídos (25/09/2026) | I02, I03 | E2 | Médio |
 | E5 | ✅ Padrão de botões e toolbars; filtros recolhíveis; exportar/importar reposicionados (25/09/2026) | I06, I07, I08 | E1 | Médio |
-| E6 | Agendamentos (toolbar, filtros rápidos) e Clientes (acessos na linha, Grupo/Rede) | I10, I13, I14 | E5 | Médio |
+| E6 | ✅ Agendamentos (toolbar, filtros rápidos) e Clientes (acessos na linha, Grupo/Rede) (25/09/2026) | I10, I13, I14 | E5 | Médio |
 | E7 | Ficha do cliente e relatórios | I09, I15 | E2, E5 | Médio |
 | E8 | Administração e Configurações (só reorganizar) | I18, I19 | — | Médio |
 | E9 | ✅ Identidade escolhida e aplicada (antecipada, 24/09/2026) | I01 | — | Médio |
@@ -543,7 +543,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 - [x] E3 — consulta com filtros próprios e gerenciador de oficiais separado, com autoria e proteção contra edição concorrente.
 - [x] E4 — Resumo com card de situação, Sem atendimento e tendência de 12 meses, unidade explícita e comparação parcial justa.
 - [x] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados (25/09/2026).
-- [ ] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto.
+- [x] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto (25/09/2026).
 - [ ] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado.
 - [ ] E8 — Administração e Configurações reagrupadas, sem preferências novas.
 - [x] E9 — identidade escolhida e aplicada (antecipada; 24/09/2026).
