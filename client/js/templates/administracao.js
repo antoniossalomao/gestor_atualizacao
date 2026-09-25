@@ -60,7 +60,7 @@ export function legendaPapeis() {
 export function linhaUsuario(u, { ehVoce }) {
   const papel = papelNormalizado(u.role);
   const acesso = u.ultimo_login
-    ? html`<span title="${formatarDataHora(u.ultimo_login)}">${tempoRelativo(u.ultimo_login)}</span>`
+    ? html`<span title="${formatarDataHora(u.ultimo_login)}">${tempoRelativo(u.ultimo_login).replace(/^./, (letra) => letra.toLocaleUpperCase("pt-BR"))}</span>`
     : html`<span class="text-muted">Nunca entrou</span>`;
   return html`
     <td data-label="Pessoa">

@@ -82,11 +82,11 @@ export class AgendamentosView extends View {
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
             <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
+            <button type="button" class="btn btn--small" data-action="modal-arquivar" hidden>Arquivar</button>
             <span class="form-actions__hint text-muted" data-role="modo"></span>
           </div>
           <div class="form-actions__right">
             <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
-            <button type="button" class="btn btn--ghost" data-action="modal-converter" hidden>${iconHtml("converter")} Converter</button>
             <button type="button" class="btn btn--ghost" data-action="modal-reabrir" hidden>${iconHtml("atualizar")} Reabrir</button>
             <button type="button" class="btn btn--ghost" data-action="modal-done" hidden>${iconHtml("check")} Concluir</button>
             <button type="submit" class="btn btn--accent" data-action="add">Adicionar Tarefa</button>
@@ -180,7 +180,7 @@ export class AgendamentosView extends View {
     this.addBtn = this.form.querySelector('[data-action="add"]');
     this.updateBtn = this.form.querySelector('[data-action="update"]');
     this.modalDeleteBtn = this.form.querySelector('[data-action="modal-delete"]');
-    this.modalConverterBtn = this.form.querySelector('[data-action="modal-converter"]');
+    this.modalArquivarBtn = this.form.querySelector('[data-action="modal-arquivar"]');
     this.modalDoneBtn = this.form.querySelector('[data-action="modal-done"]');
     this.modalReabrirBtn = this.form.querySelector('[data-action="modal-reabrir"]');
 
@@ -192,12 +192,7 @@ export class AgendamentosView extends View {
       });
     }
 
-    if (this.modalConverterBtn) {
-      this.modalConverterBtn.addEventListener("click", () => {
-        this.drawer.fechar({ forcar: true });
-        this.converterEmAtualizacao();
-      });
-    }
+    this.modalArquivarBtn?.addEventListener("click", () => this.arquivar());
 
     if (this.modalDoneBtn) {
       this.modalDoneBtn.addEventListener("click", async () => {
@@ -557,7 +552,7 @@ export class AgendamentosView extends View {
       if (!row) return;
       this._loadIntoForm(row);
       if (botao.dataset.rowAction === "editar") this.drawer.abrir({ foco: this.fields.tarefa });
-      if (botao.dataset.rowAction === "converter") this.converterEmAtualizacao();
+      if (botao.dataset.rowAction === "arquivar") await this.arquivar(botao);
       if (botao.dataset.rowAction === "concluir") await this._moverCard(row.id, STATUS_CONCLUIDO);
       if (botao.dataset.rowAction === "avancar") await this._avancar(row);
       if (botao.dataset.rowAction === "reabrir") await this.reabrir();
@@ -649,12 +644,13 @@ export class AgendamentosView extends View {
       this.updateBtn.disabled = !isEdit;
     }
     if (this.modalDeleteBtn) this.modalDeleteBtn.hidden = !isEdit || this.user?.role === "consulta";
-    if (this.modalConverterBtn) this.modalConverterBtn.hidden = !isEdit || this.user?.role === "consulta";
+    if (this.modalArquivarBtn) this.modalArquivarBtn.hidden =
+      !isEdit || this.user?.role === "consulta" || this.fields?.status?.value !== STATUS_CONCLUIDO || this.status === FILTRO_ARQUIVADAS;
     if (this.modalDoneBtn) {
       this.modalDoneBtn.hidden =
         !isEdit || this.user?.role === "consulta" || this.fields?.status?.value === STATUS_CONCLUIDO || this.status === FILTRO_ARQUIVADAS;
     }
-    if (this.modalReabrirBtn) this.modalReabrirBtn.hidden = !isEdit || this.status !== FILTRO_ARQUIVADAS;
+    if (this.modalReabrirBtn) this.modalReabrirBtn.hidden = !isEdit || this.user?.role === "consulta" || this.status !== FILTRO_ARQUIVADAS;
 
     if (this.drawer) {
       if (isEdit) {
@@ -702,17 +698,6 @@ export class AgendamentosView extends View {
         this.drawer.abrir({ foco: this.fields.tarefa });
       }
     }
-  }
-
-  converterEmAtualizacao() {
-    if (this.selectedId == null) return;
-    this.navigate("atualizacoes", {
-      cliente: this.fields.cliente.value,
-      responsavel: this.fields.responsavel.value,
-      data: this.fields.data.value,
-      motivo: this.fields.tarefa.value,
-      obs: `Convertido do agendamento #${this.selectedId}.`,
-    });
   }
 
   _readForm() {
@@ -806,20 +791,27 @@ export class AgendamentosView extends View {
     await this._moverCard(this.selectedId, STATUS_CONCLUIDO);
   }
 
-  async arquivar() {
+  async arquivar(botao = this.modalArquivarBtn) {
     if (this.selectedId == null) return;
+    if (this.user?.role === "consulta" || this.status === FILTRO_ARQUIVADAS) return;
+    if (botao.disabled) return;
     if (this.fields.status.value !== STATUS_CONCLUIDO) {
       Modal.alert("Arquivar", `Só é possível arquivar tarefas "${STATUS_CONCLUIDO}".`, "warning");
       return;
     }
+    const liberar = marcarOcupado(botao);
     try {
       await this.api.patch(`/agendamentos/${this.selectedId}/arquivar`);
       this.clearForm();
+      this.drawer.marcarLimpa();
+      await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
       toast.success("Tarefa arquivada.");
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
+    } finally {
+      liberar();
     }
   }
 
@@ -874,7 +866,7 @@ export class AgendamentosView extends View {
       this.searchInput.focus();
     } else if (e.key === "Enter" || e.key === " ") {
       const card = e.target.closest(".kanban-card");
-      if (card) {
+      if (card && e.target === card) {
         e.preventDefault();
         const row = this.rows?.find((item) => String(item.id) === card.dataset.id);
         if (row) {

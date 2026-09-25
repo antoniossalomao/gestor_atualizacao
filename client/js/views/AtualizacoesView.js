@@ -588,13 +588,8 @@ export class AtualizacoesView extends View {
     this._pintarModo();
   }
 
-  /**
-   * Chamado pela aba Agendamentos ao converter uma tarefa em Atualização
-   * (botão "Converter em Atualização", ver AgendamentosView.converterEmAtualizacao)
-   * -- pré-preenche um registro NOVO (não edita nada existente) com o que a
-   * tarefa já tinha, pra não digitar tudo de novo.
-   */
-  aplicarParams({ cliente, responsavel, data, motivo, obs, desde, ate, novo } = {}) {
+  /** Aplica o período vindo do Resumo ou abre um novo atendimento. */
+  aplicarParams({ desde, ate, novo } = {}) {
     // Vindo de um indicador do Resumo: não é para preencher formulário
     // nenhum, é para FILTRAR a lista pelo período que aquele número contava.
     if (desde || ate) {
@@ -606,14 +601,6 @@ export class AtualizacoesView extends View {
       this.drawer.abrir({ foco: this.fields.cliente });
       return;
     }
-    if (!cliente) return;
-    this.clearForm();
-    if (cliente) this.fields.cliente.value = cliente;
-    if (responsavel) this.fields.responsavel.value = responsavel;
-    if (data) this.fields.data.value = data;
-    if (motivo) this.fields.motivo.value = motivo;
-    if (obs) this.fields.obs.value = obs;
-    this.drawer.abrir({ foco: this.fields.maquinas });
   }
 
   /** Mostra em qual modo o formulário está -- criando algo novo, ou editando. */

@@ -118,10 +118,14 @@ test("AgendamentoService - concluido_em", async (t) => {
       const t1 = criar(env.service, env.db, { tarefa: "Vira concluída" });
       assert.equal(t1.concluidoEm, null, "nasce sem data de conclusão");
 
+      const atualizacoesAntes = env.db.conn.prepare("SELECT COUNT(*) AS total FROM atualizacoes").get().total;
+
       env.service.update(t1.id, { tarefa: "Vira concluída", status: CONCLUIDO }, USUARIO);
       const depois = env.db.agendamentos.find(t1.id);
       assert.equal(depois.status, CONCLUIDO);
       assert.ok(depois.concluidoEm, "deveria ter gravado a hora da conclusão");
+      assert.equal(env.db.conn.prepare("SELECT COUNT(*) AS total FROM atualizacoes").get().total, atualizacoesAntes,
+        "concluir tarefa não cria um atendimento nem aplica versões ao cliente");
     });
 
     await t.test("editar tarefa JÁ concluída preserva a data original", () => {

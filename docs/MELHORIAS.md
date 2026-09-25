@@ -87,7 +87,7 @@ confirmou contra o código.
   (`components/Drawer.js`, usado em `AgendamentosView`, `ClientesView`,
   `AtualizacoesView`).
 - **Ações rápidas por linha ao passar o mouse** (copiar relatório, editar,
-  ver ficha, marcar concluído, converter em atualização). Confirmado
+  ver ficha, marcar concluído). A conversão em atualização foi removida na E1. Confirmado
   (`row-actions` em `AgendamentosView`, `ClientesView`, `AtualizacoesView`,
   `DistribuicaoView`).
 - **Presets de período com um clique** (Hoje, Esta semana, Este mês, ...).

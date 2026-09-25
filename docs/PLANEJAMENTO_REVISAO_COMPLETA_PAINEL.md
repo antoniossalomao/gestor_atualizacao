@@ -295,24 +295,24 @@ Abaixo, filtros rápidos discretos: Minhas tarefas, Hoje, Atrasadas e Arquivadas
 
 ### 8.1 Remover conversão
 
-- [ ] Remover Converter do formulário, menus de linha, comandos e dicas.
-- [ ] Localizar chamadores antes de retirar handlers e método sem uso.
-- [ ] Manter cadastro de atualização independente do agendamento.
-- [ ] Remover instruções antigas de conversão da documentação.
-- [ ] Testar que concluir tarefa não cria atualização nem altera versão de cliente.
+- [x] Remover Converter do formulário, menus de linha, comandos e dicas.
+- [x] Localizar chamadores antes de retirar handlers e método sem uso.
+- [x] Manter cadastro de atualização independente do agendamento.
+- [x] Remover instruções antigas de conversão da documentação.
+- [x] Testar que concluir tarefa não cria atualização nem altera versão de cliente.
 
 ### 8.2 Recuperar arquivamento manual
 
 A regra atual permite arquivar tarefa concluída. Preservá-la nesta entrega; permitir arquivar pendentes seria outra decisão de negócio.
 
-- [ ] Mostrar Arquivar na linha concluída e no formulário correspondente.
-- [ ] Não oferecer ação inválida em tarefa pendente; explicar quando necessário.
-- [ ] Reutilizar rota existente, com retorno claro de sucesso ou erro.
-- [ ] Retirar da lista ativa sem apagar histórico.
-- [ ] Manter acesso a Arquivadas mesmo com contagem zero.
-- [ ] Diferenciar Desarquivar de Reabrir: verificar se a operação existente altera também o status antes de escolher o rótulo.
-- [ ] Preservar arquivamento automático e sua configuração administrativa.
-- [ ] Testar lista/Kanban, filtros e papéis admin/operador/consulta.
+- [x] Mostrar Arquivar no cartão concluído e no formulário correspondente.
+- [x] Não oferecer ação inválida em tarefa pendente; explicar quando necessário.
+- [x] Reutilizar rota existente, com retorno claro de sucesso ou erro.
+- [x] Retirar da lista ativa sem apagar histórico.
+- [x] Manter acesso a Arquivadas mesmo com contagem zero.
+- [x] Diferenciar Desarquivar de Reabrir: a operação existente também muda o status para A Fazer.
+- [x] Preservar arquivamento automático e sua configuração administrativa.
+- [x] Testar Kanban, filtro Arquivadas e papéis admin/operador/consulta (cartão e autorização da rota). A tela atual não tem lista tabular; a reorganização da grade fica para E6.
 
 Melhorias posteriores: reagendamento com motivo, lembrete de retorno e checklist de execução. Recorrência e calendário mensal ficam fora da primeira entrega por exigirem regras de série, duplicação e vencimento.
 
@@ -395,10 +395,10 @@ Aceite: filtro nunca grava; salvar não reescreve atendimento; sistemas aceitam 
 
 ### 11.1 Último acesso
 
-- [ ] Renderizar Hoje, Ontem e Há 2 dias com inicial maiúscula na célula.
-- [ ] Manter data/hora completa no detalhe acessível.
-- [ ] Preservar Nunca entrou quando não houver login.
-- [ ] Alterar apresentação local, sem capitalizar todas as frases de `tempoRelativo()` usadas em textos corridos.
+- [x] Renderizar Hoje, Ontem e Há 2 dias com inicial maiúscula na célula.
+- [x] Manter data/hora completa no detalhe acessível.
+- [x] Preservar Nunca entrou quando não houver login.
+- [x] Alterar apresentação local, sem capitalizar todas as frases de `tempoRelativo()` usadas em textos corridos.
 
 ### 11.2 Organização por finalidade
 
@@ -511,7 +511,7 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | Etapa | Entrega | Pedidos | Dependência | Esforço |
 |---|---|---|---|---|
 | E0 | ✅ Contagem real por grupo da 3.3 (24/09/2026). Capturas "antes" ainda por fazer | — | — | Pequeno |
-| E1 | Correções rápidas e independentes | I05, I06 (só Excluir e ações sem borda), I11, I12, I17 | — | Pequeno |
+| E1 | ✅ Correções rápidas e independentes (25/09/2026); navegador conferido em 390/1280 px, revisão visual completa segue em E10 | I05, I06 (só Excluir e ações sem borda), I11, I12, I17 | — | Pequeno |
 | E2 | ◐ Situação consolidada no servidor feita; sistemas fixos só na parte mínima | I04, I02 (regra) | E0 | Grande |
 | E3 | Oficiais separadas dos filtros em Sistemas | I16 | E2 | Médio |
 | E4 | ◐ Card de situação e Sem atendimento feitos; falta a tendência | I02, I03 | E2 | Médio |
@@ -528,7 +528,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 ### Checklist mestre
 
 - [x] E0 — contagem por grupo com dados reais (24/09/2026).
-- [ ] E1 — alerta sem fundo escuro, borda em Excluir, remover Converter, recuperar Arquivar, Último acesso capitalizado.
+- [x] E1 — alerta sem fundo escuro, borda em Excluir, remover Converter, recuperar Arquivar, Último acesso capitalizado.
 - [x] E2 — `controla_versao` (mínimo), comparação por data, fonte só atendimento, regra única no servidor; ADR-0008. Falta o resto do I04 (3.2).
 - [ ] E3 — gerenciador de oficiais separado dos filtros.
 - [ ] E4 — Resumo feito (card e Sem atendimento, com clique e indicador na mesma população); falta a tendência (I03).

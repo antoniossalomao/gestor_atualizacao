@@ -59,7 +59,6 @@ const PATHS = {
     '<path d="M13.4 3.4a2 2 0 0 1 2.8 2.8L7 15.4l-4 1 1-4 9.4-9.4z" stroke-linecap="round" stroke-linejoin="round"/>',
   chave:
     '<circle cx="6.8" cy="13.2" r="3.2"/><path d="M9.1 10.9 16 4l2 2-1.7 1.7M13.7 7.7l2 2" stroke-linecap="round" stroke-linejoin="round"/>',
-  converter: '<path d="M6 14 14 6M8 6h6v6" stroke-linecap="round" stroke-linejoin="round"/>',
 
   /* -- seções do painel de Configurações -- */
   paleta:

@@ -123,6 +123,16 @@ test("Agendamentos - cartão do kanban", async (t) => {
     assert.match(texto(cartaoKanban(base, "operador", { agora: AGORA })), /draggable="true"/);
   });
 
+  await t.test("Arquivar só aparece para tarefa concluída ativa e usuário que pode editar", () => {
+    const concluida = { ...base, status: STATUS_CONCLUIDO };
+    const operador = texto(cartaoKanban(concluida, "operador", { agora: AGORA }));
+    assert.match(operador, /data-row-action="arquivar"/);
+    assert.doesNotMatch(operador, /data-row-action="converter"/);
+    assert.doesNotMatch(texto(cartaoKanban(base, "operador", { agora: AGORA })), /data-row-action="arquivar"/);
+    assert.doesNotMatch(texto(cartaoKanban(concluida, "consulta", { agora: AGORA })), /data-row-action="arquivar"/);
+    assert.doesNotMatch(texto(cartaoKanban({ ...concluida, arquivadoEm: "2026-09-01" }, "admin", { agora: AGORA })), /data-row-action="arquivar"/);
+  });
+
   await t.test("sem data nem sistema/responsável: nada de '·' solto nem <time> vazio", () => {
     const html = texto(cartaoKanban({ id: 1, tarefa: "t", status: "A Fazer" }, "operador", { agora: AGORA }));
     assert.doesNotMatch(html, /<time/);
@@ -513,6 +523,11 @@ test("Administração - linha de usuário", async (t) => {
     assert.doesNotMatch(html, /<option value="admin" selected>/);
     assert.match(html, /data-action="remover" data-id="2"/);
     assert.match(html, /Nunca entrou/);
+  });
+
+  await t.test("último acesso começa com maiúscula sem perder a data completa", () => {
+    const recente = texto(linhaUsuario({ ...outro, ultimo_login: new Date(Date.now() - 3 * 86400000).toISOString() }, { ehVoce: false }));
+    assert.match(recente, /<span title="[^"]+">Há 3 dias<\/span>/);
   });
 
   await t.test("conta legada 'user' aparece como Operador selecionado", () => {

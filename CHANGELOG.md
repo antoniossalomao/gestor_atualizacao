@@ -15,6 +15,11 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Revisão do painel, E1:** retirado o comando de converter agendamento em atualização;
+  tarefas concluídas podem ser arquivadas pelo cartão ou pela gaveta e consultadas em
+  Arquivadas; “Último acesso” na Administração começa com maiúscula. O alerta sem fundo
+  escuro e a borda visível das ações destrutivas já tinham sido corrigidos nesta etapa.
+
 - **"Em dia" passou a falar de versão, não de tempo parado.** O card "Situação dos
   Clientes" do Resumo chamava de em dia quem teve qualquer atendimento nos
   últimos 60 dias. Um cliente atendido ontem com a NFe velha aparecia em
