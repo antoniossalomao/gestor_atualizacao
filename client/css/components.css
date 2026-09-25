@@ -1797,6 +1797,75 @@ select {
   background: rgba(0, 0, 0, 0.15);
 }
 
+/* Painel de filtros recolhível (I07 — datas e presets ficam aqui) */
+.filtros-painel {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  padding: var(--sp-3) 0 var(--sp-3);
+  border-top: 1px solid var(--cor-borda);
+  margin-bottom: var(--sp-2);
+}
+.filtros-painel .field--periodo {
+  min-width: 0;
+  width: 132px;
+}
+
+/* Menu dropdown de ações (I08 — "Mais ações") */
+.menu-acoes {
+  position: relative;
+  display: inline-flex;
+}
+.menu-acoes__lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 200;
+  min-width: 210px;
+  padding: var(--sp-1) 0;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-md);
+  box-shadow: var(--sombra-flutuante);
+}
+.menu-acoes__lista[hidden] { display: none !important; }
+.menu-acoes__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-4);
+  background: transparent;
+  border: none;
+  color: var(--cor-texto);
+  font-size: var(--txt-base);
+  font-family: var(--fonte-display);
+  font-weight: var(--peso-forte);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transicao);
+}
+.menu-acoes__item:hover {
+  background: var(--cor-superficie-alta);
+}
+.menu-acoes__item:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: -2px;
+  border-radius: 0;
+}
+.menu-acoes__item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+.menu-acoes__separador {
+  height: 1px;
+  background: var(--cor-borda);
+  margin: var(--sp-1) 0;
+}
+
 /* ==========================================================================
    6. TABELAS E PAGINAÇÃO
    ========================================================================== */

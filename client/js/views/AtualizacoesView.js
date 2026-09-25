@@ -64,19 +64,6 @@ export class AtualizacoesView extends View {
 
   _buildDom() {
     this.container.innerHTML = html`
-      <div class="view-actions">
-        <div class="view-actions__left">
-          <button type="button" class="btn" data-action="import">${iconHtml("upload")} Importar (.xlsx)</button>
-          <button type="button" class="btn" data-action="export">${iconHtml("download")} Exportar (.xlsx)</button>
-          <button type="button" class="btn btn--ghost" data-action="relatorio-periodo">Relatório do período</button>
-          <button type="button" class="btn btn--ghost" data-action="relatorio" disabled>${iconHtml("copiar")} Relatório do Cliente</button>
-          <button type="button" class="btn btn--danger" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
-          <input type="file" accept=".xlsx,.xls" data-role="file-input" hidden />
-        </div>
-        <div class="view-actions__right">
-          <button type="button" class="btn btn--accent" data-action="nova-atualizacao">+ Nova Atualização</button>
-        </div>
-      </div>
       <form class="card" data-role="form" novalidate>
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
@@ -93,6 +80,7 @@ export class AtualizacoesView extends View {
       </form>
 
       <div class="card">
+        <!-- Toolbar principal: controles sempre visíveis -->
         <div class="toolbar">
           <div class="field">
             <label class="field__label" for="atu-busca">Buscar</label>
@@ -102,10 +90,37 @@ export class AtualizacoesView extends View {
             <label class="field__label" for="atu-resp">Responsável</label>
             <select class="input" id="atu-resp" data-role="responsavel-filter"><option>Todos</option></select>
           </div>
-          <!-- Período. A busca era só texto livre + responsável, então "o que
-               foi feito neste mês" -- provavelmente a pergunta mais comum de
-               quem abre esta tela -- não tinha resposta a não ser rolar a
-               lista inteira conferindo datas com o olho. -->
+          <div class="toolbar__clear">
+            <button type="button" class="btn btn--small btn--ghost" data-action="limpar-filtros" hidden>Limpar filtros</button>
+          </div>
+          <div class="toolbar-spacer"></div>
+          <span class="result-count" data-role="count" aria-live="polite"></span>
+          <!-- Botão que abre/fecha o painel de filtros de data (I07) -->
+          <button type="button" class="btn btn--ghost btn--small" data-action="toggle-filtros" aria-expanded="false" aria-controls="atu-filtros-painel">Filtros</button>
+          <!-- Dropdown de relatórios -->
+          <div class="menu-acoes" data-role="menu-relatorios">
+            <button type="button" class="btn btn--ghost btn--small" data-action="toggle-relatorios" aria-haspopup="menu" aria-expanded="false">Relatórios ▾</button>
+            <div class="menu-acoes__lista" role="menu" hidden>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio-periodo">${iconHtml("copiar")} Relatório do período</button>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio" disabled>${iconHtml("copiar")} Relatório do cliente</button>
+            </div>
+          </div>
+          <!-- Mais ações: exportar e importar (I08) -->
+          <div class="menu-acoes" data-role="menu-acoes">
+            <button type="button" class="btn btn--ghost btn--small" data-action="toggle-mais-acoes" aria-haspopup="menu" aria-expanded="false">Mais ações ▾</button>
+            <div class="menu-acoes__lista" role="menu" hidden>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="export">${iconHtml("download")} Exportar resultado (.xlsx)</button>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="import">${iconHtml("upload")} Importar planilha (.xlsx)</button>
+            </div>
+          </div>
+          <input type="file" accept=".xlsx,.xls" data-role="file-input" hidden />
+          <!-- Excluir: aparece só quando há seleção; lote oculta este -->
+          <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
+          <button type="button" class="btn btn--accent btn--small" data-action="nova-atualizacao">+ Nova Atualização</button>
+        </div>
+
+        <!-- Painel de filtros de data (recolhível — I07) -->
+        <div class="filtros-painel" id="atu-filtros-painel" hidden>
           <div class="field field--periodo">
             <label class="field__label" for="atu-desde">De</label>
             <input type="text" class="input" id="atu-desde" data-role="desde"
@@ -117,12 +132,8 @@ export class AtualizacoesView extends View {
                    placeholder="dd/mm/aaaa" inputmode="numeric" />
           </div>
           <div class="date-presets" data-role="date-presets" role="group" aria-label="Filtro rápido de período"></div>
-          <div class="toolbar__clear">
-            <button type="button" class="btn btn--small btn--ghost" data-action="limpar-filtros" hidden>Limpar filtros</button>
-          </div>
-          <div class="toolbar-spacer"></div>
-          <span class="result-count" data-role="count" aria-live="polite"></span>
         </div>
+
         <div data-role="filter-chips" class="filter-chips" hidden></div>
         <!--
           Sem coluna de caixinhas, o Shift+clique não tem NENHUM indício visual
@@ -259,7 +270,12 @@ export class AtualizacoesView extends View {
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
-    // -- período --
+    // -- painel de filtros recolhível (I07) --
+    this.painelFiltros = this.container.querySelector("#atu-filtros-painel");
+    this.btnFiltros = this.container.querySelector('[data-action="toggle-filtros"]');
+    this.btnFiltros.addEventListener("click", () => this._togglePainelFiltros());
+
+    // -- período (agora dentro do painel recolhível) --
     this.desdeInput = this.container.querySelector('[data-role="desde"]');
     this.ateInput = this.container.querySelector('[data-role="ate"]');
     this.desdeInput.value = this.desde;
@@ -295,7 +311,12 @@ export class AtualizacoesView extends View {
       this.pintarPreset(chave);
       this._aplicarPeriodo(intervalo.desde, intervalo.ate);
     });
-    if (this.presetInicial) this.pintarPreset(this.presetInicial);
+    if (this.presetInicial) {
+      // Abre o painel automaticamente se houver preset inicial para que o
+      // usuário veja o filtro que acabou de ser aplicado.
+      this.pintarPreset(this.presetInicial);
+      this._abrirPainelFiltros();
+    }
 
     this.table.container.addEventListener("click", (e) => {
       const botao = e.target.closest("[data-row-action]");
@@ -317,7 +338,8 @@ export class AtualizacoesView extends View {
 
     this.addBtn = this.form.querySelector('[data-action="add"]');
     this.updateBtn = this.form.querySelector('[data-action="update"]');
-    this.relatorioBtn = this.container.querySelector('[data-action="relatorio"]');
+    // relatorioBtn aponta para o item dentro do menu dropdown de Relatórios
+    this.relatorioBtn = this.container.querySelector('[data-role="menu-relatorios"] [data-action="relatorio"]');
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
     this.modalDeleteBtn = this.form.querySelector('[data-action="modal-delete"]');
     if (this.modalDeleteBtn) {
@@ -327,7 +349,6 @@ export class AtualizacoesView extends View {
         this.deleteRecord();
       });
     }
-    const exportBtn = this.container.querySelector('[data-action="export"]');
 
     // O submit nativo cobre o clique em "Adicionar" E o Enter em qualquer
     // campo -- antes era preciso amarrar o Enter campo por campo, na mão.
@@ -336,13 +357,24 @@ export class AtualizacoesView extends View {
       this._submit();
     });
     this.updateBtn?.addEventListener("click", () => this.updateRecord());
-    this.container.querySelector('[data-action="relatorio-periodo"]').addEventListener("click", () => this.abrirRelatorioPeriodo());
-    this.relatorioBtn?.addEventListener("click", () => this.abrirRelatorio());
     this.deleteBtn?.addEventListener("click", () => this.deleteRecord());
-    exportBtn.addEventListener("click", withBusyButton(exportBtn, () => this.exportXlsx()));
+
+    // -- menus dropdown (I08) --
+    this._configurarMenuDropdown(
+      this.container.querySelector('[data-role="menu-relatorios"]'),
+      (acao, fechar) => {
+        if (acao === "relatorio-periodo") { fechar(); this.abrirRelatorioPeriodo(); }
+        if (acao === "relatorio") { fechar(); this.abrirRelatorio(); }
+      }
+    );
+    const menuAcoes = this.container.querySelector('[data-role="menu-acoes"]');
+    const exportBtn = menuAcoes.querySelector('[data-action="export"]');
+    this._configurarMenuDropdown(menuAcoes, (acao, fechar) => {
+      if (acao === "export") { fechar(); withBusyButton(exportBtn, () => this.exportXlsx())(); }
+      if (acao === "import") { fechar(); fileInput.click(); }
+    });
 
     const fileInput = this.container.querySelector('[data-role="file-input"]');
-    this.container.querySelector('[data-action="import"]').addEventListener("click", () => fileInput.click());
     fileInput.addEventListener("change", () => {
       if (fileInput.files[0]) this.importXlsx(fileInput.files[0]);
       fileInput.value = "";
@@ -355,8 +387,9 @@ export class AtualizacoesView extends View {
       this.container.querySelector('[data-action="nova-atualizacao"]').hidden = true;
       this.deleteBtn.hidden = true;
       this.bulkExcluir.hidden = true;
-      const importBtn = this.container.querySelector('[data-action="import"]');
-      if (importBtn) importBtn.hidden = true;
+      // Ocultar a opção de Importar dentro do menu Mais ações
+      const importItem = menuAcoes.querySelector('[data-action="import"]');
+      if (importItem) importItem.hidden = true;
       const hint = this.container.querySelector(".bulk-hint");
       if (hint) hint.hidden = true;
     }
@@ -364,6 +397,79 @@ export class AtualizacoesView extends View {
     this._pintarLimparFiltros();
     this.clearForm();
   }
+
+  /**
+   * Configura um menu dropdown: abre/fecha com botão toggle, fecha ao
+   * pressionar Escape ou clicar fora, e despacha as ações para o callback.
+   *
+   * @param {Element} menuEl - Elemento raiz (.menu-acoes)
+   * @param {(acao: string, fechar: () => void) => void} onAcao
+   */
+  _configurarMenuDropdown(menuEl, onAcao) {
+    const btnToggle = menuEl.querySelector("[aria-haspopup]");
+    const lista = menuEl.querySelector('[role="menu"]');
+
+    const abrir = () => {
+      lista.hidden = false;
+      btnToggle.setAttribute("aria-expanded", "true");
+    };
+    const fechar = () => {
+      lista.hidden = true;
+      btnToggle.setAttribute("aria-expanded", "false");
+      btnToggle.focus();
+    };
+
+    btnToggle.addEventListener("click", () => lista.hidden ? abrir() : fechar());
+
+    // Fechar ao clicar fora (registrado via this.on para limpeza automática)
+    this.on(document, "click", (e) => {
+      if (!lista.hidden && !menuEl.contains(e.target)) fechar();
+    });
+
+    // Ações dos itens do menu
+    lista.addEventListener("click", (e) => {
+      const item = e.target.closest("[data-action]");
+      if (!item || item.disabled) return;
+      const acao = item.dataset.action;
+      onAcao(acao, fechar);
+    });
+
+    // Escape fecha o menu (stopPropagation para não acionar o Escape global)
+    lista.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { e.stopPropagation(); fechar(); }
+    });
+  }
+
+  /** Abre o painel de filtros de data. */
+  _abrirPainelFiltros() {
+    this.painelFiltros.hidden = false;
+    this.btnFiltros.setAttribute("aria-expanded", "true");
+    this._atualizarBotaoFiltros();
+  }
+
+  /** Fecha o painel de filtros de data (NÃO limpa os filtros). */
+  _fecharPainelFiltros() {
+    this.painelFiltros.hidden = true;
+    this.btnFiltros.setAttribute("aria-expanded", "false");
+    this._atualizarBotaoFiltros();
+  }
+
+  /** Alterna o painel de filtros de data. */
+  _togglePainelFiltros() {
+    if (this.painelFiltros.hidden) this._abrirPainelFiltros();
+    else this._fecharPainelFiltros();
+  }
+
+  /**
+   * Atualiza o rótulo do botão "Filtros" com a contagem de filtros de data
+   * ativos (ex: "Filtros (1)" quando há período). Não conta busca e
+   * responsável, que ficam sempre visíveis na toolbar.
+   */
+  _atualizarBotaoFiltros() {
+    const n = (this.desde || this.ate) ? 1 : 0;
+    this.btnFiltros.textContent = n > 0 ? `Filtros (${n})` : "Filtros";
+  }
+
 
   _buildFields() {
     const wrap = this.container.querySelector('[data-role="fields"]');
@@ -495,6 +601,8 @@ export class AtualizacoesView extends View {
     this._trocouDeFiltro();
     this._salvarFiltros();
     this._reloadList();
+    // Atualiza contagem no botão Filtros após mudar o período
+    this._atualizarBotaoFiltros?.();
   }
 
   /**
@@ -518,6 +626,8 @@ export class AtualizacoesView extends View {
 
   _pintarLimparFiltros() {
     this.botaoLimparFiltros.hidden = !this._temFiltro();
+    // Mantém o rótulo do botão Filtros (n) sincronizado com o período ativo
+    this._atualizarBotaoFiltros?.();
     const chipsEl = this.container.querySelector('[data-role="filter-chips"]');
     if (!chipsEl) return;
 
@@ -888,7 +998,11 @@ export class AtualizacoesView extends View {
       desde: this.desde,
       ate: this.ate,
     });
-    baixarBlob(blob, `atualizacoes${this._temFiltro() ? "-filtrado" : ""}.xlsx`);
+    // Nome identifica o recorte: com período fica "atualizacoes_01-09-2026_25-09-2026.xlsx"
+    const sufixo = this.desde || this.ate
+      ? `_${(this.desde || "inicio").replace(/\//g, "-")}_${(this.ate || "fim").replace(/\//g, "-")}`
+      : this._temFiltro() ? "_filtrado" : "";
+    baixarBlob(blob, `atualizacoes${sufixo}.xlsx`);
     toast.info(this._temFiltro() ? "Exportação concluída (com os filtros atuais)." : "Exportação concluída.");
   }
 

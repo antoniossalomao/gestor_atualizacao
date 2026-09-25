@@ -525,7 +525,7 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E2 | ✅ Regra de versão e classificação dos componentes fixos concluídas (25/09/2026); revisão geral da ficha permanece em E7 | I04, I02 (regra) | E0 | Grande |
 | E3 | ✅ Oficiais separadas dos filtros em Sistemas (25/09/2026) | I16 | E2 | Médio |
 | E4 | ✅ Resumo e tendência mensal concluídos (25/09/2026) | I02, I03 | E2 | Médio |
-| E5 | Padrão de botões e toolbars; Atualizações com filtros recolhíveis e planilhas reposicionadas | I06, I07, I08 | E1 | Médio |
+| E5 | ✅ Padrão de botões e toolbars; filtros recolhíveis; exportar/importar reposicionados (25/09/2026) | I06, I07, I08 | E1 | Médio |
 | E6 | Agendamentos (toolbar, filtros rápidos) e Clientes (acessos na linha, Grupo/Rede) | I10, I13, I14 | E5 | Médio |
 | E7 | Ficha do cliente e relatórios | I09, I15 | E2, E5 | Médio |
 | E8 | Administração e Configurações (só reorganizar) | I18, I19 | — | Médio |
@@ -542,7 +542,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 - [x] E2 — `controla_versao`, exclusões dos fixos, classificação só por admin, comparação por data, fonte só atendimento e regra única no servidor; ADR-0008. Validados API, histórico e gráfico mensal.
 - [x] E3 — consulta com filtros próprios e gerenciador de oficiais separado, com autoria e proteção contra edição concorrente.
 - [x] E4 — Resumo com card de situação, Sem atendimento e tendência de 12 meses, unidade explícita e comparação parcial justa.
-- [ ] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados.
+- [x] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados (25/09/2026).
 - [ ] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto.
 - [ ] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado.
 - [ ] E8 — Administração e Configurações reagrupadas, sem preferências novas.
