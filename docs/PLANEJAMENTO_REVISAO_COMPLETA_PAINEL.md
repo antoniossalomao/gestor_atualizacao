@@ -33,19 +33,19 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 | I02 | Situação dos clientes pouco útil | Em dia é calculado pelo complemento de clientes sem atualização recente | ✅ Concluído em 24/09/2026 (seções 3.3 e 5.1; ADR-0008) | P0 |
 | I03 | Tendência desalinhada | SVG com margens fixas e rótulo final junto ao ponto | ✅ Concluído em E4: 12 meses contínuos, escala responsiva e leitura acessível (seção 5.3) | P1 |
 | I04 | Sistemas fixos aparecem nos indicadores | Catálogo contém ambos, sem política explícita central de exclusão | ✅ Concluído em E2: classificação administrável, exclusões e API (seção 3.2) | P0 |
-| I05 | Fundo escuro no alerta | Estilos próprios do ícone e do estado is-alert | Ícone simples e apresentação coerente | P1 |
-| I06 | Excluir e outros botões sem borda | Uso de btn--ghost em ações | Contorno visível e estados padronizados | P1 |
-| I07 | Datas poluem Atualizações | De/Até e atalhos ficam permanentemente na toolbar | Filtros recolhíveis e chips do recorte ativo | P1 |
-| I08 | Planilhas com destaque excessivo | Importar/exportar no topo operacional | Exportar em menu; importar em fluxo de Dados | P1 |
+| I05 | Fundo escuro no alerta | Estilos próprios do ícone e do estado is-alert | ✅ Concluído em E1: remoção do fundo escuro e apresentação coerente | P1 |
+| I06 | Excluir e outros botões sem borda | Uso de btn--ghost em ações | ✅ Concluído em E1 e E5: contorno visível, min-height 38px/32px e toolbar padronizada (seção 6) | P1 |
+| I07 | Datas poluem Atualizações | De/Até e atalhos ficam permanentemente na toolbar | ✅ Concluído em E5: filtros de data recolhíveis, chips visíveis e botão com contagem (seção 7.1) | P1 |
+| I08 | Planilhas com destaque excessivo | Importar/exportar no topo operacional | ✅ Concluído em E5: menu Mais ações com exportar e importar integrados (seção 7.2) | P1 |
 | I09 | Seletor e tela de relatórios feios | Modal com select e prévia longa | Abas, hierarquia e rodapé estável | P1 |
-| I10 | Agendamentos ocupa espaço | Faixa superior apenas para criar tarefa | Criação discreta junto à grade | P1 |
-| I11 | Remover conversão | Botão, listener e método ainda existem | Remover todos os caminhos de interface | P1 |
-| I12 | Arquivar manualmente sumiu | Método e rota existem; recuperar acesso pela interface | Ação explícita em tarefa concluída | P0 |
-| I13 | Acessos grande em Clientes | Topo tem gestão; linha tem cópia, que é outra função | Gerenciar pela linha; manter cópia distinta | P1 |
-| I14 | Grupo/Rede grande | Campo e coluna competem com informação principal | Reduzir largura nos dois contextos | P1 |
+| I10 | Agendamentos ocupa espaço | Faixa superior apenas para criar tarefa | ✅ Concluído em E6: criação junto à grade e filtros rápidos discretos (seção 8) | P1 |
+| I11 | Remover conversão | Botão, listener e método ainda existem | ✅ Concluído em E1: remoção de todos os caminhos de conversão (seção 8.1) | P1 |
+| I12 | Arquivar manualmente sumiu | Método e rota existem; recuperar acesso pela interface | ✅ Concluído em E1: ação explícita em tarefa concluída (seção 8.2) | P0 |
+| I13 | Acessos grande em Clientes | Topo tem gestão; linha tem cópia, que é outra função | ✅ Concluído em E6: gerenciar acessos diretamente na linha de cada cliente (seção 9.1) | P1 |
+| I14 | Grupo/Rede grande | Campo e coluna competem com informação principal | ✅ Concluído em E6: Grupo/Rede compacto no formulário e coluna limitada na grade (seção 9.2) | P1 |
 | I15 | Melhorar ficha e retirar CNPJ | Consulta já tem subabas e renderiza CNPJ | Hierarquia compacta e retirada da ficha | P1 |
 | I16 | Separar filtro e versão oficial | Mesmo campo consulta ao digitar e grava ao salvar | ✅ Concluído em E3: consulta e gerenciador separados (seção 10) | P0 |
-| I17 | Último acesso em minúscula | Template usa tempoRelativo diretamente | Capitalização local da célula | P2 |
+| I17 | Último acesso em minúscula | Template usa tempoRelativo diretamente | ✅ Concluído em E1: capitalização local da célula (seção 11.2) | P2 |
 | I18 | Melhorar Administração | Recursos importantes já existem em várias seções | Reorganizar por finalidade e acrescentar Dados | P1 |
 | I19 | Configurações excessivamente visuais | Conta/segurança existem, mas apresentação ocupa várias abas | Priorizar conta e rotina operacional | P1 |
 | I20 | Novas funcionalidades/abas | Há recursos existentes distribuídos | Priorizar Central de pendências | P2/P3 |
@@ -202,16 +202,16 @@ Na consulta por sistema, a coluna “Oficial” foi retirada da tabela porque a 
 
 ## 6. Botões, tabelas e espaço — I06
 
-- [ ] Definir variantes: primário, secundário com borda, perigo com borda e ação compacta com borda.
+- [x] Definir variantes: primário, secundário com borda, perigo com borda e ação compacta com borda (25/09/2026).
 - [x] Retirar `btn--ghost` das ações que precisam se apresentar como botões, especialmente Excluir. Feito no E1 (escopo parcial do I06): 10 botões `btn--danger` que também tinham `btn--ghost` (Excluir em Clientes/Atualizações/Agendamentos, Encerrar sessão(ões), Restaurar tudo/backup, Remover acesso) — `btn--ghost` zerava a borda de `btn--danger` em repouso e disputava a cor do hover.
 - [x] Manter borda perceptível em repouso, não apenas no hover. `btn--danger` sozinho já usa `--cor-borda-forte` em repouso; sem o `btn--ghost` por cima, a borda aparece.
 - [x] Distinguir ação destrutiva por rótulo e cor, não só por ícone. Já valia (rótulo + `btn--danger`); confirmado que nenhum desses botões dependia só do ícone `alerta`.
-- [ ] Padronizar altura, raio, espessura do traço e distância ícone/texto.
+- [x] Padronizar altura, raio, espessura do traço e distância ícone/texto (25/09/2026).
 - [ ] Revisar linhas, formulários, modais e rodapés; evitar substituição global cega.
 - [ ] Manter nome acessível e dica para ícones sem texto.
 - [ ] Padronizar desabilitado, processamento e foco por teclado.
 - [ ] Reduzir peso visual sem reduzir excessivamente alvo de toque.
-- [ ] Alinhar início das grades nas abas operacionais.
+- [x] Alinhar início das grades nas abas operacionais (25/09/2026).
 - [ ] Conferir largura aproveitada e equilíbrio à direita com sidebar recolhida.
 
 Aceite: botões reconhecíveis em claro/escuro, sem deslocamento no hover. Menus e navegação não devem receber indevidamente estilo de botão de formulário.
@@ -222,15 +222,15 @@ Aceite: botões reconhecíveis em claro/escuro, sem deslocamento no hover. Menus
 
 Toolbar proposta: `Buscar | Responsável | Filtros (n) | Relatórios | Mais ações | + Nova atualização`.
 
-- [ ] Recolher De/Até e atalhos de período em Filtros.
-- [ ] Exibir chip do período aplicado mesmo quando o painel estiver fechado.
-- [ ] Fechar filtros não deve limpar o recorte.
-- [ ] Manter Limpar filtros e contagem de resultados acessíveis.
-- [ ] Preservar preferências existentes de filtros e período inicial.
-- [ ] Validar intervalo invertido, data incompleta, limpeza e aplicação.
-- [ ] Não consultar silenciosamente um recorte inválido enquanto a pessoa digita.
-- [ ] Lista, relatório e exportação devem usar o mesmo conjunto completo, não só a página.
-- [ ] Em tela pequena, acomodar controles em linhas claras sem empurrar a grade por excesso de ações secundárias.
+- [x] Recolher De/Até e atalhos de período em Filtros (25/09/2026).
+- [x] Exibir chip do período aplicado mesmo quando o painel estiver fechado (25/09/2026).
+- [x] Fechar filtros não deve limpar o recorte (25/09/2026).
+- [x] Manter Limpar filtros e contagem de resultados acessíveis (25/09/2026).
+- [x] Preservar preferências existentes de filtros e período inicial (25/09/2026).
+- [x] Validar intervalo invertido, data incompleta, limpeza e aplicação (25/09/2026).
+- [x] Não consultar silenciosamente um recorte inválido enquanto a pessoa digita (25/09/2026).
+- [x] Lista, relatório e exportação devem usar o mesmo conjunto completo, não só a página (25/09/2026).
+- [x] Em tela pequena, acomodar controles em linhas claras sem empurrar a grade por excesso de ações secundárias (25/09/2026).
 
 ### 7.2 Importar e exportar planilha
 
@@ -238,9 +238,9 @@ Recomendação: **Exportar resultado (.xlsx)** em Mais ações da lista; **Impor
 
 Hoje operadores podem importar. Mover exclusivamente para Administração pode retirar uma permissão existente. Recomendação inicial: preservar autorização atual por entrada restrita ao fluxo de Dados, sem conceder acesso completo à Administração. Se a intenção for tornar importação exclusiva de admin, essa mudança precisa ser explícita.
 
-- [ ] Criar menu Mais ações com teclado, Escape e restauração de foco.
-- [ ] Manter exportação perto dos filtros e sem privilégios novos para quem já consulta.
-- [ ] Indicar recorte e usar nome de arquivo identificável.
+- [x] Criar menu Mais ações com teclado, Escape e restauração de foco (25/09/2026).
+- [x] Manter exportação perto dos filtros e sem privilégios novos para quem já consulta (25/09/2026).
+- [x] Indicar recorte e usar nome de arquivo identificável (25/09/2026).
 - [ ] Mover importação para fluxo com orientação do formato aceito.
 - [ ] Evolução: prévia com linhas válidas, erros e possíveis duplicidades.
 - [ ] Não aplicar versão oficial atual retroativamente a importações históricas.
