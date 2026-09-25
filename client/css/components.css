@@ -5323,6 +5323,10 @@ hr.separator {
   position: relative;
 }
 
+.tendencia-cabecalho { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp-2); }
+.tendencia-cabecalho .card__title { margin-bottom: var(--sp-2); }
+.tendencia-cabecalho span { color: var(--cor-texto-sub); font-size: var(--txt-sm); }
+
 .line-chart svg {
   display: block;
   width: 100%;
@@ -5394,21 +5398,14 @@ hr.separator {
 
 /* Ponto de destaque do hover: nasce escondido (r:0) e cresce -- fica claro
    que ele SEGUE o ponteiro, em vez de piscar de um lugar pro outro. */
-.line-chart__ponto--hover {
-  r: 0;
+.line-chart__ponto--destaque {
+  opacity: 0;
   fill: var(--cor-accent-forte);
   stroke: var(--cor-superficie);
-  stroke-width: 2;
-  transition: r var(--dur-rapida) var(--curva-padrao);
+  pointer-events: none;
 }
-.line-chart__ponto--hover.is-visivel {
-  r: 5;
-}
-
-.line-chart__valor-fim {
-  fill: var(--cor-texto);
-  font-weight: var(--peso-extra);
-  font-size: 12px;
+.line-chart__ponto--destaque.is-visivel {
+  opacity: 1;
 }
 
 .line-chart__crosshair {
@@ -5423,24 +5420,15 @@ hr.separator {
 }
 
 .line-chart__tooltip {
-  position: absolute;
-  z-index: 1;
   display: flex;
   align-items: baseline;
   gap: 6px;
-  padding: 5px 10px;
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-pequeno);
-  background: var(--cor-superficie-alta);
-  box-shadow: var(--sombra-card);
-  white-space: nowrap;
-  opacity: 0;
-  transform: translate(-50%, calc(-100% - 12px));
-  transition: opacity var(--dur-rapida) var(--curva-padrao);
-  pointer-events: none;
+  min-height: 26px;
+  color: var(--cor-texto);
+  visibility: hidden;
 }
 .line-chart__tooltip.is-visivel {
-  opacity: 1;
+  visibility: visible;
 }
 .line-chart__tooltip strong {
   font-family: var(--fonte-display);
@@ -5452,6 +5440,11 @@ hr.separator {
   color: var(--cor-texto-fraco);
   font-size: var(--txt-xs);
 }
+
+.line-chart__dados { margin-top: var(--sp-2); color: var(--cor-texto-sub); font-size: var(--txt-sm); }
+.line-chart__dados summary { width: fit-content; cursor: pointer; }
+.line-chart__dados ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: var(--sp-1) var(--sp-4); padding-left: var(--sp-5); }
+.line-chart__ponto[role="button"]:focus-visible { outline: 2px solid var(--cor-accent); outline-offset: 3px; }
 
 /* ==========================================================================
    14. LOGIN

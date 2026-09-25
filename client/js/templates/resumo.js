@@ -55,11 +55,13 @@ export function deltaTendencia(tendencia) {
  */
 export function corpoSituacao(totais, maisAtrasados) {
   if (totais.avaliados === 0) {
-    // Nunca "100% em dia" de um conjunto vazio.
+    // Nunca "100% em dia" de um conjunto vazio; o próximo passo depende
+    // de já haver clientes cadastrados ou não.
     return html`
       <p class="situacao__vazio">
-        Nenhum cliente tem sistema com controle de versão para avaliar.
-        Marque os sistemas de cada cliente em Clientes e cadastre a versão oficial em Sistemas.
+        ${totais.foraDaAvaliacao
+          ? `${plural(totais.foraDaAvaliacao, "cliente")} fora da avaliação. Vincule um sistema atualizável no cadastro em Clientes. A classificação dos sistemas fica em Administração.`
+          : "Nenhum cliente cadastrado para avaliar. Cadastre clientes e seus sistemas na tela Clientes."}
       </p>`;
   }
   const descricaoBarra = totais.grupos.map((g) => `${g.rotulo}: ${g.pct}%`).join(", ");
@@ -84,6 +86,9 @@ export function corpoSituacao(totais, maisAtrasados) {
         ? ` ${plural(totais.foraDaAvaliacao, "cliente")} fora da conta (só sistemas fixos ou nenhum).`
         : ""}
     </p>
+    ${totais.grupos.find((g) => g.chave === "pendente")?.total === totais.avaliados
+      ? html`<p class="situacao__nota">Todos aguardam verificação. Abra a lista acima para ver o que falta; as referências oficiais ficam em Versões oficiais na aba Sistemas.</p>`
+      : ""}
     ${top.length
       ? html`
         <div class="situacao__sistemas">

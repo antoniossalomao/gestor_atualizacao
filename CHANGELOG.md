@@ -15,6 +15,13 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Revisão do painel, E4:** tendência mensal do Resumo passa a mostrar 12
+  meses consecutivos, com zero nos meses vazios e sem contar registros futuros
+  como realizados. A unidade é atendimento registrado; o mês atual é parcial
+  e a variação usa períodos de igual duração. O gráfico ajusta rótulos à
+  largura, usa segmentos retos e oferece leitura por teclado, toque e lista
+  textual. O card de situação orienta conforme o tipo de estado vazio.
+
 - **Revisão do painel, E3:** a aba Sistemas separa os filtros de consulta do
   painel Versões oficiais. A data de consulta agora filtra o último atendimento
   e nunca substitui a referência oficial na classificação. A tabela ganhou

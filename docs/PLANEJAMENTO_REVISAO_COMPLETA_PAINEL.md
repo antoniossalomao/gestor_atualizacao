@@ -31,7 +31,7 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 |---|---|---|---|---|
 | I01 | Logo e nome sem identidade | Cabeçalho usa ATUALIZADOR / Gestor de clientes | ✅ Concluído em 24/09/2026 (seção 4) | P1 |
 | I02 | Situação dos clientes pouco útil | Em dia é calculado pelo complemento de clientes sem atualização recente | ✅ Concluído em 24/09/2026 (seções 3.3 e 5.1; ADR-0008) | P0 |
-| I03 | Tendência desalinhada | SVG com margens fixas e rótulo final junto ao ponto | Corrigir calendário, eixos, margens e rótulos | P1 |
+| I03 | Tendência desalinhada | SVG com margens fixas e rótulo final junto ao ponto | ✅ Concluído em E4: 12 meses contínuos, escala responsiva e leitura acessível (seção 5.3) | P1 |
 | I04 | Sistemas fixos aparecem nos indicadores | Catálogo contém ambos, sem política explícita central de exclusão | ✅ Concluído em E2: classificação administrável, exclusões e API (seção 3.2) | P0 |
 | I05 | Fundo escuro no alerta | Estilos próprios do ícone e do estado is-alert | Ícone simples e apresentação coerente | P1 |
 | I06 | Excluir e outros botões sem borda | Uso de btn--ghost em ações | Contorno visível e estados padronizados | P1 |
@@ -157,7 +157,7 @@ Substituir a rosca genérica por um card **Atualização dos clientes**, com bar
 - [x] Mostrar número e percentual com denominador explícito.
 - [x] Abrir lista com o mesmo filtro ao clicar em cada situação (as listas vêm na mesma resposta do `/resumo`).
 - [x] Mostrar até três sistemas com mais clientes desatualizados e Ver todos.
-- [ ] Estado vazio orientando conforme o problema. Hoje é uma mensagem única (sistemas nos clientes + oficial em Sistemas).
+- [x] Estado vazio orienta cadastro quando não há clientes e vínculo/classificação quando só há clientes fora da avaliação; todos pendentes recebem orientação própria.
 - [x] Não mostrar 100% em dia quando não houver clientes elegíveis.
 - [x] Não misturar falha/offline de agente com versão registrada em atendimento.
 - [x] Conferir que a população aberta pelo clique corresponde à contagem (verificado no navegador com dados sintéticos).
@@ -175,24 +175,26 @@ Substituir a rosca genérica por um card **Atualização dos clientes**, com bar
 
 ### 5.3 Tendência mensal
 
-Achados no código: `LineChart.js` usa viewBox 640×240, margens fixas, até seis rótulos centrais e valor final com limite superior de posição. Esse limite pode aproximar o texto do ponto quando o valor chega ao topo. O SQL agrupa meses com registros e limita sua quantidade; não preenche explicitamente meses vazios. São causas candidatas, a confirmar visualmente com o cenário relatado.
+**Concluído em E4 (25/09/2026).** A série do servidor conta atendimentos registrados, um por registro, inclusive os que tratam apenas de componente fixo. Mostra exatamente 12 meses consecutivos até o atual e não conta datas posteriores a hoje como realizadas. O número do mês corrente está no cabeçalho do gráfico, identificado como parcial; o indicador de variação compara os mesmos primeiros dias do mês atual e do anterior, limitando ambos ao comprimento do mês mais curto.
 
-- [ ] Definir 12 meses consecutivos até o mês corrente.
-- [ ] Preencher meses sem registros com zero, sem saltos no calendário.
-- [ ] Excluir datas futuras da série de realizados ou sinalizá-las para correção.
-- [ ] Definir unidade: atendimentos de atualização ou clientes atendidos; não alternar silenciosamente.
-- [ ] Acrescentar folga superior ao eixo para o maior valor.
-- [ ] Alinhar os meses na mesma linha-base e na posição dos respectivos pontos.
-- [ ] Ajustar âncoras nas extremidades para não cortar mês/ano.
-- [ ] Adaptar quantidade de rótulos à largura real, não só à quantidade de pontos.
-- [ ] Recomendação: tirar número final flutuante e mostrar o último total no cabeçalho; detalhes no tooltip.
-- [ ] Se mantiver número sobre o gráfico, reservar área própria sem colisão com linha, grade e borda.
-- [ ] Evitar curva que sugira valores negativos ou picos inexistentes; usar segmentos retos ou interpolação limitada.
-- [ ] Oferecer tooltip por teclado/toque e leitura textual dos valores.
-- [ ] Identificar mês corrente como parcial.
-- [ ] Comparar percentuais somente entre períodos comparáveis; base zero não gera porcentagem infinita.
+- [x] Definir 12 meses consecutivos até o mês corrente.
+- [x] Preencher meses sem registros com zero, sem saltos no calendário.
+- [x] Excluir datas futuras da série de realizados; permanecem no histórico para correção.
+- [x] Definir unidade: atendimentos registrados, um por registro, inclusive atendimentos mistos e exclusivos de componentes fixos.
+- [x] Acrescentar folga superior ao eixo para o maior valor.
+- [x] Alinhar os meses na mesma linha-base e na posição dos respectivos pontos.
+- [x] Ajustar âncoras nas extremidades para não cortar mês/ano.
+- [x] Adaptar quantidade de rótulos à largura real do card, inclusive ao recolher a sidebar.
+- [x] Tirar número final flutuante e mostrar o total do mês corrente no cabeçalho; detalhes no tooltip.
+- [x] Número flutuante removido; sem colisão com linha, grade ou borda.
+- [x] Usar segmentos retos, sem curva que sugira valores negativos ou picos inexistentes.
+- [x] Oferecer tooltip por teclado/toque e leitura textual dos 12 valores em seção expansível.
+- [x] Identificar mês corrente como parcial.
+- [x] Comparar percentuais somente entre períodos de igual duração; base zero omite a porcentagem.
 
 Aceite: 0, 1, 2, 6 e 12 meses; série zerada; máximo 121; máximo no primeiro/último ponto; zero alternado com picos; virada de ano; 390, 768, 1280 e 1440 px; sidebar aberta/recolhida.
+
+Validação E4: testes de banco cobrem virada de ano, meses sem registro, data futura e comparação de mês de 31 dias com anterior de 30. No navegador, cenários de 0/1/2/6/12 pontos, série zerada, máximo 121 nas pontas, zero alternado com picos, foco e setas do teclado, larguras 390/768/1280/1440 px e sidebar aberta/recolhida.
 
 ## 6. Botões, tabelas e espaço — I06
 
@@ -518,7 +520,7 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E1 | ✅ Correções rápidas e independentes (25/09/2026); navegador conferido em 390/1280 px, revisão visual completa segue em E10 | I05, I06 (só Excluir e ações sem borda), I11, I12, I17 | — | Pequeno |
 | E2 | ✅ Regra de versão e classificação dos componentes fixos concluídas (25/09/2026); revisão geral da ficha permanece em E7 | I04, I02 (regra) | E0 | Grande |
 | E3 | ✅ Oficiais separadas dos filtros em Sistemas (25/09/2026) | I16 | E2 | Médio |
-| E4 | ◐ Card de situação e Sem atendimento feitos; falta a tendência | I02, I03 | E2 | Médio |
+| E4 | ✅ Resumo e tendência mensal concluídos (25/09/2026) | I02, I03 | E2 | Médio |
 | E5 | Padrão de botões e toolbars; Atualizações com filtros recolhíveis e planilhas reposicionadas | I06, I07, I08 | E1 | Médio |
 | E6 | Agendamentos (toolbar, filtros rápidos) e Clientes (acessos na linha, Grupo/Rede) | I10, I13, I14 | E5 | Médio |
 | E7 | Ficha do cliente e relatórios | I09, I15 | E2, E5 | Médio |
@@ -535,7 +537,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 - [x] E1 — alerta sem fundo escuro, borda em Excluir, remover Converter, recuperar Arquivar, Último acesso capitalizado.
 - [x] E2 — `controla_versao`, exclusões dos fixos, classificação só por admin, comparação por data, fonte só atendimento e regra única no servidor; ADR-0008. Validados API, histórico e gráfico mensal.
 - [x] E3 — consulta com filtros próprios e gerenciador de oficiais separado, com autoria e proteção contra edição concorrente.
-- [ ] E4 — Resumo feito (card e Sem atendimento, com clique e indicador na mesma população); falta a tendência (I03).
+- [x] E4 — Resumo com card de situação, Sem atendimento e tendência de 12 meses, unidade explícita e comparação parcial justa.
 - [ ] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados.
 - [ ] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto.
 - [ ] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado.

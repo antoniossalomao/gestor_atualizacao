@@ -375,6 +375,39 @@ test("Gráfico mensal e referências recentes ignoram componentes fixos sem apag
   } finally { cleanup(); }
 });
 
+test("Tendência mensal retorna 12 meses consecutivos, zeros e nenhum atendimento futuro", () => {
+  const { db, service, cleanup } = ambiente();
+  try {
+    for (const [cliente, data] of [
+      ["Antigo", "30/09/2025"], ["Primeiro", "01/10/2025"],
+      ["Julho", "15/07/2026"], ["Atual", "25/09/2026"],
+      ["Futuro no mês", "26/09/2026"], ["Futuro em outro mês", "01/10/2026"],
+    ]) service.create({ cliente, sistema: "B_Vendas", data }, USUARIO);
+    const serie = db.atualizacoes.porMes(12, new Date(2026, 8, 25));
+    assert.equal(serie.length, 12);
+    assert.deepEqual(serie[0], { mes: "2025-10", total: 1 });
+    assert.deepEqual(serie[9], { mes: "2026-07", total: 1 });
+    assert.deepEqual(serie[10], { mes: "2026-08", total: 0 });
+    assert.deepEqual(serie[11], { mes: "2026-09", total: 1 });
+    assert.equal(db.atualizacoes.countForMonth("09/2026", "25/09/2026"), 1);
+    assert.equal(db.atualizacoes.countForMonth("09/2026", "26/09/2026"), 2);
+    assert.equal(db.atualizacoes.count(), 6, "registros futuros permanecem no histórico para correção");
+  } finally { cleanup(); }
+});
+
+test("Comparação mensal usa a mesma quantidade de dias quando o mês anterior é mais curto", () => {
+  const { service, cleanup } = ambiente();
+  try {
+    for (const [cliente, data] of [["Abril", "30/04/2026"], ["Maio 30", "30/05/2026"], ["Maio 31", "31/05/2026"]]) {
+      service.create({ cliente, sistema: "B_Vendas", data }, USUARIO);
+    }
+    const resumo = service.resumo(new Date(2026, 4, 31));
+    assert.equal(resumo.mesCount, 2, "o indicador mostra todos os atendimentos de maio até hoje");
+    assert.equal(resumo.mesAtualComparavel, 1, "para o percentual, maio é recortado até o dia 30");
+    assert.equal(resumo.mesAnteriorComparavel, 1, "abril tem só 30 dias");
+  } finally { cleanup(); }
+});
+
 test("Relatório por período e Excel respeitam filtros e contam clientes distintos", async () => {
   const { service, clientes, cleanup } = ambiente();
   try {

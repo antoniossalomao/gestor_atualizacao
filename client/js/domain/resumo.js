@@ -28,24 +28,15 @@ export function primeiroDiaDoMes(hoje = new Date()) {
 }
 
 /**
- * Variação do mês corrente contra o anterior, em %, a partir da série mensal
- * que o Resumo já busca para o gráfico de tendência (nenhuma chamada extra ao
- * servidor). Sem atualização nenhuma no mês anterior não há base para uma
- * porcentagem -- `null` aqui significa "não mostre nada", não "0%".
+ * Compara atendimentos realizados até hoje com o mesmo período do mês
+ * anterior (o servidor já recorta os dois). Sem base anterior, não há %.
  *
- * @param {Array<{mes: string, total: number}>} porMes
- * @param {Date} [hoje]
+ * @param {number} totalAtual
+ * @param {number} totalAnteriorComparavel
  * @returns {{pct: number, tendencia: "alta"|"baixa"|"neutra"}|null}
  */
-export function tendenciaMensal(porMes, hoje = new Date()) {
-  /** @param {Date} d */
-  const chave = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  const mesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
-
-  const totalAtual = porMes.find((m) => m.mes === chave(hoje))?.total ?? 0;
-  const totalAnterior = porMes.find((m) => m.mes === chave(mesAnterior))?.total ?? 0;
-  if (totalAnterior === 0) return null;
-
-  const pct = Math.round(((totalAtual - totalAnterior) / totalAnterior) * 100);
+export function tendenciaMensal(totalAtual, totalAnteriorComparavel) {
+  if (!Number.isFinite(totalAtual) || !Number.isFinite(totalAnteriorComparavel) || totalAnteriorComparavel <= 0) return null;
+  const pct = Math.round(((totalAtual - totalAnteriorComparavel) / totalAnteriorComparavel) * 100);
   return { pct, tendencia: pct > 0 ? "alta" : pct < 0 ? "baixa" : "neutra" };
 }

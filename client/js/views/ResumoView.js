@@ -62,7 +62,7 @@ export class ResumoView extends View {
           <div data-role="situacao"></div>
         </div>
         <div class="card">
-          <h2 class="card__title">Tendência Mensal de Atendimentos</h2>
+          <div class="tendencia-cabecalho"><h2 class="card__title">Tendência Mensal de Atendimentos</h2><span data-role="tendencia-atual"></span></div>
           <div data-role="tendencia"></div>
         </div>
       </div>
@@ -171,7 +171,7 @@ export class ResumoView extends View {
       this.container.querySelector('[data-stat="semAtendimento"] [data-role="rotulo"]').textContent =
         rotuloSemAtendimento(resumo.desatualizadoDias);
     }
-    this._setDelta("mes", tendenciaMensal(resumo.atualizacoesPorMes || []));
+    this._setDelta("mes", tendenciaMensal(resumo.mesAtualComparavel, resumo.mesAnteriorComparavel));
 
     const semAtendimentoTile = this.container.querySelector('[data-stat="semAtendimento"]');
     semAtendimentoTile.classList.toggle("is-alert", resumo.semAtendimento.length > 0);
@@ -181,8 +181,9 @@ export class ResumoView extends View {
 
     this.respTable.setRows(resumo.porResponsavel);
     this.sistemaChart.render(resumo.atualizadosMesPorSistema);
+    this.container.querySelector('[data-role="tendencia-atual"]').textContent = `${plural(resumo.mesCount, "atendimento")} neste mês (parcial)`;
     this.tendenciaChart.render(
-      (resumo.atualizacoesPorMes || []).map((item) => ({ label: formatarMes(item.mes), total: item.total }))
+      (resumo.atualizacoesPorMes || []).map((item) => ({ label: formatarMes(item.mes), total: item.total, parcial: item.mes === (resumo.atualizacoesPorMes || []).at(-1)?.mes }))
     );
   }
 
@@ -279,6 +280,12 @@ export class ResumoView extends View {
     el.hidden = false;
     el.className = `stat-tile__delta is-${tendencia.tendencia}`;
     el.innerHTML = deltaTendencia(tendencia);
-    el.title = "Comparado ao mês anterior";
+    el.title = "Comparado ao mesmo período do mês anterior";
+  }
+
+  destroy() {
+    this.tendenciaChart.destroy();
+    this.gaveta.destroy();
+    super.destroy();
   }
 }

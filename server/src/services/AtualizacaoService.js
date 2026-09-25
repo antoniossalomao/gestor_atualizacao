@@ -397,13 +397,20 @@ class AtualizacaoService {
    * Indicadores da tela de Resumo: totais, atualizacoes do mes, clientes
    * desatualizados (com dias parados) e contagem por responsavel.
    */
-  resumo() {
-    const hoje = new Date();
+  resumo(hoje = new Date()) {
     const mesStr = `${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
+    const hojeStr = `${String(hoje.getDate()).padStart(2, "0")}/${mesStr}`;
+    const mesAnterior = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+    const diaComparavel = Math.min(hoje.getDate(), new Date(hoje.getFullYear(), hoje.getMonth(), 0).getDate());
+    const ateAtualComparavel = `${String(diaComparavel).padStart(2, "0")}/${mesStr}`;
+    const mesAnteriorStr = `${String(mesAnterior.getMonth() + 1).padStart(2, "0")}/${mesAnterior.getFullYear()}`;
+    const ateAnterior = `${String(diaComparavel).padStart(2, "0")}/${mesAnteriorStr}`;
 
     const totalClientes = this.db.clientes.count();
     const totalAtualizacoes = this.db.atualizacoes.count();
-    const mesCount = this.db.atualizacoes.countForMonth(mesStr);
+    const mesCount = this.db.atualizacoes.countForMonth(mesStr, hojeStr);
+    const mesAtualComparavel = this.db.atualizacoes.countForMonth(mesStr, ateAtualComparavel);
+    const mesAnteriorComparavel = this.db.atualizacoes.countForMonth(mesAnteriorStr, ateAnterior);
     const desatualizadoDias = this.regras.valor("desatualizadoDias");
     const semAtendimento = this._clientesSemAtendimento(hoje, desatualizadoDias);
     const situacaoClientes = this._situacaoDosClientes();
@@ -413,13 +420,15 @@ class AtualizacaoService {
     // tarefas de Agendamentos vivem em tabelas diferentes desta classe,
     // mas moram aqui porque o Resumo ja busca tudo numa chamada so -- mesmo
     // motivo por tras de "atualizadosMesPorSistema" acima.
-    const atualizacoesPorMes = this.db.atualizacoes.porMes(12);
+    const atualizacoesPorMes = this.db.atualizacoes.porMes(12, hoje);
     const tempoMedioResolucao = this.db.agendamentos.tempoMedioResolucaoPorResponsavel();
 
     return {
       totalClientes,
       totalAtualizacoes,
       mesCount,
+      mesAtualComparavel,
+      mesAnteriorComparavel,
       // Tempo sem atendimento e situação de versão são perguntas DIFERENTES,
       // e por isso duas chaves. Antes o Resumo chamava de "em dia" o
       // complemento da lista abaixo: cliente atendido ontem com a NFe velha

@@ -93,6 +93,6 @@ test("corpoSituacao", async (t) => {
   await t.test("sem ninguém para avaliar, orienta em vez de mostrar porcentagem", () => {
     const vazio = String(corpoSituacao(totaisSituacao({ em_dia: [], desatualizado: [], pendente: [], sem_atualizaveis: [] }), []));
     assert.ok(!vazio.includes("%"));
-    assert.match(vazio, /versão oficial/);
+    assert.match(vazio, /Cadastre clientes/);
   });
 });
