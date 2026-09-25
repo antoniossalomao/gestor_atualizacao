@@ -247,3 +247,30 @@ test("Migração 2 - sistemas fixos", async (t) => {
     env.cleanup();
   }
 });
+
+test("Migração 3 - banco já existente recebe autoria sem perder dados", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-migr3-"));
+  const arquivo = path.join(tmpDir, "gestao.db");
+  try {
+    const inicial = new Database(arquivo);
+    inicial.conn.prepare("INSERT INTO clientes (nome) VALUES (?)").run("Cliente existente");
+    inicial.conn.prepare("UPDATE sistemas SET ultima_versao = ? WHERE nome = ?").run("24/09/2026", "B_Vendas");
+    inicial.conn.close();
+
+    const antigo = new Sqlite3(arquivo);
+    antigo.exec("ALTER TABLE sistemas DROP COLUMN ultima_versao_autor; ALTER TABLE sistemas DROP COLUMN ultima_versao_em");
+    antigo.pragma("user_version = 2");
+    antigo.close();
+
+    const migrado = new Database(arquivo);
+    try {
+      assert.equal(migrado.conn.pragma("user_version", { simple: true }), VERSAO_ATUAL);
+      const colunas = migrado.conn.prepare("PRAGMA table_info(sistemas)").all().map((c) => c.name);
+      assert.ok(colunas.includes("ultima_versao_autor"));
+      assert.ok(colunas.includes("ultima_versao_em"));
+      assert.equal(migrado.conn.prepare("SELECT nome FROM clientes WHERE nome = ?").get("Cliente existente").nome, "Cliente existente");
+      assert.equal(migrado.conn.prepare("SELECT ultima_versao FROM sistemas WHERE nome = ?").get("B_Vendas").ultima_versao, "24/09/2026");
+      assert.equal(migrado.conn.pragma("integrity_check", { simple: true }), "ok");
+    } finally { migrado.conn.close(); }
+  } finally { fs.rmSync(tmpDir, { recursive: true, force: true }); }
+});

@@ -21,6 +21,9 @@ Para o agente C#, o equivalente é
   filtros de situação e busca, mostra a oficial e abre a ficha do cliente. O
   gerenciador tem edição por linha, autor e data das alterações futuras e
   bloqueio de gravação quando outra pessoa mudou a referência antes do Salvar.
+  As colunas de autoria são adicionadas pela migração 3 também aos bancos já
+  existentes; a primeira implantação em Docker revelou que a criação inicial
+  do esquema não alcançava instalações atualizadas.
 
 - **Revisão do painel, E2:** componentes fixos saíram do gráfico por sistema,
   da seleção de Sistemas e das referências oficiais. A ficha os reúne em

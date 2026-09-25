@@ -27,6 +27,11 @@ const MIGRACOES = [
     descricao: "sistemas marcados como fixos (sem controle de versão)",
     aplicar: migracao2,
   },
+  {
+    versao: 3,
+    descricao: "autoria e data das referências oficiais dos sistemas",
+    aplicar: migracao3,
+  },
 ];
 
 /**
@@ -163,6 +168,11 @@ function migracao2(conn) {
     const sistema = sistemas.resolver(nome);
     if (sistema) marcar.run(sistema.id);
   }
+}
+
+function migracao3(conn) {
+  conn.exec("ALTER TABLE sistemas ADD COLUMN ultima_versao_autor TEXT");
+  conn.exec("ALTER TABLE sistemas ADD COLUMN ultima_versao_em TEXT");
 }
 
 function lerMapa(texto) {

@@ -382,7 +382,7 @@ Abaixo, referência de leitura: `Versão oficial de B_NFe: 22/09/2026`. Edição
 ### 10.2 Gerenciador de oficiais
 
 - [x] Uma linha por sistema atualizável, com versão salva.
-- [x] Mostrar autor/data da alteração quando disponíveis; duas colunas novas passam a registrar alterações futuras, e referências antigas mostram autor/data não registrados.
+- [x] Mostrar autor/data da alteração quando disponíveis; a migração versionada 3 acrescenta as duas colunas também aos bancos existentes. Referências antigas mostram autor/data não registrados.
 - [x] Edição explícita por linha com Salvar/Cancelar e validação de data.
 - [x] Explicar: novos atendimentos usam a oficial; os existentes preservam versões recebidas.
 - [x] Referência ausente não implica Em dia (`Sem referência` no servidor).
