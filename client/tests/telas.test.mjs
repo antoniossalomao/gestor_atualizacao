@@ -20,7 +20,7 @@ import { chipsFiltroAtualizacoes, htmlChips } from "../js/templates/filtros.js";
 import { splitSistemas, montarMatrizVersoes } from "../js/domain/matrizVersoes.js";
 import { cartaoAcesso, linhaMatrizVersoes } from "../js/templates/consulta.js";
 import { formatarMes, primeiroDiaDoMes, tendenciaMensal } from "../js/domain/resumo.js";
-import { statTile, deltaTendencia } from "../js/templates/resumo.js";
+import { statTile, deltaTendencia, corpoSituacao } from "../js/templates/resumo.js";
 import { listaNotificacoes, itemNotificacao } from "../js/templates/notificacoes.js";
 import { alteracoesRegras, descreverChaveAgentes, formatarTempoAtivo, papelNormalizado } from "../js/domain/administracao.js";
 import { linhaUsuario, linhaBackup, blocosSaude, linhaRegraNumero } from "../js/templates/administracao.js";
@@ -28,6 +28,19 @@ import { cartaoPerfil, linhaSessao, listaSessoes, previaTabela, listaAtalhos, re
 import { cabecalhoSecao, tituloCartao } from "../js/templates/secao.js";
 import { descreverAparelho } from "../js/domain/aparelho.js";
 import { descricaoPapel } from "../js/domain/pessoa.js";
+import { filtrarClientesDoSistema } from "../js/domain/filtrosSistemas.js";
+
+test("Sistemas: situação e busca filtram clientes sem mudar seus dados", () => {
+  const rows = [
+    { cliente: "Água Azul", cidade: "Uberaba", situacao: "Em dia" },
+    { cliente: "Loja B", cidade: "Araxá", situacao: "Desatualizado" },
+    { cliente: "Loja C", cidade: "Uberlândia", situacao: "Sem referência" },
+  ];
+  assert.deepEqual(filtrarClientesDoSistema(rows, "Em dia", "agua"), [rows[0]]);
+  assert.deepEqual(filtrarClientesDoSistema(rows, "Desatualizados", "araxá"), [rows[1]]);
+  assert.deepEqual(filtrarClientesDoSistema(rows, "Sem informação"), [rows[2]]);
+  assert.equal(rows[0].situacao, "Em dia");
+});
 
 const MALICIOSO = '"><img src=x onerror=alert(1)>';
 const texto = (v) => String(v);
@@ -121,6 +134,16 @@ test("Agendamentos - cartão do kanban", async (t) => {
     assert.doesNotMatch(operador, /draggable/, "arquivada não se arrasta, nem para operador");
 
     assert.match(texto(cartaoKanban(base, "operador", { agora: AGORA })), /draggable="true"/);
+  });
+
+  await t.test("Arquivar só aparece para tarefa concluída ativa e usuário que pode editar", () => {
+    const concluida = { ...base, status: STATUS_CONCLUIDO };
+    const operador = texto(cartaoKanban(concluida, "operador", { agora: AGORA }));
+    assert.match(operador, /data-row-action="arquivar"/);
+    assert.doesNotMatch(operador, /data-row-action="converter"/);
+    assert.doesNotMatch(texto(cartaoKanban(base, "operador", { agora: AGORA })), /data-row-action="arquivar"/);
+    assert.doesNotMatch(texto(cartaoKanban(concluida, "consulta", { agora: AGORA })), /data-row-action="arquivar"/);
+    assert.doesNotMatch(texto(cartaoKanban({ ...concluida, arquivadoEm: "2026-09-01" }, "admin", { agora: AGORA })), /data-row-action="arquivar"/);
   });
 
   await t.test("sem data nem sistema/responsável: nada de '·' solto nem <time> vazio", () => {
@@ -354,33 +377,28 @@ test("Consultar Cliente - marcação", async (t) => {
 // ---------------------------------------------------------------- Resumo
 
 test("Resumo - tendência do mês", async (t) => {
-  const serie = (anterior, atual) => [
-    { mes: "2026-08", total: anterior },
-    { mes: "2026-09", total: atual },
-  ];
-
-  await t.test("alta, baixa e estável contra o mês anterior", () => {
-    assert.deepEqual(tendenciaMensal(serie(10, 15), AGORA), { pct: 50, tendencia: "alta" });
-    assert.deepEqual(tendenciaMensal(serie(10, 5), AGORA), { pct: -50, tendencia: "baixa" });
-    assert.deepEqual(tendenciaMensal(serie(10, 10), AGORA), { pct: 0, tendencia: "neutra" });
+  await t.test("alta, baixa e estável contra o mesmo período do mês anterior", () => {
+    assert.deepEqual(tendenciaMensal(15, 10), { pct: 50, tendencia: "alta" });
+    assert.deepEqual(tendenciaMensal(5, 10), { pct: -50, tendencia: "baixa" });
+    assert.deepEqual(tendenciaMensal(10, 10), { pct: 0, tendencia: "neutra" });
   });
 
   await t.test("mês anterior zerado: nada a mostrar (null), não '0%' nem 'Infinity%'", () => {
-    assert.equal(tendenciaMensal(serie(0, 12), AGORA), null);
-    assert.equal(tendenciaMensal([], AGORA), null);
+    assert.equal(tendenciaMensal(12, 0), null);
+    assert.equal(tendenciaMensal(0, undefined), null);
   });
 
-  await t.test("mês atual sem linha na série conta como zero", () => {
-    assert.deepEqual(tendenciaMensal([{ mes: "2026-08", total: 4 }], AGORA), { pct: -100, tendencia: "baixa" });
+  await t.test("mês atual zerado contra período anterior positivo é queda de 100%", () => {
+    assert.deepEqual(tendenciaMensal(0, 4), { pct: -100, tendencia: "baixa" });
   });
+});
 
-  await t.test("em janeiro, o anterior é dezembro do ano passado", () => {
-    const janeiro = new Date(2027, 0, 10);
-    assert.deepEqual(
-      tendenciaMensal([{ mes: "2026-12", total: 4 }, { mes: "2027-01", total: 6 }], janeiro),
-      { pct: 50, tendencia: "alta" }
-    );
-  });
+test("Resumo orienta o estado vazio conforme a população", () => {
+  const semClientes = texto(corpoSituacao({ avaliados: 0, foraDaAvaliacao: 0 }, []));
+  const soFixos = texto(corpoSituacao({ avaliados: 0, foraDaAvaliacao: 3 }, []));
+  assert.match(semClientes, /Cadastre clientes/);
+  assert.match(soFixos, /3 clientes fora da avaliação/);
+  assert.doesNotMatch(soFixos, /100% em dia/);
 });
 
 test("Resumo - datas e indicadores", async (t) => {
@@ -513,6 +531,11 @@ test("Administração - linha de usuário", async (t) => {
     assert.doesNotMatch(html, /<option value="admin" selected>/);
     assert.match(html, /data-action="remover" data-id="2"/);
     assert.match(html, /Nunca entrou/);
+  });
+
+  await t.test("último acesso começa com maiúscula sem perder a data completa", () => {
+    const recente = texto(linhaUsuario({ ...outro, ultimo_login: new Date(Date.now() - 3 * 86400000).toISOString() }, { ehVoce: false }));
+    assert.match(recente, /<span title="[^"]+">Há 3 dias<\/span>/);
   });
 
   await t.test("conta legada 'user' aparece como Operador selecionado", () => {

@@ -71,7 +71,7 @@ export function linhaSessao(s) {
       </div>
       ${
         !s.atual &&
-        html`<button type="button" class="btn btn--small btn--ghost btn--danger" data-action="encerrar-sessao" data-id="${s.id}">Encerrar</button>`
+        html`<button type="button" class="btn btn--small btn--danger" data-action="encerrar-sessao" data-id="${s.id}">Encerrar</button>`
       }
     </li>`;
 }

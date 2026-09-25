@@ -59,7 +59,6 @@ const PATHS = {
     '<path d="M13.4 3.4a2 2 0 0 1 2.8 2.8L7 15.4l-4 1 1-4 9.4-9.4z" stroke-linecap="round" stroke-linejoin="round"/>',
   chave:
     '<circle cx="6.8" cy="13.2" r="3.2"/><path d="M9.1 10.9 16 4l2 2-1.7 1.7M13.7 7.7l2 2" stroke-linecap="round" stroke-linejoin="round"/>',
-  converter: '<path d="M6 14 14 6M8 6h6v6" stroke-linecap="round" stroke-linejoin="round"/>',
 
   /* -- seções do painel de Configurações -- */
   paleta:
@@ -108,4 +107,19 @@ export function icon(name) {
  */
 export function iconHtml(name) {
   return confiavel(icon(name));
+}
+
+/**
+ * Símbolo do Gestor de Atualizações (setas em ciclo + raio), usado na barra
+ * lateral e no login. Substituiu o logo.png, que trazia o fundo escuro
+ * "assado" na imagem: no tema claro virava um quadrado preto no meio da
+ * barra, e a cor não acompanhava o realce escolhido nas Configurações.
+ * Inline e em `currentColor` pelo mesmo motivo dos ícones acima -- o
+ * quadrado colorido em volta é do CSS (`--cor-accent`), não do desenho.
+ * Grade própria (32x32, traço 2.6), não a dos ícones: foi desenhado para
+ * continuar legível em 16 px, e o mesmo traçado está em assets/favicon.svg
+ * -- ao mudar um, mude o outro.
+ */
+export function simboloMarca() {
+  return `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.7 12.2A11 11 0 0 1 25 9.7"/><path d="M20.8 9 25 9.7 25.8 5.5"/><path d="M26.3 19.8A11 11 0 0 1 7 22.3"/><path d="M11.2 23 7 22.3 6.2 26.5"/><path d="M17.3 9.8 12.6 16.6h3.5l-1.4 5.6 4.7-6.8h-3.5z" fill="currentColor" stroke-width="1.1"/></svg>`;
 }

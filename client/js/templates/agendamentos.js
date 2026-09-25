@@ -58,6 +58,12 @@ export function cartaoKanban(row, role, { agora = new Date() } = {}) {
       <span class="kanban-card__meta">${meta || "—"}</span>
       ${dataHora && html`<time class="kanban-card__time${classeTempo}">${dataHora}</time>`}
     </div>
+    ${role !== "consulta" && row.status === STATUS_CONCLUIDO && !row.arquivadoEm && html`
+      <div class="kanban-card__actions">
+        <button type="button" class="btn btn--small" data-row-action="arquivar" data-id="${row.id}">
+          Arquivar
+        </button>
+      </div>`}
     ${row.arquivadoEm && role !== "consulta" && html`
       <div class="kanban-card__actions">
         <button type="button" class="btn btn--small btn--ghost" data-row-action="reabrir" data-id="${row.id}">

@@ -3,6 +3,9 @@ import { debounce } from "../utils/debounce.js";
 import { emptyState } from "../components/EmptyState.js";
 import { plural, html, copyToClipboard } from "../utils/html.js";
 import { toast } from "../components/Toast.js";
+import { iconHtml } from "../utils/icons.js";
+import { relatorioDeAtualizacao, haQuantoTempo } from "../domain/relatorio.js";
+import { tempoRelativo, formatarDataHora } from "../utils/date.js";
 import { montarMatrizVersoes } from "../domain/matrizVersoes.js";
 import { cartaoAcesso, CABECALHO_MATRIZ, linhaMatrizVersoes } from "../templates/consulta.js";
 
@@ -156,12 +159,13 @@ export class ConsultaView extends View {
         toast.error("Cliente não encontrado.");
         return;
       }
-      const [historico, painelVersoes, acessos] = await Promise.all([
+      const [historico, painelVersoes, acessos, situacaoSistemas] = await Promise.all([
         this.api.get(`/atualizacoes/recent-by-client/${encodeURIComponent(nome)}`, { limit: 10 }, { key: "consulta:historico" }),
         this.api.get("/versoes/painel", null, { key: "consulta:painel" }).catch(() => null),
         this.api.get(`/clientes/${cliente.id}/acessos`, null, { key: "consulta:acessos" }).catch(() => []),
+        this.api.get(`/atualizacoes/situacao-cliente/${encodeURIComponent(nome)}`, null, { key: "consulta:situacao" }),
       ]);
-      this._renderDetail(cliente, historico, painelVersoes, acessos);
+      this._renderDetail(cliente, historico, painelVersoes, acessos, situacaoSistemas);
     } catch (erro) {
       if (erro?.cancelled) return; // outra seleção, mais nova, tomou o lugar
       toast.error("Não foi possível carregar os dados deste cliente.");
@@ -178,7 +182,7 @@ export class ConsultaView extends View {
     );
   }
 
-  _renderDetail(cliente, historico, painelVersoes, acessos = []) {
+  _renderDetail(cliente, historico, painelVersoes, acessos = [], situacaoSistemas = []) {
     this.detailBox.innerHTML = html`
       <div class="consulta-detail__name"></div>
       <div class="consulta-detail__subtitle"></div>
@@ -188,23 +192,65 @@ export class ConsultaView extends View {
         <button type="button" class="btn" data-client-tab="versoes">Matriz de Versões</button>
         <button type="button" class="btn" data-client-tab="timeline">Linha do Tempo</button>
       </nav>
-      <section class="client-hub-panel" data-client-panel="resumo"><div class="info-grid" data-role="cadastro"></div></section>
+      <section class="client-hub-panel" data-client-panel="resumo" data-role="resumo-panel"></section>
       <section class="client-hub-panel" data-client-panel="acessos" hidden><div class="access-grid" data-role="acessos"></div></section>
       <section class="client-hub-panel" data-client-panel="versoes" hidden><div data-role="versao-matriz"></div></section>
       <section class="client-hub-panel" data-client-panel="timeline" hidden><div class="client-timeline" data-role="ultima"></div></section>
     `;
     this.detailBox.querySelector(".consulta-detail__name").textContent = cliente.nome;
 
+    // Cabeçalho com código, cidade e grupo (quando preenchido). CNPJ removido da ficha (I15).
     const subtitulos = [];
     if (cliente.codigo) subtitulos.push(`Código: ${cliente.codigo}`);
     if (cliente.cidade) subtitulos.push(`Cidade: ${cliente.cidade}`);
-    if (cliente.cnpj) subtitulos.push(`CNPJ: ${cliente.cnpj}`);
+    if (cliente.grupo) subtitulos.push(`Grupo/Rede: ${cliente.grupo}`);
     this.detailBox.querySelector(".consulta-detail__subtitle").textContent =
-      subtitulos.length > 0 ? subtitulos.join("    ·    ") : "Sem informações cadastrais adicionais";
+      subtitulos.length > 0 ? subtitulos.join(" · ") : "Sem informações cadastrais adicionais";
 
-    const cadastro = this.detailBox.querySelector('[data-role="cadastro"]');
-    cadastro.append(infoItem("Código", cliente.codigo), infoItem("Grupo / Rede", cliente.grupo), infoItem("Cidade", cliente.cidade),
-      infoItem("CNPJ", cliente.cnpj), infoItem("Sistemas contratados", (cliente.sistemas || []).join(", "), true));
+    // Subaba Resumo & Cadastro: resumo compacto + dados cadastrais
+    const resumoPanel = this.detailBox.querySelector('[data-role="resumo-panel"]');
+    const ultimaData = historico?.[0]?.data || null;
+    const tempoUltima = ultimaData ? haQuantoTempo(ultimaData) : "";
+    const ultimoTexto = ultimaData ? `${ultimaData}${tempoUltima ? ` (${tempoUltima})` : ""}` : "Nenhum atendimento";
+
+    const atualizaveis = (situacaoSistemas || []).filter((s) => !s.fixo);
+    const emDia = atualizaveis.filter((s) => s.situacao === "Em dia").length;
+    const atrasados = atualizaveis.filter((s) => s.situacao === "Desatualizado").length;
+    const pendentes = atualizaveis.filter((s) => s.situacao !== "Em dia" && s.situacao !== "Desatualizado").length;
+
+    let statusTexto = "Sem sistemas";
+    if (atualizaveis.length > 0) {
+      const partes = [];
+      if (emDia > 0) partes.push(`${emDia} em dia`);
+      if (atrasados > 0) partes.push(`${atrasados} ${plural(atrasados, "desatualizado")}`);
+      if (pendentes > 0) partes.push(`${pendentes} ${plural(pendentes, "pendente")}`);
+      statusTexto = partes.join(" · ") || "Todos em dia";
+    }
+
+    const statsGrid = document.createElement("div");
+    statsGrid.className = "resumo-compacto-grid";
+    statsGrid.style.cssText = "display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:var(--sp-3); margin-bottom:var(--sp-4);";
+    statsGrid.innerHTML = html`
+      <div class="card stat-card" style="padding:var(--sp-3); margin:0;">
+        <div class="stat-card__label" style="font-size:var(--txt-xs); color:var(--cor-texto-fraco); text-transform:uppercase; font-weight:var(--peso-forte);">Último atendimento</div>
+        <div class="stat-card__value" style="font-size:var(--txt-base); font-weight:var(--peso-medio); margin-top:4px;">${ultimoTexto}</div>
+      </div>
+      <div class="card stat-card" style="padding:var(--sp-3); margin:0;">
+        <div class="stat-card__label" style="font-size:var(--txt-xs); color:var(--cor-texto-fraco); text-transform:uppercase; font-weight:var(--peso-forte);">Situação dos sistemas</div>
+        <div class="stat-card__value" style="font-size:var(--txt-base); font-weight:var(--peso-medio); margin-top:4px;">${statusTexto}</div>
+      </div>
+    `;
+    resumoPanel.appendChild(statsGrid);
+
+    const cadastro = document.createElement("div");
+    cadastro.className = "info-grid";
+    cadastro.append(
+      infoItem("Código", cliente.codigo),
+      infoItem("Grupo / Rede", cliente.grupo),
+      infoItem("Cidade", cliente.cidade),
+      infoItem("Sistemas contratados", (cliente.sistemas || []).join(", "), true)
+    );
+    resumoPanel.appendChild(cadastro);
 
     const acessosBox = this.detailBox.querySelector('[data-role="acessos"]');
     if (acessos.length === 0) acessosBox.appendChild(emptyState({ titulo: "Nenhum acesso remoto", descricao: "Cadastre os acessos na tela Clientes.", icone: "acessos" }));
@@ -228,8 +274,8 @@ export class ConsultaView extends View {
       for (const painel of this.detailBox.querySelectorAll("[data-client-panel]")) painel.hidden = painel.dataset.clientPanel !== botao.dataset.clientTab;
     });
 
-    // Matriz Comparativa de Versões (Feature 3.2): Sistema | Instalada | Publicada | Estado | Último contato
-    this._renderMatrizVersoes(cliente, historico, painelVersoes);
+    // Matriz Comparativa de Versões e Telemetria de Agentes
+    this._renderMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas);
 
     const caixa = this.detailBox.querySelector('[data-role="ultima"]');
     if (!historico || historico.length === 0) {
@@ -252,6 +298,18 @@ export class ConsultaView extends View {
       }
       const grid = document.createElement("article");
       grid.className = "info-grid";
+
+      const topoLinha = document.createElement("div");
+      topoLinha.className = "info-grid__item info-grid__item--wide";
+      topoLinha.style.cssText = "display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--sp-2);";
+      topoLinha.innerHTML = html`
+        <strong style="font-size:var(--txt-base);">${registro.data || "Sem data"} — ${registro.sistema || "Sistema não informado"}</strong>
+        <button type="button" class="btn btn--small btn--ghost" data-action="copiar-chamado" data-index="${indice}" title="Copiar chamado formatado para área de transferência">
+          ${iconHtml("copiar")} Copiar Chamado
+        </button>
+      `;
+      grid.appendChild(topoLinha);
+
       grid.appendChild(infoItem("Data", registro.data));
       grid.appendChild(infoItem("Sistema", registro.sistema));
       grid.appendChild(infoItem("Versão", registro.versao));
@@ -261,13 +319,30 @@ export class ConsultaView extends View {
       if (registro.obs) grid.appendChild(infoItem("Obs", registro.obs, true));
       caixa.appendChild(grid);
     });
+
+    caixa.addEventListener("click", async (e) => {
+      const btn = e.target.closest('[data-action="copiar-chamado"]');
+      if (!btn) return;
+      const idx = Number(btn.dataset.index);
+      const reg = historico[idx];
+      if (!reg) return;
+      const anterior = historico[idx + 1] || null;
+      const textoChamado = relatorioDeAtualizacao(reg, { cliente, anterior });
+      if (await copyToClipboard(textoChamado)) {
+        toast.success("Chamado copiado para a área de transferência.");
+      }
+    });
   }
 
   /** As contas estão em domain/matrizVersoes.js e a marcação em templates/consulta.js -- os dois testados. */
-  _renderMatrizVersoes(cliente, historico, painelVersoes) {
+  _renderMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas = []) {
     const container = this.detailBox.querySelector('[data-role="versao-matriz"]');
-    const linhas = montarMatrizVersoes(cliente, historico, painelVersoes);
-    if (linhas.length === 0) {
+    const fixos = situacaoSistemas.filter((s) => s.fixo);
+    const nomesFixos = new Set(fixos.map((s) => s.sistema.toLocaleLowerCase("pt-BR")));
+    const linhas = montarMatrizVersoes(cliente, historico, painelVersoes)
+      .filter((linha) => !nomesFixos.has(linha.sistema.toLocaleLowerCase("pt-BR")));
+
+    if (linhas.length === 0 && fixos.length === 0) {
       container.replaceChildren(
         emptyState({
           titulo: "Nenhum sistema associado",
@@ -278,24 +353,90 @@ export class ConsultaView extends View {
       return;
     }
 
-    const tableWrap = document.createElement("div");
-    tableWrap.className = "table-wrap";
-    tableWrap.style.marginBottom = "var(--sp-2)";
+    container.replaceChildren();
 
-    const table = document.createElement("table");
-    table.className = "data-table";
-    table.innerHTML = CABECALHO_MATRIZ;
+    // 1. Matriz de sistemas atualizáveis
+    if (linhas.length > 0) {
+      const tableWrap = document.createElement("div");
+      tableWrap.className = "table-wrap";
+      tableWrap.style.marginBottom = "var(--sp-3)";
 
-    const tbody = table.querySelector("tbody");
-    for (const linha of linhas) {
-      const tr = document.createElement("tr");
-      tr.className = "is-readonly";
-      tr.innerHTML = linhaMatrizVersoes(linha);
-      tbody.appendChild(tr);
+      const table = document.createElement("table");
+      table.className = "data-table";
+      table.innerHTML = CABECALHO_MATRIZ;
+
+      const tbody = table.querySelector("tbody");
+      for (const linha of linhas) {
+        const tr = document.createElement("tr");
+        tr.className = "is-readonly";
+        tr.innerHTML = linhaMatrizVersoes(linha);
+        tbody.appendChild(tr);
+      }
+
+      tableWrap.appendChild(table);
+      container.appendChild(tableWrap);
     }
 
-    tableWrap.appendChild(table);
-    container.replaceChildren(tableWrap);
+    // 2. Componentes fixos (sem status de atraso)
+    if (fixos.length > 0) {
+      const secao = document.createElement("section");
+      secao.style.cssText = "margin-top:var(--sp-3); padding:var(--sp-3); border:1px solid var(--cor-borda); border-radius:var(--raio-md);";
+      const titulo = document.createElement("h4");
+      titulo.textContent = "Serviços/componentes fixos";
+      titulo.style.margin = "0 0 var(--sp-2)";
+      const lista = document.createElement("ul");
+      lista.style.margin = "0";
+      lista.style.paddingLeft = "var(--sp-4)";
+      for (const sistema of fixos) {
+        const item = document.createElement("li");
+        item.textContent = sistema.sistema;
+        lista.appendChild(item);
+      }
+      secao.append(titulo, lista);
+      container.appendChild(secao);
+    }
+
+    // 3. Telemetria de Agentes em bloco próprio (I15)
+    const nomeNorm = (cliente.nome || "").trim().toLowerCase();
+    const agentes = (painelVersoes?.agentes || []).filter((a) => {
+      if (a.empresa && a.empresa.trim().toLowerCase() === nomeNorm) return true;
+      return false;
+    });
+
+    if (agentes.length > 0) {
+      const telemetriaSecao = document.createElement("section");
+      telemetriaSecao.className = "telemetria-agentes";
+      telemetriaSecao.style.cssText = "margin-top:var(--sp-4); padding-top:var(--sp-3); border-top:1px solid var(--cor-borda);";
+      telemetriaSecao.innerHTML = html`
+        <h4 style="margin:0 0 var(--sp-1);">Telemetria dos Agentes</h4>
+        <p class="text-muted" style="font-size:var(--txt-xs); margin-bottom:var(--sp-3);">
+          Dados reportados em tempo real pelas máquinas clientes. A versão oficial é determinada pelos atendimentos registrados.
+        </p>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Máquina</th>
+                <th scope="col">Versão Reportada</th>
+                <th scope="col">Último Contato</th>
+                <th scope="col">Situação</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${agentes.map((a) => html`
+                <tr class="is-readonly">
+                  <td><strong>${a.maquina || "Servidor"}</strong></td>
+                  <td>${a.ultimaVersao ? html`<span class="version-chip">${a.ultimaVersao}</span>` : "—"}</td>
+                  <td title="${formatarDataHora(a.ultimaComunicacao)}">${tempoRelativo(a.ultimaComunicacao)}</td>
+                  <td><span class="badge ${a.situacao === "ok" ? "badge--success" : "badge--warning"}">${a.situacao || "Ativo"}</span></td>
+                </tr>
+              `)}
+            </tbody>
+          </table>
+        </div>
+      `;
+      container.appendChild(telemetriaSecao);
+    }
   }
 }
 

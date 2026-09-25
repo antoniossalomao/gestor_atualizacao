@@ -1,278 +1,178 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
-
-/**
- * Gráfico de linha em SVG puro, para série única ao longo do tempo (ex.:
- * atualizações por mês). Ocupava o lugar de um BarChart (barras horizontais)
- * antes -- bom para comparar categorias, ruim para ler evolução no tempo,
- * porque não existe um eixo esquerda->direita representando o tempo. Linha
- * resolve isso: a tendência (sobe/desce/estável) aparece de relance.
- *
- * Mesma técnica do PieChart: coordenadas num viewBox fixo, `width: 100%` no
- * CSS faz o SVG escalar com o card. Cores em `style` (não `setAttribute`)
- * porque só `style` resolve `var(--token)` -- PieChart usa hex literal via
- * tokenHex() por desenhar com `setAttribute`; aqui não precisa desse passo.
- */
 let proximoId = 0;
 
+/** Doze meses de atendimentos; pontos reais unidos por retas, sem picos artificiais. */
 export class LineChart {
   /** @param {HTMLElement} container */
-  constructor(container, { unidade = "" } = {}) {
+  constructor(container) {
     this.container = container;
-    this.unidade = unidade;
-    this.viewW = 640;
-    this.viewH = 240;
-    this.padL = 42;
-    this.padR = 16;
-    this.padT = 24;
-    this.padB = 28;
-    // Sufixo único pro id do gradiente -- sem isto, duas instâncias na mesma
-    // página (ou dois `render()` seguidos) colidiriam no mesmo id de <defs>.
     this.id = `linechart-${proximoId++}`;
+    this.pontos = [];
+    this.maxRotulos = 0;
+    this.renderWidth = 0;
+    this.renderHeight = 0;
+    if (typeof ResizeObserver !== "undefined") {
+      this.observer = new ResizeObserver(() => {
+        const largura = this._larguraGrafico();
+        const altura = this._alturaGrafico();
+        if (this.pontos.length && (largura !== this.renderWidth || altura !== this.renderHeight)) this.render(this.pontos);
+      });
+      this.observer.observe(container);
+    }
   }
 
-  /** @param {Array<{label: string, total: number}>} pontos */
+  _larguraGrafico() {
+    const estilo = getComputedStyle(this.container);
+    const padding = parseFloat(estilo.paddingLeft) + parseFloat(estilo.paddingRight);
+    return Math.max(280, Math.round((this.container.clientWidth || 640) - padding));
+  }
+
+  _maxRotulos(largura) {
+    return largura < 340 ? 3 : largura < 520 ? 4 : 6;
+  }
+
+  _alturaGrafico() {
+    return Math.max(220, Math.round(this.container.clientHeight - 26));
+  }
+
+  /** @param {Array<{label: string, total: number, parcial?: boolean}>} pontos */
   render(pontos) {
+    this.pontos = pontos;
+    const W = this._larguraGrafico();
+    const H = this._alturaGrafico();
+    this.renderWidth = W;
+    this.renderHeight = H;
+    this.maxRotulos = this._maxRotulos(W);
     this.container.replaceChildren();
     const wrap = document.createElement("div");
     wrap.className = "line-chart";
-
-    if (pontos.length === 0) {
+    this.container.appendChild(wrap);
+    if (!pontos.length) {
       const vazio = document.createElement("p");
       vazio.className = "text-muted";
       vazio.textContent = "Nenhum dado para mostrar.";
       wrap.appendChild(vazio);
-      this.container.appendChild(wrap);
       return;
     }
 
-    const { padL, padR, padT, padB, viewW, viewH } = this;
-    const plotW = viewW - padL - padR;
-    const plotH = viewH - padT - padB;
-    const n = pontos.length;
-    const valorMax = niceMax(Math.max(0, ...pontos.map((p) => p.total)));
+    const L = 37, R = 18, T = 23, B = 32;
+    const plotW = W - L - R, plotH = H - T - B;
+    const maximo = Math.max(0, ...pontos.map((p) => p.total));
+    const teto = niceMax(maximo * 1.12);
+    const xAt = (i) => pontos.length > 1 ? L + i * plotW / (pontos.length - 1) : L + plotW / 2;
+    const yAt = (v) => T + plotH - v * plotH / teto;
+    const coords = pontos.map((p, i) => ({ x: xAt(i), y: yAt(p.total) }));
+    const base = yAt(0);
 
-    const xAt = (i) => (n > 1 ? padL + (i / (n - 1)) * plotW : padL + plotW / 2);
-    const yAt = (v) => padT + plotH - (valorMax > 0 ? (v / valorMax) * plotH : 0);
-
-    const svg = document.createElementNS(SVG_NS, "svg");
-    svg.setAttribute("viewBox", `0 0 ${viewW} ${viewH}`);
-    svg.setAttribute("role", "img");
-    svg.setAttribute(
-      "aria-label",
-      `Tendência ao longo do tempo. ${pontos.map((p) => `${p.label}: ${p.total}`).join(". ")}`
-    );
-
-    // Área com gradiente (forte perto da linha, sumindo perto da base) em vez
-    // de um véu chapado -- um accent dessaturado (ex.: "Grafite" no painel de
-    // Aparência) ainda dá pra ver, porque a força vem do degradê, não só do
-    // tom da cor.
-    const defs = document.createElementNS(SVG_NS, "defs");
-    const gradId = `${this.id}-area`;
-    const gradiente = document.createElementNS(SVG_NS, "linearGradient");
-    gradiente.setAttribute("id", gradId);
-    gradiente.setAttribute("x1", "0");
-    gradiente.setAttribute("y1", "0");
-    gradiente.setAttribute("x2", "0");
-    gradiente.setAttribute("y2", "1");
-    const stopTopo = document.createElementNS(SVG_NS, "stop");
-    stopTopo.setAttribute("offset", "0%");
-    stopTopo.setAttribute("class", "line-chart__area-topo");
-    const stopBase = document.createElementNS(SVG_NS, "stop");
-    stopBase.setAttribute("offset", "100%");
-    stopBase.setAttribute("class", "line-chart__area-base");
-    gradiente.appendChild(stopTopo);
-    gradiente.appendChild(stopBase);
+    const svg = elemento("svg", { viewBox: `0 0 ${W} ${H}`, role: "group", "aria-label": "Tendência mensal de atualizações" });
+    const defs = elemento("defs");
+    const gradiente = elemento("linearGradient", { id: `${this.id}-area`, x1: "0", y1: "0", x2: "0", y2: "1" });
+    gradiente.append(elemento("stop", { offset: "0%", class: "line-chart__area-topo" }), elemento("stop", { offset: "100%", class: "line-chart__area-base" }));
     defs.appendChild(gradiente);
     svg.appendChild(defs);
 
-    // -- grade horizontal (0 / metade / topo), recessiva, atrás de tudo --
-    for (const tick of [0, valorMax / 2, valorMax]) {
+    const ticks = maximo === 0 ? [0, 1] : [...new Set([0, Math.round(teto / 2), teto])];
+    for (const tick of ticks) {
       const y = yAt(tick);
-      const linha = document.createElementNS(SVG_NS, "line");
-      linha.setAttribute("x1", String(padL));
-      linha.setAttribute("x2", String(viewW - padR));
-      linha.setAttribute("y1", String(y));
-      linha.setAttribute("y2", String(y));
-      linha.setAttribute("class", "line-chart__grade");
-      svg.appendChild(linha);
-
-      const label = document.createElementNS(SVG_NS, "text");
-      label.setAttribute("x", String(padL - 8));
-      label.setAttribute("y", String(y + 3));
-      label.setAttribute("text-anchor", "end");
-      label.setAttribute("class", "line-chart__eixo");
-      label.textContent = String(Math.round(tick));
-      svg.appendChild(label);
+      svg.appendChild(elemento("line", { x1: L, x2: W - R, y1: y, y2: y, class: "line-chart__grade" }));
+      const rotulo = elemento("text", { x: L - 8, y: y + 3, "text-anchor": "end", class: "line-chart__eixo" });
+      rotulo.textContent = String(tick);
+      svg.appendChild(rotulo);
     }
 
-    const coords = pontos.map((p, i) => ({ x: xAt(i), y: yAt(p.total) }));
-    const bezier = curvaBezier(coords);
+    const caminho = coords.map((p, i) => `${i ? "L" : "M"} ${p.x},${p.y}`).join(" ");
+    svg.appendChild(elemento("path", { d: `M ${coords[0].x},${base} ${caminho.replace(/^M/, "L")} L ${coords.at(-1).x},${base} Z`, fill: `url(#${this.id}-area)`, class: "line-chart__area" }));
+    svg.appendChild(elemento("path", { d: caminho, class: "line-chart__linha" }));
 
-    // -- área sob a linha, com o gradiente definido acima --
-    const area = document.createElementNS(SVG_NS, "path");
-    const base = yAt(0);
-    area.setAttribute("d", `M ${coords[0].x},${base} L ${coords[0].x},${coords[0].y}${bezier} L ${coords[n - 1].x},${base} Z`);
-    area.setAttribute("fill", `url(#${gradId})`);
-    area.setAttribute("class", "line-chart__area");
-    svg.appendChild(area);
-
-    // -- a linha, suavizada (Catmull-Rom -> Bézier) -- reta ponto-a-ponto lia "picotado"; a curva lê como tendência, não planilha --
-    const linhaPath = document.createElementNS(SVG_NS, "path");
-    linhaPath.setAttribute("d", `M ${coords[0].x},${coords[0].y}${bezier}`);
-    linhaPath.setAttribute("class", "line-chart__linha");
-    svg.appendChild(linhaPath);
-
-    // -- um ponto discreto em cada mês; o último ganha destaque + o valor ao lado (ver marks-and-anatomy: "linhas -> valor no fim") --
-    for (let i = 0; i < n; i++) {
-      const { x: cx, y: cy } = coords[i];
-      if (i === n - 1) {
-        // Halo atrás do ponto final -- dois círculos concêntricos e fracos,
-        // não um <filter> de blur: mais barato e sem surpresa de recorte de
-        // região do filtro perto da borda do viewBox.
-        for (const [r, classe] of [[14, "line-chart__halo line-chart__halo--externo"], [9, "line-chart__halo line-chart__halo--interno"]]) {
-          const halo = document.createElementNS(SVG_NS, "circle");
-          halo.setAttribute("cx", String(cx));
-          halo.setAttribute("cy", String(cy));
-          halo.setAttribute("r", String(r));
-          halo.setAttribute("class", classe);
-          svg.appendChild(halo);
-        }
-      }
-      const ponto = document.createElementNS(SVG_NS, "circle");
-      ponto.setAttribute("cx", String(cx));
-      ponto.setAttribute("cy", String(cy));
-      ponto.setAttribute("r", i === n - 1 ? "5" : "3");
-      ponto.setAttribute("class", i === n - 1 ? "line-chart__ponto line-chart__ponto--fim" : "line-chart__ponto");
-      svg.appendChild(ponto);
-    }
-
-    // Halo externo tem r:14 (ver loop acima) -- offset de 10px colocava o
-    // texto encostando/atrás do halo (lia como "número cortado"). 22px limpa
-    // o halo com folga; o clamp evita colidir com o topo do viewBox quando o
-    // último ponto está perto do máximo do eixo Y.
-    const valorFim = document.createElementNS(SVG_NS, "text");
-    valorFim.setAttribute("x", String(xAt(n - 1) - 6));
-    valorFim.setAttribute("y", String(Math.max(padT + 10, yAt(pontos[n - 1].total) - 22)));
-    valorFim.setAttribute("text-anchor", "end");
-    valorFim.setAttribute("class", "line-chart__valor-fim");
-    valorFim.textContent = String(pontos[n - 1].total);
-    svg.appendChild(valorFim);
-
-    // -- rótulos do eixo X; com muitos meses, mostra só alguns, distribuídos
-    // por posição (não por "um sim um não") -- "pular de 2 em 2 e sempre
-    // forçar o último" deixava os dois últimos rótulos colados quando
-    // (n-1) caía num índice ímpar (ex.: 12 meses, ago/set grudados e
-    // jul sumindo sem mostrar nada no lugar). Espalhados por posição, o
-    // último gruda no penúltimo só se REALMENTE estiverem perto. --
-    for (const i of indicesRotulo(n)) {
-      const texto = document.createElementNS(SVG_NS, "text");
-      texto.setAttribute("x", String(xAt(i)));
-      texto.setAttribute("y", String(viewH - 6));
-      texto.setAttribute("text-anchor", "middle");
-      texto.setAttribute("class", "line-chart__eixo");
-      texto.textContent = pontos[i].label;
-      svg.appendChild(texto);
-    }
-
-    // -- camada de interação: crosshair + ponto de destaque + tooltip --
-    const crosshair = document.createElementNS(SVG_NS, "line");
-    crosshair.setAttribute("y1", String(padT));
-    crosshair.setAttribute("y2", String(viewH - padB));
-    crosshair.setAttribute("class", "line-chart__crosshair");
+    const crosshair = elemento("line", { y1: T, y2: base, class: "line-chart__crosshair" });
     svg.appendChild(crosshair);
-
-    // O raio (0 -> 5, com transição) é definido em CSS, não aqui -- é o que
-    // faz o ponto "crescer" ao aparecer em vez de só surgir pronto.
-    const hoverPonto = document.createElementNS(SVG_NS, "circle");
-    hoverPonto.setAttribute("class", "line-chart__ponto line-chart__ponto--hover");
-    svg.appendChild(hoverPonto);
+    const destaque = elemento("circle", { r: 5, class: "line-chart__ponto line-chart__ponto--destaque" });
+    svg.appendChild(destaque);
 
     const tooltip = document.createElement("div");
     tooltip.className = "line-chart__tooltip";
-    tooltip.innerHTML = `<strong data-role="tt-valor"></strong><span data-role="tt-label"></span>`;
-    const ttValor = tooltip.querySelector('[data-role="tt-valor"]');
-    const ttLabel = tooltip.querySelector('[data-role="tt-label"]');
+    tooltip.setAttribute("aria-live", "polite");
+    const valor = document.createElement("strong");
+    const mes = document.createElement("span");
+    tooltip.append(valor, mes);
 
-    const mostrarIndice = (i) => {
-      const p = pontos[i];
-      const cx = xAt(i);
-      crosshair.setAttribute("x1", String(cx));
-      crosshair.setAttribute("x2", String(cx));
+    const mostrar = (i) => {
+      const ponto = pontos[i], { x, y } = coords[i];
+      crosshair.setAttribute("x1", String(x));
+      crosshair.setAttribute("x2", String(x));
       crosshair.classList.add("is-visivel");
-      hoverPonto.setAttribute("cx", String(cx));
-      hoverPonto.setAttribute("cy", String(yAt(p.total)));
-      hoverPonto.classList.add("is-visivel");
-      ttValor.textContent = String(p.total);
-      ttLabel.textContent = p.label;
-      tooltip.style.left = `${(cx / viewW) * 100}%`;
-      tooltip.style.top = `${(yAt(p.total) / viewH) * 100}%`;
+      destaque.setAttribute("cx", String(x));
+      destaque.setAttribute("cy", String(y));
+      destaque.classList.add("is-visivel");
+      valor.textContent = `${ponto.total} ${ponto.total === 1 ? "atualização" : "atualizações"}`;
+      mes.textContent = `${ponto.label}${ponto.parcial ? " · mês em andamento" : ""}`;
       tooltip.classList.add("is-visivel");
     };
     const esconder = () => {
       crosshair.classList.remove("is-visivel");
-      hoverPonto.classList.remove("is-visivel");
+      destaque.classList.remove("is-visivel");
       tooltip.classList.remove("is-visivel");
     };
-    const aoMover = (e) => {
+
+    const focaveis = [];
+    pontos.forEach((p, i) => {
+      const { x, y } = coords[i];
+      const ponto = elemento("circle", {
+        cx: x, cy: y, r: i === pontos.length - 1 ? 5 : 3.5,
+        class: i === pontos.length - 1 ? "line-chart__ponto line-chart__ponto--fim" : "line-chart__ponto",
+        tabindex: "0", role: "button", "aria-label": `${p.label}: ${p.total} ${p.total === 1 ? "atualização" : "atualizações"}${p.parcial ? ", mês em andamento" : ""}`,
+      });
+      ponto.addEventListener("focus", () => mostrar(i));
+      ponto.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+          e.preventDefault();
+          focaveis[Math.max(0, Math.min(focaveis.length - 1, i + (e.key === "ArrowRight" ? 1 : -1)))].focus();
+        }
+        if (e.key === "Escape") esconder();
+      });
+      focaveis.push(ponto);
+      svg.appendChild(ponto);
+    });
+
+    for (const i of indicesRotulo(pontos.length, this.maxRotulos)) {
+      const rotulo = elemento("text", { x: xAt(i), y: H - 5, "text-anchor": i === 0 ? "start" : i === pontos.length - 1 ? "end" : "middle", class: "line-chart__eixo" });
+      rotulo.textContent = pontos[i].label;
+      svg.appendChild(rotulo);
+    }
+
+    svg.addEventListener("pointermove", (e) => {
       const rect = svg.getBoundingClientRect();
-      if (rect.width === 0) return;
-      const fracao = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
-      const xView = fracao * viewW;
-      const i = Math.min(n - 1, Math.max(0, Math.round(((xView - padL) / plotW) * (n - 1))));
-      mostrarIndice(i);
-    };
-    svg.addEventListener("pointermove", aoMover);
-    svg.addEventListener("pointerdown", aoMover);
-    svg.addEventListener("pointerleave", esconder);
-
-    wrap.appendChild(svg);
-    wrap.appendChild(tooltip);
-    this.container.appendChild(wrap);
+      const x = ((e.clientX - rect.left) / rect.width) * W;
+      const i = Math.round((x - L) / plotW * (pontos.length - 1));
+      mostrar(Math.max(0, Math.min(pontos.length - 1, i)));
+    });
+    svg.addEventListener("pointerdown", (e) => {
+      const rect = svg.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * W;
+      mostrar(Math.max(0, Math.min(pontos.length - 1, Math.round((x - L) / plotW * (pontos.length - 1)))));
+    });
+    svg.addEventListener("pointerleave", (e) => { if (e.pointerType !== "touch") esconder(); });
+    svg.addEventListener("focusout", (e) => { if (!svg.contains(e.relatedTarget)) esconder(); });
+    wrap.append(svg, tooltip);
   }
+
+  destroy() { this.observer?.disconnect(); }
 }
 
-/**
- * Sequência de comandos "C" (Catmull-Rom convertido pra Bézier cúbica, tensão
- * 1/6 -- a conversão padrão) ligando cada ponto ao seguinte, SEM o "M"
- * inicial (quem chama já sabe onde a linha começa). Usa os vizinhos de cada
- * ponto pra escolher a curvatura, então a linha passa exatamente por cima de
- * cada valor real -- não é uma aproximação, só deixa de fazer cotovelo entre
- * dois segmentos retos.
- */
-function curvaBezier(coords) {
-  let d = "";
-  for (let i = 0; i < coords.length - 1; i++) {
-    const p0 = coords[i - 1] || coords[i];
-    const p1 = coords[i];
-    const p2 = coords[i + 1];
-    const p3 = coords[i + 2] || p2;
-    const cp1x = p1.x + (p2.x - p0.x) / 6;
-    const cp1y = p1.y + (p2.y - p0.y) / 6;
-    const cp2x = p2.x - (p3.x - p1.x) / 6;
-    const cp2y = p2.y - (p3.y - p1.y) / 6;
-    d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
-  }
-  return d;
+function elemento(nome, atributos = {}) {
+  const el = document.createElementNS(SVG_NS, nome);
+  for (const [chave, valor] of Object.entries(atributos)) el.setAttribute(chave, String(valor));
+  return el;
 }
 
-/**
- * Quais índices ganham rótulo no eixo X, no máximo 6, sempre incluindo o
- * primeiro e o último -- distribuídos por POSIÇÃO (passo fixo em índice, não
- * "um a cada N"), então o espaçamento entre rótulos escolhidos fica parelho
- * mesmo quando (n-1) não é múltiplo do passo.
- */
-function indicesRotulo(n) {
-  const maximo = 6;
-  if (n <= maximo) return Array.from({ length: n }, (_, i) => i);
-  const passo = (n - 1) / (maximo - 1);
-  return [...new Set(Array.from({ length: maximo }, (_, k) => Math.round(k * passo)))];
+function indicesRotulo(n, limite) {
+  if (n <= limite) return Array.from({ length: n }, (_, i) => i);
+  return [...new Set(Array.from({ length: limite }, (_, i) => Math.round(i * (n - 1) / (limite - 1))))];
 }
 
-/** Menor número "redondo" (1/2/5/10 x uma potência de dez) que cobre `valor`. */
 function niceMax(valor) {
   if (valor <= 0) return 1;
-  const magnitude = Math.pow(10, Math.floor(Math.log10(valor)));
+  const magnitude = 10 ** Math.floor(Math.log10(valor));
   const residual = valor / magnitude;
-  const passo = residual > 5 ? 10 : residual > 2 ? 5 : residual > 1 ? 2 : 1;
-  return passo * magnitude;
+  return (residual > 5 ? 10 : residual > 2 ? 5 : residual > 1 ? 2 : 1) * magnitude;
 }

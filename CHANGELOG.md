@@ -15,6 +15,135 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Revisão do painel, E10:** validação visual completa, revisão da documentação e encerramento do ciclo principal:
+  - *Documentação (`README.md`)*: atualizado para refletir o design e fluxos consolidados da revisão:
+    1. Agendamentos: remoção definitiva de menções legadas a "converter agendamento em atualização", documentação da toolbar unificada, filtros rápidos (Pendentes, Concluídos, Arquivados) e arquivamento manual de concluídas;
+    2. Atualizações: documentação de filtros recolhíveis com chips visuais e menu "Mais ações" para exportação e importação;
+    3. Sistemas: documentação da divisão entre consulta de clientes (com filtros por situação e busca) e painel "Versões oficiais" com autoria e detecção de edição concorrente;
+    4. Clientes e Consulta: documentação da gestão de acessos na linha de cada cliente com cópia rápida, formato compacto de Grupo/Rede e linha do tempo com cópia de relatório em texto limpo;
+    5. Administração e Configurações: documentação da reestruturação em 7 e 6 seções temáticas, respectivamente;
+    6. Limitações: remoção de menção desatualizada a "apenas dois níveis de permissão", alinhando com o modelo RBAC de três perfis (Administrador, Operador, Consulta).
+  - *Planejamento (`PLANEJAMENTO_REVISAO_COMPLETA_PAINEL.md`)*: conclusão da etapa E10 no cronograma e checklist mestre; validação e preenchimento de todos os critérios gerais de aceite (regras e dados, interação, acessibilidade visual e engenharia).
+  - *Validação de acessibilidade e visual*: garantia de consistência de contraste, foco visível, responsividade nos breakpoints (390px, 768px, 1280px e 1440px) e compatibilidade com os modos claro e escuro.
+
+- **Revisão do painel, E8:** reorganização das telas de Administração e Configurações por finalidade de uso (I18 e I19):
+  - *Administração (`AdministracaoView`)*: reestruturada em 7 seções por finalidade de operação:
+    1. **Pessoas e permissões** (`UsuariosAdmin`): usuários, papéis e gestão de contas;
+    2. **Operação** (`OperacaoAdmin`): unificação de prazos (dias até desatualizado e arquivamento de tarefas) e classificação dos sistemas (atualizável vs componente fixo);
+    3. **Dados** (`DadosAdmin`): centralização de exportação completa de atendimentos (.xlsx), importação em lote com validações e download do banco SQLite de agora;
+    4. **Integrações** (`IntegracoesAdmin`): alertas externos via Discord Webhook com teste imediato, liga/desliga do Atualizador e conectividade;
+    5. **Backups e recuperação** (`BackupsAdmin`): cópias do banco com verificação de integridade, restauração protegida e política configurável de retenção de cópias automáticas;
+    6. **Auditoria** (`HistoricoView`): auditoria completa de alterações com cabeçalho limpo e contextualizado;
+    7. **Diagnóstico** (`SaudeAdmin`): saúde do servidor, integridade do banco e status de processos.
+    Redução de descrições repetitivas, migração transparente de abas legadas na sessão e atualização dos atalhos da paleta.
+  - *Configurações (`ConfiguracoesView`)*: reorganização das preferências pessoais em 6 seções claras:
+    1. **Minha conta** (`ContaConfig`): abertura padrão com perfil, troca de senha, sessões ativas e backup de preferências;
+    2. **Trabalho diário**: tela inicial, período de abertura, paginação, menu lateral, persistência de filtros e confirmação de logout;
+    3. **Notificações**: avisos na tela (posição e duração), contador no título da aba e notificações no Windows;
+    4. **Interface e acessibilidade**: tema, realce, contraste, tamanho do texto, densidade de linhas com prévia ao vivo e personalização avançada recolhida (fontes, texturas e ultrawide);
+    5. **Regras da equipe** (`RegrasEquipeConfig`): orientação clara da separação entre escolhas pessoais e regras globais, com atalho direto para a Administração;
+    6. **Sobre e ajuda**: versão do painel, guia conciso das situações de versão dos sistemas e catálogo completo de atalhos de teclado.
+    Todas as 24 chaves de preferências salvas no navegador foram estritamente preservadas.
+
+- **Revisão do painel, E7:** ficha do cliente (`ConsultaView`) revisada:
+  remoção de referências a CNPJ no subtítulo e nos campos de cadastro; cabeçalho
+  compacto exibindo Código, Cidade e Grupo/Rede (quando preenchido); resumo
+  compacto com último atendimento relativo e situação de sistemas; separação clara
+  entre sistemas atualizáveis (classificados pela regra oficial do servidor/ADR-0008),
+  componentes fixos sem status de atraso e bloco dedicado de telemetria de agentes
+  instalados (sem interferir na situação de versão do cliente). Na linha do tempo de
+  atendimentos, adicionado botão para copiar o chamado no formato padrão. O modal de
+  relatórios (`RelatorioModal`) substituiu o seletor por abas curtas (Atendimento e
+  Cliente), cabeçalho discreto com botão fechar, filtro de histórico recolhível e
+  prévia com rodapé estável de ações (Fechar, Imprimir/Salvar PDF e Copiar texto).
+
+- **Revisão do painel, E6:** agendamentos integrados à grade com toolbar unificada,
+  criação rápida de tarefas e filtros de status discretos (Pendentes, Concluídos e
+  Arquivados). Na aba Clientes, a gestão de acessos foi movida diretamente para a
+  linha de cada cliente ("Gerenciar acessos"), a coluna Grupo/Rede foi compactada com
+  truncamento controlado e o campo de cadastro foi reorganizado junto a Código e Cidade.
+
+- **Revisão do painel, E5:** padronização do sistema de botões e toolbars
+  (variantes `btn--primary`, `btn--secondary`, `btn--danger`, altura mínima 38px/32px
+  e borda visível); filtros de data recolhíveis em Atualizações com chips visíveis e
+  indicador de filtros ativos; e menu "Mais ações" consolidando Exportar recorte e
+  Importar atendimentos com orientações de uso.
+
+- **Revisão do painel, E4:** tendência mensal do Resumo passa a mostrar 12
+  meses consecutivos, com zero nos meses vazios e sem contar registros futuros
+  como realizados. A unidade é atendimento registrado; o mês atual é parcial
+  e a variação usa períodos de igual duração. O gráfico ajusta rótulos à
+  largura, usa segmentos retos e oferece leitura por teclado, toque e lista
+  textual. O card de situação orienta conforme o tipo de estado vazio.
+
+- **Revisão do painel, E3:** a aba Sistemas separa os filtros de consulta do
+  painel Versões oficiais. A data de consulta agora filtra o último atendimento
+  e nunca substitui a referência oficial na classificação. A tabela ganhou
+  filtros de situação e busca, mostra a oficial e abre a ficha do cliente. O
+  gerenciador tem edição por linha, autor e data das alterações futuras e
+  bloqueio de gravação quando outra pessoa mudou a referência antes do Salvar.
+  As colunas de autoria são adicionadas pela migração 3 também aos bancos já
+  existentes; a primeira implantação em Docker revelou que a criação inicial
+  do esquema não alcançava instalações atualizadas.
+
+- **Revisão do painel, E2:** componentes fixos saíram do gráfico por sistema,
+  da seleção de Sistemas e das referências oficiais. A ficha os reúne em
+  Serviços/componentes fixos, sem atraso. A API bloqueia nova referência e
+  lotes de atualização por atraso, enquanto preserva atendimentos e
+  referências antigas. A classificação agora é administrada na aba própria,
+  com permissão de administrador. Totais e tendência do Resumo passaram a
+  dizer Atendimentos para refletir a contagem de registros, inclusive de
+  instalações e acessos.
+
+- **Revisão do painel, E1:** retirado o comando de converter agendamento em atualização;
+  tarefas concluídas podem ser arquivadas pelo cartão ou pela gaveta e consultadas em
+  Arquivadas; “Último acesso” na Administração começa com maiúscula. O alerta sem fundo
+  escuro e a borda visível das ações destrutivas já tinham sido corrigidos nesta etapa.
+
+- **"Em dia" passou a falar de versão, não de tempo parado.** O card "Situação dos
+  Clientes" do Resumo chamava de em dia quem teve qualquer atendimento nos
+  últimos 60 dias. Um cliente atendido ontem com a NFe velha aparecia em
+  dia, e um sem visita há três meses, mas sem versão nova para receber,
+  aparecia desatualizado. Agora há duas coisas separadas:
+  - **Card "Atualização dos Clientes"**: Em dia, Desatualizados e Verificação
+    pendente, pela versão recebida comparada com a oficial. **Quem tem
+    B_Vendas é julgado só por ele**, que é o sistema que puxa os outros.
+    Julgando por todos os sistemas, a produção mostrou só 21 de 369 em dia.
+    Sem B_Vendas, precisam estar todos em dia. Cada total abre a lista exata
+    dos clientes que ele contou, e o card mostra os sistemas com mais
+    clientes atrasados. Quem só tem sistemas
+    fixos (B_Atualizador, Suporte Bredas) fica fora da conta.
+  - **Indicador "Sem Atualização Há Mais de N Dias"** (era "Parados"): mede
+    só o tempo. O clique abria a aba Sistemas, que não mostrava esse
+    conjunto; agora abre a lista.
+  - **A mesma regra vale na aba Sistemas e na ficha.** Antes comparavam a
+    versão como texto (`===`), e quem recebeu uma versão mais nova que a
+    oficial aparecia como atrasado. Agora a comparação é por data.
+  - **Atendimento sem versão registrada é julgado pela data** do
+    atendimento contra a da oficial, e aparece como "(pela data)". Sem isso,
+    348 de 369 clientes de produção ficariam "pendentes", porque os
+    atendimentos de antes da versão oficial não gravaram versão. A versão
+    recebida continua "Não informada": nada é gravado retroativamente.
+  - Migração 2: `sistemas.controla_versao`. Decisões em
+    [ADR-0008](docs/adr/0008-situacao-de-versao-do-cliente.md).
+
+- **Um nome só e um símbolo que acompanha o tema.** A barra lateral dizia
+  "ATUALIZADOR / Gestor de clientes", o login "ATUALIZADOR" e a aba do
+  navegador "Gestor de Atualizações". Três nomes para a mesma coisa, e
+  "Atualizador" já é o nome do agente que roda no cliente. Agora é
+  **Gestor de Atualizações** em todo lugar, com "Bredas Sistemas" como
+  assinatura no login. Entre as duas propostas avaliadas (a outra era
+  "Bredas Gestão"), ficou a que já estava na aba, no README e no serviço do
+  Windows. Na barra o nome ocupa duas linhas, porque numa só era cortado
+  pelos 238px de largura.
+  - **O logo deixou de ser PNG.** O arquivo trazia o fundo escuro embutido
+    na imagem: no tema claro virava um quadrado preto, e não acompanhava a
+    cor de destaque escolhida nas Configurações. O símbolo (setas em ciclo
+    + raio) foi redesenhado em SVG inline (`simboloMarca()` em
+    `utils/icons.js`), com traço pensado para 16 px. O quadrado colorido em
+    volta agora vem do CSS. Há também `favicon.svg`, e o `favicon.png` foi
+    refeito a partir dele para as notificações.
+
 - **O banco parou de guardar listas em texto e de ligar cliente pelo nome.**
   Os sistemas de um atendimento e de um cliente eram texto separado por
   vírgula ("B_Vendas, B_NFe"), com um JSON de versões por cima, e o cliente

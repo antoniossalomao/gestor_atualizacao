@@ -35,8 +35,8 @@ export class UsuariosAdmin extends View {
   _buildDom() {
     this.container.innerHTML = html`
       ${cabecalhoSecao({
-        titulo: "Usuários",
-        descricao: "Quem entra no sistema e o que cada um pode fazer.",
+        titulo: "Pessoas e permissões",
+        descricao: "Quem entra no sistema, papéis de acesso e ações de conta.",
         acoes: html`<button type="button" class="btn btn--accent" data-action="nova">${iconHtml("plus")} Nova conta</button>`,
       })}
       <div class="admin-grade">

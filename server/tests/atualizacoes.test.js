@@ -25,6 +25,11 @@ const { ClienteService } = require("../src/services/ClienteService");
 
 const USUARIO = { id: 1, nome: "Teste" };
 
+function salvarOficial(clientes, nome, data) {
+  const esperada = clientes.db.sistemas.resolver(nome)?.ultima_versao || "";
+  return clientes.salvarVersaoSistema(nome, data, USUARIO, esperada);
+}
+
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-atu-"));
   const db = new Database(path.join(tmpDir, "gestao.db"));
@@ -229,8 +234,8 @@ test("AtualizacaoService - relatório por sistema", async (t) => {
       assert.throws(() => env.service.relatorioPorSistema("  "), /Informe o sistema/);
     });
 
-    await t.test("data de corte inválida é recusada", () => {
-      assert.throws(() => env.service.relatorioPorSistema("B_Vendas", "2026-01-01"), /Data de corte/);
+    await t.test("data de atendimento inválida é recusada", () => {
+      assert.throws(() => env.service.relatorioPorSistema("B_Vendas", "2026-01-01"), /Última atualização antes de/);
     });
 
     await t.test("lista só quem usa o sistema", () => {
@@ -240,21 +245,19 @@ test("AtualizacaoService - relatório por sistema", async (t) => {
       assert.equal(nomes.length, 3);
     });
 
-    await t.test("com data de corte, separa 'Em dia' de 'Desatualizado'", () => {
-      // É este recorte que decide quem a equipe vai atender. Uma comparação
-      // errada aqui manda visitar o cliente errado.
+    await t.test("data filtra só atendimentos anteriores, sem alterar a situação de versão", () => {
       const r = env.service.relatorioPorSistema("B_Vendas", "01/06/2026");
       const por = Object.fromEntries(r.map((x) => [x.cliente, x.situacao]));
-      assert.equal(por["Em Dia"], "Em dia", "atualizado depois do corte");
-      assert.equal(por["Atrasado"], "Desatualizado", "atualizado antes do corte");
-      assert.equal(por["Nunca"], "Nunca atualizado");
+      assert.equal(por["Em Dia"], undefined, "atendimento posterior não entra no filtro");
+      assert.equal(por["Atrasado"], "Sem referência", "data não substitui a versão oficial ausente");
+      assert.equal(por["Nunca"], undefined, "sem atendimento não satisfaz o filtro de data");
     });
 
-    await t.test("sem referência oficial ou corte, não presume que o cliente está em dia", () => {
+    await t.test("sem referência oficial, não presume que o cliente está em dia", () => {
       const r = env.service.relatorioPorSistema("B_Vendas");
       const por = Object.fromEntries(r.map((x) => [x.cliente, x.situacao]));
       assert.equal(por["Em Dia"], "Sem referência");
-      assert.equal(por["Atrasado"], "Sem referência", "sem corte não há como estar atrasado");
+      assert.equal(por["Atrasado"], "Sem referência", "sem oficial não há como estar atrasado por versão");
       assert.equal(por["Nunca"], "Nunca atualizado");
     });
 
@@ -282,34 +285,35 @@ test("Referência oficial não atribui versões retroativamente", () => {
       clientes.create({ nome, sistemas: ["B_Vendas"] }, USUARIO);
       if (data) service.create({ cliente: nome, sistema: "B_Vendas", data }, USUARIO);
     }
-    clientes.salvarVersaoSistema("B_Vendas", "09/09/2026", USUARIO);
-    clientes.salvarVersaoSistema("B_NFe", "22/09/2026", USUARIO);
+    salvarOficial(clientes, "B_Vendas", "09/09/2026");
+    salvarOficial(clientes, "B_NFe", "22/09/2026");
     const rows = service.relatorioPorSistema("B_Vendas");
-    assert.equal(rows.find((r) => r.cliente === "Anterior").situacao, "Sem informação");
-    assert.equal(rows.find((r) => r.cliente === "Igual").situacao, "Sem informação");
-    assert.equal(rows.find((r) => r.cliente === "Posterior").situacao, "Sem informação");
-    assert.equal(rows.find((r) => r.cliente === "Sem registro").situacao, "Nunca atualizado");
+    const linha = (cliente) => rows.find((r) => r.cliente === cliente);
+    // O que não pode acontecer: a oficial salva hoje virar a versão que
+    // esses atendimentos antigos "receberam".
+    for (const cliente of ["Anterior", "Igual", "Posterior"]) assert.equal(linha(cliente).instalada, "Não informada");
+    // A situação, sem versão registrada, sai pela data do atendimento -- e
+    // marcada `pelaData`, para a tela não apresentar como comprovada
+    // (decisão da equipe, ver services/situacaoVersao.js).
+    assert.deepEqual([linha("Anterior").situacao, linha("Anterior").pelaData], ["Desatualizado", true]);
+    assert.deepEqual([linha("Igual").situacao, linha("Igual").pelaData], ["Em dia", true]);
+    assert.deepEqual([linha("Posterior").situacao, linha("Posterior").pelaData], ["Em dia", true]);
+    assert.equal(linha("Sem registro").situacao, "Nunca atualizado");
     assert.equal(db.sistemas.versoes().find((s) => s.nome === "B_NFe").data, "22/09/2026");
-    assert.throws(() => clientes.salvarVersaoSistema("B_Vendas", "31/02/2026", USUARIO));
-    assert.throws(() => clientes.salvarVersaoSistema("B_Vendas", 123, USUARIO));
-    assert.throws(() => clientes.salvarVersaoSistema("Inexistente", "09/09/2026", USUARIO));
-    clientes.salvarVersaoSistema("B_Vendas", "", USUARIO);
+    assert.throws(() => salvarOficial(clientes, "B_Vendas", "31/02/2026"));
+    assert.throws(() => salvarOficial(clientes, "B_Vendas", 123));
+    assert.throws(() => salvarOficial(clientes, "Inexistente", "09/09/2026"));
+    salvarOficial(clientes, "B_Vendas", "");
     assert.equal(service.relatorioPorSistema("B_Vendas").find((r) => r.cliente === "Anterior").situacao, "Sem referência");
   } finally { cleanup(); }
 });
 
-test("Relatório por sistema - consulta avulsa por data não some com a versão oficial", () => {
-  // A tela Sistemas deixa digitar uma data diferente da oficial salva ("quem
-  // está desatualizado desde tal dia?"), sem precisar clicar em "Salvar
-  // versão" -- é uma pergunta pontual, não uma correção da referência da
-  // equipe. Isso não pode reaproveitar a comparação por versão (que exige
-  // versão capturada no atendimento): vira comparação por data pura, do
-  // jeito que já funcionava antes da versão oficial existir.
+test("Relatório por sistema - data filtra atendimentos sem substituir a oficial", () => {
   const { service, clientes, cleanup } = ambiente();
   try {
     clientes.create({ nome: "Sem Versão Capturada", sistemas: ["B_Vendas"] }, USUARIO);
     service.create({ cliente: "Sem Versão Capturada", sistema: "B_Vendas", data: "05/09/2026" }, USUARIO);
-    clientes.salvarVersaoSistema("B_Vendas", "09/09/2026", USUARIO);
+    salvarOficial(clientes, "B_Vendas", "09/09/2026");
     service.create({ cliente: "Sem Versão Capturada", sistema: "B_Vendas", data: "15/09/2026" }, USUARIO);
 
     // Sem data explícita: usa a referência oficial e compara por versão --
@@ -317,20 +321,15 @@ test("Relatório por sistema - consulta avulsa por data não some com a versão 
     // "Em dia" (a versão capturada bate com a oficial).
     assert.equal(service.relatorioPorSistema("B_Vendas").find((r) => r.cliente === "Sem Versão Capturada").situacao, "Em dia");
 
-    // Mesma data da oficial, mas digitada explicitamente: não é avulsa,
-    // continua a comparação por versão.
-    assert.equal(
-      service.relatorioPorSistema("B_Vendas", "09/09/2026").find((r) => r.cliente === "Sem Versão Capturada").situacao,
-      "Em dia"
-    );
+    // O último atendimento de 15/09 não entra no filtro "antes de 09/09".
+    assert.equal(service.relatorioPorSistema("B_Vendas", "09/09/2026").length, 0);
 
-    // Data diferente da oficial: consulta avulsa, vira comparação por data
-    // -- 20/09 é depois do último atendimento (15/09), logo "Desatualizado"
-    // por essa pergunta pontual, mesmo com a versão batendo com a oficial.
+    // O filtro 20/09 inclui o atendimento, mas a situação segue pela oficial.
     assert.equal(
       service.relatorioPorSistema("B_Vendas", "20/09/2026").find((r) => r.cliente === "Sem Versão Capturada").situacao,
-      "Desatualizado"
+      "Em dia"
     );
+    assert.throws(() => service.relatorioPorSistema("B_Vendas", "31/02/2026"));
   } finally { cleanup(); }
 });
 
@@ -338,13 +337,13 @@ test("Versões recebidas permanecem após nova oficial, edição e desfazer", ()
   const { db, service, clientes, cleanup } = ambiente();
   try {
     clientes.create({ nome: "Loja", sistemas: ["B_NFe", "B_Vendas"] }, USUARIO);
-    clientes.salvarVersaoSistema("B_NFe", "22/09/2026", USUARIO);
-    clientes.salvarVersaoSistema("B_Vendas", "09/09/2026", USUARIO);
+    salvarOficial(clientes, "B_NFe", "22/09/2026");
+    salvarOficial(clientes, "B_Vendas", "09/09/2026");
     const criado = service.create({ cliente: "Loja", sistema: "B_NFe, B_Vendas", data: "24/09/2026", responsavel: "Teste" }, USUARIO);
     assert.deepEqual(JSON.parse(criado.versoes_sistemas), { B_NFe: "22/09/2026", B_Vendas: "09/09/2026" });
     const id = ultimoId(db);
     assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").situacao, "Em dia");
-    clientes.salvarVersaoSistema("B_NFe", "24/09/2026", USUARIO);
+    salvarOficial(clientes, "B_NFe", "24/09/2026");
     assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").situacao, "Desatualizado");
     assert.equal(service.relatorioPorSistema("B_NFe")[0].instalada, "22/09/2026");
     service.update(id, { ...criado, obs: "Corrigida" }, USUARIO);
@@ -361,10 +360,58 @@ test("Versões recebidas permanecem após nova oficial, edição e desfazer", ()
   } finally { cleanup(); }
 });
 
+test("Gráfico mensal e referências recentes ignoram componentes fixos sem apagar atendimentos", () => {
+  const { db, service, clientes, cleanup } = ambiente();
+  try {
+    clientes.create({ nome: "Loja Mista", sistemas: ["B_Vendas", "B_Atualizador"] }, USUARIO);
+    clientes.create({ nome: "Loja Fixa", sistemas: ["Suporte Bredas"] }, USUARIO);
+    service.create({ cliente: "Loja Mista", sistema: "B_Vendas, B_Atualizador", data: "25/09/2026" }, USUARIO);
+    service.create({ cliente: "Loja Fixa", sistema: "Suporte Bredas", data: "25/09/2026" }, USUARIO);
+    const grafico = db.atualizacoes.atualizadosNoMesPorSistema("09/2026");
+    assert.equal(grafico.find((s) => s.label === "B_Vendas").total, 1);
+    assert.ok(!grafico.some((s) => s.label === "B_Atualizador" || s.label === "Suporte Bredas"));
+    assert.ok(!service.latestVersionBySystem().some((s) => s.nome === "B_Atualizador" || s.nome === "Suporte Bredas"));
+    assert.equal(db.atualizacoes.count(), 2, "ambos os atendimentos continuam no histórico");
+  } finally { cleanup(); }
+});
+
+test("Tendência mensal retorna 12 meses consecutivos, zeros e nenhum atendimento futuro", () => {
+  const { db, service, cleanup } = ambiente();
+  try {
+    for (const [cliente, data] of [
+      ["Antigo", "30/09/2025"], ["Primeiro", "01/10/2025"],
+      ["Julho", "15/07/2026"], ["Atual", "25/09/2026"],
+      ["Futuro no mês", "26/09/2026"], ["Futuro em outro mês", "01/10/2026"],
+    ]) service.create({ cliente, sistema: "B_Vendas", data }, USUARIO);
+    const serie = db.atualizacoes.porMes(12, new Date(2026, 8, 25));
+    assert.equal(serie.length, 12);
+    assert.deepEqual(serie[0], { mes: "2025-10", total: 1 });
+    assert.deepEqual(serie[9], { mes: "2026-07", total: 1 });
+    assert.deepEqual(serie[10], { mes: "2026-08", total: 0 });
+    assert.deepEqual(serie[11], { mes: "2026-09", total: 1 });
+    assert.equal(db.atualizacoes.countForMonth("09/2026", "25/09/2026"), 1);
+    assert.equal(db.atualizacoes.countForMonth("09/2026", "26/09/2026"), 2);
+    assert.equal(db.atualizacoes.count(), 6, "registros futuros permanecem no histórico para correção");
+  } finally { cleanup(); }
+});
+
+test("Comparação mensal usa a mesma quantidade de dias quando o mês anterior é mais curto", () => {
+  const { service, cleanup } = ambiente();
+  try {
+    for (const [cliente, data] of [["Abril", "30/04/2026"], ["Maio 30", "30/05/2026"], ["Maio 31", "31/05/2026"]]) {
+      service.create({ cliente, sistema: "B_Vendas", data }, USUARIO);
+    }
+    const resumo = service.resumo(new Date(2026, 4, 31));
+    assert.equal(resumo.mesCount, 2, "o indicador mostra todos os atendimentos de maio até hoje");
+    assert.equal(resumo.mesAtualComparavel, 1, "para o percentual, maio é recortado até o dia 30");
+    assert.equal(resumo.mesAnteriorComparavel, 1, "abril tem só 30 dias");
+  } finally { cleanup(); }
+});
+
 test("Relatório por período e Excel respeitam filtros e contam clientes distintos", async () => {
   const { service, clientes, cleanup } = ambiente();
   try {
-    clientes.salvarVersaoSistema("B_NFe", "22/09/2026", USUARIO);
+    salvarOficial(clientes, "B_NFe", "22/09/2026");
     service.create({ cliente: "Loja", sistema: "B_NFe, B_Vendas", data: "24/09/2026", responsavel: "Ana" }, USUARIO);
     service.create({ cliente: "Loja", sistema: "B_NFe", data: "25/09/2026", responsavel: "Ana" }, USUARIO);
     service.create({ cliente: "Outra", sistema: "B_NFe", data: "01/08/2026", responsavel: "Bia" }, USUARIO);

@@ -1,58 +1,74 @@
 import { View } from "../app/View.js";
+import { prefs } from "../app/prefs.js";
 import { TelaComAbas } from "../components/TelaComAbas.js";
 import { cabecalhoSecao } from "../templates/secao.js";
 import { HistoricoView } from "./HistoricoView.js";
 import { UsuariosAdmin } from "./administracao/UsuariosAdmin.js";
-import { RegrasAdmin } from "./administracao/RegrasAdmin.js";
-import { NotificacoesAdmin } from "./administracao/NotificacoesAdmin.js";
-import { AtualizadorAdmin } from "./administracao/AtualizadorAdmin.js";
+import { OperacaoAdmin } from "./administracao/OperacaoAdmin.js";
+import { DadosAdmin } from "./administracao/DadosAdmin.js";
+import { IntegracoesAdmin } from "./administracao/IntegracoesAdmin.js";
 import { BackupsAdmin } from "./administracao/BackupsAdmin.js";
 import { SaudeAdmin } from "./administracao/SaudeAdmin.js";
 
 /**
- * Tela Administração -- só para administrador (ver `papel` em App.TABS).
+ * Tela Administração -- exclusiva para administradores.
  *
- * Antes, o que era da equipe inteira morava dentro do painel de preferências
- * PESSOAIS, numa seção "Segurança" que era só uma lista de links: cada um
- * fechava o painel e abria outro modal, com desenho próprio, e o "Fechar"
- * devolvia à tela de fundo em vez de às Configurações. Juntava coisas sem
- * relação entre si (usuários, backups, a chave dos agentes, o diagnóstico do
- * servidor, o liga/desliga do Atualizador) sob um nome que só servia a uma
- * delas.
- *
- * Agora é uma tela como as outras: tem rota (#/administracao), cabe tabela de
- * usuários e lista de backups com folga, e cada assunto é uma aba. O
- * Histórico de alterações veio junto -- é auditoria, a pergunta "quem mudou
- * isto?" que se faz justamente aqui.
- *
- * Cada aba é montada na primeira vez que é aberta, e só então vai à rede: a
- * Saúde e os Backups não têm por que ser consultados quando se entra só para
- * mudar o papel de alguém. A moldura das abas é a mesma das Configurações
- * (components/TelaComAbas.js).
+ * Organizada por finalidade em 7 seções estruturadas (Seção 11.2 do planejamento):
+ *  1. Pessoas e permissões: Usuários, papéis e ações de conta.
+ *  2. Operação: Prazos, arquivamento e classificação de sistemas.
+ *  3. Dados: Importação, exportações administrativas e validações de base.
+ *  4. Integrações: Atualizador, alertas externos no Discord e endereço do servidor.
+ *  5. Backups e recuperação: Cópias de segurança, política de retenção e restauração.
+ *  6. Auditoria: Histórico detalhado de alterações e filtros.
+ *  7. Diagnóstico: Saúde do servidor, processos e integridade do banco.
  */
 const ABAS = [
-  { key: "usuarios", rotulo: "Usuários", icone: "users", Secao: UsuariosAdmin },
-  // O Histórico é uma View completa, que não desenha cabeçalho de seção
-  // próprio (como aba solta, o título vinha do cabeçalho do app). Aqui dentro
-  // ele ganha o mesmo cabeçalho das outras abas.
+  { key: "pessoas", rotulo: "Pessoas e permissões", icone: "users", Secao: UsuariosAdmin },
+  { key: "operacao", rotulo: "Operação", icone: "ajustes", Secao: OperacaoAdmin },
+  { key: "dados", rotulo: "Dados", icone: "download", Secao: DadosAdmin },
+  { key: "integracoes", rotulo: "Integrações", icone: "distribuicao", Secao: IntegracoesAdmin },
+  { key: "backups", rotulo: "Backups e recuperação", icone: "backups", Secao: BackupsAdmin },
   {
-    key: "historico",
-    rotulo: "Histórico",
+    key: "auditoria",
+    rotulo: "Auditoria",
     icone: "historico",
     Secao: HistoricoView,
-    cabecalho: { titulo: "Histórico de alterações", descricao: "Quem criou, editou ou excluiu o quê, e quando." },
+    cabecalho: {
+      titulo: "Auditoria do sistema",
+      descricao: "Histórico detalhado de quem criou, editou ou excluiu registros no sistema, e quando.",
+    },
   },
-  { key: "regras", rotulo: "Regras da equipe", icone: "ajustes", Secao: RegrasAdmin },
-  { key: "notificacoes", rotulo: "Notificações", icone: "sino", Secao: NotificacoesAdmin },
-  { key: "atualizador", rotulo: "Atualizador", icone: "distribuicao", Secao: AtualizadorAdmin },
-  { key: "backups", rotulo: "Backups", icone: "backups", Secao: BackupsAdmin },
-  { key: "saude", rotulo: "Saúde do servidor", icone: "saude", Secao: SaudeAdmin },
+  { key: "diagnostico", rotulo: "Diagnóstico", icone: "saude", Secao: SaudeAdmin },
 ];
+
+const MAPA_ALIAS = {
+  usuarios: "pessoas",
+  pessoas: "pessoas",
+  operacao: "operacao",
+  regras: "operacao",
+  classificacao: "operacao",
+  dados: "dados",
+  integracoes: "integracoes",
+  notificacoes: "integracoes",
+  atualizador: "integracoes",
+  backups: "backups",
+  auditoria: "auditoria",
+  historico: "auditoria",
+  diagnostico: "diagnostico",
+  saude: "diagnostico",
+};
 
 export class AdministracaoView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
     this.ctx = ctx;
+
+    // Migra preferência legada salva na sessão/localStorage se necessário
+    const salva = prefs.get("administracao:aba", "pessoas");
+    if (MAPA_ALIAS[salva] && MAPA_ALIAS[salva] !== salva) {
+      prefs.set("administracao:aba", MAPA_ALIAS[salva]);
+    }
+
     this.tela = new TelaComAbas(container, {
       abas: ABAS,
       rotulo: "Seções da administração",
@@ -72,9 +88,11 @@ export class AdministracaoView extends View {
     });
   }
 
-  /** `navigate("administracao", { aba: "backups" })` abre direto na aba. */
+  /** `navigate("administracao", { aba: "backups" })` abre direto na aba suportando aliases legados. */
   aplicarParams({ aba } = {}) {
-    this.tela.escolher(aba);
+    if (!aba) return;
+    const abaDestino = MAPA_ALIAS[aba] || aba;
+    this.tela.escolher(abaDestino);
   }
 
   async refresh() {

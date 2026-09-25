@@ -61,8 +61,8 @@ class AtualizacoesController {
 
   porSistema = (req, res, next) => {
     try {
-      const { sistema = "", dataCorte = "" } = req.query;
-      res.json(this.atualizacaoService.relatorioPorSistema(sistema, dataCorte));
+      const { sistema = "", atendimentoAntesDe = "" } = req.query;
+      res.json(this.atualizacaoService.relatorioPorSistema(sistema, atendimentoAntesDe));
     } catch (err) {
       next(err);
     }

@@ -1,4 +1,4 @@
-import { icon } from "../utils/icons.js";
+import { icon, simboloMarca } from "../utils/icons.js";
 import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
 import { SwrCache } from "./SwrCache.js";
@@ -314,10 +314,14 @@ export class App {
       <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
       <aside class="app-sidebar">
         <div class="app-brand">
-          <div class="app-brand__mark" aria-hidden="true">
-            <img src="/assets/logo.png" alt="" width="34" height="34" />
-          </div>
-          <div class="app-brand__text"><strong>ATUALIZADOR</strong><span>Gestor de clientes</span></div>
+          <div class="app-brand__mark" aria-hidden="true">${simboloMarca()}</div>
+          <!-- Um nome só em todo lugar (barra, login, aba do navegador). Antes
+               a barra dizia "ATUALIZADOR / Gestor de clientes" e a aba "Gestor
+               de Atualizações" -- e "Atualizador" é o nome do AGENTE que roda
+               no cliente, não do painel. Em duas linhas porque numa só o nome
+               não cabe nos 238px da barra; o descritor saiu pelo mesmo motivo
+               ("Bredas Sistemas" fica no login, onde há espaço). -->
+          <div class="app-brand__text"><strong>Gestor de<br />Atualizações</strong></div>
         </div>
         <!-- O botão de recolher também saiu: era um ícone sem rótulo cujo
              efeito só se descobre clicando, e "Menu lateral: Aberto /
@@ -727,18 +731,13 @@ export class App {
       // existe mais para devolver a pessoa ao lugar errado.
       ...(this.user?.role === "admin"
         ? [
-            ["usuarios", "Usuários e papéis", "Criar conta, mudar papel, remover acesso", "users"],
-            ["historico", "Histórico de alterações", "Quem criou, editou ou excluiu o quê, e quando", "historico"],
-            ["regras", "Regras da equipe", "Dias até desatualizado, arquivamento de tarefas, backups", "ajustes"],
-            ["notificacoes", "Notificações no Discord", "Webhook do canal e mensagem de teste", "sino"],
-            [
-              "atualizador",
-              "Ligar/desligar o Atualizador",
-              this.atualizadorHabilitado ? "Hoje ligado" : "Hoje desligado -- é por aqui que se liga de novo",
-              "distribuicao",
-            ],
-            ["backups", "Backups do banco", "Baixar ou restaurar uma cópia", "backups"],
-            ["saude", "Saúde do servidor", "Banco, processo e cópias de segurança", "saude"],
+            ["pessoas", "Pessoas e permissões", "Criar conta, mudar papel, remover acesso", "users"],
+            ["operacao", "Operação da equipe", "Prazos, arquivamento e classificação de sistemas", "ajustes"],
+            ["dados", "Dados e importação", "Exportação completa, planilha de atendimentos e base", "download"],
+            ["integracoes", "Integrações e alertas", "Alertas no Discord, Atualizador e endereço do servidor", "distribuicao"],
+            ["backups", "Backups e recuperação", "Cópias de segurança, retenção e restauração", "backups"],
+            ["auditoria", "Auditoria do sistema", "Quem criou, editou ou excluiu registros no sistema", "historico"],
+            ["diagnostico", "Diagnóstico do servidor", "Saúde do processo, integridade do banco e cópias", "saude"],
           ].map(([aba, titulo, subtitulo, icone]) => ({
             id: `admin:${aba}`,
             titulo,

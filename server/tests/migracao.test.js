@@ -16,6 +16,10 @@ const os = require("node:os");
 const Sqlite3 = require("better-sqlite3");
 
 const { Database } = require("../src/database/Database");
+const { MIGRACOES } = require("../src/database/migracoes");
+
+/** Versão do esquema depois de todas as migrações. */
+const VERSAO_ATUAL = MIGRACOES[MIGRACOES.length - 1].versao;
 
 /** Um gestao.db na versão 0, com o esquema antigo e dados como os de produção. */
 function bancoLegado() {
@@ -29,7 +33,7 @@ function bancoLegado() {
     CREATE TABLE sistemas (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE);
     CREATE TABLE agendamentos (id INTEGER PRIMARY KEY AUTOINCREMENT, tarefa TEXT NOT NULL, cliente TEXT, responsavel TEXT, data TEXT, status TEXT);
 
-    INSERT INTO sistemas (nome) VALUES ('B_Vendas'), ('B_NFe'), ('B_Importa');
+    INSERT INTO sistemas (nome) VALUES ('B_Vendas'), ('B_NFe'), ('B_Importa'), ('ATUALIZADOR');
 
     INSERT INTO clientes (id, codigo, nome, cidade, sistemas) VALUES
       (1, 'C1', 'Mercado Central', 'Marília', 'B_Vendas, B_NFe'),
@@ -75,8 +79,8 @@ const sistemasDo = (db, id) =>
 test("Migração 1 - esquema", async (t) => {
   const env = abrir();
   try {
-    await t.test("o banco passa para a versão 1", () => {
-      assert.equal(env.db.conn.pragma("user_version", { simple: true }), 1);
+    await t.test("o banco passa para a versão atual", () => {
+      assert.equal(env.db.conn.pragma("user_version", { simple: true }), VERSAO_ATUAL);
     });
 
     await t.test("as listas em texto e o JSON de versões deixam de existir", () => {
@@ -209,7 +213,7 @@ test("Migração 1 - roda uma vez só", () => {
 
     const segunda = new Database(arquivo);
     try {
-      assert.equal(segunda.conn.pragma("user_version", { simple: true }), 1);
+      assert.equal(segunda.conn.pragma("user_version", { simple: true }), VERSAO_ATUAL);
       assert.equal(segunda.conn.prepare("SELECT COUNT(*) AS n FROM atualizacao_sistemas").get().n, linhas, "nada duplicado ao reabrir");
       const colunas = segunda.conn.prepare("PRAGMA table_info(atualizacoes)").all().map((c) => c.name);
       assert.ok(!colunas.includes("versoes_sistemas"), "o esquema legado não recria a coluna removida");
@@ -219,4 +223,54 @@ test("Migração 1 - roda uma vez só", () => {
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+});
+
+test("Migração 2 - sistemas fixos", async (t) => {
+  const env = abrir();
+  const controla = (nome) => env.db.conn.prepare("SELECT controla_versao AS v FROM sistemas WHERE nome = ?").get(nome)?.v;
+  try {
+    await t.test("B_Atualizador e Suporte Bredas não controlam versão", () => {
+      // "ATUALIZADOR" é a grafia antiga no catálogo: casa pelo resolver, não pelo nome exato.
+      assert.equal(controla("ATUALIZADOR"), 0);
+      assert.equal(controla("Suporte Bredas"), 0);
+    });
+
+    await t.test("os demais continuam controlando, inclusive os inativos", () => {
+      assert.equal(controla("B_Vendas"), 1);
+      assert.equal(controla("CTe"), 1);
+    });
+
+    await t.test("nada some do histórico nem do cadastro", () => {
+      assert.ok(env.db.sistemas.list().includes("Suporte Bredas"));
+    });
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("Migração 3 - banco já existente recebe autoria sem perder dados", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-migr3-"));
+  const arquivo = path.join(tmpDir, "gestao.db");
+  try {
+    const inicial = new Database(arquivo);
+    inicial.conn.prepare("INSERT INTO clientes (nome) VALUES (?)").run("Cliente existente");
+    inicial.conn.prepare("UPDATE sistemas SET ultima_versao = ? WHERE nome = ?").run("24/09/2026", "B_Vendas");
+    inicial.conn.close();
+
+    const antigo = new Sqlite3(arquivo);
+    antigo.exec("ALTER TABLE sistemas DROP COLUMN ultima_versao_autor; ALTER TABLE sistemas DROP COLUMN ultima_versao_em");
+    antigo.pragma("user_version = 2");
+    antigo.close();
+
+    const migrado = new Database(arquivo);
+    try {
+      assert.equal(migrado.conn.pragma("user_version", { simple: true }), VERSAO_ATUAL);
+      const colunas = migrado.conn.prepare("PRAGMA table_info(sistemas)").all().map((c) => c.name);
+      assert.ok(colunas.includes("ultima_versao_autor"));
+      assert.ok(colunas.includes("ultima_versao_em"));
+      assert.equal(migrado.conn.prepare("SELECT nome FROM clientes WHERE nome = ?").get("Cliente existente").nome, "Cliente existente");
+      assert.equal(migrado.conn.prepare("SELECT ultima_versao FROM sistemas WHERE nome = ?").get("B_Vendas").ultima_versao, "24/09/2026");
+      assert.equal(migrado.conn.pragma("integrity_check", { simple: true }), "ok");
+    } finally { migrado.conn.close(); }
+  } finally { fs.rmSync(tmpDir, { recursive: true, force: true }); }
 });

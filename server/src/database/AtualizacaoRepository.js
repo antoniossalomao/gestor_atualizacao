@@ -226,32 +226,36 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /** @param {string} monthStr formato "mm/aaaa", ex.: "08/2026" */
-  countForMonth(monthStr) {
+  countForMonth(monthStr, ate) {
     const row = this.conn
-      .prepare(`SELECT COUNT(*) AS total FROM ${this.table} WHERE substr(data, 4, 7) = ?`)
-      .get(monthStr);
+      .prepare(`SELECT COUNT(*) AS total FROM ${this.table} WHERE substr(data, 4, 7) = @mes AND ${DATE_SORT_EXPR} <= @ate`)
+      .get({ mes: monthStr, ate: paraOrdenavel(ate) || "99999999" });
     return row.total;
   }
 
   /**
-   * Quantidade de atualizacoes por mes, do mais antigo para o mais recente
-   * -- usado pelo grafico de tendencia do Resumo. "mes" sai como "aaaa-mm"
-   * (ordenavel como texto) porque "data" e guardada como "dd/mm/aaaa" e
-   * ordenar esse formato direto colocaria "01/2026" antes de "12/2025".
-   * @param {number} quantidadeMeses quantos meses trazer, do mais recente pra tras
+   * Doze meses consecutivos de atendimentos, inclusive os vazios. A data
+   * futura não entra em realizados; cada registro conta uma vez, mesmo que
+   * mencione vários sistemas ou só componentes fixos.
    */
-  porMes(quantidadeMeses = 12) {
+  porMes(quantidadeMeses = 12, hoje = new Date()) {
+    const inicio = new Date(hoje.getFullYear(), hoje.getMonth() - quantidadeMeses + 1, 1);
+    const chave = (data) => `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`;
+    const ordenavel = (data) => `${data.getFullYear()}${String(data.getMonth() + 1).padStart(2, "0")}${String(data.getDate()).padStart(2, "0")}`;
     const rows = this.conn
       .prepare(
         `SELECT (substr(data,7,4) || '-' || substr(data,4,2)) AS mes, COUNT(*) AS total
          FROM ${this.table}
-         WHERE data != ''
+         WHERE ${DATE_SORT_EXPR} BETWEEN @inicio AND @fim
          GROUP BY mes
-         ORDER BY mes DESC
-         LIMIT ?`
+         ORDER BY mes`
       )
-      .all(quantidadeMeses);
-    return rows.reverse();
+      .all({ inicio: ordenavel(inicio), fim: ordenavel(hoje) });
+    const totais = new Map(rows.map((r) => [r.mes, r.total]));
+    return Array.from({ length: quantidadeMeses }, (_, i) => {
+      const mes = chave(new Date(inicio.getFullYear(), inicio.getMonth() + i, 1));
+      return { mes, total: totais.get(mes) || 0 };
+    });
   }
 
   /** Mapa { id do cliente: data da atualizacao mais recente }, usado para achar quem esta parado. */
@@ -342,6 +346,25 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
+   * Último atendimento de TODOS os clientes em cada sistema, de uma vez só:
+   * [{ cliente_id, sistema_id, data, versao }]. É a mesma escolha de
+   * ultimaPorClienteNoSistema, para o Resumo classificar os clientes sem
+   * uma consulta por sistema.
+   */
+  ultimaPorClienteESistema() {
+    return this.conn
+      .prepare(
+        `SELECT cliente_id, sistema_id, data, versao FROM (
+           SELECT a.cliente_id, x.sistema_id, a.data, x.versao,
+                  ROW_NUMBER() OVER (PARTITION BY a.cliente_id, x.sistema_id ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC) AS n
+             FROM ${this.table} a JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
+            WHERE a.cliente_id IS NOT NULL
+         ) WHERE n = 1`
+      )
+      .all();
+  }
+
+  /**
    * Último atendimento de um cliente em cada sistema que já passou por ele:
    * [{ sistema_id, sistema, data, versao }]. Usado na situação do cliente.
    */
@@ -377,8 +400,8 @@ class AtualizacaoRepository extends BaseRepository {
                 WHERE a.data != ''
              ) WHERE n = 1
            ) u ON u.sistema_id = s.id
-          WHERE s.ativo = 1
-          ORDER BY s.nome`
+           WHERE s.ativo = 1 AND s.controla_versao = 1
+           ORDER BY s.nome`
       )
       .all()
       .map((r) => ({ ...r, versao: r.versao || "Não informada" }));
@@ -405,8 +428,8 @@ class AtualizacaoRepository extends BaseRepository {
              ) WHERE n = 1 AND substr(data, 4, 7) = @mes
            ) u ON u.sistema_id = s.id
               AND EXISTS (SELECT 1 FROM cliente_sistemas cs WHERE cs.cliente_id = u.cliente_id AND cs.sistema_id = s.id)
-          WHERE s.ativo = 1
-          GROUP BY s.id
+           WHERE s.ativo = 1 AND s.controla_versao = 1
+           GROUP BY s.id
           ORDER BY total DESC, s.nome`
       )
       .all({ mes: mesStr });

@@ -322,8 +322,9 @@ como um servidor web acessível por várias pessoas ao mesmo tempo, cada uma com
   repete o aviso a cada ciclo enquanto o problema continua.
 - **Tendência mensal de atualizações** (Resumo) — gráfico dos últimos 12 meses.
 - **Grupo/Rede de clientes** — campo opcional para agrupar unidades sob a mesma bandeira.
-- **Converter Agendamento em Atualização** — botão que pré-preenche um novo registro de
-  Atualização a partir de uma tarefa de Agendamentos.
+- **Conversão de Agendamento em Atualização (removida na E1)** — o botão que pré-preenchia
+  um atendimento a partir da tarefa existiu nesta fase, mas saiu da interface. Os dois registros
+  agora são criados separadamente.
 - **Tempo médio de resolução por responsável** (Resumo) — só conta tarefas criadas depois desta
   métrica existir, pra não inventar uma data que não existe.
 
@@ -813,7 +814,7 @@ registrada no Histórico (hoje em Administração) sob o autor "limpeza de cadas
 
 Três mudanças pequenas.
 
-**Botão "Arquivar" manual em Agendamentos**, ao lado de "Excluir Selecionada". Até aqui uma tarefa
+**Botão "Arquivar" manual em Agendamentos**, disponível no cartão concluído e na gaveta da tarefa. Até aqui uma tarefa
 só saía da lista pela varredura automática ([2.7](#27-mudanças-de-11092026)) — quem queria tirar
 uma tarefa já concluída da vista sem esperar `AGENDAMENTO_ARQUIVAR_DIAS` não tinha como. Novo
 endpoint `PATCH /agendamentos/:id/arquivar`, restrito a tarefas "Concluído" (mesma regra da
@@ -1240,6 +1241,7 @@ escolha deliberada — e reintroduz o problema que ela evitava.
 | [4.5](#45-adr-0005--clientjs-dividido-por-responsabilidade) | `client/js/` dividido por responsabilidade | Aceita |
 | [4.6](#46-adr-0006--verificação-de-tipos-sem-etapa-de-build-escopada-ao-código-puro) | Verificação de tipos sem build, escopada ao código puro | Aceita |
 | [4.7](#47-adr-0007--piloto-rollback-e-concorrência-otimista) | Piloto, rollback e concorrência otimista | Aceita |
+| [ADR-0008](adr/0008-situacao-de-versao-do-cliente.md) (arquivo próprio) | Uma regra só para "o cliente está em dia?" | Aceita |
 
 **Como escrever um novo:** copie a estrutura de qualquer um — Contexto → Decisão → Consequências →
 Alternativas consideradas — como uma nova subseção `4.N` no fim desta lista. Um ADR não se edita

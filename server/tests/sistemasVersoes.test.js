@@ -63,12 +63,41 @@ test("Versões dos sistemas - gravação HTTP e permissões", async (t) => {
   const setup = await pedir("/auth/setup", { metodo: "POST", corpo: { nome: "Admin", usuario: "admin", senha: SENHA } });
   const cookie = setup.cookie;
   assert.equal((await pedir("/sistemas/versoes")).status, 401);
-  assert.equal((await pedir("/sistemas/B_Vendas/versao", { metodo: "PUT", cookie, corpo: { data: "09/09/2026" } })).status, 200);
+  assert.equal((await pedir("/sistemas/B_Vendas/versao", { metodo: "PUT", cookie, corpo: { data: "09/09/2026", versaoEsperada: "" } })).status, 200);
   const lista = await pedir("/sistemas/versoes", { cookie });
   assert.equal(lista.corpo.find((s) => s.nome === "B_Vendas").data, "09/09/2026");
+  assert.equal(lista.corpo.find((s) => s.nome === "B_Vendas").autor, "Admin");
+  assert.ok(lista.corpo.find((s) => s.nome === "B_Vendas").alteradaEm);
+  assert.equal((await pedir("/sistemas/B_Vendas/versao", { metodo: "PUT", cookie, corpo: { data: "10/09/2026", versaoEsperada: "" } })).status, 409);
+  assert.equal((await pedir("/sistemas/B_Vendas/versao", { metodo: "PUT", cookie, corpo: { data: "10/09/2026" } })).status, 400);
   assert.equal((await pedir("/sistemas/B_Vendas/versao", { metodo: "PUT", cookie, corpo: { data: "31/02/2026" } })).status, 400);
   await pedir("/usuarios", { metodo: "POST", cookie, corpo: { nome: "Consulta", usuario: "consulta", senha: SENHA, role: "consulta" } });
   const login = await pedir("/auth/login", { metodo: "POST", corpo: { usuario: "consulta", senha: SENHA } });
   assert.equal((await pedir("/sistemas/versoes", { cookie: login.cookie })).status, 200);
   assert.equal((await pedir("/sistemas/B_Vendas/versao", { metodo: "PUT", cookie: login.cookie, corpo: { data: "22/09/2026" } })).status, 403);
+});
+
+test("Sistemas fixos - referência antiga preservada, sem versão oficial nova e classificação só por admin", async (t) => {
+  const { pedir, encerrar } = await subirServidor();
+  t.after(encerrar);
+  const setup = await pedir("/auth/setup", { metodo: "POST", corpo: { nome: "Admin", usuario: "admin", senha: SENHA } });
+  const admin = setup.cookie;
+  assert.equal((await pedir("/sistemas/B_Vendas/versao", { metodo: "PUT", cookie: admin, corpo: { data: "24/09/2026", versaoEsperada: "" } })).status, 200);
+  const catalogo = await pedir("/sistemas/catalogo", { cookie: admin });
+  const vendas = catalogo.corpo.find((s) => s.nome === "B_Vendas");
+  const fixo = catalogo.corpo.find((s) => s.nome === "B_Atualizador");
+  assert.equal(fixo.controlaVersao, 0);
+  assert.ok(!(await pedir("/sistemas/versoes", { cookie: admin })).corpo.some((s) => s.nome === fixo.nome));
+  assert.equal((await pedir("/sistemas/B_Atualizador/versao", { metodo: "PUT", cookie: admin, corpo: { data: "25/09/2026" } })).status, 400);
+
+  await pedir("/usuarios", { metodo: "POST", cookie: admin, corpo: { nome: "Operador", usuario: "operador", senha: SENHA, role: "operador" } });
+  const operador = (await pedir("/auth/login", { metodo: "POST", corpo: { usuario: "operador", senha: SENHA } })).cookie;
+  assert.equal((await pedir(`/sistemas/${vendas.id}/classificacao`, { metodo: "PATCH", cookie: operador, corpo: { controlaVersao: false } })).status, 403);
+  assert.equal((await pedir(`/sistemas/${vendas.id}/classificacao`, { metodo: "PATCH", cookie: admin, corpo: { controlaVersao: "false" } })).status, 400);
+  assert.equal((await pedir(`/sistemas/${vendas.id}/classificacao`, { metodo: "PATCH", cookie: admin, corpo: { controlaVersao: false } })).status, 200);
+  assert.ok(!(await pedir("/sistemas/versoes", { cookie: admin })).corpo.some((s) => s.nome === "B_Vendas"));
+  assert.equal((await pedir("/sistemas/B_Vendas/versao", { metodo: "PUT", cookie: admin, corpo: { data: "26/09/2026" } })).status, 400);
+  assert.equal((await pedir("/sistemas/catalogo", { cookie: admin })).corpo.find((s) => s.nome === "B_Vendas").ultimaVersao, "24/09/2026");
+  assert.equal((await pedir(`/sistemas/${vendas.id}/classificacao`, { metodo: "PATCH", cookie: admin, corpo: { controlaVersao: true } })).status, 200);
+  assert.equal((await pedir("/sistemas/versoes", { cookie: admin })).corpo.find((s) => s.nome === "B_Vendas").data, "24/09/2026");
 });

@@ -145,16 +145,33 @@ class ClienteService {
     return { afetados, total: registros.length };
   }
 
-  salvarVersaoSistema(nome, data, usuario) {
+  salvarVersaoSistema(nome, data, usuario, versaoEsperada) {
     const { dataValida } = require("../shared/validation");
     if (typeof data !== "string" || (data !== "" && !dataValida(data))) {
       throw new ValidationError("Informe uma data válida no formato dd/mm/aaaa.");
     }
-    const antes = this.db.sistemas.versoes().find((s) => s.nome.toLowerCase() === nome.toLowerCase());
-    if (!antes) throw new NotFoundError("Sistema não encontrado.");
-    this.db.sistemas.salvarVersao(antes.nome, data);
-    this.historico.registrar(usuario, "atualizar", "sistema", `Última versão de ${antes.nome}: ${data || "não informada"}`, { antes, depois: { nome: antes.nome, data } });
-    return { nome: antes.nome, data };
+    const sistema = this.db.sistemas.resolver(nome);
+    if (!sistema?.ativo) throw new NotFoundError("Sistema não encontrado.");
+    if (!sistema.controla_versao) throw new ValidationError(`"${sistema.nome}" é um componente fixo e não recebe versão oficial.`);
+    if (typeof versaoEsperada !== "string") throw new ValidationError("Informe a referência anterior para evitar sobrescrever outra edição.");
+    if (sistema.ultima_versao !== versaoEsperada) throw new ConflictError("A versão oficial mudou desde que você abriu a edição. Recarregue a lista antes de salvar.");
+    const antes = { nome: sistema.nome, data: sistema.ultima_versao || "" };
+    if (!this.db.sistemas.salvarVersaoSeAtual(sistema.nome, data, versaoEsperada, usuario?.nome || "")) {
+      throw new ConflictError("A versão oficial foi alterada por outra pessoa. Recarregue a lista antes de salvar.");
+    }
+    this.historico.registrar(usuario, "atualizar", "sistema", `Última versão de ${sistema.nome}: ${data || "não informada"}`, { antes, depois: { nome: sistema.nome, data } });
+    return { nome: sistema.nome, data };
+  }
+
+  classificarSistema(id, controlaVersao, usuario) {
+    if (typeof controlaVersao !== "boolean") throw new ValidationError("Informe se o sistema controla versão.");
+    const sistema = this.db.sistemas.getById(Number(id));
+    if (!sistema?.ativo) throw new NotFoundError("Sistema não encontrado no catálogo ativo.");
+    if (Boolean(sistema.controlaVersao) === controlaVersao) return sistema;
+    this.db.sistemas.classificar(sistema.id, controlaVersao);
+    const depois = this.db.sistemas.getById(sistema.id);
+    this.historico.registrar(usuario, "atualizar", "sistema", `Sistema "${sistema.nome}" classificado como ${controlaVersao ? "atualizável" : "componente fixo"}`, { antes: sistema, depois });
+    return depois;
   }
 
   listSistemas() {

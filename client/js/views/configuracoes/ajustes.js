@@ -21,26 +21,15 @@ import { ATALHOS } from "../../app/Shortcuts.js";
 import { toast } from "../../components/Toast.js";
 
 /**
- * Tudo o que a tela Configurações oferece, como dados.
+ * Definição central de todas as preferências das Configurações (Seção 12 do planejamento).
  *
- * Está escrito assim -- e não como uma sequência de chamadas que empurram
- * elementos numa div -- porque várias coisas diferentes precisam percorrer a
- * MESMA lista: o desenho de cada aba, a busca, o contador de "fora do padrão"
- * de cada aba e o "restaurar esta seção". Com a lista sendo dado, todas leem
- * a mesma fonte; com ela sendo código, cada uma teria que ser mantida em
- * sincronia na mão, e a busca seria a primeira a ficar desatualizada quando
- * um ajuste novo entrasse.
- *
- * O campo `chaves` de cada item diz de quais preferências ele é dono. É o que
- * permite o selo "alterado", a contagem por aba e o "restaurar esta seção"
- * existirem sem uma segunda tabela dizendo a mesma coisa.
- *
- * O `busca` guarda sinônimos: ninguém procura "realce", procura "cor";
- * ninguém procura "densidade", procura "linha apertada".
- *
- * A aba Conta é montada à mão (ContaConfig.js) -- tem formulário, lista de
- * sessões, coisas que não são preferências. Os itens dela aqui existem só
- * para a busca achar "senha" e "sessões" e levar até lá.
+ * Organizada por finalidade:
+ *  1. Minha conta: Nome, senha, sessões abertas, exportar/importar preferências.
+ *  2. Trabalho diário: Tela inicial, filtros, menu e linhas por página.
+ *  3. Notificações: Avisos em tela, contador na aba do navegador e alertas no Windows.
+ *  4. Interface e acessibilidade: Tema, cores, densidade de tabelas, texto, foco e movimento.
+ *  5. Regras da equipe: Orientação clara pessoal vs. global e atalho para Administração.
+ *  6. Sobre e ajuda: Versão do painel, situações dos sistemas e lista de atalhos de teclado.
  *
  * @param {{
  *   abasDoMenu: Array<{key: string, label: string}>,
@@ -52,9 +41,9 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
   const abas = [
     {
       key: "conta",
-      rotulo: "Conta",
+      rotulo: "Minha conta",
       icone: "conta",
-      titulo: "Conta",
+      titulo: "Minha conta",
       descricao: "Quem você é no Gestor, a sua senha e em que aparelhos a sua conta está aberta.",
       manual: true,
       cartoes: [
@@ -85,182 +74,11 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
     },
 
     {
-      key: "aparencia",
-      rotulo: "Aparência",
-      icone: "paleta",
-      titulo: "Aparência",
-      descricao: "Como o Gestor se parece para você. Comece por um perfil e ajuste o resto se quiser.",
-      cartoes: [
-        {
-          titulo: "Perfil rápido",
-          descricao: "Um clique arruma vários ajustes de uma vez. Nada aqui é definitivo: cada ajuste continua mudando sozinho.",
-          itens: [
-            { id: "perfil", tipo: "perfis", titulo: "Perfil rápido", ajuda: "Equilibrado, Operação, Leitura ou Alto contraste.", busca: "perfil predefinido modo padrão operação leitura acessível conjunto" },
-          ],
-        },
-        {
-          titulo: "Tema e cores",
-          itens: [
-            {
-              id: "tema",
-              tipo: "temas",
-              titulo: "Tema",
-              ajuda: '"Sistema" acompanha a configuração do seu computador.',
-              chaves: ["tema"],
-              busca: "tema claro escuro noturno modo sistema cor de fundo",
-            },
-            {
-              id: "realce",
-              tipo: "cores",
-              titulo: "Cor de destaque",
-              ajuda: "A cor dos botões, dos links e da aba ativa.",
-              chaves: ["realce"],
-              busca: "cor destaque realce accent azul verde roxo violeta rosa âmbar",
-            },
-            {
-              id: "fundo",
-              titulo: "Fundo da tela",
-              ajuda: "A grade discreta atrás do conteúdo, com o brilho no topo.",
-              chaves: ["fundoTela"],
-              busca: "fundo grade textura brilho halo liso plano",
-              opcoes: [
-                { valor: "grade", rotulo: "Com grade" },
-                { valor: "liso", rotulo: "Liso" },
-              ],
-              atual: () => aparencia.fundoTela(),
-              aoEscolher: (valor) => aparencia.aplicar({ fundoTela: valor }),
-            },
-          ],
-        },
-        {
-          titulo: "Texto",
-          itens: [
-            {
-              id: "escala",
-              titulo: "Tamanho do texto",
-              ajuda: "Aumenta tudo junto, sem desalinhar a interface.",
-              chaves: ["escalaTexto"],
-              busca: "tamanho do texto letra fonte zoom acessibilidade enxergar",
-              opcoes: ESCALAS,
-              atual: () => aparencia.escalaTexto(),
-              aoEscolher: (valor) => aparencia.aplicar({ escalaTexto: valor }),
-            },
-            {
-              id: "fonte",
-              titulo: "Fonte",
-              ajuda: "A Inter vem da internet. A do sistema (Segoe UI) já está no Windows e aparece na hora, mesmo sem internet.",
-              chaves: ["fonte"],
-              busca: "fonte letra tipografia inter segoe windows sistema",
-              opcoes: FONTES,
-              atual: () => aparencia.fonte(),
-              aoEscolher: (valor) => aparencia.aplicar({ fonte: valor }),
-            },
-          ],
-        },
-        {
-          titulo: "Espaço na tela",
-          itens: [
-            {
-              id: "menu",
-              titulo: "Menu lateral",
-              ajuda: "Recolhido, sobra largura para as tabelas. Ctrl + B alterna sem vir até aqui.",
-              chaves: ["sidebarRecolhida"],
-              busca: "menu lateral barra sidebar recolher esconder largura",
-              opcoes: [
-                { valor: "aberto", rotulo: "Aberto" },
-                { valor: "recolhido", rotulo: "Recolhido" },
-              ],
-              atual: () => (settings.get("sidebarRecolhida", false) ? "recolhido" : "aberto"),
-              aoEscolher: (valor) => definirSidebar(valor === "recolhido"),
-            },
-            {
-              id: "largura",
-              titulo: "Largura do conteúdo",
-              ajuda: 'Num monitor largo, "Tela inteira" deixa as tabelas usarem o espaço todo.',
-              chaves: ["largura"],
-              busca: "largura tela inteira monitor largo ultrawide espaço máximo",
-              opcoes: LARGURAS,
-              atual: () => aparencia.largura(),
-              aoEscolher: (valor) => aparencia.aplicar({ largura: valor }),
-            },
-          ],
-        },
-      ],
-    },
-
-    {
-      key: "tabelas",
-      rotulo: "Tabelas",
-      icone: "tabela",
-      titulo: "Tabelas",
-      descricao: "Este é um app de ler tabela o dia inteiro. Aqui é onde isso se ajusta -- a prévia ao lado muda junto.",
-      previa: true,
-      cartoes: [
-        {
-          titulo: "Linhas",
-          itens: [
-            {
-              id: "densidade",
-              titulo: "Densidade",
-              ajuda: "Quanto respiro cada linha tem. Compacta mostra mais registros sem rolar.",
-              chaves: ["densidade"],
-              busca: "densidade linha altura da linha compacta confortável espaçamento apertada",
-              opcoes: DENSIDADES,
-              atual: () => aparencia.densidade(),
-              aoEscolher: (valor) => aparencia.aplicar({ densidade: valor }),
-            },
-            {
-              id: "zebra",
-              titulo: "Linhas alternadas",
-              ajuda: "A faixa clara em uma linha sim, outra não, para não pular de linha numa tabela larga.",
-              chaves: ["zebra"],
-              busca: "zebra listrado linhas alternadas faixa risca lisa",
-              opcoes: ZEBRAS,
-              atual: () => aparencia.zebra(),
-              aoEscolher: (valor) => aparencia.aplicar({ zebra: valor }),
-            },
-          ],
-        },
-        {
-          titulo: "Tamanho",
-          itens: [
-            {
-              id: "altura",
-              titulo: "Altura das tabelas",
-              ajuda: "Quanto da tela a tabela ocupa antes de precisar rolar por dentro.",
-              chaves: ["alturaTabela"],
-              busca: "altura tabela rolagem scroll tela cheia",
-              opcoes: ALTURAS,
-              atual: () => aparencia.altura(),
-              aoEscolher: (valor) => aparencia.aplicar({ altura: valor }),
-            },
-            {
-              id: "linhas",
-              titulo: "Linhas por página",
-              ajuda: "Vale para Atualizações, Clientes, Agendamentos e o Histórico.",
-              chaves: ["linhasPorPagina"],
-              busca: "linhas por página paginação quantidade registros",
-              opcoes: LINHAS_OPCOES.map((n) => ({ valor: String(n), rotulo: String(n) })),
-              atual: () => String(aparencia.linhasPorPagina()),
-              aoEscolher: (valor) => {
-                aparencia.aplicar({ linhasPorPagina: Number(valor) });
-                // As outras preferências se explicam sozinhas na prévia. O
-                // tamanho de página é o único cujo efeito acontece em OUTRA
-                // tela, onde não dá para ver daqui.
-                toast.info(`As tabelas passam a mostrar ${valor} linhas por página.`);
-              },
-            },
-          ],
-        },
-      ],
-    },
-
-    {
-      key: "navegacao",
-      rotulo: "Navegação",
+      key: "trabalho",
+      rotulo: "Trabalho diário",
       icone: "bussola",
-      titulo: "Navegação e comportamento",
-      descricao: "Onde o Gestor abre, o que ele lembra de uma tela para outra e o que ele pergunta antes de agir.",
+      titulo: "Trabalho diário",
+      descricao: "Preferências para a sua rotina de trabalho diário: tela inicial, filtros e paginação.",
       cartoes: [
         {
           titulo: "Ao entrar",
@@ -294,51 +112,68 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
           ],
         },
         {
-          titulo: "Entre uma tela e outra",
+          titulo: "Listas e navegação",
+          itens: [
+            {
+              id: "linhas",
+              titulo: "Linhas por página",
+              ajuda: "Quantidade de registros exibidos em Atualizações, Clientes, Agendamentos e Auditoria.",
+              chaves: ["linhasPorPagina"],
+              busca: "linhas por página paginação quantidade registros",
+              opcoes: LINHAS_OPCOES.map((n) => ({ valor: String(n), rotulo: String(n) })),
+              atual: () => String(aparencia.linhasPorPagina()),
+              aoEscolher: (valor) => {
+                aparencia.aplicar({ linhasPorPagina: Number(valor) });
+                toast.info(`As tabelas passam a mostrar ${valor} linhas por página.`);
+              },
+            },
+            {
+              id: "menu",
+              titulo: "Menu lateral",
+              ajuda: "Recolhido, sobra largura para as tabelas. O atalho Ctrl + B alterna sem precisar abrir as Configurações.",
+              chaves: ["sidebarRecolhida"],
+              busca: "menu lateral barra sidebar recolher esconder largura",
+              opcoes: [
+                { valor: "aberto", rotulo: "Aberto" },
+                { valor: "recolhido", rotulo: "Recolhido" },
+              ],
+              atual: () => (settings.get("sidebarRecolhida", false) ? "recolhido" : "aberto"),
+              aoEscolher: (valor) => definirSidebar(valor === "recolhido"),
+            },
+          ],
+        },
+        {
+          titulo: "Sessão e comportamento",
           itens: [
             {
               id: "lembrar-filtros",
               tipo: "alternar",
               titulo: "Lembrar filtros ao trocar de tela",
-              ajuda: "Busca, filtro e ordenação continuam como estavam ao voltar. Somem quando o navegador fecha.",
+              ajuda: "Busca, filtro e ordenação continuam como estavam ao navegar. Somem ao fechar o navegador.",
               chaves: ["lembrarFiltros"],
               busca: "lembrar filtros busca ordenação memória limpar sessão",
               atual: () => aparencia.lembrarFiltros(),
               aoEscolher: (lembrar) => {
                 aparencia.aplicar({ lembrarFiltros: lembrar });
-                // Desligar sem varrer o que já estava guardado deixaria os
-                // filtros de antes presos na sessão: invisíveis para o app, mas
-                // de volta assim que alguém religasse a opção.
                 if (!lembrar) prefs.limparTudo();
               },
             },
-          ],
-        },
-        {
-          titulo: "Ao sair",
-          itens: [
             {
               id: "confirmar-saida",
               tipo: "alternar",
               titulo: "Confirmar antes de sair da conta",
-              ajuda: 'Pergunta "Deseja encerrar sua sessão?" antes de sair. Desligue se você sempre sai de propósito.',
+              ajuda: 'Pergunta "Deseja encerrar sua sessão?" antes de deslogar.',
               chaves: ["confirmarSaida"],
               busca: "sair logout confirmar pergunta encerrar sessão",
               atual: () => aparencia.confirmarSaida(),
               aoEscolher: (valor) => aparencia.aplicar({ confirmarSaida: valor }),
             },
-          ],
-        },
-        {
-          titulo: "Distribuição",
-          itens: [
             {
               id: "ritmo",
               titulo: "Atualizar a Distribuição sozinha",
-              ajuda: "De quanto em quanto tempo a tela busca o retorno dos agentes.",
+              ajuda: "Intervalo para buscar o retorno dos agentes automáticos.",
               chaves: ["ritmoPainel"],
               busca: "atualizar sozinha automático distribuição agentes intervalo tempo",
-              // Sem o Atualizador, é o ajuste de uma tela que não existe.
               oculto: () => !atualizadorHabilitado,
               opcoes: RITMOS.map((r) => ({ valor: String(r.valor), rotulo: r.rotulo })),
               atual: () => String(aparencia.ritmoPainel()),
@@ -354,31 +189,29 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
       rotulo: "Notificações",
       icone: "sino",
       titulo: "Notificações",
-      descricao: "O que o Gestor pode interromper para contar, onde e por quanto tempo.",
+      descricao: "Avisos rápidos na tela, contadores na aba do navegador e alertas no computador.",
       cartoes: [
         {
           titulo: "Avisos na tela",
-          descricao: 'Os recados rápidos, como "Registro salvo".',
+          descricao: 'Mensagens instantâneas de confirmação (ex: "Registro salvo").',
           itens: [
             {
               id: "posicao-avisos",
               titulo: "Onde aparecem",
-              ajuda: "Embaixo eles passam por cima da paginação; em cima, por cima do título.",
+              ajuda: "No topo eles chamam mais atenção; no rodapé, evitam cobrir cabeçalhos.",
               chaves: ["posicaoAvisos"],
               busca: "avisos toast posição canto topo rodapé onde aparecem",
               opcoes: POSICOES_AVISO,
               atual: () => aparencia.posicaoAvisos(),
               aoEscolher: (valor) => {
                 aparencia.aplicar({ posicaoAvisos: valor });
-                // O único ajuste cujo efeito é invisível até algo acontecer:
-                // mostrar um aviso na hora é a demonstração, não um parabéns.
                 toast.info(valor === "topo" ? "Os avisos passam a aparecer aqui em cima." : "Os avisos voltam para o rodapé.");
               },
             },
             {
               id: "duracao-avisos",
               titulo: "Tempo na tela",
-              ajuda: "Passar o mouse por cima segura o aviso, em qualquer escolha.",
+              ajuda: "Passar o mouse sobre o aviso suspende o fechamento automático.",
               chaves: ["duracaoAvisos"],
               busca: "tempo duração aviso toast some rápido devagar ler",
               opcoes: DURACOES_AVISO,
@@ -389,10 +222,10 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
               id: "aviso-exemplo",
               tipo: "acao",
               titulo: "Ver como fica",
-              ajuda: "Mostra um aviso de exemplo, com a posição e o tempo escolhidos.",
+              ajuda: "Exibe uma notificação de teste com a posição e duração configuradas.",
               busca: "exemplo testar aviso toast",
               rotulo: "Mostrar um aviso",
-              executar: () => toast.success("Este é um aviso de exemplo. É assim que o Gestor confirma o que você fez."),
+              executar: () => toast.success("Este é um aviso de exemplo. É assim que o Gestor confirma as suas ações."),
             },
           ],
         },
@@ -403,7 +236,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
               id: "contador-titulo",
               tipo: "alternar",
               titulo: "Pendências no título da aba",
-              ajuda: 'O "(2)" antes do nome da aba. Aparece na barra de tarefas mesmo com o Gestor atrás de outras janelas.',
+              ajuda: 'Contador "(2)" antes do nome da aba no navegador, visível na barra de tarefas.',
               chaves: ["contadorNoTitulo"],
               busca: "título aba navegador contador número pendências barra de tarefas",
               atual: () => aparencia.contadorNoTitulo(),
@@ -412,20 +245,18 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
           ],
         },
         {
-          titulo: "Notificações do Windows",
+          titulo: "Notificações do sistema",
           itens: [
             {
               id: "notificar-falhas",
               tipo: "alternar",
               titulo: "Avisar quando um agente falhar",
-              ajuda: "Notificação do sistema, mesmo com o Gestor em outra aba. Vale só neste computador.",
+              ajuda: "Notificação nativa do Windows quando o Atualizador reportar incidente. Vale apenas nesta máquina.",
               busca: "notificação aviso falha erro agente windows alerta som",
               oculto: () => !notificacoes.suportado() || !atualizadorHabilitado,
               atual: () => notificacoes.ligadas(),
               aoEscolher: async (ligar) => {
                 const ligou = await notificacoes.definir(ligar);
-                // Se o navegador recusou a permissão, o interruptor volta
-                // sozinho (ver `alternar` em controles.js).
                 if (ligar && !ligou) {
                   toast.error("O navegador bloqueou as notificações para este site.");
                   return false;
@@ -439,46 +270,98 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
     },
 
     {
-      key: "acessibilidade",
-      rotulo: "Acessibilidade",
-      icone: "acessibilidade",
-      titulo: "Acessibilidade",
-      descricao: "Enxergar melhor, cansar menos e deixar a tela mais leve na máquina.",
+      key: "interface",
+      rotulo: "Interface e acessibilidade",
+      icone: "paleta",
+      titulo: "Interface e acessibilidade",
+      descricao: "Tema visual, cores, densidade de linhas, texto, contraste e foco. Prévia ao vivo ao lado.",
+      previa: true,
       cartoes: [
         {
-          titulo: "Enxergar",
+          titulo: "Tema e contraste",
           itens: [
+            {
+              id: "tema",
+              tipo: "temas",
+              titulo: "Tema",
+              ajuda: '"Sistema" acompanha o tema claro ou escuro configurado no seu computador.',
+              chaves: ["tema"],
+              busca: "tema claro escuro noturno modo sistema cor de fundo",
+            },
+            {
+              id: "realce",
+              tipo: "cores",
+              titulo: "Cor de destaque",
+              ajuda: "Cor primária dos botões, links e abas ativas.",
+              chaves: ["realce"],
+              busca: "cor destaque realce accent azul verde roxo violeta rosa âmbar",
+            },
             {
               id: "contraste",
               titulo: "Contraste",
-              ajuda: "Reforça bordas e textos de apoio, sem trocar o tema que você escolheu.",
+              ajuda: "Reforça bordas e textos secundários sem alterar o tema escolhido.",
               chaves: ["contraste"],
               busca: "contraste alto enxergar legibilidade borda fraca claro demais",
               opcoes: CONTRASTES,
               atual: () => aparencia.contraste(),
               aoEscolher: (valor) => aparencia.aplicar({ contraste: valor }),
             },
+          ],
+        },
+        {
+          titulo: "Texto e tabelas",
+          itens: [
             {
-              id: "foco",
-              titulo: "Anel de foco",
-              ajuda: "O contorno que mostra onde o teclado está. Reforçado fica mais grosso e mais afastado do controle.",
-              chaves: ["foco"],
-              busca: "foco teclado contorno anel tab navegação visível",
-              opcoes: FOCOS,
-              atual: () => aparencia.foco(),
-              aoEscolher: (valor) => aparencia.aplicar({ foco: valor }),
+              id: "escala",
+              titulo: "Tamanho do texto",
+              ajuda: "Ajusta o tamanho das fontes proporcionalmente em toda a interface.",
+              chaves: ["escalaTexto"],
+              busca: "tamanho do texto letra fonte zoom acessibilidade enxergar",
+              opcoes: ESCALAS,
+              atual: () => aparencia.escalaTexto(),
+              aoEscolher: (valor) => aparencia.aplicar({ escalaTexto: valor }),
+            },
+            {
+              id: "densidade",
+              titulo: "Densidade das linhas",
+              ajuda: "Espaçamento vertical das tabelas. Compacta exibe mais linhas sem rolagem.",
+              chaves: ["densidade"],
+              busca: "densidade linha altura da linha compacta confortável espaçamento apertada",
+              opcoes: DENSIDADES,
+              atual: () => aparencia.densidade(),
+              aoEscolher: (valor) => aparencia.aplicar({ densidade: valor }),
+            },
+            {
+              id: "zebra",
+              titulo: "Linhas alternadas",
+              ajuda: "Faixas zebradas alternadas para facilitar a leitura horizontal de dados.",
+              chaves: ["zebra"],
+              busca: "zebra listrado linhas alternadas faixa risca lisa",
+              opcoes: ZEBRAS,
+              atual: () => aparencia.zebra(),
+              aoEscolher: (valor) => aparencia.aplicar({ zebra: valor }),
             },
           ],
         },
         {
-          titulo: "Movimento e desempenho",
+          titulo: "Foco e movimento",
           itens: [
+            {
+              id: "foco",
+              titulo: "Anel de foco",
+              ajuda: "Contorno indicador do foco do teclado. Reforçado melhora a visualização com Tab.",
+              chaves: ["foco"],
+              busca: "foco teclado contorno anel tab navegação visível acessibilidade",
+              opcoes: FOCOS,
+              atual: () => aparencia.foco(),
+              aoEscolher: (valor) => aparencia.aplicar({ foco: valor }),
+            },
             {
               id: "movimento",
               titulo: "Animações",
-              ajuda: "Transições, deslizes e o esmaecer das janelas.",
+              ajuda: "Efeitos de transição e movimento de janelas.",
               chaves: ["movimento"],
-              busca: "animação movimento transição efeito reduzir enjoo vertigem",
+              busca: "animação movimento transição efeito reduzir enjoo vertigem acessibilidade",
               opcoes: [
                 { valor: "normal", rotulo: "Normais" },
                 { valor: "reduzido", rotulo: "Reduzidas" },
@@ -489,7 +372,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
             {
               id: "transparencia",
               titulo: "Superfícies",
-              ajuda: "O vidro fosco do menu e das janelas. Sólidas pesam menos em máquina fraca.",
+              ajuda: "Vidro fosco em menus e janelas. Superfícies sólidas melhoram o desempenho em computadores mais lentos.",
               chaves: ["transparencia"],
               busca: "transparência desfoque blur vidro fosco desempenho lento travando sólido",
               opcoes: TRANSPARENCIAS,
@@ -498,26 +381,130 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
             },
           ],
         },
+        {
+          titulo: "Personalização avançada",
+          descricao: "Ajustes opcionais de tipografia, textura de fundo e dimensões de tela.",
+          itens: [
+            {
+              id: "perfil",
+              tipo: "perfis",
+              titulo: "Perfil rápido",
+              ajuda: "Equilibrado, Operação, Leitura ou Alto contraste.",
+              busca: "perfil predefinido modo padrão operação leitura acessível conjunto",
+            },
+            {
+              id: "fonte",
+              titulo: "Família de fonte",
+              ajuda: "Inter (tipografia moderna carregada da web) ou Fonte do sistema (Segoe UI/Windows).",
+              chaves: ["fonte"],
+              busca: "fonte letra tipografia inter segoe windows sistema",
+              opcoes: FONTES,
+              atual: () => aparencia.fonte(),
+              aoEscolher: (valor) => aparencia.aplicar({ fonte: valor }),
+            },
+            {
+              id: "fundo",
+              titulo: "Textura de fundo",
+              ajuda: "Grade sutil no plano de fundo ou visual liso.",
+              chaves: ["fundoTela"],
+              busca: "fundo grade textura brilho halo liso plano",
+              opcoes: [
+                { valor: "grade", rotulo: "Com grade" },
+                { valor: "liso", rotulo: "Liso" },
+              ],
+              atual: () => aparencia.fundoTela(),
+              aoEscolher: (valor) => aparencia.aplicar({ fundoTela: valor }),
+            },
+            {
+              id: "largura",
+              titulo: "Largura do conteúdo",
+              ajuda: 'Em monitores largos, "Tela inteira" permite que tabelas aproveitem todo o espaço horizontal.',
+              chaves: ["largura"],
+              busca: "largura tela inteira monitor largo ultrawide espaço máximo",
+              opcoes: LARGURAS,
+              atual: () => aparencia.largura(),
+              aoEscolher: (valor) => aparencia.aplicar({ largura: valor }),
+            },
+            {
+              id: "altura",
+              titulo: "Altura das tabelas",
+              ajuda: "Espaço vertical das caixas de dados antes de iniciar a rolagem interna.",
+              chaves: ["alturaTabela"],
+              busca: "altura tabela rolagem scroll tela cheia",
+              opcoes: ALTURAS,
+              atual: () => aparencia.altura(),
+              aoEscolher: (valor) => aparencia.aplicar({ altura: valor }),
+            },
+          ],
+        },
       ],
     },
 
     {
-      key: "atalhos",
-      rotulo: "Atalhos",
-      icone: "teclado",
-      titulo: "Atalhos de teclado",
-      descricao: "Tudo o que dá para fazer sem tirar a mão do teclado. Esta lista também abre com ?, em qualquer tela.",
+      key: "regras-equipe",
+      rotulo: "Regras da equipe",
+      icone: "ajustes",
+      titulo: "Regras da equipe",
+      descricao: "Diferença entre escolhas pessoais e regras globais, com acesso à Administração.",
+      manual: true,
       cartoes: [
         {
-          titulo: "Na tela",
+          titulo: "Regras globais",
+          itens: [
+            {
+              id: "regras-globais-info",
+              titulo: "Regras globais da equipe",
+              ajuda: "Prazos, arquivamento, classificação dos sistemas e backups afetam todos os usuários.",
+              busca: "regras equipe globais administracao prazos arquivamento sistemas operacao",
+            },
+          ],
+        },
+      ],
+    },
+
+    {
+      key: "ajuda",
+      rotulo: "Sobre e ajuda",
+      icone: "info",
+      titulo: "Sobre e ajuda",
+      descricao: "Versão do painel, situações dos sistemas e atalhos de teclado.",
+      cartoes: [
+        {
+          titulo: "Sobre o Gestor",
+          itens: [
+            {
+              id: "versao-painel",
+              tipo: "info",
+              titulo: "Gestor de Atualizações",
+              ajuda: "Painel de controle de versões, clientes e agendamentos. Versão 2.0.",
+              busca: "versão sistema painel gestor sobre ajuda release",
+            },
+          ],
+        },
+        {
+          titulo: "Situações dos sistemas",
+          descricao: "Como o Gestor avalia a situação de versão dos clientes e sistemas.",
+          itens: [
+            {
+              id: "situacoes-sistemas",
+              tipo: "info",
+              titulo: "Significado das situações de versão",
+              ajuda: "Em dia: atendido na versão oficial mais recente. Atrasado: versão recebida é anterior à oficial. Sem informação: cliente sem atendimento registrado no sistema. Verificação pendente: formato recebido não comparável automaticamente. Componente fixo: sistema não atualizável.",
+              busca: "situacao situacoes em dia atrasado sem informacao pendente fixo significado legenda",
+            },
+          ],
+        },
+        {
+          titulo: "Atalhos de teclado",
+          descricao: "Tudo o que dá para fazer sem tirar a mão do teclado. Digite ? em qualquer tela para abrir.",
           itens: [
             {
               id: "dicas-atalho",
               tipo: "alternar",
               titulo: "Mostrar as dicas de atalho",
-              ajuda: 'As etiquetas "Alt+1" no menu, "Ctrl K" na busca e "Alt+N" na ação rápida. Os atalhos funcionam com ou sem elas.',
+              ajuda: 'Etiquetas indicadoras no menu, na busca e nas ações rápidas.',
               chaves: ["dicasAtalho"],
-              busca: "dicas etiquetas atalho kbd esconder mostrar",
+              busca: "dicas etiquetas atalho kbd esconder mostrar teclado",
               atual: () => aparencia.dicasAtalho(),
               aoEscolher: (valor) => aparencia.aplicar({ dicasAtalho: valor }),
             },
@@ -542,10 +529,6 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
     },
   ];
 
-  // Um item escondido (sem abas para escolher, sem suporte a notificação,
-  // Atualizador desligado) sai da lista AQUI, antes de qualquer consumidor --
-  // assim a busca não encontra um ajuste que não existe nesta máquina, e um
-  // cartão não nasce vazio sem ninguém perceber.
   for (const aba of abas) {
     for (const cartao of aba.cartoes) cartao.itens = cartao.itens.filter((item) => !item.oculto?.());
     aba.cartoes = aba.cartoes.filter((cartao) => cartao.itens.length > 0);

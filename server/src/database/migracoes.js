@@ -1,5 +1,6 @@
 const { SistemaRepository } = require("./SistemaRepository");
 const { normalizarSistemas } = require("../shared/normalizacao");
+const { SISTEMA_SUPORTE_BREDAS } = require("../config/constants");
 
 /**
  * Migrações numeradas do esquema. O número da última aplicada fica no
@@ -20,6 +21,16 @@ const MIGRACOES = [
     versao: 1,
     descricao: "sistemas e clientes em tabelas de ligação, cliente_id nas atualizações e agendamentos",
     aplicar: migracao1,
+  },
+  {
+    versao: 2,
+    descricao: "sistemas marcados como fixos (sem controle de versão)",
+    aplicar: migracao2,
+  },
+  {
+    versao: 3,
+    descricao: "autoria e data das referências oficiais dos sistemas",
+    aplicar: migracao3,
   },
 ];
 
@@ -135,6 +146,33 @@ function migracao1(conn) {
     ALTER TABLE atualizacoes DROP COLUMN versoes_sistemas;
     ALTER TABLE clientes DROP COLUMN sistemas;
   `);
+}
+
+/**
+ * Sistemas fixos: componentes que o cliente tem instalados, mas que não têm
+ * "versão atrasada" -- B_Atualizador (o agente) e Suporte Bredas (acesso
+ * remoto). Continuam no cadastro do cliente e no histórico; o que muda é
+ * que ficam fora da situação de versão, senão todo cliente com Suporte
+ * Bredas ficaria para sempre "pendente" de uma versão que não existe.
+ *
+ * A marca é uma coluna do catálogo, e não uma lista no código, para haver
+ * um lugar só que responde "este sistema controla versão?" -- os dois nomes
+ * abaixo só dão o valor inicial. Resolvidos pelo catálogo (mesma regra de
+ * grafia do resto), então "ATUALIZADOR" digitado lá atrás também casa.
+ */
+function migracao2(conn) {
+  conn.exec("ALTER TABLE sistemas ADD COLUMN controla_versao INTEGER NOT NULL DEFAULT 1");
+  const sistemas = new SistemaRepository(conn);
+  const marcar = conn.prepare("UPDATE sistemas SET controla_versao = 0 WHERE id = ?");
+  for (const nome of ["B_Atualizador", SISTEMA_SUPORTE_BREDAS]) {
+    const sistema = sistemas.resolver(nome);
+    if (sistema) marcar.run(sistema.id);
+  }
+}
+
+function migracao3(conn) {
+  conn.exec("ALTER TABLE sistemas ADD COLUMN ultima_versao_autor TEXT");
+  conn.exec("ALTER TABLE sistemas ADD COLUMN ultima_versao_em TEXT");
 }
 
 function lerMapa(texto) {

@@ -170,31 +170,21 @@
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  overflow: hidden;
   background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
 }
 
-.app-brand__mark img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.app-brand__mark svg {
+  width: 24px;
+  height: 24px;
 }
 
+/* Duas linhas de propósito (o <br> está em App.js): "Gestor de
+   Atualizações" numa linha só, a 18px, era cortado pela largura da barra. */
 .app-brand strong {
   display: block;
-  font: var(--peso-extra) 18px/1.1 var(--fonte-display);
+  font: var(--peso-extra) 16px/1.15 var(--fonte-display);
   letter-spacing: -0.015em;
-  white-space: nowrap;
-}
-
-.app-brand span {
-  display: block;
-  margin-top: 2px;
-  color: var(--cor-texto-fraco);
-  font-size: var(--txt-2xs);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
 }
 
 .app-sidebar__group-title {
@@ -923,37 +913,30 @@ kbd {
 }
 
 /*
- * Linha de dois cards com larguras DIFERENTES, para quando os dois gráficos
- * não têm a mesma fome de largura: a rosca da "Situação dos Clientes" satura
- * por volta de 300px (é redonda -- depois disso só cresce o vazio em volta),
- * e o gráfico de barras ao lado melhora com cada pixel a mais.
+ * Linha de dois cards com larguras DIFERENTES, para quando os dois não têm a
+ * mesma fome de largura: a lista de situação dos clientes satura por volta
+ * de 320px (rótulo, número e porcentagem numa linha), e o gráfico de
+ * tendência ao lado melhora com cada pixel a mais.
  *
- * `minmax(260px, 320px)` e não uma largura fixa: abaixo de 260px a legenda do
- * donut começaria a quebrar linha, e acima de 320px ele voltaria a sobrar
- * espaço -- que é exatamente o defeito que este arranjo veio consertar.
+ * `minmax(280px, 340px)` e não uma largura fixa: abaixo de 280px
+ * "Verificação pendente" começaria a quebrar linha, e acima de 340px só
+ * cresceria o vazio entre o rótulo e o número -- o defeito que este arranjo
+ * veio consertar quando o card ocupava a largura inteira.
  */
 .card-row--aside {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) 1fr;
+  grid-template-columns: minmax(280px, 340px) 1fr;
 }
 
-/*
- * O card da esquerda estica até a altura do vizinho (é o padrão do grid) e
- * centra o gráfico no espaço que sobrar. Sem isto, o donut ficava colado no
- * topo com uma faixa morta embaixo da legenda -- exatamente o mesmo defeito
- * que este arranjo veio consertar, só que na vertical em vez da horizontal.
- */
-.card-row--aside > .card:first-child {
+.card-row--aside > .card:last-child {
   display: flex;
   flex-direction: column;
 }
-.card-row--aside > .card:first-child > [data-role] {
-  display: flex;
+
+.card-row--aside [data-role="tendencia"] {
   flex: 1;
-}
-.card-row--aside .pie-chart {
-  flex: 1;
-  justify-content: center;
+  min-width: 0;
+  min-height: 300px;
 }
 
 .section-heading {
@@ -1024,7 +1007,8 @@ kbd {
    perder o comportamento, do mesmo jeito que .consulta-matches__item faz. */
 .stat-tile {
   position: relative;
-  display: block;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   padding: 16px 20px;
   font: inherit;
@@ -1083,11 +1067,15 @@ kbd {
   height: 15px;
 }
 
+/* `margin-top: auto` (com o tile em coluna): o número fica no pé do card.
+   "Sem Atendimento Há Mais de 60 Dias" quebra em duas linhas, e com margem
+   fixa o número dele ficava mais baixo que o dos vizinhos. */
 .stat-tile__value-row {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: auto;
+  padding-top: 10px;
 }
 
 .stat-tile__value {
@@ -1134,13 +1122,12 @@ kbd {
 }
 
 /* O indicador de clientes parados é o único que pode virar má notícia. Quando
-   vira, o número inteiro muda de cor e o ícone acompanha -- assim o alerta é
-   visível na varredura rápida, não só para quem parar para ler o valor. */
+   vira, o número inteiro muda de cor -- assim o alerta é visível na
+   varredura rápida, não só para quem parar para ler o valor. O ícone fica de
+   fora: os outros três indicadores nunca colorem o ícone, só o texto, e um
+   triângulo vermelho ali (ainda mais sem fundo atrás dele) lia como falha
+   grave do sistema, não como "olha essa lista". */
 .stat-tile.is-alert .stat-tile__value {
-  color: var(--cor-vermelho);
-}
-.stat-tile.is-alert .stat-tile__icon {
-  background: var(--cor-vermelho-fraco);
   color: var(--cor-vermelho);
 }
 
@@ -1681,6 +1668,26 @@ select {
   flex: 1;
 }
 
+.sistemas-toolbar > button { align-self: flex-end; }
+.sistemas-referencia { margin: 0 0 var(--sp-4); color: var(--cor-texto-sub); font-size: var(--txt-sm); }
+.sistemas-filtros { display: flex; align-items: flex-end; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.sistemas-filtros[hidden], .sistemas-oficiais[hidden] { display: none; }
+.sistemas-filtros .field { max-width: 310px; }
+.sistemas-oficiais { margin-bottom: var(--sp-5); padding: var(--sp-4); border: 1px solid var(--cor-borda); border-radius: var(--raio-md); }
+.sistemas-oficiais__cabecalho, .sistemas-oficiais__row { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); }
+.sistemas-oficiais__cabecalho { margin-bottom: var(--sp-3); }
+.sistemas-oficiais__cabecalho h2 { margin: 0; font-size: var(--txt-lg); }
+.sistemas-oficiais__cabecalho p { margin: var(--sp-1) 0 0; color: var(--cor-texto-sub); font-size: var(--txt-sm); }
+.sistemas-oficiais__row { padding: var(--sp-3) 0; border-top: 1px solid var(--cor-borda); }
+.sistemas-oficiais__row > div:first-child { display: grid; gap: var(--sp-1); }
+.sistemas-oficiais__row small { color: var(--cor-texto-sub); }
+.sistemas-oficiais__acoes { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.sistemas-oficiais__acoes .input { width: 140px; }
+@media (max-width: 700px) {
+  .sistemas-oficiais__cabecalho, .sistemas-oficiais__row { align-items: flex-start; flex-direction: column; }
+  .sistemas-toolbar .field, .sistemas-toolbar .field:has(input[type="search"]) { min-width: 100%; }
+}
+
 .result-count {
   /* Alinha a linha de base com a borda inferior dos campos ao lado (que têm
      padding de 9px) -- sem isto, o texto solto fica alguns pixels mais alto,
@@ -1788,6 +1795,113 @@ select {
 .filter-chip__remove:hover {
   opacity: 1;
   background: rgba(0, 0, 0, 0.15);
+}
+
+/* Painel de filtros recolhível (I07 — datas e presets ficam aqui) */
+.filtros-painel {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  padding: var(--sp-3) 0 var(--sp-3);
+  border-top: 1px solid var(--cor-borda);
+  margin-bottom: var(--sp-2);
+}
+.filtros-painel .field--periodo {
+  min-width: 0;
+  width: 132px;
+}
+
+/* Menu dropdown de ações (I08 — "Mais ações") */
+.menu-acoes {
+  position: relative;
+  display: inline-flex;
+}
+.menu-acoes__lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 200;
+  min-width: 210px;
+  padding: var(--sp-1) 0;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-md);
+  box-shadow: var(--sombra-flutuante);
+}
+.menu-acoes__lista[hidden] { display: none !important; }
+.menu-acoes__item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-4);
+  background: transparent;
+  border: none;
+  color: var(--cor-texto);
+  font-size: var(--txt-base);
+  font-family: var(--fonte-display);
+  font-weight: var(--peso-forte);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transicao);
+}
+.menu-acoes__item:hover {
+  background: var(--cor-superficie-alta);
+}
+.menu-acoes__item:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: -2px;
+  border-radius: 0;
+}
+.menu-acoes__item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+.menu-acoes__separador {
+  height: 1px;
+  background: var(--cor-borda);
+  margin: var(--sp-1) 0;
+}
+
+/* Filtros rápidos discretos (I10 — Agendamentos) */
+.filtros-rapidos {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: calc(-1 * var(--sp-2));
+  margin-bottom: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.filtro-rapido {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 4px 10px;
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-medio);
+  font-family: var(--fonte);
+  color: var(--cor-texto-fraco);
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pilula);
+  cursor: pointer;
+  transition: all var(--transicao);
+}
+
+.filtro-rapido:hover {
+  color: var(--cor-texto);
+  border-color: var(--cor-borda-forte);
+  background: var(--cor-superficie-alta);
+}
+
+.filtro-rapido.is-active {
+  color: var(--cor-accent-texto, white);
+  background: var(--cor-accent);
+  border-color: var(--cor-accent);
 }
 
 /* ==========================================================================
@@ -5130,57 +5244,46 @@ hr.separator {
    ========================================================================== */
 
 /*
- * A rosca empilha: desenho em cima, legenda embaixo, tudo centrado. Era lado a
- * lado, o que só fazia sentido enquanto o card ocupava a largura inteira da
- * tela -- e era justamente essa largura inteira o problema (ver o comentário
- * em PieChart.js e o rearranjo em ResumoView).
+ * Card "Atualização dos Clientes" do Resumo (ver templates/resumo.js,
+ * corpoSituacao). Substituiu a rosca de duas fatias; do que a rosca tinha
+ * aprendido, ficaram: os números na MESMA coluna à direita (comparáveis de
+ * relance, ao contrário de uma frase corrida "Em dia -- 186 (50%)") e cada
+ * linha ser um <button> de verdade, com o visual nativo zerado.
  */
-.pie-chart {
+.situacao__barra {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--sp-4);
+  gap: 2px;
+  height: 12px;
+  margin-bottom: var(--sp-3);
+  overflow: hidden;
+  border-radius: var(--raio-pilula);
+  background: var(--cor-superficie-alta);
+}
+/* A largura de cada parte vem de `flex-grow` = quantidade de clientes (em
+   `style`, no template): proporção exata sem arredondar porcentagem, e a
+   soma sempre fecha a barra inteira. */
+.situacao__parte {
+  flex: 0 1 0;
+  min-width: 4px;
+}
+.is-boa { --situacao-cor: var(--severidade-boa); }
+.is-alta { --situacao-cor: var(--severidade-alta); }
+.is-media { --situacao-cor: var(--cor-amarelo); }
+.situacao__parte,
+.situacao__marca {
+  background: var(--situacao-cor);
 }
 
-/* Cresce até o teto que o PieChart define em `style`, e encolhe junto com o
-   card abaixo disso -- por isso `width: 100%` e não uma medida fixa. */
-.pie-chart svg {
-  width: 100%;
-  height: auto;
-}
-
-.pie-chart__total {
-  fill: var(--cor-texto);
-  font-family: var(--fonte-display);
-  font-size: 34px;
-  font-weight: 800;
-}
-
-.pie-chart__unidade {
-  fill: var(--cor-texto-fraco);
-  font-family: var(--fonte-display);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.pie-chart__legend {
+.situacao__totais {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  width: 100%;
 }
-
-/* Nome à esquerda, número à direita, numa linha que se acende ao passar o
-   mouse -- a mesma forma de uma linha de tabela, porque é o que ela é.
-   É um <button> (ver PieChart._buildLegend), por isso o reset do visual
-   nativo logo nas primeiras cinco linhas -- mesmo caso do .stat-tile. */
-.pie-chart__legend-item {
+.situacao__total {
   display: flex;
-  align-items: center;
-  width: 100%;
+  align-items: baseline;
   gap: 8px;
+  width: 100%;
   padding: 7px 8px;
   border: 0;
   border-radius: var(--raio-pequeno);
@@ -5190,59 +5293,102 @@ hr.separator {
   font-size: var(--txt-base);
   text-align: left;
   cursor: pointer;
-  transition: opacity var(--transicao);
 }
-.pie-chart__legend-item:hover:not(:disabled) {
+.situacao__total:hover {
   background: var(--cor-superficie-hover);
 }
-.pie-chart__legend-item:disabled {
-  cursor: default;
-}
-
-/* Clicar isola a fatia (ver PieChart._ligarIsolamento): as outras apagam em
-   vez de sumir, para o olho continuar vendo a proporção geral enquanto foca
-   numa categoria. */
-.pie-chart__legend-item.is-apagado,
-.pie-chart svg circle.is-apagado {
-  opacity: 0.28;
-}
-.pie-chart svg circle {
-  transition: opacity var(--transicao);
-}
-
-.pie-chart__dot {
+.situacao__marca {
   flex-shrink: 0;
+  align-self: center;
   width: 9px;
   height: 9px;
   border-radius: 50%;
 }
-
-.pie-chart__nome {
+.situacao__rotulo {
   flex: 1;
   min-width: 0;
   color: var(--cor-texto-sub);
 }
-
-/* Os números das duas linhas ficam na MESMA coluna, à direita: é isso que
-   deixa "186" e "187" comparáveis de relance. Numa frase corrida ("Em dia --
-   186 (50%)") cada número começa numa posição diferente. */
-.pie-chart__valor {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  flex: 0 0 auto;
-  font-variant-numeric: tabular-nums;
-}
-.pie-chart__valor strong {
+.situacao__valor {
   font-family: var(--fonte-display);
   font-size: var(--txt-md);
   font-weight: var(--peso-extra);
+  font-variant-numeric: tabular-nums;
 }
-.pie-chart__valor small {
+.situacao__pct {
   min-width: 34px;
   color: var(--cor-texto-fraco);
   font-size: var(--txt-xs);
+  font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+.situacao__nota,
+.situacao__vazio {
+  margin: var(--sp-3) 0 0;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-sm);
+}
+
+.situacao__sistemas {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--cor-borda);
+}
+.situacao__subtitulo {
+  margin: 0 0 var(--sp-2);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-forte);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.situacao__sistemas ul {
+  margin: 0 0 var(--sp-2);
+  padding: 0;
+  list-style: none;
+}
+.situacao__sistema {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--raio-pequeno);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--txt-sm);
+  cursor: pointer;
+}
+.situacao__sistema:hover {
+  background: var(--cor-superficie-hover);
+}
+.situacao__sistema span:last-child {
+  color: var(--cor-texto-fraco);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nome do cliente nas listas da gaveta do Resumo: leva à ficha. Parece
+   texto de link, mas é <button> -- não há URL para onde ir, é uma troca
+   de aba. */
+.tabela-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--cor-accent);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tabela-link:hover {
+  text-decoration: underline;
+}
+.gaveta-lista__ajuda {
+  margin: 0 0 var(--sp-3);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-sm);
 }
 
 .bar-chart {
@@ -5293,12 +5439,20 @@ hr.separator {
  */
 .line-chart {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
+
+.tendencia-cabecalho { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--sp-2); }
+.tendencia-cabecalho .card__title { margin-bottom: var(--sp-2); }
+.tendencia-cabecalho span { color: var(--cor-texto-sub); font-size: var(--txt-sm); }
 
 .line-chart svg {
   display: block;
   width: 100%;
-  height: auto;
+  flex: 1;
+  min-height: 0;
   overflow: visible;
   /* Não usar `cursor: crosshair` -- o cursor nativo do SO (uma cruz/"+"
      enorme, sem relação com a escala do gráfico) duplicava o crosshair que já
@@ -5366,21 +5520,14 @@ hr.separator {
 
 /* Ponto de destaque do hover: nasce escondido (r:0) e cresce -- fica claro
    que ele SEGUE o ponteiro, em vez de piscar de um lugar pro outro. */
-.line-chart__ponto--hover {
-  r: 0;
+.line-chart__ponto--destaque {
+  opacity: 0;
   fill: var(--cor-accent-forte);
   stroke: var(--cor-superficie);
-  stroke-width: 2;
-  transition: r var(--dur-rapida) var(--curva-padrao);
+  pointer-events: none;
 }
-.line-chart__ponto--hover.is-visivel {
-  r: 5;
-}
-
-.line-chart__valor-fim {
-  fill: var(--cor-texto);
-  font-weight: var(--peso-extra);
-  font-size: 12px;
+.line-chart__ponto--destaque.is-visivel {
+  opacity: 1;
 }
 
 .line-chart__crosshair {
@@ -5395,24 +5542,15 @@ hr.separator {
 }
 
 .line-chart__tooltip {
-  position: absolute;
-  z-index: 1;
   display: flex;
   align-items: baseline;
   gap: 6px;
-  padding: 5px 10px;
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio-pequeno);
-  background: var(--cor-superficie-alta);
-  box-shadow: var(--sombra-card);
-  white-space: nowrap;
-  opacity: 0;
-  transform: translate(-50%, calc(-100% - 12px));
-  transition: opacity var(--dur-rapida) var(--curva-padrao);
-  pointer-events: none;
+  flex: 0 0 26px;
+  color: var(--cor-texto);
+  visibility: hidden;
 }
 .line-chart__tooltip.is-visivel {
-  opacity: 1;
+  visibility: visible;
 }
 .line-chart__tooltip strong {
   font-family: var(--fonte-display);
@@ -5424,6 +5562,8 @@ hr.separator {
   color: var(--cor-texto-fraco);
   font-size: var(--txt-xs);
 }
+
+.line-chart__ponto[role="button"]:focus-visible { outline: 2px solid var(--cor-accent); outline-offset: 3px; }
 
 /* ==========================================================================
    14. LOGIN
@@ -5473,15 +5613,15 @@ hr.separator {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   width: 48px;
   height: 48px;
   border-radius: 11px;
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
 }
-.auth-screen__brand-mark img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.auth-screen__brand-mark svg {
+  width: 34px;
+  height: 34px;
 }
 
 .auth-screen__brand-name {
@@ -5540,22 +5680,17 @@ hr.separator {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
   width: 44px;
   height: 44px;
   margin-bottom: var(--sp-4);
   border-radius: 9px;
   background: var(--cor-accent);
   color: var(--cor-sobre-accent);
-  font-family: var(--fonte-display);
-  font-size: 18px;
-  font-weight: var(--peso-extra);
 }
 
-.auth-card__logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.auth-card__logo svg {
+  width: 30px;
+  height: 30px;
 }
 
 .auth-card h2 {
@@ -5780,7 +5915,7 @@ h1, h2, h3, strong {
     flex-direction: column;
   }
   /* A linha desigual é grid, não flex: `flex-direction` não a alcança, e sem
-     esta linha os 260px mínimos da coluna da rosca estourariam a tela. */
+     esta linha os 280px mínimos da coluna da situação estourariam a tela. */
   .card-row--aside {
     grid-template-columns: 1fr;
   }

@@ -18,8 +18,8 @@ export class SaudeAdmin extends View {
     super(container, api, ctx);
     this.container.innerHTML = html`
       ${cabecalhoSecao({
-        titulo: "Saúde do servidor",
-        descricao: "Diagnóstico do banco, do processo e das cópias de segurança, lido agora.",
+        titulo: "Diagnóstico do servidor",
+        descricao: "Saúde do processo, integridade do banco de dados e cópias de segurança.",
         acoes: html`<button type="button" class="btn" data-action="atualizar">${iconHtml("atualizar")} Conferir de novo</button>`,
       })}
       <div data-role="situacao"></div>
