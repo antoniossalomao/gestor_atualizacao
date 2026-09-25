@@ -464,23 +464,7 @@ Segurança futura: encerramento por inatividade administrável e autenticação 
 
 ## 13. Sugestões de evolução — I20
 
-### 13.1 Central de pendências — primeira recomendação
-
-Pergunta: **o que a equipe precisa resolver agora?**
-
-Reunir clientes desatualizados, referências oficiais ausentes, versões recebidas desconhecidas e agendamentos atrasados. Falhas de agentes podem aparecer como categoria própria, com origem identificada.
-
-- [ ] Cada pendência tem tipo, cliente/sistema, idade e ação para sua origem.
-- [ ] Responsável somente quando houver atribuição real.
-- [ ] Filtros Minhas pendências, Equipe, Tipo e Sistema.
-- [ ] Contagens deduplicadas, sem copiar registros para uma tabela paralela desnecessária.
-- [ ] Resolver na origem retira automaticamente a pendência.
-- [ ] Criar agendamento por ação explícita, evitando duplicatas.
-- [ ] Não apresentar informação ausente como falha confirmada.
-
-Depende da classificação correta e da revisão de Agendamentos. A primeira versão pode ser uma lista acessível pelo Resumo; promover a aba permanente quando o volume e uso justificarem.
-
-### 13.2 Campanhas de atualização — segunda etapa
+### 13.1 Campanhas de atualização — segunda etapa
 
 Pergunta: **como acompanhar um conjunto de clientes para uma versão específica?**
 
@@ -493,15 +477,15 @@ Pergunta: **como acompanhar um conjunto de clientes para uma versão específica
 
 Requer entidade e regras novas. Entregar depois de validar a Central de pendências.
 
-### 13.3 Relatórios gerenciais
+### 13.2 Relatórios gerenciais
 
 Uma aba dedicada pode reunir período, cliente, sistema e responsável, com filtros salvos. Hoje relatórios já existem nas telas: primeiro melhorar consistência e acesso. Criar aba somente quando houver cruzamentos recorrentes que o modal não comporte.
 
-### 13.4 Qualidade dos cadastros
+### 13.3 Qualidade dos cadastros
 
 Recomendação: seção em Dados, não nova aba principal. Listar clientes sem sistemas, atendimentos sem versão, sistemas sem oficial e possíveis duplicidades. Correção deve mostrar os registros envolvidos; não consolidar ou excluir automaticamente por semelhança de nomes.
 
-### 13.5 Preferências e notificações — adiadas da seção 12
+### 13.4 Preferências e notificações — adiadas da seção 12
 
 - [ ] Tipos de evento, minhas tarefas/equipe, som opcional; não oferecer opção que não altere comportamento real.
 - [ ] Horário silencioso: definir fuso, eventos críticos e mensagens acumuladas.
