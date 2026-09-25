@@ -18,14 +18,14 @@ Para o agente C#, o equivalente é
 - **Revisão do painel, E7:** ficha do cliente (`ConsultaView`) revisada:
   remoção de referências a CNPJ no subtítulo e nos campos de cadastro; cabeçalho
   compacto exibindo Código, Cidade e Grupo/Rede (quando preenchido); resumo
-  compacto com último atendimento relativo e situação de sistemas; separação clara
+  compacto com card de Última atualização (tempo relativo formatado); separação clara
   entre sistemas atualizáveis (classificados pela regra oficial do servidor/ADR-0008),
   componentes fixos sem status de atraso e bloco dedicado de telemetria de agentes
   instalados (sem interferir na situação de versão do cliente). Na linha do tempo de
-  atendimentos, adicionado botão para copiar o chamado no formato padrão. O modal de
-  relatórios (`RelatorioModal`) substituiu o seletor por abas curtas (Atendimento e
-  Cliente), cabeçalho discreto com botão fechar, filtro de histórico recolhível e
-  prévia com rodapé estável de ações (Fechar, Imprimir/Salvar PDF e Copiar texto).
+  atendimentos, adicionado botão para copiar o relatório ("Copiar Relatório") no formato
+  padrão. O modal de relatórios (`RelatorioModal`) substituiu o seletor por abas curtas
+  (Atendimento e Cliente), cabeçalho discreto com botão fechar, filtro de histórico
+  recolhível e prévia com rodapé estável de ações (Fechar, Imprimir/Salvar PDF e Copiar texto).
 
 - **Revisão do painel, E6:** agendamentos integrados à grade com toolbar unificada,
   criação rápida de tarefas e filtros de status discretos (Pendentes, Concluídos e
