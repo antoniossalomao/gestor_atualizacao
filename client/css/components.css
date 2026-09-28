@@ -7188,3 +7188,75 @@ h1, h2, h3, strong {
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
+
+/* ==========================================================================
+   Administração e Configurações -- polimento visual (28/09/2026)
+   ========================================================================== */
+
+/* Os cartões de uma seção vinham encostados um no outro: o contêiner não
+   tinha regra nenhuma (a classe existia só no HTML). */
+.admin-grade-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* Rodapé de salvar: encaixado no fim do cartão (sem a faixa de outra cor
+   que sobrava abaixo dele), só com a linha de cima separando. */
+.admin-form__rodape {
+  margin: var(--sp-2) calc(var(--sp-5) * -1) calc(var(--sp-2) * -1);
+  background: transparent;
+}
+
+/* Classificação dos sistemas: uma linha curta por sistema, em duas colunas
+   quando cabe. A linha alterada ganha o realce e o botão Salvar. */
+.admin-sistemas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr));
+  column-gap: var(--sp-6, 32px);
+  padding: var(--sp-2) 0 var(--sp-3);
+}
+.admin-sistema {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-2);
+  border-bottom: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  transition: background var(--transicao);
+}
+.admin-sistema.is-alterado { background: var(--cor-accent-fraco); }
+.admin-sistema__nome { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.admin-sistema__nome strong { overflow-wrap: anywhere; }
+.admin-sistema__nome small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
+.admin-sistema .segmented { flex: 0 0 auto; }
+
+/* Diagnóstico: título e selo quebram de linha em vez de espremer o título. */
+.admin-saude__bloco header { flex-wrap: wrap; }
+
+/* Abas das telas com abas: quando as abas e a busca não cabem numa linha, a
+   busca sobe para cima (como no celular) em vez de cortar a última aba --
+   "Sobre e ajuda" ficava escondida atrás da busca, rolando sem barra. */
+.tela-abas__barra { flex-wrap: wrap-reverse; }
+.tela-abas__lista { flex: 1 1 max-content; }
+.tela-abas__extra { margin-left: auto; }
+/* Mais estreita (as seis abas somam ~910 px), para caber ao lado delas em
+   1440 px com o menu aberto; abaixo disso
+   ela sobe para cima das abas (regra acima). */
+@media (min-width: 761px) {
+  .tela-abas__extra .cfg-busca { width: 200px; }
+}
+/* No celular vale a regra de sempre: busca em cima, na largura toda. Repetida
+   aqui porque as regras acima vêm depois da versão original na cascata. */
+@media (max-width: 760px) {
+  .tela-abas__barra { flex-wrap: nowrap; }
+  .tela-abas__lista { flex: 0 0 auto; }
+  .tela-abas__extra { margin-left: 0; }
+  .tela-abas__extra .cfg-busca { width: 100%; }
+}
+/* Classificação no celular: nome em cima, escolha e Salvar embaixo -- lado a
+   lado, o nome ficava espremido em duas letras por linha. */
+@media (max-width: 600px) {
+  .admin-sistema { flex-wrap: wrap; }
+  .admin-sistema__nome { flex-basis: 100%; }
+}

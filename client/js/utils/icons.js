@@ -89,6 +89,9 @@ const PATHS = {
   /* -- Configurações como tela: navegação, sessões abertas, restaurar -- */
   bussola: '<circle cx="10" cy="10" r="7.5"/><path d="m12.9 7.1-1.7 4.1-4.1 1.7 1.7-4.1z" stroke-linejoin="round"/>',
   celular: '<rect x="6" y="2.5" width="8" height="15" rx="1.8"/><path d="M9 14.8h2" stroke-linecap="round"/>',
+  // "i" num círculo: Sobre e ajuda (Configurações). A aba já pedia "info",
+  // que não existia, e o ícone saía vazio.
+  info: '<circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6.2v.1" stroke-linecap="round"/>',
   // Bandeira: a meta de uma campanha de atualização (aba Campanhas).
   campanhas: '<path d="M5 17.5V3M5 3.5h9.5l-2 3.5 2 3.5H5" stroke-linecap="round" stroke-linejoin="round"/>',
   restaurar: '<path d="M4.2 9.5a5.9 5.9 0 1 0 1.9-4.1M4 3.6v3h3" stroke-linecap="round" stroke-linejoin="round"/>',

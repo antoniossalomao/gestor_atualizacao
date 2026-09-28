@@ -33,7 +33,7 @@ export class DadosAdmin extends View {
           <div class="cfg-linhas">
             <div class="cfg-group">
               <div class="cfg-group__labels">
-                <span class="cfg-group__title">Exportar todos os atendimentos</span>
+                <span class="cfg-group__title">Exportar todas as atualizações</span>
                 <span class="cfg-group__help">Gera um arquivo .xlsx com todos os registros cadastrados na base, sem recortes de data.</span>
               </div>
               <button type="button" class="btn btn--small" data-action="exportar-todos">
@@ -43,7 +43,7 @@ export class DadosAdmin extends View {
 
             <div class="cfg-group">
               <div class="cfg-group__labels">
-                <span class="cfg-group__title">Importar planilha de atendimentos</span>
+                <span class="cfg-group__title">Importar planilha de atualizações</span>
                 <span class="cfg-group__help">Acrescenta registros ao histórico a partir de um arquivo .xlsx, com prévia antes de gravar. Registros existentes não são alterados.</span>
               </div>
               <button type="button" class="btn btn--small btn--accent" data-action="importar-planilha">
@@ -75,10 +75,10 @@ export class DadosAdmin extends View {
                 <span class="cfg-group__help">Verifique clientes sem sistemas vinculados ou sistemas sem versão oficial cadastrada.</span>
               </div>
               <div class="form-actions">
-                <button type="button" class="btn btn--small btn--ghost" data-action="ir-clientes">
+                <button type="button" class="btn btn--small" data-action="ir-clientes">
                   ${iconHtml("users")} Ver clientes
                 </button>
-                <button type="button" class="btn btn--small btn--ghost" data-action="ir-sistemas">
+                <button type="button" class="btn btn--small" data-action="ir-sistemas">
                   ${iconHtml("sistemas")} Ver sistemas
                 </button>
               </div>

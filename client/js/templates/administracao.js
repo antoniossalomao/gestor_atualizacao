@@ -37,7 +37,7 @@ export function rodapeFormulario() {
   return html`
     <footer class="admin-form__rodape">
       <span class="admin-form__estado" data-role="estado" aria-live="polite"></span>
-      <button type="button" class="btn btn--ghost" data-action="desfazer" disabled>Desfazer</button>
+      <button type="button" class="btn" data-action="desfazer" disabled>Desfazer</button>
       <button type="submit" class="btn btn--accent" data-action="salvar" disabled>Salvar</button>
     </footer>`;
 }

@@ -45,3 +45,20 @@ test("todo botão só de ícone tem aria-label e title", async (t) => {
     });
   }
 });
+
+test("todo ícone pedido pelo nome existe", () => {
+  // Um nome que não existe não quebra nada: sai um <svg> vazio. Foi assim
+  // que a aba "Sobre e ajuda" das Configurações ficou meses sem ícone
+  // ("info" não estava em icons.js).
+  const icones = fs.readFileSync(path.join(JS, "utils", "icons.js"), "utf8");
+  const existentes = new Set([...icones.matchAll(/^\s{2}([a-zA-Z]+):/gm)].map((m) => m[1]));
+  const faltando = [];
+  for (const abs of listar(JS)) {
+    const fonte = fs.readFileSync(abs, "utf8");
+    for (const m of fonte.matchAll(/\b(?:icone|icon):\s*"([a-zA-Z]+)"|\b(?:iconHtml|icon)\("([a-zA-Z]+)"\)/g)) {
+      const nome = m[1] || m[2];
+      if (!existentes.has(nome)) faltando.push(`${path.relative(JS, abs)}: ${nome}`);
+    }
+  }
+  assert.deepEqual(faltando, []);
+});
