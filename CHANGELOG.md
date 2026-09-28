@@ -15,6 +15,11 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Polimento visual após o fechamento do planejamento (28/09/2026):**
+  - *Resumo, card "Atualização dos Clientes"*: o "% em dia" virou o número principal, com "N de M clientes" ao lado; a barra ficou mais grossa e mostra o total de cada segmento ao passar o mouse; "Onde estão os atrasos" mostra, para cada sistema, atrasados sobre quantos clientes o usam ("196 de 250"), com mini-barra e %. Antes, "196 clientes" sozinho não dizia se era quase todo mundo. Continuam os três primeiros e "Ver todos" (decisão da seção 5.1 do planejamento). O servidor passou a mandar `clientes` em `sistemasMaisAtrasados`.
+  - *Administração*: cartões de cada seção com espaço entre si (vinham encostados: a classe do contêiner não tinha regra de CSS); rodapé de salvar encaixado no cartão; Classificação dos sistemas em linhas curtas, em duas colunas, com Atualizável/Fixo em botões colados e Salvar só na linha alterada — antes cada sistema tinha seletor e Salvar empilhados; em Dados, "atendimentos" virou "atualizações" e os botões ganharam borda.
+  - *Configurações*: a aba "Sobre e ajuda" ficava cortada atrás da busca e sem ícone (pedia `info`, que não existia). A busca sobe para cima das abas quando não cabe ao lado; o ícone foi criado; e um teste novo exige que todo ícone pedido pelo nome exista.
+
 - **Planejamento 13.4 e fechamento da revisão (28/09/2026):** preferências de notificação e de relatório, polimento da aba Campanhas e o [planejamento](docs/PLANEJAMENTO_REVISAO_COMPLETA_PAINEL.md) marcado como **finalizado**.
   - *O que o sino conta*: interruptor por tipo (agendamentos atrasados, de hoje, situação dos agentes) e escopo **Da equipe / Só as minhas**. O que fica desligado some do sino e do contador no título da aba. "Minha" tarefa é decidida por `ehResponsavel` (domain/pessoa.js): o Responsável costuma ser só o primeiro nome ("Antonio") e a conta tem o nome inteiro ("Antonio Salomão"); comparar os textos inteiros diria "não é minha" para quase tudo.
   - *Som*: opcional e desligado por padrão; toca quando o número de pendências não vistas cresce (não a cada ciclo de cinco minutos) e quando chega falha de agente. Gerado no navegador, sem arquivo de áudio.
