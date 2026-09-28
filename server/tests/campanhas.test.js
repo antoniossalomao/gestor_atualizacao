@@ -91,6 +91,15 @@ test("Campanhas - meta, baixa automática e placar", async (t) => {
       assert.equal(d.percentual, 25);
     });
 
+    await t.test("tarefa 'Sem resposta' não conta como agendada: o cliente continua pendente", () => {
+      const { id } = env.db.conn.prepare("SELECT id FROM agendamentos WHERE cliente = 'Loja Agendada'").get();
+      const tarefa = env.db.agendamentos.find(id);
+      env.agenda.update(id, { ...tarefa, status: "Sem resposta" }, USUARIO);
+      assert.equal(env.situacao(campanha.id, "Loja Agendada"), "pendente");
+      env.agenda.update(id, { ...env.db.agendamentos.find(id), status: "A Fazer" }, USUARIO);
+      assert.equal(env.situacao(campanha.id, "Loja Agendada"), "agendado");
+    });
+
     await t.test("tarefa concluída não conta como agendada", () => {
       const { id } = env.db.conn.prepare("SELECT id FROM agendamentos WHERE cliente = 'Loja Agendada'").get();
       env.agenda.markDone(id, USUARIO);
@@ -243,4 +252,25 @@ test("Campanhas - rotas e permissões", async (t) => {
     assert.equal((await pedir(`/campanhas/${id}`, { metodo: "DELETE", cookie: admin })).status, 204);
     assert.equal((await pedir(`/campanhas/${id}`, { cookie: admin })).status, 404);
   });
+});
+
+test("Campanhas - encerradas saem da mais recente para a mais antiga, sem olhar o prazo", () => {
+  const env = ambiente();
+  try {
+    const a = env.campanhas.create({ titulo: "A", sistema: "B_NFe", versaoAlvo: "01/01/2026", prazo: "01/01/2026" }, USUARIO);
+    const b = env.campanhas.create({ titulo: "B", sistema: "B_NFe", versaoAlvo: "01/01/2026", prazo: "30/06/2026" }, USUARIO);
+    const c = env.campanhas.create({ titulo: "C", sistema: "B_NFe", versaoAlvo: "01/01/2026" }, USUARIO);
+    env.campanhas.encerrar(b.id, USUARIO);
+    env.campanhas.encerrar(c.id, USUARIO);
+    env.campanhas.encerrar(a.id, USUARIO);
+    // Mesma data de encerramento no mesmo milissegundo é possível num teste:
+    // força a ordem pelo carimbo.
+    const set = env.db.conn.prepare("UPDATE campanhas SET encerrada_em = ? WHERE id = ?");
+    set.run("2026-09-01T10:00:00.000Z", b.id);
+    set.run("2026-09-02T10:00:00.000Z", c.id);
+    set.run("2026-09-03T10:00:00.000Z", a.id);
+    assert.deepEqual(env.campanhas.list("encerradas").map((x) => x.titulo), ["A", "C", "B"]);
+  } finally {
+    env.cleanup();
+  }
 });

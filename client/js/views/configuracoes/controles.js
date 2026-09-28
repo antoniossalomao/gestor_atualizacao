@@ -335,6 +335,15 @@ function estado(item) {
     selo.dataset.tom = item.tom?.() || "neutro";
   };
   sincronizar();
-  item.observar?.(sincronizar);
+  // O aviso de mudança vem do navegador e sobreviveria à linha: quando a seção
+  // é redesenhada, a linha antiga sai do documento e o ouvinte se desliga na
+  // primeira chamada, em vez de continuar preso a um nó que ninguém vê.
+  const desligar = item.observar?.(() => {
+    if (!el.isConnected) {
+      desligar?.();
+      return;
+    }
+    sincronizar();
+  });
   return { el, sincronizar };
 }

@@ -8,6 +8,8 @@ const { acharSistema } = require("../database/SistemaRepository");
 const { situacaoDoSistema, contaParaVersao } = require("./situacaoVersao");
 
 const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+/** Status em que a tarefa não encaminha mais o cliente (ver abertasComCliente). */
+const STATUS_ENCERRADOS = [STATUS_CONCLUIDO, "Sem resposta"];
 
 /** Situação de um cliente DENTRO da campanha. Não se sobrepõem: somam o total. */
 const SITUACOES = { concluido: "Concluído", agendado: "Já agendado", pendente: "Pendente" };
@@ -48,7 +50,10 @@ class CampanhaService {
   list(situacao = "ativas") {
     const filtro = ["ativas", "encerradas", "todas"].includes(situacao) ? situacao : "ativas";
     const agendas = this._agendasAbertas();
-    return this.db.campanhas.list(filtro).map((c) => ({ ...c, ...this._placar(c, this._clientes(c, agendas)) }));
+    // Campanhas do mesmo sistema leem os mesmos clientes e atendimentos: uma
+    // consulta por SISTEMA, e não por campanha.
+    const porSistema = new Map();
+    return this.db.campanhas.list(filtro).map((c) => ({ ...c, ...this._placar(c, this._clientes(c, agendas, porSistema)) }));
   }
 
   /** Uma campanha com todos os clientes e a situação de cada um. */
@@ -160,7 +165,7 @@ class CampanhaService {
     const catalogo = this.db.sistemas.todos();
     /** @type {Map<number, Array<{id:number, tarefa:string, data:string, responsavel:string, sistemas:Set<number>}>>} */
     const porCliente = new Map();
-    for (const t of this.db.agendamentos.abertasComCliente(STATUS_CONCLUIDO)) {
+    for (const t of this.db.agendamentos.abertasComCliente(STATUS_ENCERRADOS)) {
       const sistemas = new Set(splitSystems(t.sistema).map((nome) => acharSistema(catalogo, nome)?.id).filter(Boolean));
       if (sistemas.size === 0) continue;
       if (!porCliente.has(t.clienteId)) porCliente.set(t.clienteId, []);
@@ -169,9 +174,16 @@ class CampanhaService {
     return porCliente;
   }
 
-  _clientes(campanha, agendas) {
-    const ultimas = new Map(this.db.atualizacoes.ultimaPorClienteNoSistema(campanha.sistemaId).map((r) => [r.cliente_id, r]));
-    const lista = this.db.clientes.clientesDoSistemaComCodigo(campanha.sistemaId).map(({ id, nome, codigo, cidade }) => {
+  /** @param {Map<number, {ultimas: Map<number, any>, cadastro: any[]}>} [porSistema] cache opcional por sistema */
+  _clientes(campanha, agendas, porSistema = new Map()) {
+    if (!porSistema.has(campanha.sistemaId)) {
+      porSistema.set(campanha.sistemaId, {
+        ultimas: new Map(this.db.atualizacoes.ultimaPorClienteNoSistema(campanha.sistemaId).map((r) => [r.cliente_id, r])),
+        cadastro: this.db.clientes.clientesDoSistemaComCodigo(campanha.sistemaId),
+      });
+    }
+    const { ultimas, cadastro } = porSistema.get(campanha.sistemaId);
+    const lista = cadastro.map(({ id, nome, codigo, cidade }) => {
       const registro = ultimas.get(id);
       const { situacao: frente, pelaData } = situacaoDoSistema(registro, campanha.versaoAlvo);
       const agendamento = (agendas.get(id) || []).find((t) => t.sistemas.has(campanha.sistemaId));

@@ -538,7 +538,7 @@ Upload com progresso: `postForm` usa `XMLHttpRequest` em vez de `fetch` (só o X
 
 Rotas por hash (`#/clientes`) — o hash nunca chega ao servidor, sem risco de conflitar com rota da
 API. Paleta de comandos (**Ctrl+K**) busca telas, ações e clientes juntos. **Alt+1**…**Alt+9** vão
-direto à aba de mesmo número. **`?`** abre a lista de atalhos. Filtros persistem por aba
+direto à aba de mesmo número, e **Alt+0** à décima. **`?`** abre a lista de atalhos. Filtros persistem por aba
 (`sessionStorage`).
 
 #### Visual, design system e acessibilidade

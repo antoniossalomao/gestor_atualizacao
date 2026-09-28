@@ -15,6 +15,15 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Correções da revisão de código da branch (28/09/2026):**
+  - *Importação — duplicidade*: a chave usava o sistema como veio da planilha e na ordem em que veio. "Vendas" não casava com o "B_Vendas" gravado, nem "B_NFe, B_Vendas" com "B_Vendas, B_NFe", e reimportar o mesmo arquivo com "pular duplicidades" duplicava o histórico mesmo assim. Agora os sistemas são resolvidos no catálogo e ordenados, numa função só (`chaveDuplicidade`) usada dos dois lados.
+  - *Importação — planilha sem cabeçalho*: a leitura começava sempre na linha 2, e o primeiro atendimento sumia em silêncio (os dados dele apareciam como "colunas ignoradas"). Sem cabeçalho, a linha 1 já é dado.
+  - *Importação — Auditoria*: importação que não gravou nada não registra mais "criar atualização: 0 importados".
+  - *Campanhas*: tarefa "Sem resposta" deixava o cliente como "Já agendado", fora dos pendentes e sem o botão Agendar; agora conta como pendente (a mesma leitura dos lembretes). Encerradas saem da encerrada mais recentemente para a mais antiga (o prazo passava na frente). A lista consulta clientes e atendimentos uma vez por sistema, e não uma vez por campanha.
+  - *Preferências*: um valor fora do formato recusava o conjunto inteiro, e como o cliente envia tudo junto, um valor velho travava em silêncio a sincronização de todas as preferências. Agora só aquele valor é descartado.
+  - *Atalhos*: com a aba Campanhas, a Administração virou a 10ª aba e perdia o Alt+9 sem atalho novo (e o comentário dizia que nada mudava). A 10ª aba passa a ser **Alt+0**; o teste do dígito também impede que Alt+Espaço vire "décima aba".
+  - *Configurações*: o ouvinte de mudança da permissão de notificação agora se desliga quando a linha sai da tela.
+
 - **Polimento visual após o fechamento do planejamento (28/09/2026):**
   - *Resumo, card "Atualização dos Clientes"*: o "% em dia" virou o número principal, com "N de M clientes" ao lado; a barra ficou mais grossa e mostra o total de cada segmento ao passar o mouse; "Onde estão os atrasos" mostra, para cada sistema, atrasados sobre quantos clientes o usam ("196 de 250"), com mini-barra e %. Antes, "196 clientes" sozinho não dizia se era quase todo mundo. Continuam os três primeiros e "Ver todos" (decisão da seção 5.1 do planejamento). O servidor passou a mandar `clientes` em `sistemasMaisAtrasados`.
   - *Administração*: cartões de cada seção com espaço entre si (vinham encostados: a classe do contêiner não tinha regra de CSS); rodapé de salvar encaixado no cartão; Classificação dos sistemas em linhas curtas, em duas colunas, com Atualizável/Fixo em botões colados e Salvar só na linha alterada — antes cada sistema tinha seletor e Salvar empilhados; em Dados, "atendimentos" virou "atualizações" e os botões ganharam borda.

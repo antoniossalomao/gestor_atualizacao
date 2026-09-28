@@ -18,7 +18,9 @@ class CampanhaRepository extends BaseRepository {
 
   /**
    * Ativas primeiro (prazo mais próximo no topo, sem prazo no fim), depois as
-   * encerradas, da mais recente para a mais antiga.
+   * encerradas, da encerrada mais recentemente para a mais antiga. Os CASE
+   * fazem o prazo valer SÓ para as ativas: aplicado a todas, ele passava na
+   * frente da data de encerramento e as encerradas saíam por prazo.
    * @param {"ativas"|"encerradas"|"todas"} situacao
    */
   list(situacao = "ativas") {
@@ -27,7 +29,8 @@ class CampanhaRepository extends BaseRepository {
       .prepare(
         `SELECT ${CAMPOS} FROM campanhas c JOIN sistemas s ON s.id = c.sistema_id ${where}
          ORDER BY (c.encerrada_em IS NOT NULL),
-                  (c.prazo = ''), substr(c.prazo,7,4) || substr(c.prazo,4,2) || substr(c.prazo,1,2),
+                  CASE WHEN c.encerrada_em IS NULL THEN (c.prazo = '') END,
+                  CASE WHEN c.encerrada_em IS NULL THEN substr(c.prazo,7,4) || substr(c.prazo,4,2) || substr(c.prazo,1,2) END,
                   c.encerrada_em DESC, c.id DESC`
       )
       .all();

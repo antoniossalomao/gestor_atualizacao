@@ -192,7 +192,10 @@ test("PreferenciaService - o que pode ser guardado", async (t) => {
         ["silencioInicio", "25:00"], ["silencioInicio", "7:00"], ["silencioFim", "07:15"],
         ["sinoEscopo", "todos"], ["relatorioAba", "periodo"], ["somAvisos", "sim"], ["sinoHoje", 1],
       ]) {
-        assert.throws(() => env.prefs.salvar(usuario, { [chave]: ruim }), /Valor inválido/, `${chave}=${ruim}`);
+        // Descartado, sem derrubar o resto do conjunto (que sincroniza tudo junto).
+        const salvo = env.prefs.salvar(usuario, { [chave]: ruim, tema: "escuro" });
+        assert.equal(chave in salvo, false, `${chave}=${ruim} não é guardado`);
+        assert.equal(salvo.tema, "escuro", "o resto do conjunto continua sendo gravado");
       }
     });
 

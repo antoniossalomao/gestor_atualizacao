@@ -98,7 +98,11 @@ class PreferenciaService {
     for (const [chave, valor] of entradas) {
       if (!NOME_CHAVE.test(chave)) throw new ValidationError(`Nome de preferência inválido: "${String(chave).slice(0, 40)}".`);
       const formato = FORMATOS[chave];
-      if (formato && !formato(valor)) throw new ValidationError(`Valor inválido para "${chave}".`);
+      // Valor fora do formato é DESCARTADO (a opção volta ao padrão na tela),
+      // e não motivo para recusar o conjunto: o cliente manda todas as
+      // preferências juntas, e um valor velho ou corrompido numa delas
+      // travaria em silêncio a sincronização de todas as outras.
+      if (formato && !formato(valor)) continue;
       if (typeof valor === "string") {
         if (valor.length > MAX_TEXTO) throw new ValidationError(`Valor de "${chave}" é longo demais.`);
         limpo[chave] = valor;

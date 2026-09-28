@@ -69,7 +69,9 @@ const TABS = [
   { key: "sistemas", label: "Sistemas", icon: "sistemas", View: SistemasView, grupo: "Distribuição",
     descricao: "Relatório por sistema, com data de corte opcional." },
   // Depois de Sistemas, e não em Operação, para não mudar o Alt+N das abas
-  // que a equipe já usa: as campanhas são metas de VERSÃO de um sistema.
+  // de operação que a equipe usa o dia todo: as campanhas são metas de
+  // VERSÃO de um sistema. Com ela, a Administração (admin com o Atualizador
+  // ligado) vira a 10ª aba e passa de Alt+9 para Alt+0.
   { key: "campanhas", label: "Campanhas", icon: "campanhas", View: CampanhasView, grupo: "Distribuição",
     descricao: "Metas de versão por sistema: quantos clientes já receberam uma versão crítica." },
   // Só administrador (ver `papel`). O Histórico de alterações, que era uma
@@ -529,10 +531,10 @@ export class App {
       button.setAttribute("aria-controls", `painel-${tab.key}`);
       button.id = `aba-${tab.key}`;
       button.tabIndex = -1;
-      // Só existem Alt+1…Alt+9 (uma tecla de número). Com dez abas ou mais,
-      // a partir da décima não há atalho -- anunciar um "Alt+10" seria
-      // prometer uma tecla que não faz nada.
-      const atalho = i < 9 ? `Alt+${i + 1}` : "";
+      // Uma tecla de número por aba: Alt+1…Alt+9 e, para a décima, Alt+0 --
+      // a convenção de navegadores e editores. Da 11ª em diante não há
+      // atalho; anunciar um "Alt+11" seria prometer uma tecla que não existe.
+      const atalho = numeroDoAtalho(i) === null ? "" : `Alt+${numeroDoAtalho(i)}`;
       button.title = atalho ? `${tab.label} (${atalho})` : tab.label;
       // A dica do atalho fica na própria aba, aparecendo ao passar o mouse ou
       // ao focar pelo teclado. O `title` só conta a mesma coisa depois de um
@@ -629,14 +631,17 @@ export class App {
     this.root.querySelector(`#aba-${this.tabsNoMenu[alvo].key}`)?.focus();
   }
 
-  /** `Alt+1` … `Alt+9` levam direto à aba de mesmo número. */
+  /** `Alt+1` … `Alt+9` levam direto à aba de mesmo número; `Alt+0`, à décima. */
   _ligarAtalhosNumericos() {
     const handler = (e) => {
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
-      const n = Number(e.key);
-      if (!Number.isInteger(n) || n < 1 || n > this.tabsNoMenu.length) return;
+      // Teste explícito do dígito: `Number(" ")` é 0, e o Alt+Espaço (menu da
+      // janela no Windows) viraria "ir para a décima aba".
+      if (!/^[0-9]$/.test(e.key)) return;
+      const indice = e.key === "0" ? 9 : Number(e.key) - 1;
+      if (indice >= this.tabsNoMenu.length) return;
       e.preventDefault();
-      this.switchTab(this.tabsNoMenu[n - 1].key);
+      this.switchTab(this.tabsNoMenu[indice].key);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -1086,4 +1091,10 @@ export class App {
       this._onAuthenticated(user);
     });
   }
+}
+
+/** Dígito do atalho Alt+N da aba de índice `i` (0 = primeira), ou null. */
+function numeroDoAtalho(i) {
+  if (i < 9) return String(i + 1);
+  return i === 9 ? "0" : null;
 }

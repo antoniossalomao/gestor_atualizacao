@@ -137,7 +137,7 @@ test("Importação - erros de arquivo e de coluna", async (t) => {
       await assert.rejects(env.servico.previaImportacao(Buffer.from("não sou xlsx")), /Não foi possível abrir/);
     });
     await t.test("planilha sem linhas", async () => {
-      await assert.rejects(env.servico.previaImportacao(await planilha([CABECALHO])), /vazia/);
+      await assert.rejects(env.servico.previaImportacao(await planilha([CABECALHO])), /nenhuma linha preenchida abaixo do cabeçalho/);
     });
     await t.test("cabeçalho reconhecido, mas sem a coluna Cliente", async () => {
       await assert.rejects(env.servico.previaImportacao(await planilha([["Sistema", "Data"], ["B_NFe", "10/08/2026"]])), /coluna "Cliente"/);
@@ -147,10 +147,20 @@ test("Importação - erros de arquivo e de coluna", async (t) => {
       assert.deepEqual(p.colunasIgnoradas, ["Telefone"]);
       assert.equal(p.validas, 1);
     });
-    await t.test("sem cabeçalho reconhecível, vale a ordem fixa das colunas", async () => {
-      const p = await env.servico.previaImportacao(await planilha([["a", "b", "c"], ["Mercado Central", "B_NFe", "", "", "10/08/2026"]]));
+    await t.test("sem cabeçalho, vale a ordem fixa -- e a PRIMEIRA linha já é dado", async () => {
+      // Antes a leitura começava sempre na linha 2: o primeiro atendimento de
+      // uma planilha sem cabeçalho sumia, e os dados dele apareciam como
+      // "colunas ignoradas".
+      const p = await env.servico.previaImportacao(await planilha([
+        ["Mercado Central", "B_NFe", "", "", "10/08/2026"],
+        ["Mercado Central", "B_NFe", "", "", "11/08/2026"],
+      ]));
       assert.equal(p.semCabecalho, true);
-      assert.equal(p.validas, 1);
+      assert.equal(p.total, 2);
+      assert.equal(p.validas, 2);
+      assert.deepEqual(p.colunasIgnoradas, []);
+      const uma = await env.servico.previaImportacao(await planilha([["Mercado Central", "B_NFe", "", "", "10/08/2026"]]));
+      assert.equal(uma.validas, 1, "planilha de uma linha só não é 'vazia'");
     });
   } finally {
     env.cleanup();
@@ -196,4 +206,34 @@ test("Importação - permissões da prévia e da importação", async (t) => {
     assert.equal((await enviar("/atualizacoes/import", admin, { pularDuplicadas: "1" })).corpo.inserted, 1);
     assert.equal((await enviar("/atualizacoes/import", admin, { pularDuplicadas: "1" })).corpo.inserted, 0);
   });
+});
+
+test("Importação - duplicidade reconhece o sistema pelo catálogo e ignora a ordem", async () => {
+  const env = ambiente();
+  try {
+    await env.servico.importXlsx(await planilha([CABECALHO, ["Mercado Central", "B_Vendas, B_NFe", "", "", "10/08/2026", "", "", ""]]), USUARIO);
+    // "Vendas" é o B_Vendas do catálogo, e "NFe, Vendas" é o mesmo par em
+    // outra ordem: as duas linhas repetem o que já foi gravado.
+    const p = await env.servico.previaImportacao(await planilha([
+      CABECALHO,
+      ["mercado central", "NFe, Vendas", "", "", "10/08/2026", "", "", ""],
+      ["Mercado Central", "B_Vendas", "", "", "10/08/2026", "", "", ""],
+    ]));
+    assert.equal(p.duplicadas, 1, "só a primeira repete (a segunda tem outro conjunto de sistemas)");
+    assert.equal(p.ocorrencias.find((o) => o.linha === 2).avisos.at(-1).tipo, "duplicidade");
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("Importação - nada importado não vira registro de criação na Auditoria", async () => {
+  const env = ambiente();
+  try {
+    const antes = env.db.historico.list({}).total;
+    const r = await env.servico.importXlsx(await planilha([CABECALHO, ["Loja", "B_NFe", "", "", "2026-08-10", "", "", ""]]), USUARIO);
+    assert.equal(r.inserted, 0);
+    assert.equal(env.db.historico.list({}).total, antes);
+  } finally {
+    env.cleanup();
+  }
 });

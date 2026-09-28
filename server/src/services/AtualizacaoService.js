@@ -594,13 +594,17 @@ class AtualizacaoService {
     const resumo = this._resumoLeitura(leitura);
     const inserted = aplicar.length;
     const ignoradas = leitura.linhas.length - inserted;
-    this.historico.registrar(
-      usuario,
-      "criar",
-      "atualizacao",
-      `Importação de planilha: ${inserted} registro(s) importado(s)${ignoradas ? `, ${ignoradas} ignorado(s)` : ""}`,
-      { importados: inserted, comErro: resumo.comErro, duplicadasIgnoradas: pularDuplicadas ? resumo.duplicadas : 0 }
-    );
+    // Só quando algo entrou: a entrada é "criar atualização", e registrar
+    // "0 importados" encheria a Auditoria de criações que não aconteceram.
+    if (inserted > 0) {
+      this.historico.registrar(
+        usuario,
+        "criar",
+        "atualizacao",
+        `Importação de planilha: ${inserted} registro(s) importado(s)${ignoradas ? `, ${ignoradas} ignorado(s)` : ""}`,
+        { importados: inserted, comErro: resumo.comErro, duplicadasIgnoradas: pularDuplicadas ? resumo.duplicadas : 0 }
+      );
+    }
     return { ...resumo, inserted, ignoradas, naoCadastrados: [...naoCadastrados].sort() };
   }
 
@@ -619,7 +623,7 @@ class AtualizacaoService {
       throw new ValidationError("Não foi possível abrir o arquivo. Envie uma planilha Excel (.xlsx) sem senha.");
     }
     const ws = workbook.worksheets[0];
-    if (!ws || ws.rowCount < 2) throw new ValidationError("A planilha está vazia: a primeira aba precisa ter o cabeçalho e ao menos uma linha.");
+    if (!ws || ws.rowCount < 1) throw new ValidationError("A planilha está vazia: a primeira aba precisa ter ao menos uma linha.");
 
     const expected = COLUMNS.map((c) => c.key);
     const cabecalho = rowToStrings(ws.getRow(1)).map((h) => h.trim());
@@ -636,15 +640,20 @@ class AtualizacaoService {
     if (!semCabecalho && colMap.cliente == null) {
       throw new ValidationError('A coluna "Cliente" não foi encontrada no cabeçalho. Ela é obrigatória.');
     }
+    // Sem cabeçalho, a linha 1 já é DADO: começa nela, e o que havia nela não
+    // é "coluna ignorada". (Começar sempre na 2 descartava o primeiro
+    // atendimento em silêncio -- e uma planilha de uma linha só dava "vazia".)
+    const primeira = semCabecalho ? 1 : 2;
+    if (semCabecalho) colunasIgnoradas.length = 0;
 
     // Fora do laço: a planilha pode ter centenas de linhas, e catálogo,
     // responsáveis e o que já está gravado não mudam no meio da leitura.
     const contexto = this._contextoNormalizacao();
     const catalogo = this.db.sistemas.todos();
-    const existentes = this.db.atualizacoes.chavesDeDuplicidade();
+    const existentes = new Set(this.db.atualizacoes.linhasParaDuplicidade().map((l) => chaveDuplicidade(l.cliente, l.data, l.sistema, catalogo)));
     const vistas = new Set();
     const linhas = [];
-    for (let r = 2; r <= ws.rowCount; r++) {
+    for (let r = primeira; r <= ws.rowCount; r++) {
       const valores = rowToStrings(ws.getRow(r));
       if (valores.every((v) => v === "")) continue;
       const record = {};
@@ -676,14 +685,14 @@ class AtualizacaoService {
       if (foraDoCatalogo.length) {
         linha.avisos.push({ tipo: "sistema", mensagem: `Sistema fora do catálogo (${foraDoCatalogo.join(", ")}): entra como inativo.` });
       }
-      const chave = chaveDuplicidade(registro.cliente, registro.data, registro.sistema);
+      const chave = chaveDuplicidade(registro.cliente, registro.data, registro.sistema, catalogo);
       if (existentes.has(chave) || vistas.has(chave)) {
         linha.duplicada = true;
         linha.avisos.push({ tipo: "duplicidade", mensagem: existentes.has(chave) ? "Já existe atualização com o mesmo cliente, data e sistemas." : "Repetida nesta planilha." });
       }
       vistas.add(chave);
     }
-    if (linhas.length === 0) throw new ValidationError("A planilha não tem nenhuma linha preenchida abaixo do cabeçalho.");
+    if (linhas.length === 0) throw new ValidationError(semCabecalho ? "A planilha está vazia." : "A planilha não tem nenhuma linha preenchida abaixo do cabeçalho.");
     return { linhas, colunasIgnoradas, semCabecalho };
   }
 
@@ -737,12 +746,23 @@ class AtualizacaoService {
 
 /**
  * Chave da "possível duplicidade" de importação: cliente (sem caixa nem
- * espaços nas pontas), data e a lista de sistemas já normalizada. A mesma
- * forma sai de AtualizacaoRepository.chavesDeDuplicidade para o que já está
- * gravado.
+ * espaços nas pontas), data e os sistemas RESOLVIDOS no catálogo, sem caixa e
+ * em ordem alfabética. Usada dos dois lados -- o que já está gravado e o que
+ * vem da planilha --, e é por isso que mora num lugar só.
+ *
+ * Resolver no catálogo é o que faz "Vendas" na planilha casar com o "B_Vendas"
+ * gravado (a normalização da planilha mantém o nome como veio; quem casa sem
+ * o prefixo B_ é `acharSistema`). E ordenar é o que faz "B_NFe, B_Vendas"
+ * casar com "B_Vendas, B_NFe". Sem as duas coisas, reimportar o mesmo arquivo
+ * com "pular duplicidades" duplicava o histórico mesmo assim.
+ * @param {Array<{nome: string}>} catalogo `sistemas.todos()`
  */
-function chaveDuplicidade(cliente, data, sistema) {
-  return `${String(cliente || "").trim().toLowerCase()}|${data || ""}|${String(sistema || "").toLowerCase()}`;
+function chaveDuplicidade(cliente, data, sistema, catalogo) {
+  const sistemas = splitSystems(sistema)
+    .map((nome) => (acharSistema(catalogo, nome)?.nome || nome).toLowerCase())
+    .sort()
+    .join(",");
+  return `${String(cliente || "").trim().toLowerCase()}|${data || ""}|${sistemas}`;
 }
 
 /** Todas as celulas de uma linha do exceljs como strings (numero/data viram texto; vazio vira ""). */

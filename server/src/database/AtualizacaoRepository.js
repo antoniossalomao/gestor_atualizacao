@@ -436,21 +436,21 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
+   * Cliente, data e sistemas (nomes do catálogo) de todas as atualizações --
+   * a importação monta com eles as chaves de "possível duplicidade" (ver
+   * `chaveDuplicidade` em AtualizacaoService, o ÚNICO lugar que decide o
+   * formato da chave).
+   * @returns {Array<{cliente: string, data: string, sistema: string}>}
+   */
+  linhasParaDuplicidade() {
+    return this.conn.prepare("SELECT cliente, data, sistema FROM atualizacoes_v").all();
+  }
+
+  /**
    * Quantidade de atualizacoes por responsavel, agrupando ignorando
    * maiusculas/minusculas e espacos nas bordas (para "Camila", "CAMILA" e
    * " camila " contarem como a mesma pessoa).
    */
-  /**
-   * Cliente, data e sistemas de todas as atualizações, na forma de
-   * `chaveDuplicidade` (AtualizacaoService) -- a importação avisa (e por
-   * padrão pula) a linha que repete uma delas.
-   * @returns {Set<string>}
-   */
-  chavesDeDuplicidade() {
-    const linhas = this.conn.prepare("SELECT cliente, data, sistema FROM atualizacoes_v").all();
-    return new Set(linhas.map((l) => `${String(l.cliente || "").trim().toLowerCase()}|${l.data || ""}|${String(l.sistema || "").toLowerCase()}`));
-  }
-
   countsByResponsavel() {
     const raw = this.conn
       .prepare(`SELECT responsavel, COUNT(*) AS qtde FROM ${this.table} WHERE responsavel != '' GROUP BY responsavel`)
