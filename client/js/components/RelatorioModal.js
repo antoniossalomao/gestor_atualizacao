@@ -17,7 +17,7 @@ export function abrirRelatorio({ tipos, gerar, periodo = false }) {
 
   // Rótulos curtos recomendados no planejamento (I09)
   const rotulosAba = {
-    atualizacao: "Atendimento",
+    atualizacao: "Atualização",
     cliente: "Cliente",
     periodo: "Período",
   };

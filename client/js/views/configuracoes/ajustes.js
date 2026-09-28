@@ -489,7 +489,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
               id: "situacoes-sistemas",
               tipo: "info",
               titulo: "Significado das situações de versão",
-              ajuda: "Em dia: atendido na versão oficial mais recente. Atrasado: versão recebida é anterior à oficial. Sem informação: cliente sem atendimento registrado no sistema. Verificação pendente: formato recebido não comparável automaticamente. Componente fixo: sistema não atualizável.",
+              ajuda: "Em dia: atualizado na versão oficial mais recente, ou em uma mais nova. Atrasado: versão recebida é anterior à oficial. Sem informação: nenhuma atualização registrada no sistema. Verificação pendente: formato recebido não comparável automaticamente. Componente fixo: sistema não atualizável.",
               busca: "situacao situacoes em dia atrasado sem informacao pendente fixo significado legenda",
             },
           ],

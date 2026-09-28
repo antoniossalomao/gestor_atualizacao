@@ -27,8 +27,8 @@ export class DadosAdmin extends View {
       <div class="admin-grade-vertical">
         <section class="card secao-card">
           ${tituloCartao({
-            titulo: "Atendimentos e atualizações",
-            descricao: "Exporte todo o histórico gravado em planilha Excel (.xlsx) ou importe novos atendimentos em lote.",
+            titulo: "Histórico de atualizações",
+            descricao: "Exporte todo o histórico gravado em planilha Excel (.xlsx) ou importe novas atualizações em lote.",
           })}
           <div class="cfg-linhas">
             <div class="cfg-group">
@@ -115,7 +115,7 @@ export class DadosAdmin extends View {
       const agora = new Date();
       const carimbo = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
       baixarBlob(blob, `atualizacoes_completo_${carimbo}.xlsx`);
-      toast.success("Planilha completa de atendimentos exportada com sucesso.");
+      toast.success("Planilha completa de atualizações exportada com sucesso.");
     } catch (err) {
       Modal.alert("Erro ao exportar", err.message || "Não foi possível baixar os dados.", "error");
     } finally {

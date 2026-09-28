@@ -41,7 +41,7 @@ export class OperacaoAdmin extends FormularioRegras {
           ${linhaRegraNumero({
             nome: "desatualizadoDias",
             titulo: "Sem atualização depois de",
-            ajuda: "Sem atendimento registrado por mais que isso, o cliente entra na lista \"Sem atualização\" do Resumo. Não altera a situação de versão.",
+            ajuda: "Sem atualização registrada por mais que isso, o cliente entra na lista \"Sem atualização\" do Resumo. Não altera a situação de versão.",
             unidade: "dias",
             valor: valores.desatualizadoDias,
             min: d.desatualizadoDias.min,

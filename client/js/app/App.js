@@ -742,7 +742,7 @@ export class App {
         ? [
             ["pessoas", "Pessoas e permissões", "Criar conta, mudar papel, remover acesso", "users"],
             ["operacao", "Operação da equipe", "Prazos, arquivamento e classificação de sistemas", "ajustes"],
-            ["dados", "Dados e importação", "Exportação completa, planilha de atendimentos e base", "download"],
+            ["dados", "Dados e importação", "Exportação completa, planilha de atualizações e base", "download"],
             ["integracoes", "Integrações e alertas", "Alertas no Discord, Atualizador e endereço do servidor", "distribuicao"],
             ["backups", "Backups e recuperação", "Cópias de segurança, retenção e restauração", "backups"],
             ["auditoria", "Auditoria do sistema", "Quem criou, editou ou excluiu registros no sistema", "historico"],
