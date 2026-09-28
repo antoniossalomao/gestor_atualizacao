@@ -232,9 +232,12 @@ export class ResumoView extends View {
       ajuda: "Conta cada sistema separado: um cliente atrasado em dois sistemas aparece nos dois, e um cliente em dia pelo B_Vendas ainda aparece aqui se outro sistema dele estiver atrasado.",
       colunas: [
         { key: "sistema", label: "Sistema", render: (row) => this._link("sistema", row.sistema) },
-        { key: "total", label: "Clientes", type: "numeric" },
+        { key: "total", label: "Atrasados", type: "numeric" },
+        { key: "clientes", label: "Clientes no sistema", type: "numeric" },
+        { key: "pct", label: "% atrasado", type: "numeric", render: (row) => document.createTextNode(`${row.pct}%`) },
       ],
-      linhas: sistemas,
+      // A mesma proporção do card: atrasados sobre quem usa o sistema.
+      linhas: sistemas.map((s) => ({ ...s, clientes: s.clientes || s.total, pct: Math.round((s.total / (s.clientes || s.total || 1)) * 100) })),
       chave: (row) => row.sistema,
       vazio: "Nenhum sistema com cliente atrasado.",
     });

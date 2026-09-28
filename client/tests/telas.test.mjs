@@ -401,6 +401,29 @@ test("Resumo orienta o estado vazio conforme a população", () => {
   assert.doesNotMatch(soFixos, /100% em dia/);
 });
 
+test("Resumo - card de situação: número principal e proporção por sistema", () => {
+  const totais = {
+    avaliados: 368,
+    foraDaAvaliacao: 0,
+    grupos: [
+      { chave: "em_dia", rotulo: "Em dia", severidade: "boa", descricao: "", total: 72, pct: 20 },
+      { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "", total: 197, pct: 54 },
+      { chave: "pendente", rotulo: "Verificação pendente", severidade: "media", descricao: "", total: 99, pct: 27 },
+    ],
+  };
+  const m = texto(corpoSituacao(totais, [
+    { sistema: "B_Vendas", total: 196, clientes: 250 },
+    { sistema: MALICIOSO, total: 3, clientes: 4 },
+  ]));
+  assert.match(m, /situacao__hero">20%</, "o percentual em dia é o número principal");
+  assert.match(m, /72 de 368 clientes/);
+  assert.match(m, /196 de 250/, "a contagem vem com o denominador");
+  assert.match(m, /width: 78%/, "a mini-barra é atrasados sobre quem usa o sistema");
+  assert.doesNotMatch(m, /<img/);
+  // Resposta antiga do servidor, sem `clientes`: não quebra nem inventa proporção.
+  assert.match(texto(corpoSituacao(totais, [{ sistema: "B_NFe", total: 5 }])), /5 de 5/);
+});
+
 test("Resumo - datas e indicadores", async (t) => {
   await t.test("formatarMes e primeiroDiaDoMes", () => {
     assert.equal(formatarMes("2026-09"), "set/2026");

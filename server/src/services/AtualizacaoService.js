@@ -475,6 +475,8 @@ class AtualizacaoService {
     const grupos = { desatualizado: [], pendente: [], em_dia: [], sem_atualizaveis: [] };
     /** Quantos clientes estão atrasados em cada sistema -- os "mais atrasados" do card. */
     const atrasosPorSistema = new Map();
+    /** Quantos clientes avaliados usam cada sistema -- o "de quantos" do card. */
+    const clientesPorSistema = new Map();
     for (const { id, nome, cidade } of this.db.clientes.allBasic()) {
       const doCliente = ultimas.get(id) || new Map();
       const ids = new Set([...(cadastro.get(id) || []), ...doCliente.keys()]);
@@ -484,6 +486,7 @@ class AtualizacaoService {
         if (!contaParaVersao(sistema)) continue;
         const { situacao, pelaData } = situacaoDoSistema(doCliente.get(sistemaId), sistema.ultima_versao);
         sistemas.push({ sistema: sistema.nome, situacao, pelaData });
+        clientesPorSistema.set(sistema.nome, (clientesPorSistema.get(sistema.nome) || 0) + 1);
         if (situacao === "Desatualizado") atrasosPorSistema.set(sistema.nome, (atrasosPorSistema.get(sistema.nome) || 0) + 1);
       }
       sistemas.sort((a, b) => a.sistema.localeCompare(b.sistema, "pt-BR"));
@@ -495,7 +498,9 @@ class AtualizacaoService {
     return {
       ...grupos,
       sistemasMaisAtrasados: [...atrasosPorSistema]
-        .map(([sistema, total]) => ({ sistema, total }))
+        // `clientes` é o denominador: "196 atrasados" sozinho não diz se é
+        // quase todo mundo ou uma fração de uma base grande.
+        .map(([sistema, total]) => ({ sistema, total, clientes: clientesPorSistema.get(sistema) || total }))
         .sort((a, b) => b.total - a.total || a.sistema.localeCompare(b.sistema, "pt-BR")),
     };
   }

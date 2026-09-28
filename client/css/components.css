@@ -7129,3 +7129,62 @@ h1, h2, h3, strong {
 .cfg-estado[data-tom="boa"] { border-left-color: var(--severidade-boa); }
 .cfg-estado[data-tom="alta"] { border-left-color: var(--severidade-alta); }
 .cfg-estado[data-tom="media"] { border-left-color: var(--cor-amarelo); }
+
+/* ==========================================================================
+   Card "Atualização dos Clientes" (Resumo), revisão de 28/09/2026
+
+   O card respondia "quantos em cada grupo", mas não a pergunta que se faz ao
+   abrir o Resumo -- "como estamos?". O percentual em dia vira o número
+   principal (em tinta de texto, não na cor da série: a cor fica na barra e
+   nos pontos), a barra engorda para ser lida de relance, e cada sistema da
+   lista de atrasos ganha o denominador ("196 de 250") e uma mini-barra,
+   porque a contagem sozinha não dizia se era quase todo mundo ou uma fração.
+   ========================================================================== */
+.situacao__destaque {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.situacao__hero {
+  font-family: var(--fonte-display);
+  font-size: calc(34px * var(--escala, 1));
+  font-weight: var(--peso-extra);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--cor-texto);
+}
+.situacao__hero-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--txt-sm); }
+.situacao__hero-texto small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
+.situacao__barra { height: 14px; margin-bottom: var(--sp-3); }
+
+.situacao__sistema {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "nome  conta"
+    "trilho pct";
+  align-items: center;
+  gap: 4px 10px;
+  padding: 7px 8px;
+  text-align: left;
+}
+.situacao__sistema-nome { grid-area: nome; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--peso-medio); }
+.situacao__sistema-conta { grid-area: conta; color: var(--cor-texto-fraco); font-size: var(--txt-xs); font-variant-numeric: tabular-nums; }
+.situacao__sistema-trilho {
+  grid-area: trilho;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--raio-pilula);
+  background: var(--cor-superficie-alta);
+}
+.situacao__sistema-barra { display: block; height: 100%; border-radius: var(--raio-pilula); background: var(--severidade-alta); }
+.situacao__sistema .situacao__sistema-pct {
+  grid-area: pct;
+  min-width: 34px;
+  color: var(--cor-texto);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-forte);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
