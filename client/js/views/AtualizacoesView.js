@@ -176,9 +176,12 @@ export class AtualizacoesView extends View {
       id: "46px",
       cliente: "20%",
       sistema: "16%",
-      versao: "82px",
-      responsavel: "132px",
-      data: "78px",
+      // Versão e Data são datas dd/mm/aaaa: abaixo de ~96px a fonte em
+      // negrito corta o ano ("26/09/2..."), mesmo com espaço sobrando nas
+      // colunas de texto livre. "Quem atualizou" cede um pouco da folga.
+      versao: "96px",
+      responsavel: "124px",
+      data: "96px",
       motivo: "105px",
       maquinas: "92px",
       obs: "11%",

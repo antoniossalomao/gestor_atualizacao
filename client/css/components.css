@@ -7022,3 +7022,31 @@ h1, h2, h3, strong {
   .importacao__ocorrencias td:first-child::before { content: "Linha "; }
   .importacao__ocorrencias td:nth-child(4) { grid-column: 1 / -1; }
 }
+
+/* ==========================================================================
+   Estados de botão e alvo de toque (seção 6 do planejamento, fechamento)
+
+   Processando não é desabilitado. `marcarOcupado` (utils/guard.js) desabilita
+   o botão para impedir o segundo clique, e antes disso ele ficava com a
+   mesma cara de "você não pode usar isto" (opacidade 0.5, cursor proibido).
+   Agora o botão ocupado continua legível, com o spinner e o cursor de
+   progresso: a pessoa vê que o clique pegou, e não que foi recusado.
+   ========================================================================== */
+.btn[aria-busy="true"]:disabled {
+  opacity: 0.85;
+  cursor: progress;
+}
+
+/* Em tela de toque, os botões só de ícone (26 px, pensados para o mouse no
+   fim da linha) ficam pequenos demais para o dedo. Cresce o ALVO, não o
+   desenho: o ícone continua com 14 px, e no desktop nada muda. */
+@media (pointer: coarse) {
+  .row-actions .btn,
+  .btn--icon {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+  .row-actions { gap: 6px; }
+  .btn--small { min-height: 40px; }
+}

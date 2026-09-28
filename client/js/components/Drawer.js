@@ -27,7 +27,7 @@ export class Drawer {
       <section class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="${tituloId}">
         <header class="drawer-header">
           <div><h2 id="${tituloId}">${titulo}</h2>${descricao ? `<p>${descricao}</p>` : ""}</div>
-          <button type="button" class="btn btn--icon btn--ghost" data-action="drawer-fechar" aria-label="Fechar">×</button>
+          <button type="button" class="btn btn--icon btn--ghost" data-action="drawer-fechar" aria-label="Fechar" title="Fechar (Esc)">×</button>
         </header>
         <div class="drawer-body" data-role="drawer-body"></div>
       </section>`;

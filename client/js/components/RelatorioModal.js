@@ -27,7 +27,7 @@ export function abrirRelatorio({ tipos, gerar, periodo = false }) {
   box.innerHTML = html`
     <div class="modal-box__head relatorio-controles" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--sp-3);">
       <h3 class="modal-box__title" id="${id}" style="margin:0;">Relatório de Atualizações</h3>
-      <button type="button" class="btn btn--icon btn--ghost" data-action="fechar-x" aria-label="Fechar relatório">✕</button>
+      <button type="button" class="btn btn--icon btn--ghost" data-action="fechar-x" aria-label="Fechar relatório" title="Fechar relatório">✕</button>
     </div>
 
     <div class="relatorio-controles">
