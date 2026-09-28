@@ -7,7 +7,7 @@ const { parseData } = require("../shared/validation");
  * dias (o que não diz nada sobre versão), e as outras duas comparavam o
  * texto da versão com `===`.
  *
- * Três decisões, tomadas com a equipe (ver docs/adr/0008):
+ * Três decisões, tomadas com a equipe (ver docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0008):
  *
  *  1. **Compara como data, não como texto.** Versão aqui é uma data
  *     (dd/mm/aaaa). Com `===`, quem recebeu uma versão MAIS NOVA que a

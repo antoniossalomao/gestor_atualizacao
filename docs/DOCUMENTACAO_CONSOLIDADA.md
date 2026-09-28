@@ -9,10 +9,10 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 
 | | |
 |---|---|
-| **Versão deste documento** | 1.4 |
-| **Data** | 22 de setembro de 2026 |
+| **Versão deste documento** | 1.5 |
+| **Data** | 28 de setembro de 2026 |
 | **Autor** | Antonio Salomão |
-| **Nesta revisão** | Incorporados o resumo executivo (seção 0) e as decisões de arquitetura — ADRs (seção 4), que existiam como arquivos separados em `web/docs/` |
+| **Nesta revisão** | Integrados os ADRs 0007–0009 e o plano concluído; o backlog ativo ficou em `MELHORIAS.md` |
 | **Substitui** | Ver [seção 7 — histórico deste documento](#7-histórico-deste-documento-o-que-foi-consolidado) |
 
 > ### Este documento é uma fotografia, não a fonte da verdade
@@ -29,7 +29,7 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 > | Como rodar, instalar, o que o sistema faz | `web/README.md`, `atualizador/README.md` |
 > | Onde colocar cada coisa, como testar | `CONTRIBUTING.md` de cada metade |
 > | **Por que** foi feito assim | Seção 4 deste documento (painel web); `atualizador/docs/adr/` (agente C#) |
-> | O que mudou e quando | [`web/CHANGELOG.md`](CHANGELOG.md) |
+> | O que mudou e quando | [`web/CHANGELOG.md`](../CHANGELOG.md) |
 > | O que ainda falta fazer | [`docs/MELHORIAS.md`](MELHORIAS.md) |
 > | O que fazer quando quebra | [`docs/OPERACAO.md`](OPERACAO.md) |
 > | O que ainda pode dar errado no agente | [`atualizador/RISCOS-CONHECIDOS.md`](../../atualizador/RISCOS-CONHECIDOS.md) |
@@ -54,6 +54,7 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 5. [Como verificar](#5-como-verificar)
 6. [Auditoria de agosto/set 2026 — o que mudou desde então](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então)
 7. [Histórico deste documento](#7-histórico-deste-documento-o-que-foi-consolidado)
+8. [Plano de revisão concluído](#8-plano-de-revisão-concluído--24-a-28092026)
 
 ---
 
@@ -423,7 +424,7 @@ responde "onde eu ponho este arquivo novo?": **`utils/` não conhece o negócio,
 conhece o DOM, `components/` não conhece a tela em que está, `views/` conhece as duas coisas, e
 `app/` segura tudo junto.** Até set/2026 existia uma pasta `core/` única com 35 arquivos
 misturando as cinco categorias -- ver
-[ADR-0005](adr/0005-organizacao-do-client-por-responsabilidade.md).
+[ADR-0005](#adr-0005).
 
 Cada `View` é instanciada uma única vez (não recriada ao trocar de aba), para não perder o que o
 usuário estava digitando. Toda vez que a aba fica visível, `App.js` chama `view.refresh()`, que
@@ -769,7 +770,7 @@ desconhecido estragaria em silêncio a primeira atualização de um sistema novo
 
 O histórico já gravado foi acertado por um script de faxina de uma vez só
 (`scripts/normalizar-historico.js`, removido em set/2026 quando a migração 1 levou os sistemas
-para tabelas de ligação — ver [ADR-0007](adr/0007-esquema-normalizado-e-migracoes-versionadas.md)),
+para tabelas de ligação — ver [ADR-0007](#adr-0007)),
 com as mesmas funções. Resultado medido na época: 650 atualizações com
 sistema reescrito, 36 com responsável, 1 agendamento; as grafias fora do catálogo caíram de 144
 (1.164 ocorrências) para 6 (10 ocorrências), todas as seis deliberadamente ignoradas (`CTe`,
@@ -1223,7 +1224,8 @@ sem timeout deixaria o cliente inteiro parado até alguém perceber.
 ## 4. Decisões de arquitetura — ADRs do painel web
 
 > Esta seção reúne os Registros de Decisão de Arquitetura (ADR) que antes existiam como arquivos
-> separados em `web/docs/adr/`. Incorporados aqui em 22/09/2026 — ver
+> separados em `web/docs/adr/`. Os primeiros foram incorporados em 22/09/2026;
+> os ADRs 0007–0009, em 28/09/2026 — ver
 > [seção 7](#7-histórico-deste-documento-o-que-foi-consolidado). O agente C# (`atualizador/`) tem
 > seus próprios ADRs, em `atualizador/docs/adr/` — não fazem parte deste documento.
 
@@ -1240,9 +1242,10 @@ escolha deliberada — e reintroduz o problema que ela evitava.
 | [4.4](#44-adr-0004--injeção-de-dependência-na-mão-sem-container) | Injeção de dependência na mão, sem container | Aceita |
 | [4.5](#45-adr-0005--clientjs-dividido-por-responsabilidade) | `client/js/` dividido por responsabilidade | Aceita |
 | [4.6](#46-adr-0006--verificação-de-tipos-sem-etapa-de-build-escopada-ao-código-puro) | Verificação de tipos sem build, escopada ao código puro | Aceita |
-| [4.7](#47-adr-0007--piloto-rollback-e-concorrência-otimista) | Piloto, rollback e concorrência otimista | Aceita |
-| [ADR-0008](adr/0008-situacao-de-versao-do-cliente.md) (arquivo próprio) | Uma regra só para "o cliente está em dia?" | Aceita |
-| [ADR-0009](adr/0009-campanhas-de-atualizacao.md) (arquivo próprio) | Campanhas de atualização: meta guardada, andamento calculado | Aceita |
+| [4.7](#47--piloto-rollback-e-concorrência-otimista) | Piloto, rollback e concorrência otimista | Aceita |
+| [4.8](#adr-0007) | Sistemas e clientes em tabelas de ligação | Aceita |
+| [4.9](#adr-0008) | Uma regra para a situação do cliente | Aceita |
+| [4.10](#adr-0009) | Campanhas: meta guardada, andamento calculado | Aceita |
 
 **Como escrever um novo:** copie a estrutura de qualquer um — Contexto → Decisão → Consequências →
 Alternativas consideradas — como uma nova subseção `4.N` no fim desta lista. Um ADR não se edita
@@ -1251,6 +1254,7 @@ depois de aceito: se a decisão mudar, escreva um novo que o substitua e marque 
 a escolha óbvia tiver sido descartada por um motivo não óbvio — escolha de nome de variável não é
 ADR.
 
+<a id="adr-0001"></a>
 ### 4.1 ADR-0001 — Front-end sem framework e sem etapa de build
 
 **Situação:** Aceita
@@ -1291,6 +1295,7 @@ UI que este painel não tem. Web Components nativos — descartado por pouca mar
 encapsulamento melhor, mas o Shadow DOM complicaria o tema global por variáveis CSS, que é o
 mecanismo central da aparência do app.
 
+<a id="adr-0002"></a>
 ### 4.2 ADR-0002 — SQLite embarcado, com driver síncrono
 
 **Situação:** Aceita
@@ -1325,6 +1330,7 @@ que não existe aqui. Driver `sqlite3` (assíncrono) — descartado: depende de 
 node-gyp no Windows, e sua cadeia de dependências de build tinha vulnerabilidades conhecidas à
 época; o ganho (não bloquear o event loop) não se paga neste volume.
 
+<a id="adr-0003"></a>
 ### 4.3 ADR-0003 — Armazenamento de sessão escrito à mão
 
 **Situação:** Aceita
@@ -1359,6 +1365,7 @@ sessões. Sessão em JWT, sem estado no servidor — descartado: deixaria de exi
 invalidar sessão do lado do servidor, que é justamente o que `clearAll()` precisa fazer depois de
 restaurar um backup.
 
+<a id="adr-0004"></a>
 ### 4.4 ADR-0004 — Injeção de dependência na mão, sem container
 
 **Situação:** Aceita
@@ -1392,6 +1399,7 @@ e ~26 objetos, o custo de entendimento supera o ganho. Singletons via `module.ex
 Service()` — descartado: é o padrão que mais atrapalha teste em Node — uma vez que um módulo abre
 o banco no `require`, não há mais como testá-lo com outro banco sem truque de cache de módulo.
 
+<a id="adr-0005"></a>
 ### 4.5 ADR-0005 — `client/js/` dividido por responsabilidade
 
 **Situação:** Aceita
@@ -1444,6 +1452,7 @@ helpers) — descartado: é a divisão certa quando os módulos são independent
 componente é usado por quase toda tela; levaria a uma pasta `compartilhado/` que seria a `core/` de
 volta, com outro nome.
 
+<a id="adr-0006"></a>
 ### 4.6 ADR-0006 — Verificação de tipos sem etapa de build, escopada ao código puro
 
 **Situação:** Aceita
@@ -1500,7 +1509,7 @@ escritas para agradar a ferramenta, não para comunicar algo a quem lê. ESLint 
 de tipos — descartado para este problema: pega estilo e erros sintáticos, não pegaria nenhum dos
 achados acima (todos de tipo); continua sendo uma adição possível, ortogonal a esta.
 
-### 4.7 ADR-0007 — Piloto, rollback e concorrência otimista
+### 4.7 — Piloto, rollback e concorrência otimista
 
 **Situação:** Aceita em setembro de 2026.
 
@@ -1524,6 +1533,269 @@ alcance fica inteiramente no servidor. O histórico de versões permanece audit�
 rollback mudam estados em vez de apagar linhas. Interfaces de edição precisam conservar e reenviar
 a revisão recebida.
 
+
+<a id="adr-0007"></a>
+### 4.8 ADR-0007 — Sistemas e clientes em tabelas de ligação, com migrações numeradas
+
+**Situação:** Aceita (setembro de 2026)
+
+#### Contexto
+
+Três campos do banco guardavam listas ou vínculos como texto:
+
+- `atualizacoes.sistema` — a lista de sistemas de um atendimento, separada por
+  vírgula (`"B_Vendas, B_NFe"`). Em produção, 866 dos 945 atendimentos tinham
+  mais de um sistema.
+- `clientes.sistemas` — a mesma coisa para os sistemas de cada cliente.
+- `atualizacoes.cliente` e `agendamentos.cliente` — o **nome** do cliente,
+  sem id.
+
+Por cima disso, a versão oficial por sistema (setembro de 2026) acrescentou
+`atualizacoes.versoes_sistemas`, um JSON `{sistema: versão}` que repetia a lista.
+
+O custo aparecia de três formas:
+
+1. **Toda leitura reinterpretava texto.** Quebrar a lista por vírgula e
+   comparar nomes "sem caixa, acento nem prefixo `B_`" estava espalhado em seis
+   arquivos (`splitSystems`, `sameSystem`, `versaoDoRegistro`, `splitSistemas`,
+   `versaoRegistrada`…). Cada tela nova precisava lembrar de todas as regras.
+2. **O catálogo não garantia nada.** `B_NFCe` (100 usos), `B_Sped` (53), `CTe`,
+   `B_Rat` e outros apareciam no histórico sem existir na tabela `sistemas`, e
+   o mesmo sistema tinha grafias diferentes (`B_NFE`/`B_NFe`, `DFE`/`B_DFe`).
+   A comparação aproximada escondia isso na maior parte das telas, mas não em
+   todas: a situação do cliente listava `NFCe` e `B_NFCe` como dois sistemas.
+3. **O vínculo com o cliente era frágil.** Renomear um cliente exigia reescrever
+   o nome em duas outras tabelas, e 57 atendimentos já não batiam com cliente
+   nenhum.
+
+E o jeito de mudar o esquema — `ALTER TABLE ADD COLUMN` em try/catch, repetido a
+cada boot — servia para acrescentar coluna, mas não para mover dado de uma
+coluna para uma tabela e apagar a coluna.
+
+#### Decisão
+
+**Migrações numeradas** (`server/src/database/migracoes.js`). O número da última
+aplicada fica em `PRAGMA user_version`. Cada migração roda uma vez, em ordem,
+numa transação. Antes de aplicar qualquer migração pendente, o servidor copia o
+banco para `backups/` e confere a cópia com `integrity_check`; se a cópia falhar,
+a subida é interrompida. O bloco antigo de `ALTER TABLE` virou
+`Database._esquemaLegado` e só roda em banco ainda na versão 0.
+
+**Migração 1:**
+
+| Antes | Depois |
+|---|---|
+| `atualizacoes.sistema` (texto) + `versoes_sistemas` (JSON) | `atualizacao_sistemas (atualizacao_id, sistema_id, ordem, versao)` |
+| `clientes.sistemas` (texto) | `cliente_sistemas (cliente_id, sistema_id, ordem)` |
+| cliente por nome | `cliente_id` em `atualizacoes` e `agendamentos` (`ON DELETE SET NULL`) |
+| excluir sistema apagava a linha | `sistemas.ativo`: excluir desativa |
+
+- **Sistemas fora do catálogo viram inativos.** O histórico continua apontando
+  para eles, e eles não aparecem nas telas de cadastro. Cadastrar de novo o
+  mesmo nome reativa a mesma linha, com o histórico junto. As grafias de um
+  mesmo sistema viram uma linha só, com o nome mais usado.
+- **O nome do cliente continua em `atualizacoes.cliente`**, como cópia: é o que
+  se mostra quando o cliente é excluído ou quando o atendimento foi lançado para
+  um nome sem cadastro. Enquanto existe vínculo, a cópia acompanha o rename.
+  Cadastrar um cliente com o nome de atendimentos sem vínculo passa a ligá-los
+  a ele.
+- **`versoes_por_sistema`** distingue o atendimento cuja versão foi capturada
+  sistema a sistema do registro legado, em que a verdade é o texto livre de
+  `versao`. No legado, a versão só vira a versão de um sistema quando o
+  atendimento tinha um sistema só; com vários, fica nula, porque é ambígua.
+- **Visões `atualizacoes_v` e `clientes_v`** montam de volta as listas em texto,
+  no formato que a API sempre entregou. Por isso o front-end não mudou: `sistema`
+  continua `"B_Vendas, B_NFe"` e `versoes_sistemas` continua um JSON (nulo para
+  o legado).
+
+#### Consequências
+
+- Relatórios por sistema, o Resumo e a situação do cliente viraram consultas
+  SQL por id, com `ROW_NUMBER()` para "o último atendimento". O ensaio numa cópia
+  do banco de produção comparou o código antigo com o novo: relatório por
+  sistema (com e sem data de corte), Resumo e última versão por sistema saíram
+  idênticos. As únicas diferenças foram as grafias corrigidas e o desempate de
+  dois atendimentos no mesmo dia, que agora é sempre pelo último registrado.
+- A regra "qual sistema um nome quer dizer" existe num lugar só:
+  `SistemaRepository.resolver`/`resolverOuCriar`. Ela roda na gravação; a
+  leitura só compara ids.
+- **Mudança de esquema nova é uma migração nova** em `migracoes.js`, nunca de
+  volta em `_esquemaLegado`.
+- O que **não** mudou, de propósito: datas continuam `dd/mm/aaaa` em texto
+  (trocar mexeria na API, no front e na importação inteira), e `responsavel`
+  continua texto, porque há pessoas na equipe sem conta no sistema.
+- `scripts/normalizar-historico.js` foi removido: gravava direto na coluna que
+  deixou de existir, e a migração 1 refaz aquela normalização.
+- Para voltar atrás, é preciso a imagem anterior **e** o backup de antes da
+  migração, porque o código antigo não lê o esquema novo.
+
+<a id="adr-0008"></a>
+### 4.9 ADR-0008 — Uma regra só para "o cliente está em dia?"
+
+**Situação:** Aceita (setembro de 2026)
+
+#### Contexto
+
+Três telas respondiam a mesma pergunta de três jeitos:
+
+- **Resumo:** "em dia" era quem teve **qualquer** atendimento nos últimos 60
+  dias; o resto era "desatualizado". Não olhava versão nenhuma. Cliente
+  atendido ontem com a NFe velha aparecia em dia; cliente sem visita há três
+  meses, mas sem nenhuma versão nova para receber, aparecia desatualizado.
+- **Sistemas** e **ficha do cliente:** comparavam o texto da versão recebida
+  com o da oficial usando `===`. Quem recebeu uma versão **mais nova** que a
+  oficial (versão de teste, ou oficial rebaixada) aparecia como atrasado.
+- B_Atualizador e Suporte Bredas, que não têm versão atrasada, entravam na
+  conta como qualquer outro sistema.
+
+Medido numa cópia do banco de produção (24/09/2026), com a regra estrita
+("sem versão registrada = não dá para saber"): de 369 clientes, 21
+desatualizados, **348 pendentes** e 0 em dia. Os atendimentos de antes da
+versão oficial existir não gravaram versão (1.275 sistemas nessa condição), e
+o indicador novo não serviria para nada.
+
+#### Decisão
+
+Uma regra, no servidor, em `server/src/services/situacaoVersao.js`, usada pelo
+Resumo, pela aba Sistemas e pela situação do cliente.
+
+**Por sistema:**
+
+| Caso | Situação |
+|---|---|
+| Nenhum atendimento naquele sistema | Nunca atualizado |
+| Sistema sem versão oficial cadastrada | Sem referência |
+| Versão recebida (data) **anterior** à oficial | Desatualizado |
+| Versão recebida igual ou **posterior** à oficial | Em dia |
+| Sem versão (ou versão que não é data) → data do atendimento anterior à oficial | Desatualizado, **pela data** |
+| Sem versão → atendimento na data da oficial ou depois | Em dia, **pela data** |
+| Sem versão e data do atendimento inválida | Sem informação |
+
+- **Compara datas, não texto.**
+- **A fonte é o atendimento.** O que o agente reporta não entra na conta.
+- **"Pela data" é marcado**, e as telas escrevem "Em dia (pela data)". A versão
+  recebida continua "Não informada": nada é gravado retroativamente, e editar
+  o atendimento não muda isso.
+
+**Por cliente** (grupos que não se sobrepõem, para os totais somarem):
+
+- **Quem tem B_Vendas é julgado só pelo B_Vendas.** É o sistema que puxa a
+  atualização dos outros: com ele em dia, a equipe considera o cliente
+  atualizado, mesmo com outro sistema para trás. Na primeira versão desta
+  regra (todos os sistemas precisavam estar em dia), a produção mostrou 21
+  em dia, 245 desatualizados e 103 pendentes, de 369, o que não batia com o
+  que a equipe vê. O nome fica fixo no código, por escolha da equipe.
+- **Sem B_Vendas:** Desatualizado se algum sistema está desatualizado; senão
+  Em dia se todos estão em dia; senão Verificação pendente.
+- Quem não tem nenhum sistema que controle versão fica **fora da conta**.
+
+A lista "sistemas com mais clientes atrasados" continua contando por sistema.
+Um cliente em dia pelo B_Vendas ainda aparece nela se outro sistema dele
+estiver atrasado.
+
+**Sistemas fixos:** `sistemas.controla_versao` (migração 2), falso para
+B_Atualizador e Suporte Bredas. Fixos e inativos não entram na situação do
+cliente, mas continuam no cadastro, no histórico e na ficha.
+
+**Tempo sem atualização** continua existindo, como indicador separado ("Sem
+atualização há mais de N dias"), e não altera a situação de versão.
+
+#### Consequências
+
+- O Resumo troca a rosca por um card com três totais clicáveis. As listas vão
+  inteiras na resposta do `/resumo`, e o clique abre exatamente os clientes
+  contados.
+- A regra "pela data" é uma **dedução**, aceita pela equipe para o indicador
+  ser útil já. Com o tempo, atendimentos novos gravam a versão oficial e a
+  dedução deixa de ser usada naturalmente. Se ela passar a atrapalhar, basta
+  remover o ramo "pela data" de `situacaoDoSistema`: o resto não muda.
+- Datas continuam `dd/mm/aaaa`. Uma versão que não é data não é comparável e
+  cai na regra da data do atendimento.
+- A chave da regra da equipe continua `desatualizado_dias` (já gravada nas
+  instalações); só o texto na Administração mudou para "Sem atualização".
+- O que ficou para depois: tela para marcar ou desmarcar sistema fixo e
+  bloqueio na API de oficial para sistema fixo (resto do I04).
+
+<a id="adr-0009"></a>
+### 4.10 ADR-0009 — Campanhas de atualização: meta guardada, andamento calculado
+
+**Situação:** Aceita (setembro de 2026)
+
+#### Contexto
+
+A equipe precisava acompanhar uma entrega com prazo — "todo cliente de B_NFe
+na versão 25/09/2026 até o dia 30, por causa da Nota Técnica da SEFAZ" — e
+responder a qualquer momento: quantos já receberam, quem falta, quem já está
+agendado.
+
+O Resumo e a aba Sistemas não respondem isso. Os dois julgam contra a versão
+oficial **de hoje** (ADR-0008): se uma oficial mais nova sai no meio do
+prazo, todo mundo que cumpriu a meta volta a aparecer como atrasado, e o
+placar da entrega some.
+
+Três desenhos eram possíveis para guardar uma campanha:
+
+1. Copiar a lista de clientes na criação e marcar cada um como concluído à
+   mão.
+2. Copiar a lista de clientes na criação e marcar concluído automaticamente.
+3. Guardar só a meta (sistema, versão-alvo, prazo) e calcular tudo o resto a
+   cada leitura.
+
+#### Decisão
+
+**Opção 3.** A migração 4 cria uma tabela só, `campanhas`, com a meta. Nada
+mais é gravado por campanha:
+
+- **Quem entra:** os clientes que têm o sistema no cadastro
+  (`cliente_sistemas`), lidos ao vivo. Cliente cadastrado depois da criação
+  entra; cliente que perdeu o sistema sai.
+- **Quem está atualizado:** o último atendimento do cliente no sistema passa
+  por `situacaoDoSistema` (a mesma função da ADR-0008) contra a
+  **versão-alvo**. Versão recebida igual ou mais nova conta; sem versão
+  registrada, vale a data do atendimento, marcado "pela data". **Não existe
+  baixa manual**: a baixa é registrar a atualização em Atualizações, como
+  sempre.
+- **Quem já está agendado:** tem uma tarefa em aberto (não concluída, não
+  arquivada) do **mesmo sistema**. Estar atualizado ganha de estar agendado.
+- **A meta não anda:** a versão-alvo é uma cópia, não uma referência à
+  oficial. Editar a campanha muda só título, descrição e prazo.
+- **Encerrar congela o placar** (`total_final`, `atendidos_final`): a
+  campanha encerrada mostra o resultado que teve, não o de hoje. Reabrir
+  volta a contar ao vivo.
+- Sistemas fixos (ADR-0008, `controla_versao = 0`) não podem ter campanha: não
+  há versão para cobrar, e ela nunca terminaria.
+
+Código: `server/src/services/CampanhaService.js`,
+`server/src/database/CampanhaRepository.js`, migração 4 em
+`server/src/database/migracoes.js`; tela em `client/js/views/CampanhasView.js`.
+
+#### Consequências
+
+- Um lugar só para a verdade: o histórico de atualizações. A campanha nunca
+  discorda dele, porque não guarda nada que ele já saiba.
+- Registrar a atualização continua sendo o único gesto da equipe — ninguém
+  precisa lembrar de "dar baixa" também na campanha.
+- A lista de uma campanha ativa muda sozinha quando o cadastro muda. É o
+  desejado para uma meta do tipo "todo cliente do sistema"; não serve para
+  uma campanha de uma lista escolhida à mão (não pedida até aqui).
+- Cada leitura recalcula; com centenas de clientes e poucas campanhas, custa
+  algumas consultas já existentes (`ultimaPorClienteNoSistema`).
+- Excluir uma campanha apaga só a meta e o placar. Atualizações e tarefas
+  criadas por causa dela ficam.
+
+#### Alternativas consideradas
+
+- **Lista copiada com baixa manual (1):** duas fontes para a mesma pergunta,
+  que divergem no primeiro esquecimento; e o cliente cadastrado depois ficaria
+  de fora sem ninguém perceber.
+- **Lista copiada com baixa automática (2):** resolve o esquecimento, mas
+  ainda congela a população na criação e exige manter a cópia em dia a cada
+  mudança de cadastro.
+- **Julgar contra a oficial atual, como o Resumo:** foi o que motivou a
+  campanha — a meta andaria sozinha a cada nova oficial.
+- **Ligar a tarefa à campanha por uma coluna nova em `agendamentos`:** "já
+  agendado" por sistema já responde a pergunta sem mexer na tabela de tarefas,
+  e continua certo para tarefas criadas fora da campanha.
 ---
 
 ## 5. Como verificar
@@ -1560,7 +1832,7 @@ tipos batiam):
 ```bash
 cd web
 npm install       # uma vez; traz só o verificador de tipos
-npm run check     # tipos, sem etapa de build (ver adr/0006)
+npm run check     # tipos, sem etapa de build (decisão ADR-0006 na seção 4)
 npm test          # 458 testes: 359 no servidor, 99 no front-end
 ```
 
@@ -1674,7 +1946,7 @@ movidos para dentro da pasta junto com o resto. A pasta foi reorganizada em dois
 `PLANEJAMENTO_MELHORIAS_UX_UI.md` (planejamento de UX/UI, também 18/09) foram fundidos em
 [`MELHORIAS.md`](MELHORIAS.md). Achado na reconciliação: quase todo o roadmap do segundo já tinha
 sido entregue — confirmado no código e na entrada "Roadmap UX/UI entregue em quatro frentes" do
-[`CHANGELOG.md`](CHANGELOG.md) — mas o documento continuava descrevendo esses itens como proposta
+[`CHANGELOG.md`](../CHANGELOG.md) — mas o documento continuava descrevendo esses itens como proposta
 futura. `MELHORIAS.md` ficou com o que sobrou de genuinamente pendente.
 
 **Passo 2 (este).** `APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md` virou a [seção 0](#0-resumo-executivo)
@@ -1685,6 +1957,676 @@ o Claude Code carrega `CLAUDE.md` automaticamente), então fundi-los aqui dentro
 integrações. `CHANGELOG.md` também voltou para a raiz — é o `../CHANGELOG.md` referenciado em todo
 este documento.
 
-Resultado: `web/docs/` ficou com quatro arquivos de conteúdo — este (`DOCUMENTACAO_CONSOLIDADA.md`),
-[`OPERACAO.md`](OPERACAO.md), [`MELHORIAS.md`](MELHORIAS.md) e o [`README.md`](README.md) índice —
-mais o `atualizador/docs/adr/` do outro repositório, que não foi tocado por esta reorganização.
+Resultado naquela data: `web/docs/` ficou com quatro arquivos de conteúdo,
+incluindo um índice próprio. A organização atual está descrita abaixo.
+
+### 7.2 Consolidação dos planos e decisões — 28/09/2026
+
+O plano técnico vigente foi incorporado em [`MELHORIAS.md`](MELHORIAS.md#plano-vigente),
+antes do backlog histórico. O planejamento de revisão concluído foi preservado
+integralmente na [seção 8](#plano-revisao-concluido). Os ADRs 0007–0009 foram
+incorporados integralmente à seção 4. Os caminhos antigos passaram a apontar
+para essas seções. Na pasta `docs/` ficam apenas este arquivo,
+[`MELHORIAS.md`](MELHORIAS.md) e [`OPERACAO.md`](OPERACAO.md); o índice está no
+[`README.md`](../README.md) da raiz. Os arquivos especiais da raiz permanecem.
+
+---
+
+<a id="plano-revisao-concluido"></a>
+## 8. Plano de revisão concluído — 24 a 28/09/2026
+
+Esta seção preserva as decisões, o checklist e os critérios da revisão concluída. Não é o backlog vigente; para melhorias novas, consulte [MELHORIAS.md](MELHORIAS.md).
+
+Data: 24/09/2026 (finalizado em 28/09/2026)
+Situação: **FINALIZADO.** Todas as etapas (E0–E11), todos os itens das seções 3 a 12 e as evoluções 13.1 (Campanhas) e 13.4 (preferências e notificações) foram entregues e verificados. Este documento não recebe mais itens: 13.2 e 13.3 ficam registradas como sugestões para um planejamento futuro, sem compromisso de execução.
+Escopo: identidade, indicadores, tabelas, relatórios, agendamentos, clientes, sistemas, usuários, administração, configurações e evolução do produto.
+
+### 1. Objetivo e limites da análise
+
+Tornar o painel mais coerente com a operação: saber quem precisa de atualização, organizar atendimentos e produzir relatórios úteis, com menos controles disputando atenção.
+
+A análise foi feita sobre o código atual das telas, componentes, serviços e repositórios. As observações visuais do usuário são requisitos deste plano. O desalinhamento dos meses, o número 121 e a aparência do ícone precisam ser reproduzidos no navegador durante a execução: nesta etapa não houve nova inspeção visual de todas as telas nem consulta ao banco de produção para confirmar esse valor.
+
+A normalização dos relacionamentos de clientes, sistemas e atualizações, com migrações numeradas, já está consolidada (commit `cba726c`). A execução parte desse esquema, sem reconstruir o modelo antigo. Os documentos anteriores de planejamento não foram localizados pelos padrões pesquisados na árvore atual; este documento não presume que seus itens antigos ainda estejam pendentes.
+
+Somente este documento é criado nesta etapa. Interface, regras, dados e configurações do painel permanecem sem alteração por este trabalho.
+
+#### Regras já acordadas que precisam permanecer
+
+- Uma nova atualização guarda as versões oficiais dos sistemas informados naquele atendimento.
+- Alterar a oficial não muda a versão recebida anteriormente por um cliente.
+- Editar observações não deve reaplicar versões atuais ao atendimento antigo.
+- Histórico sem versão comprovada não recebe a referência de hoje retroativamente.
+- B_Atualizador e Suporte Bredas são sistemas fixos, conforme definição do usuário, sem controle de defasagem de versões.
+- O relatório do chamado segue o formato aprovado, sem ID, código, cidade ou motivo.
+- Converter agendamento em atualização deve sair da interface.
+- Publicação de pacotes continua em Versões; acompanhamento de agentes, em Distribuição.
+
+### 2. Rastreabilidade dos pedidos e prioridades
+
+| ID | Pedido | Diagnóstico atual | Direção proposta | Prioridade |
+|---|---|---|---|---|
+| I01 | Logo e nome sem identidade | Cabeçalho usa ATUALIZADOR / Gestor de clientes | ✅ Concluído em 24/09/2026 (seção 4) | P1 |
+| I02 | Situação dos clientes pouco útil | Em dia é calculado pelo complemento de clientes sem atualização recente | ✅ Concluído em 24/09/2026 (seções 3.3 e 5.1; ADR-0008) | P0 |
+| I03 | Tendência desalinhada | SVG com margens fixas e rótulo final junto ao ponto | ✅ Concluído em E4: 12 meses contínuos, escala responsiva e leitura acessível (seção 5.3) | P1 |
+| I04 | Sistemas fixos aparecem nos indicadores | Catálogo contém ambos, sem política explícita central de exclusão | ✅ Concluído em E2: classificação administrável, exclusões e API (seção 3.2) | P0 |
+| I05 | Fundo escuro no alerta | Estilos próprios do ícone e do estado is-alert | ✅ Concluído em E1: remoção do fundo escuro e apresentação coerente | P1 |
+| I06 | Excluir e outros botões sem borda | Uso de btn--ghost em ações | ✅ Concluído em E1 e E5: contorno visível, min-height 38px/32px e toolbar padronizada (seção 6) | P1 |
+| I07 | Datas poluem Atualizações | De/Até e atalhos ficam permanentemente na toolbar | ✅ Concluído em E5: filtros de data recolhíveis, chips visíveis e botão com contagem (seção 7.1) | P1 |
+| I08 | Planilhas com destaque excessivo | Importar/exportar no topo operacional | ✅ Concluído em E5: menu Mais ações com exportar e importar integrados (seção 7.2) | P1 |
+| I09 | Seletor e tela de relatórios feios | Modal com select e prévia longa | ✅ Concluído em E7: abas curtas, rodapé estável e filtro recolhível (seção 7.3) | P1 |
+| I10 | Agendamentos ocupa espaço | Faixa superior apenas para criar tarefa | ✅ Concluído em E6: criação junto à grade e filtros rápidos discretos (seção 8) | P1 |
+| I11 | Remover conversão | Botão, listener e método ainda existem | ✅ Concluído em E1: remoção de todos os caminhos de conversão (seção 8.1) | P1 |
+| I12 | Arquivar manualmente sumiu | Método e rota existem; recuperar acesso pela interface | ✅ Concluído em E1: ação explícita em tarefa concluída (seção 8.2) | P0 |
+| I13 | Acessos grande em Clientes | Topo tem gestão; linha tem cópia, que é outra função | ✅ Concluído em E6: gerenciar acessos diretamente na linha de cada cliente (seção 9.1) | P1 |
+| I14 | Grupo/Rede grande | Campo e coluna competem com informação principal | ✅ Concluído em E6: Grupo/Rede compacto no formulário e coluna limitada na grade (seção 9.2) | P1 |
+| I15 | Melhorar ficha e retirar CNPJ | Consulta já tem subabas e renderiza CNPJ | ✅ Concluído em E7: hierarquia compacta, telemetria de agentes em bloco próprio e retirada de CNPJ (seção 9.3) | P1 |
+| I16 | Separar filtro e versão oficial | Mesmo campo consulta ao digitar e grava ao salvar | ✅ Concluído em E3: consulta e gerenciador separados (seção 10) | P0 |
+| I17 | Último acesso em minúscula | Template usa tempoRelativo diretamente | ✅ Concluído em E1: capitalização local da célula (seção 11.2) | P2 |
+| I18 | Melhorar Administração | Recursos importantes já existem em várias seções | ✅ Concluído em E8: 7 seções por finalidade de uso, incluindo Dados e Operação (seção 11) | P1 |
+| I19 | Configurações excessivamente visuais | Conta/segurança existem, mas apresentação ocupa várias abas | ✅ Concluído em E8: abertura em Minha conta e 6 seções por finalidade de uso (seção 12) | P1 |
+| I20 | Novas funcionalidades/abas | Acompanhamento de metas e versões críticas | ✅ Concluído em E11: aba Campanhas com meta de versão, baixa automática e progresso (seção 13.1; ADR-0009) | P2/P3 |
+
+P0: corrigir significado ou função importante. P1: revisão principal. P2: melhoria complementar. P3: expansão opcional. Prioridade não equivale a dificuldade.
+
+### 3. Modelo de informação: corrigir antes de redesenhar
+
+#### 3.1 Conceitos diferentes
+
+| Conceito | Pergunta respondida | Fonte |
+|---|---|---|
+| Versão recebida | Qual versão foi aplicada ao sistema do cliente? | Cópia registrada no atendimento |
+| Versão oficial | Qual versão deve ser aplicada em um atendimento novo? | Catálogo de versões oficiais |
+| Tempo sem atendimento | Há quanto tempo não há atendimento registrado? | Data do último atendimento válido |
+
+Exemplo: cliente atendido ontem com NFe 22/09 fica desatualizado quando a oficial passa para 24/09, mas não está há 60 dias sem atendimento. Cliente sem atendimento recente pode continuar em dia se nenhuma versão dos seus sistemas mudou.
+
+#### 3.2 Sistemas fixos — I04
+
+Recomendação: atributo persistido no catálogo, por exemplo `controla_versao`, inicialmente falso para B_Atualizador e Suporte Bredas. O nome técnico deve acompanhar o esquema normalizado atual. Não espalhar listas independentes no cliente e no servidor.
+
+- [x] Identificar ambos pelo cadastro canônico, aproveitando aliases já normalizados (`SistemaRepository.resolver`).
+- [x] Criar migração idempotente, preservando IDs, vínculos e histórico (migração 2, `sistemas.controla_versao`).
+- [x] Manter os sistemas fixos no cadastro de sistemas usados pelo cliente.
+- [x] Excluir dos denominadores de cobertura de versões (card do Resumo).
+- [x] Excluir do gráfico "Atualizações Por Sistema Este Mês" (`atualizadosNoMesPorSistema` filtra `controla_versao`).
+- [x] Excluir de listas e contagens de clientes desatualizados por versão.
+- [x] Excluir da seleção da aba Sistemas e da lista de referências oficiais (`/sistemas/versoes`).
+- [x] Na ficha, apresentar em Serviços/componentes fixos, sem estado de atraso; a revisão geral da matriz continua em E7.
+- [x] Não apagar atendimentos, anotações ou referências antigas já registradas.
+- [x] Impedir na API que sistema fixo receba nova referência oficial por engano.
+- [x] Desconsiderar referência antiga eventualmente cadastrada nesses sistemas; ao reclassificar como atualizável, a referência preservada volta a aparecer.
+- [x] Não gerar lote de agendamentos de atualização por atraso desses sistemas; tarefa manual de instalação/acesso continua possível.
+- [x] Reservar alteração da classificação de sistema à administração (aba Classificação, rota com papel `admin`).
+
+Para volume de trabalho: um atendimento misto continua contando uma vez. Registro exclusivamente de instalação/acesso a componente fixo pode continuar no histórico de atendimentos, mas não deve inflar uma série chamada Atualizações de sistemas. Explicitar essa distinção no indicador.
+
+**Feito em E2 (25/09/2026):** os totais e a tendência atuais do Resumo foram rotulados como **Atendimentos**, pois contam cada registro uma vez, inclusive os exclusivamente de componentes fixos. O gráfico **Atualizações Por Sistema Este Mês** lista somente sistemas atualizáveis. A definição e o tratamento dos meses vazios da tendência permanecem em E4 (5.3).
+
+#### 3.3 Situação consolidada do cliente
+
+Grupos mutuamente exclusivos (decididos). **Cliente com B_Vendas é julgado só pelo B_Vendas** (decidido em 24/09/2026, depois de ver o card com dados reais: com todos os sistemas eram 21 em dia, 245 desatualizados e 103 pendentes, de 369). Sem B_Vendas, valem as regras abaixo sobre todos os sistemas:
+
+1. **Desatualizado:** existe sistema atualizável com versão recebida **anterior** à oficial (ou, sem versão registrada, atendido antes da data da oficial).
+2. **Verificação pendente:** não há atraso confirmado, mas algum sistema atualizável nunca teve atendimento, não tem oficial cadastrada ou tem data de atendimento inválida.
+3. **Em dia:** possui ao menos um sistema atualizável e todos têm versão recebida **igual ou posterior** à oficial (ou, sem versão registrada, atendimento na data da oficial ou depois).
+4. **Sem sistemas atualizáveis:** possui apenas fixos ou nenhum sistema; fica fora do denominador de cobertura.
+
+Comparação por data, não por igualdade de texto. Hoje `matrizVersoes.js` usa `instalada === versaoAtiva`, o que marca como atrasado um cliente à frente da oficial (versão de teste, oficial rebaixada). Recebida posterior à oficial conta como Em dia. Versão em formato que não se converte em data é tratada como versão ausente (regra "pela data" abaixo).
+
+**Fonte da versão recebida (decidido):** somente a versão registrada em atendimento. O que o agente reporta não entra na classificação; aparece separado, com origem identificada (ver 9.3). Hoje a ficha deixa o agente sobrepor o atendimento (`matrizVersoes.js`, `agente?.ultimaVersao || versaoRegistrada(...)`) e casa agente com cliente por CNPJ/nome; isso deixa de afetar a situação.
+
+Nunca atualizado continua como detalhe por sistema. No consolidado, falta de evidência entra em Verificação pendente. Cliente com atraso confirmado e outro sistema sem informação conta uma vez em Desatualizado; a falta de informação aparece como detalhe secundário.
+
+**Medido em 24/09/2026 (E0), numa cópia do banco de produção:** com a regra estrita, 21 desatualizados, 348 pendentes e 0 em dia, de 369 clientes. Havia 1.275 sistemas com atendimento sem versão, registrados antes de existir a versão oficial. **Decidido: atendimento sem versão é julgado pela data** do atendimento contra a data da oficial, marcado "(pela data)" na tela. A versão recebida continua "Não informada": nada é gravado retroativamente. A ação "confirmar versão atual" deixou de ser pré-requisito. Detalhes na [decisão ADR-0008](#adr-0008).
+
+- [x] Compartilhar regra no servidor entre Resumo, Sistemas, situação do cliente e relatório do cliente (`services/situacaoVersao.js`).
+- [x] Matriz da ficha revisada em E7: telemetria de agentes em bloco próprio sem sobrepor atendimento, e classificação de sistemas atualizáveis obtida da regra oficial do servidor/ADR-0008 (25/09/2026).
+- [x] Retornar totais de clientes, elegíveis e fora da avaliação.
+- [x] Garantir soma correta, sem duplicar cliente com vários sistemas.
+- [x] Usar IDs e relacionamentos normalizados atuais, sem novas junções por nome livre.
+- [x] Aproveitar cópias de versões já existentes, sem mecanismo concorrente.
+- [x] Comparar versões como datas; recebida posterior à oficial conta Em dia.
+- [x] Classificar só pela versão do atendimento; agente fica fora da regra.
+- [x] Testar oficial alterada, recebida à frente, formato não comparável, versões ausentes, vários sistemas, fixos e legados (`server/tests/situacaoVersao.test.js`).
+
+### 4. Identidade visual e nome principal — I01
+
+**Concluído em 24/09/2026.** Foram avaliadas duas propostas, Bredas Gestão e Gestor de Atualizações, aplicadas em barra, login e aba do navegador. A escolhida foi **Gestor de Atualizações**, com **Bredas Sistemas** como assinatura secundária.
+
+O cabeçalho anterior misturava ATUALIZADOR e Gestor de clientes, deixando incerto se o produto era o agente automático, um cadastro ou uma central de operação.
+
+- [x] Inventariar logo, favicon, login, sidebar, título do navegador e PDF. O PDF do relatório não usa marca e continua assim.
+- [x] Preparar duas propostas em contexto real antes de substituir arquivos.
+- [x] Definir símbolo simples e reconhecível em 16–32 px, vetorial.
+- [x] Verificar reutilização: o conceito (setas + raio) foi mantido; o PNG não servia, porque tinha fundo escuro embutido.
+- [x] Definir tipografia, proporção símbolo/nome, espaçamento e tamanho mínimo.
+- [x] Usar uma cor principal (`--cor-accent`, que acompanha o realce escolhido).
+- [x] Prever temas claro/escuro e sidebar aberta/recolhida.
+- [x] Retirar descritor quando faltar espaço, sem distorcer logo ou cortar nome.
+- [x] Atualizar nome, título do navegador e login de forma consistente.
+- [x] Documentar as aplicações escolhidas (tabela abaixo).
+
+#### Aplicações da marca
+
+| Onde | Como |
+|---|---|
+| Símbolo | `simboloMarca()` em `client/js/utils/icons.js`: SVG 32×32, traço 2.6, `currentColor`. Mesmo traçado em `assets/favicon.svg`; ao mudar um, mude o outro. |
+| Quadrado do símbolo | Fundo `--cor-accent` e desenho `--cor-sobre-accent`, no CSS. Nunca fundo embutido no desenho. |
+| Barra lateral aberta | Símbolo 34 px (desenho 24 px) + "Gestor de / Atualizações" em duas linhas, Sora extra 16 px. Sem descritor. |
+| Barra recolhida | Só o símbolo. |
+| Login (tela larga) | Símbolo 48 px, nome numa linha em `--txt-xl`, e a linha "Bredas Sistemas · Atualizações e atendimento dos clientes, num só lugar." |
+| Login (celular) | Símbolo 44 px no cartão; subtítulo "Gestor de Atualizações". |
+| Aba do navegador | "‹Tela› · Gestor de Atualizações"; `favicon.svg`, com `favicon.png` (64 px) como reserva e para as notificações. |
+| O que não usar | "ATUALIZADOR" como nome do painel: é o nome do agente. |
+
+Aceite: legibilidade em 390 px e desktop, sem deformação, fundo acidental, nome cortado ou assinaturas contraditórias.
+
+### 5. Resumo e gráficos — I02, I03, I05
+
+#### 5.1 Situação dos clientes
+
+Substituir a rosca genérica por um card **Atualização dos clientes**, com barra horizontal de distribuição e três totais clicáveis: Em dia, Desatualizados e Verificação pendente. Informar quantos clientes são elegíveis e quantos não participam da avaliação. O gráfico é auxiliar; os valores e ações precisam funcionar sem ele.
+
+**Feito em 24/09/2026 (I02).** Cada total abre uma gaveta com a lista exata. Os nomes de sistema levam à aba Sistemas já filtrada.
+
+- [x] Aplicar categorias da seção 3.3, em vez do prazo de 60 dias.
+- [x] Mostrar número e percentual com denominador explícito.
+- [x] Abrir lista com o mesmo filtro ao clicar em cada situação (as listas vêm na mesma resposta do `/resumo`).
+- [x] Mostrar até três sistemas com mais clientes desatualizados e Ver todos.
+- [x] Estado vazio orienta cadastro quando não há clientes e vínculo/classificação quando só há clientes fora da avaliação; todos pendentes recebem orientação própria.
+- [x] Não mostrar 100% em dia quando não houver clientes elegíveis.
+- [x] Não misturar falha/offline de agente com versão registrada em atendimento.
+- [x] Conferir que a população aberta pelo clique corresponde à contagem (verificado no navegador com dados sintéticos).
+
+#### 5.2 Sem atendimento há mais de 60 dias
+
+- [x] Renomear indicador para **Sem atualização há mais de 60 dias** (a equipe preferiu "atualização" a "atendimento"), usando o prazo configurado, e o texto da regra na Administração.
+- [x] Separar Nunca atendidos de clientes com atendimento antigo (vêm primeiro na lista, com "Nunca").
+- [x] Corrigir destino do clique: hoje abre Sistemas sem reproduzir o conjunto contado.
+- [x] Abrir lista com cliente, último atendimento e dias; responsável somente se houver fonte definida.
+- [x] Remover fundo escuro arredondado do ícone de alerta.
+- [x] Usar ícone simples e cor discreta, coerente com os demais indicadores.
+- [x] Não tratar acompanhamento preventivo como falha crítica do sistema. Verificado: nenhuma palavra "falha"/"crítico" ligada ao indicador; o sino de notificações (`domain/notificacoes.js`) nem inclui "sem atualização" entre os avisos, só agendamentos atrasados e agentes.
+- [x] Validar contraste, foco e leitura nos dois temas. Contraste calculado do valor vermelho contra o fundo do card: 6.17:1 (escuro) e 5.44:1 (claro), acima do mínimo de 4.5:1. Foco por teclado usa a regra global `::focus-visible`, sem reset em `.stat-tile`. Validação visual pixel a pixel fica para o E10 (sem ferramenta de navegador nesta etapa).
+
+#### 5.3 Tendência mensal
+
+**Concluído em E4 (25/09/2026).** A série do servidor conta atualizações registradas, uma por registro, inclusive as que tratam apenas de componente fixo. Mostra exatamente 12 meses consecutivos até o atual e não conta datas posteriores a hoje como realizadas. O número do mês corrente está no cabeçalho do gráfico, identificado como parcial; o indicador de variação compara os mesmos primeiros dias do mês atual e do anterior, limitando ambos ao comprimento do mês mais curto.
+
+- [x] Definir 12 meses consecutivos até o mês corrente.
+- [x] Preencher meses sem registros com zero, sem saltos no calendário.
+- [x] Excluir datas futuras da série de realizados; permanecem no histórico para correção.
+- [x] Definir unidade: atualizações registradas, uma por registro, inclusive atualizações mistas e exclusivas de componentes fixos.
+- [x] Acrescentar folga superior ao eixo para o maior valor.
+- [x] Alinhar os meses na mesma linha-base e na posição dos respectivos pontos.
+- [x] Ajustar âncoras nas extremidades para não cortar mês/ano.
+- [x] Adaptar quantidade de rótulos à largura real do card, inclusive ao recolher a sidebar.
+- [x] Tirar número final flutuante e mostrar o total do mês corrente no cabeçalho; detalhes no tooltip.
+- [x] Número flutuante removido; sem colisão com linha, grade ou borda.
+- [x] Usar segmentos retos, sem curva que sugira valores negativos ou picos inexistentes.
+- [x] Oferecer tooltip por teclado/toque nos pontos do gráfico.
+- [x] Identificar mês corrente como parcial.
+- [x] Comparar percentuais somente entre períodos de igual duração; base zero omite a porcentagem.
+
+Aceite: 0, 1, 2, 6 e 12 meses; série zerada; máximo 121; máximo no primeiro/último ponto; zero alternado com picos; virada de ano; 390, 768, 1280 e 1440 px; sidebar aberta/recolhida.
+
+Validação E4: testes de banco cobrem virada de ano, meses sem registro, data futura e comparação de mês de 31 dias com anterior de 30. No navegador, cenários de 0/1/2/6/12 pontos, série zerada, máximo 121 nas pontas, zero alternado com picos, foco e setas do teclado, larguras 390/768/1280/1440 px e sidebar aberta/recolhida.
+
+**Ajuste após E4 (25/09/2026):** por decisão do usuário, a seção expansível “Ver valores dos 12 meses” foi removida; o gráfico ocupa a altura disponível no card, mantendo tooltip por mouse, toque e teclado. Os textos visíveis do painel, relatórios e exportação passaram a usar “atualização” em vez de “atendimento”. Os nomes internos e registros históricos permanecem intactos.
+
+Na consulta por sistema, a coluna “Oficial” foi retirada da tabela porque a versão oficial do sistema selecionado já aparece acima dela. A coluna da data passou a se chamar “Última atualização”.
+
+### 6. Botões, tabelas e espaço — I06
+
+- [x] Definir variantes: primário, secundário com borda, perigo com borda e ação compacta com borda (25/09/2026).
+- [x] Retirar `btn--ghost` das ações que precisam se apresentar como botões, especialmente Excluir. Feito no E1 (escopo parcial do I06): 10 botões `btn--danger` que também tinham `btn--ghost` (Excluir em Clientes/Atualizações/Agendamentos, Encerrar sessão(ões), Restaurar tudo/backup, Remover acesso) — `btn--ghost` zerava a borda de `btn--danger` em repouso e disputava a cor do hover.
+- [x] Manter borda perceptível em repouso, não apenas no hover. `btn--danger` sozinho já usa `--cor-borda-forte` em repouso; sem o `btn--ghost` por cima, a borda aparece.
+- [x] Distinguir ação destrutiva por rótulo e cor, não só por ícone. Já valia (rótulo + `btn--danger`); confirmado que nenhum desses botões dependia só do ícone `alerta`.
+- [x] Padronizar altura, raio, espessura do traço e distância ícone/texto (25/09/2026).
+- [x] Revisar linhas, formulários, modais e rodapés; evitar substituição global cega (28/09/2026). Revisão tela a tela no navegador, com correções pontuais: colunas Versão e Data de Atualizações cortavam o ano ("26/09/2…") e passaram a 96 px; o novo modal de importação e o formulário de campanha seguem o rodapé padrão (`modal-box__actions`).
+- [x] Manter nome acessível e dica para ícones sem texto (28/09/2026). Auditoria no navegador em todas as abas: nenhum botão visível sem nome acessível. Os fechar "×" da gaveta e do relatório ganharam `title`. `client/tests/acessibilidade.test.mjs` trava a regra: todo `btn--icon` precisa de `aria-label` **e** `title`.
+- [x] Padronizar desabilitado, processamento e foco por teclado (28/09/2026). Botão processando (`aria-busy`, de `marcarOcupado`) deixou de parecer desabilitado: fica legível, com spinner e cursor de progresso. Desabilitado continua com opacidade 0.5; foco usa a regra global `:focus-visible`.
+- [x] Reduzir peso visual sem reduzir excessivamente alvo de toque (28/09/2026). Em tela de toque (`pointer: coarse`), botões só de ícone crescem de 26 para 40 px e `btn--small` ganha altura mínima de 40 px; o ícone e o desktop não mudam.
+- [x] Alinhar início das grades nas abas operacionais (25/09/2026).
+- [x] Conferir largura aproveitada e equilíbrio à direita com sidebar recolhida (28/09/2026). Medido em 1440 px nas 11 telas, barra aberta e recolhida: o conteúdo ocupa a área inteira, com a mesma margem (24 px) dos dois lados e sem rolagem horizontal.
+
+Aceite: botões reconhecíveis em claro/escuro, sem deslocamento no hover. Menus e navegação não devem receber indevidamente estilo de botão de formulário.
+
+### 7. Atualizações — I07, I08, I09
+
+#### 7.1 Filtros de data
+
+Toolbar proposta: `Buscar | Responsável | Filtros (n) | Relatórios | Mais ações | + Nova atualização`.
+
+- [x] Recolher De/Até e atalhos de período em Filtros (25/09/2026).
+- [x] Exibir chip do período aplicado mesmo quando o painel estiver fechado (25/09/2026).
+- [x] Fechar filtros não deve limpar o recorte (25/09/2026).
+- [x] Manter Limpar filtros e contagem de resultados acessíveis (25/09/2026).
+- [x] Preservar preferências existentes de filtros e período inicial (25/09/2026).
+- [x] Validar intervalo invertido, data incompleta, limpeza e aplicação (25/09/2026).
+- [x] Não consultar silenciosamente um recorte inválido enquanto a pessoa digita (25/09/2026).
+- [x] Lista, relatório e exportação devem usar o mesmo conjunto completo, não só a página (25/09/2026).
+- [x] Em tela pequena, acomodar controles em linhas claras sem empurrar a grade por excesso de ações secundárias (25/09/2026).
+
+#### 7.2 Importar e exportar planilha
+
+Recomendação: **Exportar resultado (.xlsx)** em Mais ações da lista; **Importar planilha** em fluxo dedicado de Dados, acessível pela Administração e por entrada discreta quando o papel permitir.
+
+Hoje operadores podem importar. Mover exclusivamente para Administração pode retirar uma permissão existente. Recomendação inicial: preservar autorização atual por entrada restrita ao fluxo de Dados, sem conceder acesso completo à Administração. Se a intenção for tornar importação exclusiva de admin, essa mudança precisa ser explícita.
+
+- [x] Criar menu Mais ações com teclado, Escape e restauração de foco (25/09/2026).
+- [x] Manter exportação perto dos filtros e sem privilégios novos para quem já consulta (25/09/2026).
+- [x] Indicar recorte e usar nome de arquivo identificável (25/09/2026).
+- [x] Mover importação para fluxo com orientação do formato aceito (28/09/2026). `components/ImportacaoModal.js`: orientação → prévia → resultado, aberto por Mais ações em Atualizações (operador e admin, como antes) e por Administração › Dados. Permissão inalterada.
+- [x] Prévia com linhas válidas, erros e possíveis duplicidades (28/09/2026). `POST /atualizacoes/import/previa` lê e classifica sem gravar nada, nem sistema novo no catálogo.
+- [x] Não aplicar versão oficial atual retroativamente a importações históricas (continua em `_versoesLegadas`; agora com teste).
+- [x] Diferenciar erro de arquivo, coluna, data e cliente desconhecido (28/09/2026). Arquivo que não abre, planilha vazia e falta da coluna Cliente recusam o arquivo; cliente em branco e data fora de dd/mm/aaaa são erros de linha (a linha fica de fora); cliente sem cadastro, sistema fora do catálogo e duplicidade são avisos. Colunas desconhecidas são listadas.
+- [x] Confirmar aplicação após prévia, com resultado no Histórico (28/09/2026). O botão diz quantas linhas entram; possíveis duplicidades são puladas por padrão (caixa marcada); o Histórico registra importadas e ignoradas.
+- [x] Transação e recuperação de falha do lote (28/09/2026). O lote grava numa transação única: uma falha no meio não deixa nada gravado, e a tela avisa "Nenhuma linha foi gravada".
+
+**Mudança de comportamento:** antes, linha com data fora do formato era importada assim mesmo; agora fica de fora e aparece na prévia. Testes em `server/tests/importacao.test.js`.
+
+A prévia da importação pode ser entrega posterior: reposicionar botões não precisa esperar a ampliação de todo o importador.
+
+#### 7.3 Tela dos relatórios
+
+Relatório por período, cópia, impressão/PDF e Excel formatado já existem. Melhorar acesso e apresentação, sem reconstruir recursos equivalentes.
+
+- [x] Trocar select por abas curtas: Atendimento e Cliente (25/09/2026).
+- [x] Período permanece entrada própria, utilizável sem selecionar um cliente (25/09/2026).
+- [x] Não oferecer Atendimento sem registro selecionado (25/09/2026).
+- [x] Cabeçalho informa contexto e oferece fechar de forma discreta (25/09/2026).
+- [x] Prévia rolável com rodapé estável: Copiar e Imprimir/Salvar PDF (25/09/2026).
+- [x] Filtro de histórico somente na aba Cliente, recolhido inicialmente (25/09/2026).
+- [x] Diferenciar Situação atual de Histórico no período; o filtro não representa uma situação histórica reconstruída (25/09/2026).
+- [x] Reduzir repetição de títulos, caixa alta e espaços vazios (25/09/2026).
+- [x] Sistemas em tabela no desktop e blocos no celular, sem cortar informações (25/09/2026).
+- [x] Texto para copiar permanece simples, sem alinhamento manual com espaços (25/09/2026).
+- [x] PDF multipágina não pode cortar conteúdo nem incluir navegação e botões (25/09/2026).
+- [x] Copiar apresenta sucesso sem obrigatoriamente fechar o relatório (25/09/2026).
+- [x] Não reintroduzir campos retirados do chamado (25/09/2026).
+
+Formato obrigatório do chamado:
+
+```text
+ATUALIZAÇÃO — 24/09/2026
+
+Cliente: Mercado Central
+Sistemas: B_Vendas, B_NFe
+B_Vendas: 09/09/2026 (anterior: 17/08/2026)
+B_NFe: 22/09/2026 (anterior: 15/09/2026)
+Máquinas: 3
+Por: Antonio
+Obs: Sistemas atualizados no servidor e nos dois caixas.
+Realizados testes de venda e emissão de nota fiscal.
+```
+
+Aceite: sem ID, código, cidade ou motivo; versão anterior apenas quando conhecida e diferente; observação conserva quebras de linha; alteração de oficial não reescreve relatório antigo.
+
+### 8. Agendamentos — I10, I11, I12
+
+Toolbar junto à grade: `Buscar | Responsável | Status | Filtros | + Novo agendamento`.
+
+Abaixo, filtros rápidos discretos: Minhas tarefas, Hoje, Atrasadas e Arquivadas. Lista é o padrão recomendado; Kanban existente permanece alternativa, compartilhando dados e regras.
+
+- [x] Remover faixa superior usada apenas pelo botão de criação (25/09/2026).
+- [x] Mover criação para toolbar com tamanho secundário e borda (25/09/2026).
+- [x] Alinhar início da grade com Clientes e Atualizações (25/09/2026).
+- [x] Padronizar busca, filtros e paginação (25/09/2026).
+- [x] Destacar cliente/tarefa; responsável, prazo e status legíveis na linha (25/09/2026).
+- [x] Destacar alta/urgente sem selos excessivos para prioridade normal (25/09/2026).
+- [x] Expor edição, conclusão e arquivamento conforme estado (25/09/2026).
+- [x] Reaproveitar prioridades, horários, responsáveis, observações e Kanban existentes (25/09/2026).
+- [x] Garantir contagens e conjuntos corretos nos filtros rápidos (25/09/2026).
+
+#### 8.1 Remover conversão
+
+- [x] Remover Converter do formulário, menus de linha, comandos e dicas.
+- [x] Localizar chamadores antes de retirar handlers e método sem uso.
+- [x] Manter cadastro de atualização independente do agendamento.
+- [x] Remover instruções antigas de conversão da documentação.
+- [x] Testar que concluir tarefa não cria atualização nem altera versão de cliente.
+
+#### 8.2 Recuperar arquivamento manual
+
+A regra atual permite arquivar tarefa concluída. Preservá-la nesta entrega; permitir arquivar pendentes seria outra decisão de negócio.
+
+- [x] Mostrar Arquivar no cartão concluído e no formulário correspondente.
+- [x] Não oferecer ação inválida em tarefa pendente; explicar quando necessário.
+- [x] Reutilizar rota existente, com retorno claro de sucesso ou erro.
+- [x] Retirar da lista ativa sem apagar histórico.
+- [x] Manter acesso a Arquivadas mesmo com contagem zero.
+- [x] Diferenciar Desarquivar de Reabrir: a operação existente também muda o status para A Fazer.
+- [x] Preservar arquivamento automático e sua configuração administrativa.
+- [x] Testar Kanban, filtro Arquivadas e papéis admin/operador/consulta (cartão e autorização da rota). A tela atual não tem lista tabular; a reorganização da grade fica para E6.
+
+Melhorias posteriores: reagendamento com motivo, lembrete de retorno e checklist de execução. Recorrência e calendário mensal ficam fora da primeira entrega por exigirem regras de série, duplicação e vencimento.
+
+### 9. Clientes e Consulta — I13, I14, I15
+
+#### 9.1 Acessos na linha
+
+- [x] Retirar Acessos da toolbar global (25/09/2026).
+- [x] Acrescentar Gerenciar acessos diretamente na linha de cada cliente (25/09/2026).
+- [x] Manter Copiar acessos separado: a ação atual de cópia não substitui a gestão (25/09/2026).
+- [x] Usar menu de linha quando ficha, acessos, edição e exclusão não couberem (25/09/2026).
+- [x] Passar o ID da linha para a ação, sem depender de seleção prévia (25/09/2026).
+- [x] Evitar propagação do clique que abra simultaneamente o formulário (25/09/2026).
+- [x] Preservar restrições de usuários de consulta (25/09/2026).
+
+**Revisto em 28/09/2026 (decisão do usuário):** o botão Copiar acessos saiu da linha; fica só Gerenciar acessos, onde cada identificador tem cópia própria. O papel Consulta vê os acessos na ficha (subaba Acessos Remotos).
+
+#### 9.2 Grupo/Rede
+
+- [x] Priorizar largura do nome do cliente (25/09/2026).
+- [x] Limitar coluna Grupo/Rede com quebra controlada ou reticências e leitura completa acessível (25/09/2026).
+- [x] Compactar campo no formulário, agrupando com Código/Cidade quando couber (25/09/2026).
+- [x] No celular, manter rótulo e conteúdo legíveis em disposição vertical (25/09/2026).
+- [x] Não criar selo ou bloco chamativo para valor vazio (25/09/2026).
+- [x] Preservar busca por grupo, autocomplete e dados existentes (25/09/2026).
+
+#### 9.3 Ficha do cliente
+
+Cadastro, Sistemas e Acessos já existem como subabas. O foco deve ser hierarquia, consistência e informação útil.
+
+- [x] Cabeçalho com nome, código e cidade; grupo apenas quando preenchido (25/09/2026).
+- [x] Remover CNPJ do subtítulo e dos campos da ficha (25/09/2026).
+- [x] Não remover identificação por CNPJ dos agentes em Distribuição: é outro uso (25/09/2026).
+- [x] Resumo compacto: último atendimento, sistemas desatualizados e informação pendente (25/09/2026).
+- [x] Compartilhar comparação de versões com Sistemas e relatório do cliente (25/09/2026).
+- [x] Separar componentes fixos dos sistemas atualizáveis (25/09/2026).
+- [x] Não confundir versão publicada do agente com oficial do histórico operacional (25/09/2026).
+- [x] Quando houver dados do agente, mostrar em bloco próprio (versão reportada, último contato, falha), sem alterar a situação do sistema, que vem só do atendimento (25/09/2026).
+- [x] Histórico cronológico com observações expansíveis e relatório do atendimento (25/09/2026).
+- [x] Acrescentar próximos agendamentos se puder reutilizar consulta existente; caso contrário, entregar depois (25/09/2026).
+- [x] Acessos por máquina em lista compacta com cópia individual (25/09/2026).
+- [x] Estados vazios curtos, sem vários campos preenchidos com travessões (25/09/2026).
+- [x] Preservar seleção e pesquisa ao voltar da ficha (25/09/2026).
+
+Aceite: nome longo, sem grupo, sem sistemas, apenas fixos, sem histórico, vários acessos e histórico extenso.
+
+**Revisto em 28/09/2026 (decisão do usuário):** o resumo compacto ficou só com **Última atualização** (o rótulo dizia "Último atendimento"); o cartão Situação dos sistemas saiu, porque repetia a Matriz de Versões.
+
+### 10. Sistemas e versões oficiais — I16
+
+Recomendação: não deixar dois campos de data permanentes. Separar consulta e manutenção.
+
+Toolbar: `Sistema | Situação | Buscar cliente | Filtros | Versões oficiais`.
+
+Abaixo, referência de leitura: `Versão oficial de B_NFe: 22/09/2026`. Edição dentro de Versões oficiais.
+
+#### 10.1 Consulta
+
+- [x] Situação: Todos, Em dia, Desatualizados, Sem informação.
+- [x] Busca por cliente/cidade sem alterar versão.
+- [x] Oferecer Último atendimento antes de em Filtros, com data opcional. Sem atendimento fica fora desse recorte de data; aparece em Sem informação quando não há data aplicada.
+- [x] A data filtra o atendimento; não substitui a oficial usada na classificação de versão.
+- [x] Retirar ambiguidade atual: a consulta não tem ação de salvar referência.
+- [x] Colunas: Cliente, Último atendimento, Versão recebida, Oficial e Situação; cidade secundária.
+- [x] Abrir ficha na linha para investigar pendência.
+- [x] Excluir fixos da seleção principal de controle.
+- [x] Preservar filtros ao voltar, buscando a referência oficial atual a cada entrada.
+
+#### 10.2 Gerenciador de oficiais
+
+- [x] Uma linha por sistema atualizável, com versão salva.
+- [x] Mostrar autor/data da alteração quando disponíveis; a migração versionada 3 acrescenta as duas colunas também aos bancos existentes. Referências antigas mostram autor/data não registrados.
+- [x] Edição explícita por linha com Salvar/Cancelar e validação de data.
+- [x] Explicar: novos atendimentos usam a oficial; os existentes preservam versões recebidas.
+- [x] Referência ausente não implica Em dia (`Sem referência` no servidor).
+- [x] Preservar papéis atuais de gravação; consulta apenas visualiza.
+- [x] Invalidar os dados locais de Resumo, Sistemas, Consulta e relatórios após mudança.
+- [x] Detectar edição concorrente antes de sobrescrever uma oficial alterada por outra pessoa (comparação atômica com a referência anterior; HTTP 409).
+- [x] Fechar painel ou trocar seleção não grava alterações.
+
+Aceite: filtro nunca grava; salvar não reescreve atendimento; sistemas aceitam oficiais diferentes; limpar oficial não torna todos os clientes atualizados.
+
+**Validado em E3 (25/09/2026):** testes de API cobrem autoria, referência anterior obrigatória e conflito HTTP 409; os testes de serviço cobrem filtro de atendimento sem substituir a oficial e preservação da versão recebida. No navegador, em 1280 e 390 px, o filtro não enviou PUT, a edição atualizou a referência mostrada, não houve erro de JavaScript nem rolagem horizontal.
+
+### 11. Usuários e Administração — I17, I18
+
+#### 11.1 Último acesso
+
+- [x] Renderizar Hoje, Ontem e Há 2 dias com inicial maiúscula na célula.
+- [x] Manter data/hora completa no detalhe acessível.
+- [x] Preservar Nunca entrou quando não houver login.
+- [x] Alterar apresentação local, sem capitalizar todas as frases de `tempoRelativo()` usadas em textos corridos.
+
+#### 11.2 Organização por finalidade
+
+| Seção proposta | Conteúdo | Situação |
+|---|---|---|
+| Pessoas e permissões | Usuários, papéis e ações de conta | Existe; reorganizar |
+| Operação | Prazos, arquivamento, classificação dos sistemas | Parte existe; ampliar |
+| Dados | Importação, exportações administrativas e validações | Nova organização; fluxos parcialmente existentes |
+| Integrações | Atualizador, alertas externos, URL do painel | Recursos já distribuídos |
+| Backups e recuperação | Cópias, retenção, restauração | Existe |
+| Auditoria | Histórico de alterações e filtros | Existe |
+| Diagnóstico | Saúde e falhas relevantes do servidor | Existe |
+
+- [x] Reduzir descrições longas e cabeçalhos repetidos.
+- [x] Mostrar estado resumido sem buscar diagnóstico pesado ao abrir Usuários.
+- [x] Identificar formulários que afetam toda a equipe.
+- [x] Salvar por formulário/seção com indicação de alterações pendentes.
+- [x] Proteger contra perda de edição ao sair da seção.
+- [x] Manter segredos mascarados e fora do Histórico.
+- [x] Não transformar infraestrutura e segredos de implantação em preferências pessoais.
+- [x] Reaproveitar auditoria existente, sem outra lista de histórico concorrente.
+- [x] Backup saudável precisa considerar verificação, não só existência de arquivo.
+- [x] Ações de restauração/exclusão permanecem em seu contexto, com consequência clara.
+- [x] Autorizar na API, além de esconder controles na tela.
+
+### 12. Configurações para a rotina — I19
+
+Nome, senha, sessões, pesquisa e restauração por seção já existem. O problema é prioridade e organização: várias abas cuidam de como a tela parece, em vez de como a pessoa trabalha.
+
+**Escopo da primeira entrega (decidido): só reorganizar o que já existe.** Nenhuma preferência ou notificação nova. O mesmo vale para a Administração (11.2): reagrupar seções existentes; Dados reúne fluxos que já existem (importação, exportações).
+
+| Grupo | Conteúdo | Escopo |
+|---|---|---|
+| Minha conta | Nome, senha, sessões e sair dos outros aparelhos | Pessoal |
+| Trabalho diário | Preferências já existentes de tela inicial, filtros, lista/Kanban e linhas por página | Pessoal |
+| Notificações | Controles já existentes, sem novos tipos de evento | Pessoal |
+| Interface/acessibilidade | Tema, densidade, texto, movimento, contraste e foco | Pessoal |
+| Regras da equipe | Link para Administração; não duplicar formulários | Global/admin |
+| Sobre e ajuda | Versão do painel, atalhos e significado das situações | Informativo |
+
+- [x] Abrir em Minha conta ou Trabalho diário, não num catálogo de temas.
+- [x] Recolher personalizações avançadas em subseção.
+- [x] Manter tema, texto, densidade e acessibilidade fáceis de encontrar.
+- [x] Reavaliar destaque de fonte, fundo decorativo, perfis visuais e largura ajustável.
+- [x] Reaproveitar busca e restauração por seção.
+- [x] Identificar ajuste pessoal versus global quando houver risco de confusão.
+- [x] Preservar valores já salvos ao mover opções de lugar.
+- [x] Testar restauração e conta sem acesso administrativo.
+
+Ficaram para a evolução 13.4 (entregue em 28/09/2026): tipos de evento no sino, som, horário silencioso, preferências de relatório e validação das preferências guardadas no servidor. A persistência por usuário no servidor e a sincronização entre navegadores já existiam (`PreferenciaService` e `conectarPreferencias`).
+
+Segurança futura: encerramento por inatividade administrável e autenticação em dois fatores podem ser úteis, mas exigem servidor, recuperação e testes próprios. Não são apenas controles novos na interface e ficam fora da primeira revisão visual.
+
+### 13. Sugestões de evolução — I20
+
+#### 13.1 Campanhas de atualização — metas de versão e prazos críticos (E11)
+
+Pergunta: **como acompanhar o avanço e a entrega de uma versão crítica ou prazo fiscal em todos os clientes?**
+
+Substitui a proposta anterior da Central de pendências. Permite criar metas temporárias focadas em um sistema e versão mínima (ex.: B_NFe 25/09/2026 para uma Nota Técnica da SEFAZ), monitorando em tempo real o percentual de clientes atualizados contra os pendentes.
+
+**Concluído em E11 (28/09/2026).** Decisões e motivos na [decisão ADR-0009](#adr-0009).
+
+- [x] Nova aba no menu lateral: **Campanhas** (ícone de bandeira), no grupo Distribuição, depois de Sistemas, para não mudar o Alt+N das abas existentes. A partir da 10ª aba não há atalho numérico, e a aba deixou de anunciar um "Alt+10" que não existia.
+- [x] Criação de campanha: sistema, versão-alvo (dd/mm/aaaa), prazo limite opcional e título/descrição. A versão-alvo vem sugerida com a oficial atual do sistema. Sistemas fixos e fora do catálogo são recusados.
+- [x] Reconhecimento automático via atendimentos: o último atendimento do cliente no sistema passa por `situacaoDoSistema` contra a versão-alvo (ADR-0008, inclusive "pela data" quando o atendimento não tem versão). Não existe baixa manual.
+- [x] Imutabilidade da meta: a versão-alvo é copiada na criação; editar a campanha muda só título, descrição e prazo, e uma oficial nova em Sistemas não altera a meta.
+- [x] Painel visual executivo: barra de progresso com atendidos, já agendados e pendentes (mesmas cores do card de situação do Resumo), contagens e percentual. Sem clientes, mostra "—" em vez de 0% ou 100%.
+- [x] Tabela de clientes com filtros rápidos (Pendentes, Já agendados, Concluídos, Todos), cada um com a contagem, e busca por nome, código ou cidade.
+- [x] Ações na linha: Agendar (cria a tarefa na hora, com o sistema da campanha, prioridade Alta se houver prazo e a origem no título), gerenciar acessos remotos e abrir a ficha. Agendar só aparece para pendente e para quem pode editar.
+- [x] Exportação em planilha (.xlsx) dos clientes que faltam (pendentes e já agendados), com código, cidade, última atualização, versão recebida e a tarefa; segunda aba com o resumo da campanha.
+- [x] Ciclo de vida: ativa → encerrada (placar congelado no encerramento) → reabrir, se preciso. Excluir é só do admin e não apaga atualizações nem tarefas. Tudo registrado no Histórico (tipo "Campanha").
+- [x] Estrutura leve no SQLite: migração 4 cria só `campanhas` (a meta). Os clientes saem ao vivo de `cliente_sistemas`; "já agendado" é uma tarefa em aberto do mesmo sistema. Nenhuma tabela de clientes duplicada.
+
+**Revisão visual (28/09/2026):** o cartão da aba ocupa a altura da tela (lista e detalhe rolam cada um por si); sem campanhas, a coluna da lista some e o aviso fica centralizado no cartão (antes eram dois avisos, um espremido no canto); Ativas/Encerradas virou um seletor alinhado com "Nova campanha"; o placar ganhou painel próprio com o percentual em destaque; o prazo deixou de aparecer duas vezes no cabeçalho; a busca fica na linha dos filtros.
+
+Validação E11: `server/tests/campanhas.test.js` (baixa automática, meta imutável, agendado só do mesmo sistema, placar congelado, validação, permissões e exportação), `server/tests/migracao.test.js` (banco na versão 3) e `client/tests/campanhas.test.mjs` (filtros, papéis, escape de HTML). No navegador, em 1280 e 390 px: criação, "Agendar" de ponta a ponta (pendentes 4 → 3, já agendados 1 → 2), sem erro de JavaScript nem rolagem horizontal; no celular a tabela vira blocos.
+
+#### 13.2 Relatórios gerenciais
+
+Uma aba dedicada pode reunir período, cliente, sistema e responsável, com filtros salvos. Hoje relatórios já existem nas telas: primeiro melhorar consistência e acesso. Criar aba somente quando houver cruzamentos recorrentes que o modal não comporte.
+
+#### 13.3 Qualidade dos cadastros
+
+Recomendação: seção em Dados, não nova aba principal. Listar clientes sem sistemas, atendimentos sem versão, sistemas sem oficial e possíveis duplicidades. Correção deve mostrar os registros envolvidos; não consolidar ou excluir automaticamente por semelhança de nomes.
+
+#### 13.4 Preferências e notificações — adiadas da seção 12
+
+**Concluído em 28/09/2026.** Todas as opções novas mudam comportamento de verdade e ficam em Configurações › Notificações e › Trabalho diário. Acompanham a conta (servidor), entram em Restaurar, no selo "alterado" e na exportação/importação de preferências.
+
+- [x] Tipos de evento, minhas tarefas/equipe, som opcional. O sino tem um interruptor por tipo (agendamentos atrasados, de hoje, situação dos agentes) e o escopo "Da equipe / Só as minhas"; o que fica desligado some do sino **e** do contador no título da aba, que somam a mesma lista (`montarNotificacoes` com filtro). "Minha" tarefa é decidida por `ehResponsavel` (domain/pessoa.js): sem caixa nem acento, e o primeiro nome da tarefa casa com o nome completo da conta ("Antonio" × "Antonio Salomão"), mas "Ana" não casa com "Anabela". Som opcional (desligado por padrão): toque curto gerado no navegador, sem arquivo, quando o número de pendências não vistas **cresce** ou chega falha de agente — não a cada ciclo.
+- [x] Horário silencioso. Intervalo de meia em meia hora que pode virar a noite (19:00–07:00); início igual ao fim não silencia nada; o fim é exclusivo. Fuso: o relógio deste computador, mostrado na tela ("America/Sao_Paulo"), sem conversão. Evento crítico: falha de agente, que por padrão aparece mesmo no silêncio (sem som); desligando isso, as falhas do período viram **um** aviso-resumo quando o silêncio acaba (mensagens acumuladas). O sino continua contando no silêncio.
+- [x] Estado real da permissão de notificação: linha própria em Notificações do sistema, relida do navegador (e do evento de mudança, quando o navegador oferece), com os quatro casos — permitidas, bloqueadas (com o caminho para liberar pelo cadeado), ainda não pedidas e indisponível (HTTP sem HTTPS).
+- [x] Preferências de relatório: aba com que o relatório abre (Atualização ou Cliente, quando a tela oferece as duas) e "Fechar o relatório depois de copiar". Nenhuma mexe no conteúdo: o formato do chamado (7.3) não virou editor. A aba "Atendimento" do relatório passou a se chamar "Atualização".
+- [x] Persistência por usuário no servidor, validação de chaves e migração das preferências locais. Persistência e migração já existiam. Nova: o servidor recusa nome de chave fora do formato (inclusive `__proto__`) e confere o valor das chaves que mudam comportamento (horários na grade de meia hora, listas fechadas, sim/não). O cliente deixa de enviar chave antiga fora do formato, para uma chave estranha não travar a sincronização das outras.
+- [x] Não acrescentar idioma/fuso decorativos: nenhum seletor de idioma ou fuso foi criado; o horário silencioso usa o relógio local e só informa qual é.
+
+Testes: `client/tests/notificacoes.test.mjs` (silêncio, filtro do sino, "minha" tarefa), `client/tests/preferencias.test.mjs` (padrões, fallback, exportar/importar) e `server/tests/historicoPreferencias.test.js` (nome e formato das chaves). Validação no navegador: seção Notificações sem erro de JavaScript.
+
+### 14. Sequência de execução
+
+Numeração única: as etapas abaixo são a ordem de execução e cada uma é uma entrega verificável. Esforços são relativos, não prazos: migrações e permissões precisam estar consolidadas antes de estimar horas/dias com confiança. A marca (E9) já foi aplicada antes da ordem prevista; se E5 mudar o padrão de botões ou da barra lateral, conferir de novo a tabela "Aplicações da marca" da seção 4.
+
+| Etapa | Entrega | Pedidos | Dependência | Esforço |
+|---|---|---|---|---|
+| E0 | ✅ Contagem real por grupo da 3.3 (24/09/2026). Capturas "antes" ainda por fazer | — | — | Pequeno |
+| E1 | ✅ Correções rápidas e independentes (25/09/2026); navegador conferido em 390/1280 px, revisão visual completa segue em E10 | I05, I06 (só Excluir e ações sem borda), I11, I12, I17 | — | Pequeno |
+| E2 | ✅ Regra de versão e classificação dos componentes fixos concluídas (25/09/2026); revisão geral da ficha permanece em E7 | I04, I02 (regra) | E0 | Grande |
+| E3 | ✅ Oficiais separadas dos filtros em Sistemas (25/09/2026) | I16 | E2 | Médio |
+| E4 | ✅ Resumo e tendência mensal concluídos (25/09/2026) | I02, I03 | E2 | Médio |
+| E5 | ✅ Padrão de botões e toolbars; filtros recolhíveis; exportar/importar reposicionados (25/09/2026) | I06, I07, I08 | E1 | Médio |
+| E6 | ✅ Agendamentos (toolbar, filtros rápidos) e Clientes (acessos na linha, Grupo/Rede) (25/09/2026) | I10, I13, I14 | E5 | Médio |
+| E7 | ✅ Ficha do cliente e relatórios (25/09/2026) | I09, I15 | E2, E5 | Médio |
+| E8 | ✅ Administração e Configurações reorganizadas por finalidade (25/09/2026) | I18, I19 | — | Médio |
+| E9 | ✅ Identidade escolhida e aplicada (antecipada, 24/09/2026) | I01 | — | Médio |
+| E10 | ✅ Validação visual completa, README/ajuda, CHANGELOG (25/09/2026) | — | Todas | Pequeno |
+| E11 | ✅ Campanhas de atualização (aba no menu lateral, metas de versão e progresso) e fechamento das pendências das seções 6 e 7.2 (28/09/2026) | I20, I06, I08 | E2, E4, E6 | Médio |
+
+E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída decidida foi julgar pela data o atendimento sem versão (3.3), e não criar a ação de confirmar versão.
+
+#### Checklist mestre
+
+- [x] E0 — contagem por grupo com dados reais (24/09/2026).
+- [x] E1 — alerta sem fundo escuro, borda em Excluir, remover Converter, recuperar Arquivar, Último acesso capitalizado.
+- [x] E2 — `controla_versao`, exclusões dos fixos, classificação só por admin, comparação por data, fonte só atendimento e regra única no servidor; ADR-0008. Validados API, histórico e gráfico mensal.
+- [x] E3 — consulta com filtros próprios e gerenciador de oficiais separado, com autoria e proteção contra edição concorrente.
+- [x] E4 — Resumo com card de situação, Sem atendimento e tendência de 12 meses, unidade explícita e comparação parcial justa.
+- [x] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados (25/09/2026).
+- [x] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto (25/09/2026).
+- [x] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado (25/09/2026).
+- [x] E8 — Administração e Configurações reagrupadas por finalidade, sem preferências novas (25/09/2026).
+- [x] E9 — identidade escolhida e aplicada (antecipada; 24/09/2026).
+- [x] E10 — validação completa e documentação (25/09/2026).
+- [x] E11 — Campanhas de atualização; importação com prévia e transação; revisão final de botões e acessibilidade (28/09/2026).
+- [x] 13.4 — Preferências e notificações: tipos no sino, som, horário silencioso, estado da permissão, relatório e validação de chaves (28/09/2026).
+- [x] Documento finalizado (28/09/2026).
+
+### 15. Validação e critérios gerais de aceite
+
+#### Regras e dados
+
+- [x] NFe recebido em 22/09 fica atrasado após oficial 24/09 sem reescrever histórico.
+- [x] Novo atendimento recebe a oficial; editar observação preserva a recebida.
+- [x] Cliente somente com fixos não entra na fila nem no denominador de versões.
+- [x] Cliente com vários sistemas conta uma vez na situação consolidada.
+- [x] Informação ausente não produz Em dia.
+- [x] Recebida posterior à oficial conta Em dia; formato não comparável vai para Verificação pendente.
+- [x] Versão reportada pelo agente não altera a situação do cliente.
+- [x] Tempo sem atendimento não altera situação de versão.
+- [x] Meses vazios aparecem; clique e indicador têm a mesma população.
+- [x] Exportação e relatório incluem todas as páginas do recorte.
+- [x] Alteração no catálogo invalida telas afetadas, preservando atendimentos.
+- [x] Migrações preservam vínculos, são idempotentes e têm recuperação documentada.
+
+#### Interação
+
+- [x] Filtrar nunca grava oficial; fechar painel não aplica edição.
+- [x] Fechar filtro mantém recorte; Limpar remove recorte e chips.
+- [x] Arquivar concluída funciona e ela pode ser encontrada depois.
+- [x] Converter não aparece em nenhum caminho de Agendamentos.
+- [x] Acessos abre no cliente correto; copiar é ação separada.
+- [x] Opções de Configurações movidas de lugar mantêm os valores já salvos.
+- [x] Falha de rede, sessão expirada e conflito não produzem sucesso falso.
+- [x] Importação falha não deixa alteração parcial sem resultado explícito.
+
+#### Visual e acessibilidade
+
+- [x] Nas etapas intermediárias: 390 px e desktop, tema claro e escuro.
+- [x] Em E10: 390, 768, 1280 e 1440 px, zoom 200%, sidebar aberta/recolhida.
+- [x] Conferir temas claro/escuro e contraste elevado disponível.
+- [x] Conferir bordas, foco, desabilitados, teclado e alvos de toque.
+- [x] No celular, informação essencial não depende de tabela cortada: usar resumo, blocos ou expansão quando necessário.
+- [x] Gráfico não corta meses, valor nem tooltip e oferece leitura textual.
+- [x] Modal permite alcançar rodapé por teclado, sem rolagem horizontal.
+- [x] PDF multipágina sem sidebar, controles ou conteúdo cortado.
+- [x] Nomes longos, observações multilinha e caracteres HTML seguros e legíveis.
+
+#### Engenharia e entrega
+
+- [x] Revalidar estado dos arquivos antes de editar e preservar alterações alheias.
+- [x] Rodar `npm run check`, `npm test` e `git diff --check` a partir de `web` ao fim de cada etapa.
+- [x] Cobrir regras e autorização das APIs de sistemas, importação e arquivamento.
+- [x] Decisão para a situação consolidada e `controla_versao`: [ADR-0008](#adr-0008), incorporada à seção 4.
+- [x] CHANGELOG a cada etapa com mudança visível.
+- [x] Testar navegador com banco descartável e dados representativos.
+- [x] Registrar antes/depois: sintaxe e testes automatizados não comprovam aparência.
+- [x] Testar papéis admin, operador e consulta.
+- [x] Atualizar README e ajuda, removendo instruções antigas de conversão/filtros.
+- [x] Documentar banco e reinício necessário; não reiniciar produção automaticamente durante validação.
+
+### 16. Mapa técnico
+
+| Área | Pontos de entrada |
+|---|---|
+| Marca | `client/js/app/App.js`, `client/index.html`, `client/assets/`, `client/css/theme.css` |
+| Padrões | `client/css/components.css`, `SortableTable.js`, `Drawer.js`, `Modal.js` |
+| Resumo/gráficos | `ResumoView.js`, `components/charts/LineChart.js`, `BarChart.js`, `PieChart.js`, `domain/resumo.js` |
+| Indicadores | `server/src/services/AtualizacaoService.js`, `server/src/database/AtualizacaoRepository.js` |
+| Sistemas | `SistemasView.js`, `SistemaRepository.js`, `ClienteService.js`, `SistemasController.js` |
+| Relatórios | `AtualizacoesView.js`, `components/RelatorioModal.js`, `domain/relatorio.js` |
+| Agendamentos | `AgendamentosView.js`, `templates/agendamentos.js`, `AgendamentoService.js`, `AgendamentoRepository.js` |
+| Clientes/Consulta | `ClientesView.js`, `ConsultaView.js`, `AcessosModal.js`, `domain/matrizVersoes.js` |
+| Administração | `AdministracaoView.js`, `views/administracao/`, `templates/administracao.js` |
+| Configurações | `ConfiguracoesView.js`, `views/configuracoes/ajustes.js`, `ContaConfig.js`, `app/appearance.js` |
+| Regras/banco | `server/src/config/regrasEquipe.js`, `ConfiguracaoSistemaService.js`, `Database.js`, migrações atuais |
+| Campanhas | `CampanhasView.js`, `templates/campanhas.js`, `domain/campanhas.js`, `CampanhaService.js`, `CampanhaRepository.js`, migração 4 |
+| Importação | `components/ImportacaoModal.js`, `templates/importacao.js`, `AtualizacaoService.previaImportacao/importXlsx` |
+| Testes | `client/tests/`, `server/tests/` e navegador com dados descartáveis |
+
+Colunas e contratos devem seguir a normalização atual. Este mapa aponta investigação; não autoriza substituir mudanças recentes por arquivos de versões anteriores.
+
+### 17. Decisões para revisão nas etapas correspondentes
+
+#### Decididas (24/09/2026)
+
+| Decisão | Resultado |
+|---|---|
+| Recebida mais nova que a oficial | Em dia; desatualizado só quando anterior à oficial |
+| Fonte da versão para a situação | Só o atendimento; agente aparece separado |
+| Escopo de Configurações/Administração | Só reorganizar na seção 12; as novidades vieram depois, na 13.4 |
+| Central de pendências | Substituída por Campanhas de Atualização (E11, aba no menu lateral) |
+| Situação no Resumo | Barra e totais clicáveis, substituindo a rosca (E4) |
+| Arquivar pendente | Só concluídas (E1); arquivar pendente seria outra regra de negócio |
+| Importação de operador | Permissão preservada: Mais ações em Atualizações e Administração › Dados (7.2) |
+| Datas em Sistemas | Filtro recolhível e gerenciador de oficiais separado (E3) |
+| Duplicidade na importação | Avisada na prévia e pulada por padrão; importar mesmo assim é escolha explícita (28/09/2026) |
+| Campanha: quem entra e quem está atendido | Clientes ao vivo do cadastro; atendido pela regra da ADR-0008 contra a versão-alvo; sem baixa manual (ADR-0009) |
+| Nome/símbolo | Gestor de Atualizações, assinatura Bredas Sistemas; símbolo vetorial (seção 4) |
+| Atendimento sem versão registrada | Julgado pela data do atendimento contra a da oficial, marcado "(pela data)" (ADR-0008) |
+| Quem decide a situação do cliente | O B_Vendas, quando o cliente tem (fixo no código); sem ele, todos os sistemas |
+| Nome do indicador de tempo | "Sem atualização há mais de N dias" (não "atendimento") |
+| Sistemas fixos agora | Classificação, exclusões, tela administrativa e API concluídas em E2 |
+
+#### Em aberto
+
+Nenhuma. Documento finalizado: 13.2 (relatórios gerenciais) e 13.3 (qualidade dos cadastros) ficam como sugestões para um planejamento novo.
+
+O resultado esperado é um painel mais útil, com menos ambiguidade. Novas abas vêm depois de indicadores, filtros e ações principais representarem corretamente o trabalho da equipe.

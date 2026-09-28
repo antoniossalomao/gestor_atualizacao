@@ -14,7 +14,7 @@ const { SISTEMA_SUPORTE_BREDAS } = require("../config/constants");
  * tabela e apagar a coluna -- que é o que a migração 1 faz. Mudança nova de
  * esquema entra aqui, como a próxima versão, nunca de volta no legado.
  *
- * Ver docs/adr/0007-esquema-normalizado-e-migracoes-versionadas.md.
+ * Ver docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0007.
  */
 const MIGRACOES = [
   {

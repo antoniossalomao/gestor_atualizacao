@@ -2,7 +2,7 @@
   // Verificação estática do NÚCLEO PURO do servidor -- o código que não fala
   // com o Node (nem `fs`, nem `process`, nem `Buffer`), não abre banco e não
   // conhece `req`/`res`. Mesmo princípio e mesma justificativa do
-  // client/tsconfig.json: ver docs/adr/0006-verificacao-de-tipos-sem-build.md.
+  // client/tsconfig.json: ver docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0006.
   //
   // Não compila nada ("noEmit"): lê o JavaScript que já existe e as anotações
   // JSDoc que ele já tinha.

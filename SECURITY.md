@@ -1,5 +1,9 @@
 # Segurança
 
+O [plano vigente de melhorias](docs/MELHORIAS.md#plano-vigente) reúne as
+próximas ações de segurança do painel. Para pedidos gerais, vale o
+[escopo documentado no README](README.md#escopo-das-melhorias).
+
 Este é um sistema **interno**: roda na rede da empresa, atende uma equipe
 pequena e guarda dados de clientes (nomes, cidades, sistemas instalados e
 **IDs de acesso remoto**). Não é um produto público, mas o conteúdo é

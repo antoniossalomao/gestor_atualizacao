@@ -8,7 +8,7 @@ arquivo resume só o que é **não óbvio** e o que mais se erra por aqui.
 ```bash
 cd web
 npm run check     # tipos (client/js/domain, client/js/utils, server/src/shared)
-npm test          # ~745 testes (servidor + cliente)
+npm test          # servidor + cliente
 ```
 
 Os dois têm que passar. Não relate conclusão sem ter rodado.
@@ -18,7 +18,7 @@ Os dois têm que passar. Não relate conclusão sem ter rodado.
 - **Não introduza etapa de build no front-end.** Sem bundler, sem transpilação,
   sem TypeScript de verdade. O que está em `client/` é exatamente o que o
   navegador executa, e isso é uma decisão registrada
-  ([ADR-0001](docs/adr/0001-sem-framework-e-sem-build.md)), não uma pendência.
+  ([ADR-0001](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0001)), não uma pendência.
 - **Não adicione dependência de front-end.** `client/` não tem `node_modules`,
   e é para continuar assim.
 - **Não troque comentário "por quê" por comentário "o quê".** Os comentários
@@ -73,5 +73,6 @@ mock de banco. Dois detalhes que já custaram uma rodada vermelha:
 ## Ao terminar
 
 Se mudou comportamento visível, acrescente ao [`CHANGELOG.md`](CHANGELOG.md).
-Se tomou uma decisão cara de reverter, escreva um ADR em [`docs/adr/`](docs/adr/).
+Se tomou uma decisão cara de reverter, registre-a como nova subseção na
+[seção de decisões da documentação consolidada](docs/DOCUMENTACAO_CONSOLIDADA.md#4-decisões-de-arquitetura--adrs-do-painel-web).
 Não faça commit nem push sem o usuário pedir.

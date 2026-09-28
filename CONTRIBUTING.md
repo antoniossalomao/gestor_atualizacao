@@ -4,6 +4,12 @@ Guia para quem vai alterar o painel web — inclusive você mesmo daqui a seis
 meses, sem lembrar de nada. O [README](README.md) explica **o que** o sistema
 faz; este arquivo explica **como trabalhar** nele.
 
+**Escopo de melhorias:** o Atualizador Automático está pausado. Pedidos gerais
+de análise, planejamento ou melhoria do sistema web devem seguir o
+[planejamento vigente](docs/MELHORIAS.md#plano-vigente) e deixar esse
+módulo fora do escopo. A [regra completa](README.md#escopo-das-melhorias)
+só muda com pedido explícito de retomada ou análise específica.
+
 ## Preparar a máquina
 
 Só o Node.js é necessário (versão 20 ou mais nova; testado em 22).
@@ -26,7 +32,7 @@ verdade.
 ## Rodar os testes
 
 ```bash
-npm test                  # daqui, roda os dois lados (359 + 99 testes, ~8s)
+npm test                  # daqui, roda os dois lados
 
 npm run test:server       # só o servidor
 npm run test:client       # só o front-end
@@ -67,7 +73,7 @@ porque lia uma propriedade que a classe nunca teve.
 Se um arquivo novo dessas pastas só passar quando você der um jeito de alcançar
 o `document` ou o `fs`, ele está na pasta errada — a `lib` do TypeScript está
 restrita de propósito para que isso apareça. Ver
-[ADR-0006](docs/adr/0006-verificacao-de-tipos-sem-build.md).
+[ADR-0006](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0006).
 
 Não há cobertura automática configurada, e isso é deliberado: um número de
 cobertura convida a escrever teste para subir o número. O critério aqui é

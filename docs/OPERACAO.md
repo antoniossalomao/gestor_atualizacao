@@ -232,7 +232,7 @@ simplesmente param de se comunicar, como se estivessem offline.
 ## Lentidão
 
 O banco é SQLite com driver **síncrono**, então uma consulta lenta trava o
-processo inteiro ([ADR-0002](adr/0002-sqlite-com-better-sqlite3.md)). Com o
+processo inteiro ([ADR-0002](DOCUMENTACAO_CONSOLIDADA.md#adr-0002)). Com o
 volume atual isso é teórico, mas se acontecer:
 
 1. **Confira o tamanho do banco** em **Administração → Saúde do servidor**.

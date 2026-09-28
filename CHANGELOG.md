@@ -15,6 +15,13 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Documentação consolidada (28/09/2026):** `docs/` passou a manter apenas
+  Operação, Melhorias e Documentação Consolidada. O plano vigente foi integrado
+  a Melhorias; o plano de revisão concluído e os ADRs 0007–0009 foram
+  incorporados à Documentação Consolidada. O `README.md` da raiz virou o índice.
+  Pedidos gerais de melhorias deixam o Atualizador Automático fora do escopo
+  enquanto estiver pausado, salvo pedido explícito em contrário.
+
 - **Correções da revisão de código da branch (28/09/2026):**
   - *Importação — duplicidade*: a chave usava o sistema como veio da planilha e na ordem em que veio. "Vendas" não casava com o "B_Vendas" gravado, nem "B_NFe, B_Vendas" com "B_Vendas, B_NFe", e reimportar o mesmo arquivo com "pular duplicidades" duplicava o histórico mesmo assim. Agora os sistemas são resolvidos no catálogo e ordenados, numa função só (`chaveDuplicidade`) usada dos dois lados.
   - *Importação — planilha sem cabeçalho*: a leitura começava sempre na linha 2, e o primeiro atendimento sumia em silêncio (os dados dele apareciam como "colunas ignoradas"). Sem cabeçalho, a linha 1 já é dado.
@@ -33,7 +40,7 @@ Para o agente C#, o equivalente é
   - *Clientes*: cabeçalho "Máquinas" cortado ("MÁQUI…"); coluna com 92 px.
   - *Configurações*: a aba "Sobre e ajuda" ficava cortada atrás da busca e sem ícone (pedia `info`, que não existia). A busca sobe para cima das abas quando não cabe ao lado; o ícone foi criado; e um teste novo exige que todo ícone pedido pelo nome exista.
 
-- **Planejamento 13.4 e fechamento da revisão (28/09/2026):** preferências de notificação e de relatório, polimento da aba Campanhas e o [planejamento](docs/PLANEJAMENTO_REVISAO_COMPLETA_PAINEL.md) marcado como **finalizado**.
+- **Planejamento 13.4 e fechamento da revisão (28/09/2026):** preferências de notificação e de relatório, polimento da aba Campanhas e o [planejamento](docs/DOCUMENTACAO_CONSOLIDADA.md#plano-revisao-concluido) marcado como **finalizado**.
   - *O que o sino conta*: interruptor por tipo (agendamentos atrasados, de hoje, situação dos agentes) e escopo **Da equipe / Só as minhas**. O que fica desligado some do sino e do contador no título da aba. "Minha" tarefa é decidida por `ehResponsavel` (domain/pessoa.js): o Responsável costuma ser só o primeiro nome ("Antonio") e a conta tem o nome inteiro ("Antonio Salomão"); comparar os textos inteiros diria "não é minha" para quase tudo.
   - *Som*: opcional e desligado por padrão; toca quando o número de pendências não vistas cresce (não a cada ciclo de cinco minutos) e quando chega falha de agente. Gerado no navegador, sem arquivo de áudio.
   - *Horário silencioso*: de meia em meia hora, pode virar a noite, pelo relógio do computador (o fuso aparece na tela, sem conversão). Falha de agente é o evento crítico: por padrão passa sem som; desligando, as falhas do período viram um aviso-resumo ao fim do silêncio.
@@ -44,8 +51,8 @@ Para o agente C#, o equivalente é
   - *Textos*: "atendimento" virou "atualização" onde aparecia na tela (Administração › Dados e Operação, paleta, ajuda das situações).
   - *Testes*: `client/tests/notificacoes.test.mjs`, casos novos em `preferencias.test.mjs` e `historicoPreferencias.test.js`.
 
-- **Revisão do painel, E11 (fechamento do planejamento, 28/09/2026):** Campanhas de atualização, importação com prévia e as últimas pendências de botões e acessibilidade. Com isto, todas as etapas E0–E11 do [planejamento](docs/PLANEJAMENTO_REVISAO_COMPLETA_PAINEL.md) estão concluídas.
-  - *Campanhas (nova aba, grupo Distribuição)*: meta temporária de versão por sistema ("B_NFe na 25/09/2026 até o dia 30"), com barra de progresso (atualizados, já agendados, pendentes), filtros rápidos com contagem, busca, botão **Agendar** na linha (cria a tarefa com o sistema da campanha), gerenciar acessos, abrir a ficha e exportação dos pendentes em `.xlsx`. **Não há baixa manual**: registrar a atualização com a versão da meta, ou mais nova, tira o cliente dos pendentes — pela mesma regra da ADR-0008, inclusive "pela data". A versão-alvo é copiada na criação e não muda com uma oficial nova; encerrar congela o placar; excluir é só do admin e não apaga atualizações nem tarefas. Migração 4 (tabela `campanhas`, só a meta: os clientes vêm ao vivo do cadastro). Decisão em [ADR-0009](docs/adr/0009-campanhas-de-atualizacao.md).
+- **Revisão do painel, E11 (fechamento do planejamento, 28/09/2026):** Campanhas de atualização, importação com prévia e as últimas pendências de botões e acessibilidade. Com isto, todas as etapas E0–E11 do [planejamento](docs/DOCUMENTACAO_CONSOLIDADA.md#plano-revisao-concluido) estão concluídas.
+  - *Campanhas (nova aba, grupo Distribuição)*: meta temporária de versão por sistema ("B_NFe na 25/09/2026 até o dia 30"), com barra de progresso (atualizados, já agendados, pendentes), filtros rápidos com contagem, busca, botão **Agendar** na linha (cria a tarefa com o sistema da campanha), gerenciar acessos, abrir a ficha e exportação dos pendentes em `.xlsx`. **Não há baixa manual**: registrar a atualização com a versão da meta, ou mais nova, tira o cliente dos pendentes — pela mesma regra da ADR-0008, inclusive "pela data". A versão-alvo é copiada na criação e não muda com uma oficial nova; encerrar congela o placar; excluir é só do admin e não apaga atualizações nem tarefas. Migração 4 (tabela `campanhas`, só a meta: os clientes vêm ao vivo do cadastro). Decisão em [ADR-0009](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0009).
   - *Atalhos das abas*: com a décima aba, a partir dela não há Alt+N — e a aba deixou de anunciar um "Alt+10" que não funcionava. Campanhas entrou depois de Sistemas para não mudar o número das abas que a equipe já usa.
   - *Importação de planilha*: virou um fluxo em três passos (orientação do formato → prévia → resultado), em Atualizações › Mais ações e em Administração › Dados. A prévia (`POST /atualizacoes/import/previa`) não grava nada. **Mudança de comportamento:** linha com data fora de dd/mm/aaaa, que antes entrava assim mesmo, agora fica de fora; possíveis duplicidades (mesmo cliente, data e sistemas) são avisadas e puladas por padrão — o caso comum era reenviar o mesmo arquivo. O lote grava numa transação só: antes, uma falha no meio deixava parte do arquivo dentro sem aviso. Arquivos `.xls` (formato antigo) são recusados com mensagem clara: o leitor só entende `.xlsx`. O Histórico registra importadas e ignoradas.
   - *Botões e acessibilidade (seção 6)*: botão processando não parece mais desabilitado (fica legível, com spinner e cursor de progresso); em tela de toque os botões só de ícone passam de 26 para 40 px, sem mudar o desktop; os "×" da gaveta e do relatório ganharam dica; nova trava `client/tests/acessibilidade.test.mjs` (todo `btn--icon` com `aria-label` e `title`). Auditoria no navegador em todas as abas, barra aberta e recolhida: nenhum botão sem nome acessível, largura inteira aproveitada.
@@ -62,7 +69,7 @@ Para o agente C#, o equivalente é
     4. Clientes e Consulta: documentação da gestão de acessos na linha de cada cliente com cópia rápida, formato compacto de Grupo/Rede e linha do tempo com cópia de relatório em texto limpo;
     5. Administração e Configurações: documentação da reestruturação em 7 e 6 seções temáticas, respectivamente;
     6. Limitações: remoção de menção desatualizada a "apenas dois níveis de permissão", alinhando com o modelo RBAC de três perfis (Administrador, Operador, Consulta).
-  - *Planejamento (`PLANEJAMENTO_REVISAO_COMPLETA_PAINEL.md`)*: conclusão da etapa E10 no cronograma e checklist mestre; validação e preenchimento de todos os critérios gerais de aceite (regras e dados, interação, acessibilidade visual e engenharia).
+  - *[Planejamento concluído](docs/DOCUMENTACAO_CONSOLIDADA.md#plano-revisao-concluido)*: conclusão da etapa E10 no cronograma e checklist mestre; validação e preenchimento de todos os critérios gerais de aceite (regras e dados, interação, acessibilidade visual e engenharia).
   - *Validação de acessibilidade e visual*: garantia de consistência de contraste, foco visível, responsividade nos breakpoints (390px, 768px, 1280px e 1440px) e compatibilidade com os modos claro e escuro.
 
 - **Revisão do painel, E8:** reorganização das telas de Administração e Configurações por finalidade de uso (I18 e I19):
@@ -164,7 +171,7 @@ Para o agente C#, o equivalente é
     atendimentos de antes da versão oficial não gravaram versão. A versão
     recebida continua "Não informada": nada é gravado retroativamente.
   - Migração 2: `sistemas.controla_versao`. Decisões em
-    [ADR-0008](docs/adr/0008-situacao-de-versao-do-cliente.md).
+    [ADR-0008](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0008).
 
 - **Um nome só e um símbolo que acompanha o tema.** A barra lateral dizia
   "ATUALIZADOR / Gestor de clientes", o login "ATUALIZADOR" e a aba do
@@ -215,7 +222,7 @@ Para o agente C#, o equivalente é
     dia agora vem sempre do último registrado; antes a escolha entre os dois
     era arbitrária.
   - Detalhes e o que ficou de fora de propósito (datas em texto,
-    responsável em texto): [ADR-0007](docs/adr/0007-esquema-normalizado-e-migracoes-versionadas.md).
+    responsável em texto): [ADR-0007](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0007).
 
 - **Sistemas ganhou uma "versão oficial" por sistema, e cada atendimento
   guarda a versão que o cliente recebeu naquela data.** Antes a "versão"
@@ -549,7 +556,7 @@ Para o agente C#, o equivalente é
   `services/normalizacao.js`), conferindo o JSDoc que já existia. Nada é
   compilado e o navegador continua executando exatamente o que está em
   `client/`. Também no CI. Ver
-  [ADR-0006](docs/adr/0006-verificacao-de-tipos-sem-build.md) — inclusive por
+  [ADR-0006](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0006) — inclusive por
   que o resto do front-end fica de fora.
 
 - **`?sortBy=constructor` derrubava qualquer listagem paginada.**
@@ -581,7 +588,7 @@ Para o agente C#, o equivalente é
   misturando cinco categorias, virou `app/`, `components/` (+ `charts/`),
   `domain/` e `utils/`, cada uma com um critério verificável. 175 caminhos de
   importação reescritos. Ver
-  [ADR-0005](docs/adr/0005-organizacao-do-client-por-responsabilidade.md).
+  [ADR-0005](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0005).
 
 - **Testes**: de 28 para 458 no painel (359 no servidor, 99 no front-end). Passaram a ter cobertura o
   roteamento HTTP (ordem de API × estático × fallback), o grafo de módulos do

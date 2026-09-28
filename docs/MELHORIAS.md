@@ -1,4 +1,209 @@
-# Melhorias — estado e backlog
+# Melhorias do painel web — plano vigente e histórico
+
+O plano ativo está na seção 1. A seção 2 preserva a revisão de 22/09/2026 como histórico; propostas antigas já entregues ou fora do escopo não voltam ao backlog por aparecerem ali. O escopo dos pedidos futuros segue o [README](../README.md#escopo-das-melhorias): o Atualizador Automático está pausado e não entra em melhorias gerais.
+
+<a id="plano-vigente"></a>
+## 1. Plano vigente — análise de 28/09/2026
+
+**Data da análise:** 28/09/2026
+**Estado:** planejamento; nenhuma implementação autorizada por este documento
+**Referência:** código do checkout nesta data; `npm run check` e `npm test` passaram (416 testes).
+
+### 1. Escopo e premissas
+
+Este plano cobre autenticação e sessões, clientes, atendimentos, agendamentos,
+campanhas, relatórios, importação/exportação, navegação e infraestrutura do
+painel. Não altera regras históricas já adotadas: versão recebida no atendimento,
+versão oficial atual e tempo sem atendimento são conceitos distintos. Um
+atendimento antigo nunca recebe retroativamente uma versão oficial nova.
+
+As prioridades abaixo são de risco e benefício, não de esforço. Os pontos de
+desempenho precisam ser medidos com cópia anonimizada ou sintética de volume
+representativo antes de escolher índices ou reescrever consultas. Não houve
+inspeção visual completa no navegador nem teste com dados de produção nesta
+análise; sintomas de interface devem ser reproduzidos antes de corrigir.
+
+### 2. Visão das entregas
+
+| ID | Prioridade | Entrega | Resultado esperado |
+|---|---|---|---|
+| P01 | P0 se houver acesso fora de rede confiável; P1 na rede interna | Transporte seguro e configuração de implantação | Credenciais, sessões e dados sensíveis trafegam por HTTPS |
+| P02 | P1 | Proteção CSRF das operações com sessão | Uma página de outra origem não consegue executar alterações autenticadas |
+| P03 | P1 | Indicação de dados desatualizados no front | Falhas de revalidação ficam visíveis sem apagar dados úteis |
+| P04 | P1 | Testes de navegador dos fluxos críticos | Fluxos completos têm regressões detectadas antes da entrega |
+| P05 | P2, antecipar se houver lentidão ou falha real | Limites e medição da importação/exportação | Arquivos grandes têm comportamento previsível de memória e tempo |
+| P06 | P2 | Redução do acoplamento das views grandes | Formulários, filtros e ações podem evoluir com menos risco |
+| P07 | P2 | Diagnóstico de falhas das requisições | Operação distingue falha de servidor, validação e conexão |
+
+### 3. Etapas e checklist de execução
+
+#### P01 — Transporte seguro
+
+**Evidência atual:** `server/src/Server.js` permite cookie de sessão sem `secure`
+conforme a configuração; `server/server.js` lê `SESSION_SECURE` e `TRUST_PROXY`;
+`docker-compose.yml` publica a porta 3000. `SECURITY.md` documenta o uso
+possível de HTTP em rede local. O risco depende de como cada instalação é
+acessada; não foi feita auditoria da infraestrutura instalada.
+
+- [ ] Inventariar os endereços usados pela equipe, inclusive acesso remoto,
+      dispositivos móveis e eventual proxy já existente.
+- [ ] Definir URL canônica HTTPS e certificado confiável para os navegadores da
+      equipe. Registrar quem renova o certificado.
+- [ ] Ajustar o proxy e `TRUST_PROXY` para a quantidade real de saltos; impedir
+      acesso direto à porta HTTP a partir de redes não previstas.
+- [ ] Ativar `SESSION_SECURE=true` somente depois que o proxy HTTPS estiver
+      funcional; verificar login, renovação e encerramento da sessão.
+- [ ] Atualizar instruções de instalação e recuperação em `README.md`,
+      `SECURITY.md` e `docs/OPERACAO.md`.
+
+**Aceite:** senha e cookie não cruzam o trecho acessado pelo usuário em HTTP;
+login e logout funcionam pela URL oficial; o painel não aceita um caminho
+alternativo de acesso que contorne a configuração. Validar em cada forma de
+instalação usada de fato.
+
+#### P02 — Proteção CSRF
+
+**Evidência atual:** `server/src/Server.js` configura `sameSite: "lax"`, mas
+`server/src/routes/index.js` não aplica proteção CSRF às rotas de escrita.
+`SECURITY.md` registra essa limitação.
+
+- [ ] Escolher proteção compatível com sessão e com chamadas JSON e multipart:
+      token vinculado à sessão ou validação robusta de origem, documentando a
+      razão da escolha.
+- [ ] Centralizar a verificação para `POST`, `PUT`, `PATCH` e `DELETE` da API
+      usada pelo navegador, incluindo importação, conta e restauração.
+- [ ] Entregar o token pelo fluxo de autenticação e incluí-lo no `ApiClient`
+      para JSON e `FormData`; tratar token ausente ou vencido com mensagem clara.
+- [ ] Confirmar que login e configuração inicial têm o tratamento correto e
+      que clientes de API sem cookie não sofrem regressão indevida.
+- [ ] Testar sessão válida sem proteção, proteção inválida, sessão expirada e
+      envio multipart; verificar que nenhuma alteração é gravada nos casos
+      recusados.
+
+**Aceite:** todas as escritas autenticadas do navegador exigem a proteção;
+as recusas devolvem erro consistente; os fluxos normais continuam operando.
+
+#### P03 — Dados desatualizados no front
+
+**Evidência atual:** em `client/js/app/View.js`, `swr()` conserva o valor em
+cache quando uma nova consulta falha. Isso protege a tela vazia, mas não
+informa por que o dado mostrado pode estar velho.
+
+- [ ] Definir estados comuns: carregando pela primeira vez, atualizado,
+      revalidando, erro com dados anteriores e erro sem dados.
+- [ ] Exibir horário da última resposta válida e ação **Tentar novamente**
+      apenas quando houver falha; manter a informação anterior visível.
+- [ ] Diferenciar erro de rede, sessão expirada e resposta 4xx/5xx; evitar
+      notificações repetidas a cada atualização de uma mesma tela.
+- [ ] Aplicar primeiro às telas que orientam decisões diárias: Resumo,
+      Atualizações, Clientes, Sistemas e Campanhas.
+- [ ] Verificar que troca rápida de aba e busca cancelada não mostram erro falso.
+
+**Aceite:** ao interromper a API após uma leitura válida, a tela identifica
+que os dados são anteriores, mostra quando foram obtidos e permite nova
+tentativa. Ao recuperar a conexão, o aviso desaparece.
+
+#### P04 — Testes de navegador e acessibilidade dos fluxos críticos
+
+**Evidência atual:** `npm test` cobre regras e módulos, mas a suíte do cliente
+não executa os fluxos completos em navegador. A aprovação dos 416 testes não
+prova foco, recorte, navegação por teclado ou responsividade reais.
+
+- [ ] Preparar banco descartável e usuário de teste, isolados de qualquer
+      instalação real. A suíte deve criar e limpar seus próprios dados.
+- [ ] Cobrir login, criação/edição de atendimento, filtros, geração e cópia de
+      relatório, prévia/importação de planilha, tarefas e campanha.
+- [ ] Cobrir erros relevantes: sessão expirada, conflito de revisão, falha da
+      API durante envio e confirmação antes de exclusão.
+- [ ] Validar teclado e foco em menu, drawer, modal, tabela, ações em lote e
+      mensagens de erro. Incluir checagem automatizada de acessibilidade como
+      apoio, com revisão manual dos resultados importantes.
+- [ ] Conferir larguras 390, 768, 1280 e 1440 px, temas claro/escuro e zoom
+      do navegador. Registrar imagens apenas para regressões visuais estáveis.
+
+**Aceite:** os fluxos essenciais completam no navegador sem erro de console,
+perda de foco ou ação inacessível por teclado; não há rolagem horizontal da
+página nas larguras previstas, salvo a rolagem contida de tabelas.
+
+#### P05 — Capacidade da importação e exportação
+
+**Evidência atual:** `server/src/routes/index.js` recebe planilha em memória
+até 15 MB; `AtualizacaoRepository.exportAll()` materializa todas as linhas
+filtradas; `AtualizacaoService.exportXlsxBuffer()` monta o arquivo completo em
+memória. Isso é um risco de crescimento, não uma falha medida na instalação.
+
+- [ ] Medir tempo, pico de memória e tamanho de resposta para arquivos e
+      bases pequenos, médios e no maior volume esperado; registrar os números.
+- [ ] Definir limite funcional de linhas por importação/exportação e resposta
+      legível ao excedê-lo. Alinhar o limite ao volume real da equipe.
+- [ ] Se a medição justificar, trocar importação por leitura em fluxo ou por
+      arquivo temporário com limpeza garantida; manter prévia e aplicação
+      transacional.
+- [ ] Se a medição justificar, paginar a leitura da exportação e usar escrita
+      XLSX em fluxo, preservando filtros, colunas e aba Resumo.
+- [ ] Repetir testes com datas inválidas, duplicatas e falha no meio do lote;
+      nenhuma importação parcial pode ficar gravada.
+
+**Aceite:** o maior arquivo suportado conclui dentro dos limites definidos de
+tempo e memória; falha ou cancelamento não deixam dados parciais nem arquivo
+temporário órfão; a planilha exportada corresponde aos filtros da tela.
+
+#### P06 — Manutenção das views
+
+**Evidência atual:** `AtualizacoesView.js` e `AgendamentosView.js` concentram
+mais de 800 linhas cada, com renderização, eventos, filtros e mutações na
+mesma classe. O tamanho isolado não é defeito, mas amplia o custo de revisão.
+
+- [ ] Identificar os blocos com motivos reais de mudança separados:
+      formulário, filtros, tabela/quadro e ações em lote.
+- [ ] Extrair um bloco de cada vez, mantendo contratos da `View`, `ApiClient`
+      e cache. Não duplicar regras de negócio que já moram em `domain/`.
+- [ ] Preservar a limpeza de listeners no `destroy()` e o cancelamento de
+      requisições ao trocar filtros.
+- [ ] Validar cada extração com `npm run check`, testes existentes e os fluxos
+      de navegador de P04; comparar comportamento antes/depois.
+
+**Aceite:** a view principal coordena as partes sem repetir manipulação de
+DOM ou regras; testes e fluxos do usuário mantêm o mesmo resultado.
+
+#### P07 — Diagnóstico de falhas das requisições
+
+**Evidência atual:** `server/src/middlewares/errorHandler.js` escreve erros no
+console; o front recebe mensagens HTTP pelo `ApiClient`. A análise não
+confirmou correlação entre uma falha vista na tela e o log correspondente.
+
+- [ ] Criar identificador por requisição e incluí-lo nos logs do servidor e
+      na resposta de erro, sem expor detalhes internos ao usuário.
+- [ ] Registrar método, rota, duração, status e classe do erro; nunca registrar
+      senhas, cookies, identificadores de acesso remoto ou conteúdo integral
+      de planilhas.
+- [ ] Definir retenção e rotação compatíveis com a forma de instalação.
+- [ ] Mostrar o identificador no aviso de erro do front para facilitar suporte.
+- [ ] Verificar erros de validação, conflito, banco indisponível e falha de rede.
+
+**Aceite:** um erro reproduzido no navegador aponta para um único registro
+de diagnóstico, sem dados sensíveis no log.
+
+### 4. Sequência e controle
+
+1. **Preparar evidência:** levantar forma real de acesso, volume de dados e
+   comportamento no navegador; manter os resultados junto ao trabalho de
+   implementação.
+2. **Segurança:** executar P01 conforme a implantação e depois P02. Validar
+   login, sessão e todas as escritas antes de avançar.
+3. **Confiabilidade visível:** executar P03 e P04; usar os testes de navegador
+   como proteção para as próximas mudanças.
+4. **Capacidade e manutenção:** medir P05, implementar somente o que os dados
+   justificarem, extrair P06 gradualmente e concluir P07.
+
+Em cada entrega: registrar o problema reproduzido, a decisão, o resultado dos
+critérios de aceite, `npm run check`, `npm test` e a verificação de navegador
+pertinente. Alterações em dados devem usar banco descartável ou cópia segura;
+nenhuma validação deste plano precisa gravar no banco de produção.
+
+---
+
+## 2. Registro histórico — revisão de 22/09/2026
 
 **Projeto:** Gestor de Atualizações — Painel web
 **Reconciliado em:** 22 de setembro de 2026
@@ -29,12 +234,12 @@ na próxima revisão. O que mudou e quando é o [`CHANGELOG.md`](../CHANGELOG.md
 
 ---
 
-## 1. O que já foi entregue
+### 1. O que já foi entregue
 
 Consolidado das duas auditorias, com o que a reconciliação de 22/09
 confirmou contra o código.
 
-### Segurança e proteção de operações de alto impacto
+#### Segurança e proteção de operações de alto impacto
 
 - **Permissões granulares (RBAC)** — três papéis (`consulta`/`operador`/`admin`),
   middleware `requireRole`, gestão de papéis pela interface, travas contra
@@ -54,7 +259,7 @@ confirmou contra o código.
   repositórios). A auditoria técnica de 18/09 ainda listava isto como
   pendente ("2.2 Controle de concorrência"); foi implementado depois.
 
-### Operação e distribuição
+#### Operação e distribuição
 
 - **Centro de saúde operacional** — `SaudeService` + `GET /api/saude`,
   painel `SaudeSistemaPanel.js` com integridade do SQLite, backups, pacotes
@@ -72,7 +277,7 @@ confirmou contra o código.
   Agendamentos em Lote" para os clientes defasados de uma data de corte.
   Confirmado (`SistemasView`).
 
-### Interface
+#### Interface
 
 - **Navegação agrupada** na sidebar (Visão Geral / Operação / Distribuição /
   Administração), com tooltips e colapso.
@@ -109,12 +314,12 @@ confirmou contra o código.
 
 ---
 
-## 2. Ainda pendente
+### 2. Ainda pendente
 
 Itens genuinamente em aberto — não encontrados no código nem no changelog
 na conferência de 22/09.
 
-### Confiabilidade e observabilidade
+#### Confiabilidade e observabilidade
 
 - **Ampliar testes automatizados** para os fluxos que a auditoria de 18/09
   listava e que não têm confirmação explícita de cobertura: importação e
@@ -130,7 +335,7 @@ na conferência de 22/09.
   transitiva ainda sem correção upstream. Decisão pendente: aguardar
   `exceljs` novo, trocar de biblioteca, ou aceitar o risco formalmente.
 
-### Versão-alvo manual por sistema e campanhas de atualização
+#### Versão-alvo manual por sistema e campanhas de atualização
 
 _Proposta de 23/09/2026, ainda não aprovada para implementação._
 
@@ -161,7 +366,7 @@ a atualização dos clientes voltou a ser manual, e o painel não ajuda nisso:
 exige um formato consistente, então vem junto a validação do campo
 `versao` no formulário e na importação de planilha.
 
-### Regras e notificações
+#### Regras e notificações
 
 - **Regras automáticas / SLA** — severidade e prazo para agente sem
   contato, versão não adotada, autorização pendente há muito tempo, script
@@ -173,7 +378,7 @@ exige um formato consistente, então vem junto a validação do campo
   alertas só para falhas críticas, por sistema, horários silenciosos,
   destinatários diferentes por tipo de evento, botão "Reconhecer alerta".
 
-### Polimento visual restante
+#### Polimento visual restante
 
 - **Gráficos de barra** (`BarChart.js`) — cantos arredondados e animação de
   crescimento na montagem; não encontrado no código (o gráfico de linha já
@@ -185,7 +390,7 @@ exige um formato consistente, então vem junto a validação do campo
 
 ---
 
-## 3. Roadmap sugerido
+### 3. Roadmap sugerido
 
 | Ordem | Entrega |
 |---:|---|

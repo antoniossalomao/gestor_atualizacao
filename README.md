@@ -171,9 +171,10 @@ client/                front-end (HTML/CSS/JavaScript puro, sem framework nem bu
   tests/                 testes do que dá pra testar sem navegador
   tsconfig.json          escopo da verificação de tipos (não compila nada -- ver ADR-0006)
 
-docs/                  a documentação longa -- ver docs/README.md para o índice
-  adr/                   decisões de arquitetura, uma por arquivo
+docs/                  documentação detalhada, organizada por finalidade
   OPERACAO.md            runbook por sintoma: deu problema agora, o que fazer
+  MELHORIAS.md           plano vigente e backlog histórico
+  DOCUMENTACAO_CONSOLIDADA.md  arquitetura, decisões e revisão concluída
 ```
 
 A divisão do `client/js/` segue uma regra só, fácil de aplicar na hora de criar
@@ -216,7 +217,7 @@ npm run check      # verificação de tipos (não compila nada -- ver ADR-0006)
 ```
 
 O front-end **não tem dependência nenhuma** (ver
-[ADR-0001](docs/adr/0001-sem-framework-e-sem-build.md)): não há o que instalar
+[ADR-0001](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0001): não há o que instalar
 em `client/`.
 
 ### Usando um banco que você já tem
@@ -228,7 +229,7 @@ sozinhas no início do servidor. Cada uma é numerada e roda uma vez só
 (`PRAGMA user_version` guarda a última aplicada), numa transação; antes de
 aplicar uma migração pendente, o servidor copia o banco para `backups/` —
 essa cópia aparece na tela de Backups e pode ser restaurada por lá. Ver
-[ADR-0007](docs/adr/0007-esquema-normalizado-e-migracoes-versionadas.md).
+[ADR-0007](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0007).
 
 ## Variáveis de ambiente (`.env`)
 
@@ -590,20 +591,21 @@ neste arquivo.
 
 ## Documentação
 
+**Escopo das melhorias:** o Atualizador Automático está pausado. Pedidos
+gerais de análise, planejamento e melhorias deste sistema consideram apenas
+o painel de gestão. Não incluir propostas para agentes, distribuição, pacotes
+ou publicação, salvo pedido explícito de retomada ou análise desse módulo.
+O plano vigente está em [MELHORIAS.md](docs/MELHORIAS.md#plano-vigente).
+
 | Documento | Para quem, e quando |
 |---|---|
 | Este README | Quem vai **usar** ou **instalar** o painel |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Quem vai **alterar o código**: como rodar, onde colocar cada coisa, o que não quebrar |
 | [`SECURITY.md`](SECURITY.md) | O que protege o quê, onde ficam os segredos, e os limites assumidos de propósito |
 | [`CHANGELOG.md`](CHANGELOG.md) | "Por que isso é assim?" — diário de decisões, em ordem cronológica |
-| [`docs/README.md`](docs/README.md) | Índice dos documentos longos, e a regra de precedência quando dois discordarem |
 | [`docs/OPERACAO.md`](docs/OPERACAO.md) | **Deu problema agora.** Runbook por sintoma: servidor fora do ar, ninguém entra, agente parado, restaurar backup |
-| [`docs/adr/`](docs/adr/) | As decisões de arquitetura, uma por arquivo, com as alternativas descartadas |
-| [`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) | Documento único cobrindo painel + agente, auditorias técnicas e histórico de correções |
-| [`docs/APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md`](docs/APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md) | Visão para a diretoria, sem detalhe técnico |
-
-Os PDFs ao lado dos `.md` são gerados do próprio Markdown
-(`cd docs && npm install && npm run pdf`) e **nunca** são editados à mão.
+| [`docs/MELHORIAS.md`](docs/MELHORIAS.md) | Plano vigente de melhorias e registro histórico das propostas anteriores |
+| [`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) | Arquitetura, decisões incorporadas, visão do projeto e plano de revisão concluído |
 
 A documentação do agente C# fica no repositório dele — em especial
 [`RISCOS-CONHECIDOS.md`](../atualizador/RISCOS-CONHECIDOS.md), que é leitura
@@ -613,8 +615,8 @@ obrigatória antes de mexer naquele lado.
 
 - *"Como eu rodo isso?"* → este README.
 - *"Onde eu ponho este arquivo novo?"* → `CONTRIBUTING.md`.
-- *"Por que não usaram React?"* → `docs/adr/0001`.
-- *"Por que existe uma classe de sessão escrita à mão?"* → `docs/adr/0003`.
+- *"Por que não usaram React?"* → [decisão 0001](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0001).
+- *"Por que existe uma classe de sessão escrita à mão?"* → [decisão 0003](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0003).
 - *"Quando isso mudou, e por quê?"* → `CHANGELOG.md`.
 - *"Isso aqui é seguro?"* → `SECURITY.md`.
 - *"Está fora do ar, e agora?"* → `docs/OPERACAO.md`.
