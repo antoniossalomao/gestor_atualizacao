@@ -6874,3 +6874,117 @@ h1, h2, h3, strong {
   .relatorio-imprimir .relatorio-controles { display: none !important; }
   .relatorio-imprimir .relatorio-previa { border: 0; padding: 0; margin: 0; }
 }
+
+/* ==========================================================================
+   Campanhas de atualização (E11 -- views/CampanhasView.js)
+
+   Duas colunas: lista de campanhas à esquerda, detalhe à direita. A barra de
+   progresso reaproveita as cores e a técnica (flex-grow = quantidade) do
+   card de situação do Resumo, para "verde = atendido" significar a mesma
+   coisa nas duas telas.
+   ========================================================================== */
+.campanhas__grade {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+.campanhas__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.campanhas__vazio {
+  margin: 0;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-sm);
+}
+.campanha-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: var(--sp-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.campanha-cartao:hover { border-color: var(--cor-borda-forte); background: var(--cor-superficie-hover); }
+.campanha-cartao.is-selecionada { border-color: var(--cor-accent); box-shadow: inset 3px 0 0 var(--cor-accent); }
+.campanha-cartao__topo { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); }
+.campanha-cartao__titulo { overflow-wrap: anywhere; }
+.campanha-cartao__meta { color: var(--cor-texto-fraco); font-size: var(--txt-sm); }
+.campanha-cartao .campanha__barra { margin: 2px 0 0; height: 8px; }
+
+.campanha__cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.campanha__identidade { min-width: 0; flex: 1 1 280px; }
+.campanha__titulo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: 0 0 4px; font-size: var(--txt-lg); overflow-wrap: anywhere; }
+.campanha__meta, .campanha__descricao { margin: 0; color: var(--cor-texto-fraco); }
+.campanha__descricao { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.campanha__acoes { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.campanha__barra { height: 12px; }
+.campanha__placar { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); margin-bottom: var(--sp-2); }
+.campanha__numero { display: inline-flex; align-items: baseline; gap: 6px; }
+.campanha__numero strong { font-size: var(--txt-lg); }
+.campanha__numero .situacao__marca,
+.campanha__situacao .situacao__marca { align-self: center; }
+.campanha__numero--pct { margin-left: auto; }
+.campanha__nota { margin: 0 0 var(--sp-3); color: var(--cor-texto-fraco); font-size: var(--txt-sm); }
+.campanha__situacao { display: inline-flex; align-items: center; gap: 6px; }
+.campanha__selo {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pilula);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-medio);
+  white-space: nowrap;
+}
+.campanha__selo.is-alerta { border-color: var(--severidade-alta); color: var(--severidade-alta); }
+.campanha__selo.is-encerrada { background: var(--cor-superficie-alta); }
+.campanhas__toolbar { align-items: flex-end; }
+.campanhas__toolbar .filtros-rapidos { margin: 0; }
+.filtro-rapido__n { opacity: 0.8; font-variant-numeric: tabular-nums; }
+.campanha-form textarea.input { resize: vertical; min-height: 72px; }
+
+@media (max-width: 900px) {
+  .campanhas__grade { grid-template-columns: 1fr; }
+  .campanha__numero--pct { margin-left: 0; }
+}
+.campanhas__alternar { margin: 0; }
+.campanha__cliente { display: flex; flex-direction: column; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.campanha__cliente small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
+.campanha__situacao { white-space: normal; }
+/* Sem isto a coluna 1fr cresce até caber a tabela inteira e o cartão vaza
+   pela direita no celular: item de grade tem `min-width: auto` por padrão. */
+.campanhas__lista, .campanhas__detalhe { min-width: 0; }
+/* No celular a tabela vira blocos (nome em cima, data e situação embaixo,
+   ações à direita) em vez de rolar para o lado. As células já dizem o que
+   são ("Nunca", "Pendente", "versão ..."), então não precisam de rótulo. */
+@media (max-width: 600px) {
+  .campanhas__tabela thead { display: none; }
+  .campanhas__tabela table, .campanhas__tabela tbody { display: block; width: 100%; }
+  .campanhas__tabela tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px var(--sp-3);
+    padding: var(--sp-3);
+    border-bottom: 1px solid var(--cor-borda);
+  }
+  .campanhas__tabela tbody td { display: block; width: auto !important; padding: 0; border: 0; }
+  .campanhas__tabela tbody td:nth-child(1) { grid-column: 1 / -1; }
+  .campanhas__tabela tbody td:nth-child(4) { grid-column: 2; grid-row: 2 / span 2; align-self: center; }
+  .campanhas__toolbar .field { width: 100%; }
+}

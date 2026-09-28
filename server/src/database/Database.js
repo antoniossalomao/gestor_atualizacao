@@ -14,6 +14,7 @@ const { UsuarioRepository } = require("./UsuarioRepository");
 const { HistoricoRepository } = require("./HistoricoRepository");
 const { VersaoRepository } = require("./VersaoRepository");
 const { ConfiguracaoSistemaRepository } = require("./ConfiguracaoSistemaRepository");
+const { CampanhaRepository } = require("./CampanhaRepository");
 const { MIGRACOES, criarVisoes } = require("./migracoes");
 
 /**
@@ -69,6 +70,7 @@ class Database {
     this.historico = new HistoricoRepository(this.conn);
     this.versoes = new VersaoRepository(this.conn);
     this.configuracoesSistema = new ConfiguracaoSistemaRepository(this.conn);
+    this.campanhas = new CampanhaRepository(this.conn);
   }
 
   /**

@@ -257,6 +257,21 @@ class AgendamentoRepository extends BaseRepository {
   }
 
   /**
+   * Tarefas em aberto (não concluídas nem arquivadas) ligadas a um cliente
+   * cadastrado -- é o "já agendado" das Campanhas. O sistema vem como texto
+   * (o campo da tarefa é livre); quem chama resolve no catálogo.
+   */
+  abertasComCliente(statusConcluido) {
+    return this.conn
+      .prepare(
+        `SELECT id, cliente_id AS clienteId, tarefa, sistema, responsavel, data FROM ${this.table}
+         WHERE cliente_id IS NOT NULL AND arquivado_em IS NULL AND status != ?
+         ORDER BY ${DATE_SORT_EXPR} ASC, id ASC`
+      )
+      .all(statusConcluido);
+  }
+
+  /**
    * Tarefas pendentes (nem "Concluído" nem "Sem resposta") com data de hoje
    * ou anterior -- usadas pelo banner de lembrete que aparece ao abrir o app.
    */

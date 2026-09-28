@@ -16,6 +16,7 @@ import { AgendamentosView } from "../views/AgendamentosView.js";
 import { ClientesView } from "../views/ClientesView.js";
 import { ConsultaView } from "../views/ConsultaView.js";
 import { SistemasView } from "../views/SistemasView.js";
+import { CampanhasView } from "../views/CampanhasView.js";
 import { AdministracaoView } from "../views/AdministracaoView.js";
 import { ConfiguracoesView } from "../views/ConfiguracoesView.js";
 import { DistribuicaoView } from "../views/DistribuicaoView.js";
@@ -66,6 +67,10 @@ const TABS = [
     descricao: "Envie, publique e administre as versões distribuídas.", requerAtualizador: true },
   { key: "sistemas", label: "Sistemas", icon: "sistemas", View: SistemasView, grupo: "Distribuição",
     descricao: "Relatório por sistema, com data de corte opcional." },
+  // Depois de Sistemas, e não em Operação, para não mudar o Alt+N das abas
+  // que a equipe já usa: as campanhas são metas de VERSÃO de um sistema.
+  { key: "campanhas", label: "Campanhas", icon: "campanhas", View: CampanhasView, grupo: "Distribuição",
+    descricao: "Metas de versão por sistema: quantos clientes já receberam uma versão crítica." },
   // Só administrador (ver `papel`). O Histórico de alterações, que era uma
   // aba aberta a todos, mora agora dentro dela -- ver AdministracaoView.
   { key: "administracao", label: "Administração", icon: "escudo", View: AdministracaoView, grupo: "Administração",
@@ -495,13 +500,17 @@ export class App {
       button.setAttribute("aria-controls", `painel-${tab.key}`);
       button.id = `aba-${tab.key}`;
       button.tabIndex = -1;
-      button.title = `${tab.label} (Alt+${i + 1})`;
+      // Só existem Alt+1…Alt+9 (uma tecla de número). Com dez abas ou mais,
+      // a partir da décima não há atalho -- anunciar um "Alt+10" seria
+      // prometer uma tecla que não faz nada.
+      const atalho = i < 9 ? `Alt+${i + 1}` : "";
+      button.title = atalho ? `${tab.label} (${atalho})` : tab.label;
       // A dica do atalho fica na própria aba, aparecendo ao passar o mouse ou
       // ao focar pelo teclado. O `title` só conta a mesma coisa depois de um
       // segundo parado em cima -- e ninguém para em cima de um menu que já
       // sabe usar. Ela ocupa o espaço dela o tempo todo (muda só a opacidade),
       // senão cada aba mudaria de largura quando o mouse passasse.
-      button.innerHTML = `${icon(tab.icon)}<span>${tab.label}</span><kbd class="tab-button__atalho">Alt+${i + 1}</kbd>`;
+      button.innerHTML = `${icon(tab.icon)}<span>${tab.label}</span>${atalho ? `<kbd class="tab-button__atalho">${atalho}</kbd>` : ""}`;
       tabsNav.appendChild(button);
       container.setAttribute("aria-labelledby", `aba-${tab.key}`);
     }

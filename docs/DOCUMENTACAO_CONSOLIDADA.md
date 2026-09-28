@@ -1242,6 +1242,7 @@ escolha deliberada — e reintroduz o problema que ela evitava.
 | [4.6](#46-adr-0006--verificação-de-tipos-sem-etapa-de-build-escopada-ao-código-puro) | Verificação de tipos sem build, escopada ao código puro | Aceita |
 | [4.7](#47-adr-0007--piloto-rollback-e-concorrência-otimista) | Piloto, rollback e concorrência otimista | Aceita |
 | [ADR-0008](adr/0008-situacao-de-versao-do-cliente.md) (arquivo próprio) | Uma regra só para "o cliente está em dia?" | Aceita |
+| [ADR-0009](adr/0009-campanhas-de-atualizacao.md) (arquivo próprio) | Campanhas de atualização: meta guardada, andamento calculado | Aceita |
 
 **Como escrever um novo:** copie a estrutura de qualquer um — Contexto → Decisão → Consequências →
 Alternativas consideradas — como uma nova subseção `4.N` no fim desta lista. Um ADR não se edita

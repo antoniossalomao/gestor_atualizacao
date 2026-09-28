@@ -32,6 +32,11 @@ const MIGRACOES = [
     descricao: "autoria e data das referências oficiais dos sistemas",
     aplicar: migracao3,
   },
+  {
+    versao: 4,
+    descricao: "campanhas de atualização (meta de versão por sistema)",
+    aplicar: migracao4,
+  },
 ];
 
 /**
@@ -173,6 +178,40 @@ function migracao2(conn) {
 function migracao3(conn) {
   conn.exec("ALTER TABLE sistemas ADD COLUMN ultima_versao_autor TEXT");
   conn.exec("ALTER TABLE sistemas ADD COLUMN ultima_versao_em TEXT");
+}
+
+/**
+ * Campanha: "todo cliente de B_NFe precisa estar na 25/09/2026 até o dia
+ * 30". Guarda só a META -- sistema, versão-alvo e prazo. Os clientes NÃO são
+ * copiados: saem ao vivo de `cliente_sistemas`, e quem está atendido sai dos
+ * atendimentos. Uma lista copiada na criação envelheceria no primeiro
+ * cliente cadastrado depois, e teria de ser mantida em dois lugares.
+ *
+ * `versao_alvo` é uma cópia de propósito, e não uma referência à oficial do
+ * sistema: publicar uma oficial mais nova no meio da campanha não pode
+ * mudar a meta de quem já foi atendido para cumpri-la.
+ *
+ * `total_final`/`atendidos_final` congelam o placar no encerramento, para a
+ * campanha encerrada mostrar o resultado que teve, e não o de hoje.
+ */
+function migracao4(conn) {
+  conn.exec(`
+    CREATE TABLE campanhas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      titulo TEXT NOT NULL,
+      descricao TEXT NOT NULL DEFAULT '',
+      sistema_id INTEGER NOT NULL REFERENCES sistemas(id),
+      versao_alvo TEXT NOT NULL,
+      prazo TEXT NOT NULL DEFAULT '',
+      criada_em TEXT NOT NULL,
+      criada_por TEXT NOT NULL DEFAULT '',
+      encerrada_em TEXT,
+      encerrada_por TEXT,
+      total_final INTEGER,
+      atendidos_final INTEGER
+    );
+    CREATE INDEX idx_campanhas_sistema ON campanhas (sistema_id);
+  `);
 }
 
 function lerMapa(texto) {

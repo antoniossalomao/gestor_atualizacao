@@ -1,0 +1,246 @@
+/*
+ * Campanhas de atualização (services/CampanhaService.js).
+ *
+ * Tudo aqui erra em silêncio: uma campanha que conta errado não quebra tela
+ * nenhuma, só diz à equipe que terminou quando não terminou. Os casos são
+ * os que a regra precisa segurar -- baixa automática pelo atendimento, meta
+ * que não anda quando a oficial muda, "já agendado" só com tarefa do mesmo
+ * sistema, sistemas fixos recusados, placar congelado no encerramento -- e
+ * as permissões das rotas.
+ */
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const os = require("node:os");
+
+const { Database } = require("../src/database/Database");
+const { Server } = require("../src/Server");
+const { HistoricoService } = require("../src/services/HistoricoService");
+const { AtualizacaoService } = require("../src/services/AtualizacaoService");
+const { AgendamentoService } = require("../src/services/AgendamentoService");
+const { CampanhaService } = require("../src/services/CampanhaService");
+
+const USUARIO = { id: 1, nome: "Teste" };
+
+function ambiente() {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-campanhas-"));
+  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const historico = new HistoricoService(db);
+  const atualizacoes = new AtualizacaoService(db, historico, { notifyAtualizacao: async () => {} });
+  const agenda = new AgendamentoService(db, historico);
+  const campanhas = new CampanhaService(db, historico);
+  const id = (nome) => db.sistemas.resolver(nome).id;
+  const cliente = (nome, sistemas) => db.clientes.insert("", nome, "Marília", sistemas.map(id), "");
+  const atender = (nome, sistema, data) => atualizacoes.create({ cliente: nome, sistema, data }, USUARIO);
+  const situacao = (campanhaId, nome) => campanhas.detalhe(campanhaId).clientes.find((c) => c.nome === nome)?.situacao;
+  const cleanup = () => {
+    try {
+      db.conn.close();
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+  };
+  return { db, atualizacoes, agenda, campanhas, cliente, atender, situacao, cleanup };
+}
+
+test("Campanhas - meta, baixa automática e placar", async (t) => {
+  const env = ambiente();
+  try {
+    env.db.sistemas.salvarVersao("B_NFe", "20/09/2026");
+    env.cliente("Loja Atendida", ["B_NFe"]);
+    env.cliente("Loja Antiga", ["B_NFe"]);
+    env.cliente("Loja Agendada", ["B_NFe"]);
+    env.cliente("Loja Outro Sistema Agendado", ["B_NFe", "B_Vendas"]);
+    env.cliente("Sem NFe", ["B_Vendas"]);
+    env.atender("Loja Antiga", "B_NFe", "21/09/2026"); // recebe 20/09: abaixo da meta
+
+    const campanha = env.campanhas.create({ titulo: "NT 2026.001", sistema: "nfe", versaoAlvo: "25/09/2026", prazo: "30/09/2026" }, USUARIO);
+
+    await t.test("só entram os clientes que têm o sistema no cadastro", () => {
+      assert.equal(campanha.sistema, "B_NFe", "o nome digitado é resolvido no catálogo");
+      assert.deepEqual(campanha.clientes.map((c) => c.nome).sort(), ["Loja Agendada", "Loja Antiga", "Loja Atendida", "Loja Outro Sistema Agendado"]);
+      assert.equal(campanha.totalClientes, 4);
+      assert.equal(campanha.pendentes, 4);
+      assert.equal(campanha.percentual, 0);
+    });
+
+    await t.test("atendimento abaixo da versão-alvo não conclui", () => {
+      assert.equal(env.situacao(campanha.id, "Loja Antiga"), "pendente");
+    });
+
+    await t.test("registrar o atendimento com a versão da meta dá baixa sozinho", () => {
+      env.db.sistemas.salvarVersao("B_NFe", "25/09/2026");
+      env.atender("Loja Atendida", "B_NFe", "26/09/2026");
+      assert.equal(env.situacao(campanha.id, "Loja Atendida"), "concluido");
+      const linha = env.campanhas.detalhe(campanha.id).clientes.find((c) => c.nome === "Loja Atendida");
+      assert.equal(linha.versaoRecebida, "25/09/2026");
+      assert.equal(linha.pelaData, false);
+    });
+
+    await t.test("tarefa em aberto do MESMO sistema vira 'já agendado'; de outro sistema, não", () => {
+      env.agenda.create({ tarefa: "Atualizar", cliente: "Loja Agendada", sistema: "B_NFe", data: "29/09/2026" }, USUARIO);
+      env.agenda.create({ tarefa: "Instalar", cliente: "Loja Outro Sistema Agendado", sistema: "B_Vendas" }, USUARIO);
+      assert.equal(env.situacao(campanha.id, "Loja Agendada"), "agendado");
+      assert.equal(env.situacao(campanha.id, "Loja Outro Sistema Agendado"), "pendente");
+      const d = env.campanhas.detalhe(campanha.id);
+      assert.equal(d.clientes.find((c) => c.nome === "Loja Agendada").agendamento.data, "29/09/2026");
+      assert.deepEqual([d.atendidos, d.agendados, d.pendentes], [1, 1, 2]);
+      assert.equal(d.atendidos + d.agendados + d.pendentes, d.totalClientes, "os grupos somam o total");
+      assert.equal(d.percentual, 25);
+    });
+
+    await t.test("tarefa concluída não conta como agendada", () => {
+      const { id } = env.db.conn.prepare("SELECT id FROM agendamentos WHERE cliente = 'Loja Agendada'").get();
+      env.agenda.markDone(id, USUARIO);
+      assert.equal(env.situacao(campanha.id, "Loja Agendada"), "pendente");
+    });
+
+    await t.test("oficial nova em Sistemas não muda a meta nem desfaz a baixa", () => {
+      env.db.sistemas.salvarVersao("B_NFe", "28/09/2026");
+      const d = env.campanhas.detalhe(campanha.id);
+      assert.equal(d.versaoAlvo, "25/09/2026");
+      assert.equal(env.situacao(campanha.id, "Loja Atendida"), "concluido");
+    });
+
+    await t.test("editar muda título e prazo, nunca sistema ou versão-alvo", () => {
+      const editada = env.campanhas.update(campanha.id, { titulo: "NT revisada", prazo: "", sistema: "B_Vendas", versaoAlvo: "01/01/2030" }, USUARIO);
+      assert.equal(editada.titulo, "NT revisada");
+      assert.equal(editada.prazo, "");
+      assert.equal(editada.sistema, "B_NFe");
+      assert.equal(editada.versaoAlvo, "25/09/2026");
+    });
+
+    await t.test("encerrar congela o placar", () => {
+      const encerrada = env.campanhas.encerrar(campanha.id, USUARIO);
+      assert.ok(encerrada.encerradaEm);
+      assert.deepEqual([encerrada.totalClientes, encerrada.atendidos], [4, 1]);
+      env.atender("Loja Antiga", "B_NFe", "28/09/2026");
+      const depois = env.campanhas.detalhe(campanha.id);
+      assert.equal(depois.atendidos, 1, "atendimento depois do encerramento não muda o resultado");
+      assert.equal(env.campanhas.list("ativas").length, 0);
+      assert.equal(env.campanhas.list("encerradas").length, 1);
+      assert.throws(() => env.campanhas.encerrar(campanha.id, USUARIO), /já está encerrada/);
+    });
+
+    await t.test("reabrir volta a contar ao vivo", () => {
+      const reaberta = env.campanhas.reabrir(campanha.id, USUARIO);
+      assert.equal(reaberta.encerradaEm, null);
+      assert.equal(reaberta.atendidos, 2);
+    });
+
+    await t.test("excluir a campanha não mexe em atendimentos nem tarefas", () => {
+      const antes = [env.db.atualizacoes.count(), env.db.agendamentos.count()];
+      env.campanhas.remove(campanha.id, USUARIO);
+      assert.deepEqual([env.db.atualizacoes.count(), env.db.agendamentos.count()], antes);
+      assert.throws(() => env.campanhas.detalhe(campanha.id), /não existe mais/);
+    });
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("Campanhas - atendimento sem versão é julgado pela data (ADR-0008)", () => {
+  const env = ambiente();
+  try {
+    env.cliente("Loja Legada", ["B_Vendas"]);
+    env.cliente("Loja Legada Velha", ["B_Vendas"]);
+    // Sem oficial cadastrada: o atendimento não grava versão nenhuma.
+    env.atender("Loja Legada", "B_Vendas", "26/09/2026");
+    env.atender("Loja Legada Velha", "B_Vendas", "01/09/2026");
+    const c = env.campanhas.create({ titulo: "Vendas", sistema: "B_Vendas", versaoAlvo: "25/09/2026" }, USUARIO);
+    const loja = c.clientes.find((x) => x.nome === "Loja Legada");
+    assert.equal(loja.situacao, "concluido");
+    assert.equal(loja.pelaData, true);
+    assert.equal(c.clientes.find((x) => x.nome === "Loja Legada Velha").situacao, "pendente");
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("Campanhas - validação", async (t) => {
+  const env = ambiente();
+  try {
+    const base = { titulo: "X", sistema: "B_NFe", versaoAlvo: "25/09/2026" };
+    await t.test("sistema fixo não pode ter campanha", () => {
+      assert.throws(() => env.campanhas.create({ ...base, sistema: "Suporte Bredas" }, USUARIO), /não controla versão/);
+    });
+    await t.test("sistema fora do catálogo é recusado", () => {
+      assert.throws(() => env.campanhas.create({ ...base, sistema: "Inexistente" }, USUARIO), /catálogo/);
+    });
+    await t.test("versão-alvo e prazo precisam ser datas reais", () => {
+      assert.throws(() => env.campanhas.create({ ...base, versaoAlvo: "" }, USUARIO), /Versão-alvo/);
+      assert.throws(() => env.campanhas.create({ ...base, versaoAlvo: "31/02/2026" }, USUARIO), /Versão-alvo/);
+      assert.throws(() => env.campanhas.create({ ...base, prazo: "2026-09-30" }, USUARIO), /Prazo/);
+    });
+    await t.test("título obrigatório", () => {
+      assert.throws(() => env.campanhas.create({ ...base, titulo: "  " }, USUARIO), /título/);
+    });
+    await t.test("campanha sem clientes não mostra 100%", () => {
+      const vazia = env.campanhas.create(base, USUARIO);
+      assert.equal(vazia.totalClientes, 0);
+      assert.equal(vazia.percentual, null);
+    });
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("Campanhas - rotas e permissões", async (t) => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-campanhas-http-"));
+  const server = new Server({ port: 0, dbPath: path.join(tmpDir, "gestao.db"), sessionSecret: "segredo-de-teste", sessionSecure: false, agentApiToken: "token-de-teste" });
+  await server.start();
+  const base = `http://127.0.0.1:${server.httpServer.address().port}/api`;
+  t.after(async () => {
+    await server.stop().catch(() => {});
+    try { server.db.close(); } catch { /* ignore */ }
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+  const pedir = async (caminho, { metodo = "GET", corpo, cookie } = {}) => {
+    const r = await fetch(`${base}${caminho}`, {
+      method: metodo,
+      headers: { ...(corpo !== undefined ? { "content-type": "application/json" } : {}), ...(cookie ? { cookie } : {}) },
+      body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
+    });
+    const tipo = r.headers.get("content-type") || "";
+    const corpoResp = tipo.includes("json") ? await r.json() : null;
+    return { status: r.status, corpo: corpoResp, tipo, disposicao: r.headers.get("content-disposition"), cookie: r.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ") };
+  };
+  const SENHA = "senha-de-teste-123";
+  const admin = (await pedir("/auth/setup", { metodo: "POST", corpo: { nome: "Admin", usuario: "admin", senha: SENHA } })).cookie;
+  const logar = async (role) => {
+    await pedir("/usuarios", { metodo: "POST", cookie: admin, corpo: { nome: role, usuario: role, senha: SENHA, role } });
+    return (await pedir("/auth/login", { metodo: "POST", corpo: { usuario: role, senha: SENHA } })).cookie;
+  };
+  const operador = await logar("operador");
+  const consulta = await logar("consulta");
+  const nova = { titulo: "NT", sistema: "B_NFe", versaoAlvo: "25/09/2026" };
+
+  await t.test("anônimo não lê", async () => {
+    assert.equal((await pedir("/campanhas")).status, 401);
+  });
+  await t.test("consulta lê mas não cria", async () => {
+    assert.equal((await pedir("/campanhas", { metodo: "POST", cookie: consulta, corpo: nova })).status, 403);
+    assert.equal((await pedir("/campanhas", { cookie: consulta })).status, 200);
+  });
+  let id;
+  await t.test("operador cria, encerra e reabre, mas não exclui", async () => {
+    const criada = await pedir("/campanhas", { metodo: "POST", cookie: operador, corpo: nova });
+    assert.equal(criada.status, 201);
+    id = criada.corpo.id;
+    assert.equal((await pedir(`/campanhas/${id}/encerrar`, { metodo: "PATCH", cookie: operador })).status, 200);
+    assert.equal((await pedir(`/campanhas/${id}/reabrir`, { metodo: "PATCH", cookie: operador })).status, 200);
+    assert.equal((await pedir(`/campanhas/${id}`, { metodo: "DELETE", cookie: operador })).status, 403);
+  });
+  await t.test("exportação devolve planilha com nome identificável", async () => {
+    const r = await pedir(`/campanhas/${id}/export`, { cookie: consulta });
+    assert.equal(r.status, 200);
+    assert.match(r.tipo, /spreadsheetml/);
+    assert.match(r.disposicao, /campanha-pendentes-B_NFe-25-09-2026\.xlsx/);
+  });
+  await t.test("admin exclui; depois disso é 404", async () => {
+    assert.equal((await pedir(`/campanhas/${id}`, { metodo: "DELETE", cookie: admin })).status, 204);
+    assert.equal((await pedir(`/campanhas/${id}`, { cookie: admin })).status, 404);
+  });
+});
