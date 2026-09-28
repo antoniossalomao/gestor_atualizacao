@@ -1,7 +1,7 @@
 # Planejamento completo de revisão do painel web
 
-Data: 24/09/2026 (concluído em 28/09/2026)  
-Situação: **concluído.** Todas as etapas (E0–E11) e todos os itens das seções 3 a 12 foram entregues; o que ficou em aberto está marcado como evolução na seção 13 (13.2 a 13.4), fora do escopo desta revisão.  
+Data: 24/09/2026 (finalizado em 28/09/2026)  
+Situação: **FINALIZADO.** Todas as etapas (E0–E11), todos os itens das seções 3 a 12 e as evoluções 13.1 (Campanhas) e 13.4 (preferências e notificações) foram entregues e verificados. Este documento não recebe mais itens: 13.2 e 13.3 ficam registradas como sugestões para um planejamento futuro, sem compromisso de execução.  
 Escopo: identidade, indicadores, tabelas, relatórios, agendamentos, clientes, sistemas, usuários, administração, configurações e evolução do produto.
 
 ## 1. Objetivo e limites da análise
@@ -464,7 +464,7 @@ Nome, senha, sessões, pesquisa e restauração por seção já existem. O probl
 - [x] Preservar valores já salvos ao mover opções de lugar.
 - [x] Testar restauração e conta sem acesso administrativo.
 
-Ficam para evolução (seção 13.5): novos tipos de notificação, som, horário silencioso, preferências de relatório/exportação, responsável padrão, persistência de preferências por usuário no servidor e sincronização entre navegadores.
+Ficaram para a evolução 13.4 (entregue em 28/09/2026): tipos de evento no sino, som, horário silencioso, preferências de relatório e validação das preferências guardadas no servidor. A persistência por usuário no servidor e a sincronização entre navegadores já existiam (`PreferenciaService` e `conectarPreferencias`).
 
 Segurança futura: encerramento por inatividade administrável e autenticação em dois fatores podem ser úteis, mas exigem servidor, recuperação e testes próprios. Não são apenas controles novos na interface e ficam fora da primeira revisão visual.
 
@@ -489,6 +489,8 @@ Substitui a proposta anterior da Central de pendências. Permite criar metas tem
 - [x] Ciclo de vida: ativa → encerrada (placar congelado no encerramento) → reabrir, se preciso. Excluir é só do admin e não apaga atualizações nem tarefas. Tudo registrado no Histórico (tipo "Campanha").
 - [x] Estrutura leve no SQLite: migração 4 cria só `campanhas` (a meta). Os clientes saem ao vivo de `cliente_sistemas`; "já agendado" é uma tarefa em aberto do mesmo sistema. Nenhuma tabela de clientes duplicada.
 
+**Revisão visual (28/09/2026):** o cartão da aba ocupa a altura da tela (lista e detalhe rolam cada um por si); sem campanhas, a coluna da lista some e o aviso fica centralizado no cartão (antes eram dois avisos, um espremido no canto); Ativas/Encerradas virou um seletor alinhado com "Nova campanha"; o placar ganhou painel próprio com o percentual em destaque; o prazo deixou de aparecer duas vezes no cabeçalho; a busca fica na linha dos filtros.
+
 Validação E11: `server/tests/campanhas.test.js` (baixa automática, meta imutável, agendado só do mesmo sistema, placar congelado, validação, permissões e exportação), `server/tests/migracao.test.js` (banco na versão 3) e `client/tests/campanhas.test.mjs` (filtros, papéis, escape de HTML). No navegador, em 1280 e 390 px: criação, "Agendar" de ponta a ponta (pendentes 4 → 3, já agendados 1 → 2), sem erro de JavaScript nem rolagem horizontal; no celular a tabela vira blocos.
 
 ### 13.2 Relatórios gerenciais
@@ -501,12 +503,16 @@ Recomendação: seção em Dados, não nova aba principal. Listar clientes sem s
 
 ### 13.4 Preferências e notificações — adiadas da seção 12
 
-- [ ] Tipos de evento, minhas tarefas/equipe, som opcional; não oferecer opção que não altere comportamento real.
-- [ ] Horário silencioso: definir fuso, eventos críticos e mensagens acumuladas.
-- [ ] Estado real da permissão de notificação de desktop, inclusive bloqueio.
-- [ ] Preferências de relatório sem reintroduzir campos removidos do chamado; o chamado não vira editor livre.
-- [ ] Persistência por usuário no servidor, validação de chaves e migração das preferências locais.
-- [ ] Não acrescentar idioma/fuso decorativos sem suporte integral nas datas e relatórios.
+**Concluído em 28/09/2026.** Todas as opções novas mudam comportamento de verdade e ficam em Configurações › Notificações e › Trabalho diário. Acompanham a conta (servidor), entram em Restaurar, no selo "alterado" e na exportação/importação de preferências.
+
+- [x] Tipos de evento, minhas tarefas/equipe, som opcional. O sino tem um interruptor por tipo (agendamentos atrasados, de hoje, situação dos agentes) e o escopo "Da equipe / Só as minhas"; o que fica desligado some do sino **e** do contador no título da aba, que somam a mesma lista (`montarNotificacoes` com filtro). "Minha" tarefa é decidida por `ehResponsavel` (domain/pessoa.js): sem caixa nem acento, e o primeiro nome da tarefa casa com o nome completo da conta ("Antonio" × "Antonio Salomão"), mas "Ana" não casa com "Anabela". Som opcional (desligado por padrão): toque curto gerado no navegador, sem arquivo, quando o número de pendências não vistas **cresce** ou chega falha de agente — não a cada ciclo.
+- [x] Horário silencioso. Intervalo de meia em meia hora que pode virar a noite (19:00–07:00); início igual ao fim não silencia nada; o fim é exclusivo. Fuso: o relógio deste computador, mostrado na tela ("America/Sao_Paulo"), sem conversão. Evento crítico: falha de agente, que por padrão aparece mesmo no silêncio (sem som); desligando isso, as falhas do período viram **um** aviso-resumo quando o silêncio acaba (mensagens acumuladas). O sino continua contando no silêncio.
+- [x] Estado real da permissão de notificação: linha própria em Notificações do sistema, relida do navegador (e do evento de mudança, quando o navegador oferece), com os quatro casos — permitidas, bloqueadas (com o caminho para liberar pelo cadeado), ainda não pedidas e indisponível (HTTP sem HTTPS).
+- [x] Preferências de relatório: aba com que o relatório abre (Atualização ou Cliente, quando a tela oferece as duas) e "Fechar o relatório depois de copiar". Nenhuma mexe no conteúdo: o formato do chamado (7.3) não virou editor. A aba "Atendimento" do relatório passou a se chamar "Atualização".
+- [x] Persistência por usuário no servidor, validação de chaves e migração das preferências locais. Persistência e migração já existiam. Nova: o servidor recusa nome de chave fora do formato (inclusive `__proto__`) e confere o valor das chaves que mudam comportamento (horários na grade de meia hora, listas fechadas, sim/não). O cliente deixa de enviar chave antiga fora do formato, para uma chave estranha não travar a sincronização das outras.
+- [x] Não acrescentar idioma/fuso decorativos: nenhum seletor de idioma ou fuso foi criado; o horário silencioso usa o relógio local e só informa qual é.
+
+Testes: `client/tests/notificacoes.test.mjs` (silêncio, filtro do sino, "minha" tarefa), `client/tests/preferencias.test.mjs` (padrões, fallback, exportar/importar) e `server/tests/historicoPreferencias.test.js` (nome e formato das chaves). Validação no navegador: seção Notificações sem erro de JavaScript.
 
 ## 14. Sequência de execução
 
@@ -543,6 +549,8 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 - [x] E9 — identidade escolhida e aplicada (antecipada; 24/09/2026).
 - [x] E10 — validação completa e documentação (25/09/2026).
 - [x] E11 — Campanhas de atualização; importação com prévia e transação; revisão final de botões e acessibilidade (28/09/2026).
+- [x] 13.4 — Preferências e notificações: tipos no sino, som, horário silencioso, estado da permissão, relatório e validação de chaves (28/09/2026).
+- [x] Documento finalizado (28/09/2026).
 
 ## 15. Validação e critérios gerais de aceite
 
@@ -626,7 +634,7 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 |---|---|
 | Recebida mais nova que a oficial | Em dia; desatualizado só quando anterior à oficial |
 | Fonte da versão para a situação | Só o atendimento; agente aparece separado |
-| Escopo de Configurações/Administração | Só reorganizar; novidades em 13.5 |
+| Escopo de Configurações/Administração | Só reorganizar na seção 12; as novidades vieram depois, na 13.4 |
 | Central de pendências | Substituída por Campanhas de Atualização (E11, aba no menu lateral) |
 | Situação no Resumo | Barra e totais clicáveis, substituindo a rosca (E4) |
 | Arquivar pendente | Só concluídas (E1); arquivar pendente seria outra regra de negócio |
@@ -642,6 +650,6 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 
 ### Em aberto
 
-Nenhuma decisão pendente para esta revisão. As evoluções da seção 13 (13.2 a 13.4) dependem de decisão própria quando forem priorizadas.
+Nenhuma. Documento finalizado: 13.2 (relatórios gerenciais) e 13.3 (qualidade dos cadastros) ficam como sugestões para um planejamento novo.
 
 O resultado esperado é um painel mais útil, com menos ambiguidade. Novas abas vêm depois de indicadores, filtros e ações principais representarem corretamente o trabalho da equipe.

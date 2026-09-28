@@ -113,6 +113,14 @@ a situação de cada agente em campo. O agente vive em
   **Minha conta** e agrupa as opções em 6 seções (Minha conta, Trabalho
   diário, Notificações, Interface e acessibilidade, Regras da equipe, Sobre
   e ajuda), com perfis prontos, prévia ao vivo das tabelas e busca instantânea.
+- **Notificações sob medida**: em Configurações › Notificações cada pessoa
+  escolhe o que o sino conta (agendamentos atrasados, de hoje, situação dos
+  agentes; da equipe ou só as suas), liga um som curto para pendência nova e
+  define um horário silencioso (pode virar a noite; falhas de agente podem
+  passar mesmo assim, ou chegar num resumo quando o silêncio acaba). A tela
+  mostra o estado real da permissão de notificação do navegador, inclusive
+  bloqueio. Em Trabalho diário, a aba com que o relatório abre e se ele fecha
+  ao copiar.
 - **Nomes de sistema e de responsável são padronizados na gravação** —
   quem digitar `B_NFE` grava `B_NFe`, e `CAMILA` grava `Camila`. Sem isso, o
   relatório por sistema erra em silêncio (ver a seção de 11/09 abaixo, que
