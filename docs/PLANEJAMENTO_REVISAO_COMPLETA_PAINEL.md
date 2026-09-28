@@ -1,7 +1,7 @@
 # Planejamento completo de revisão do painel web
 
-Data: 24/09/2026  
-Situação: proposta para revisão; implementação não iniciada por este planejamento.  
+Data: 24/09/2026 (concluído em 28/09/2026)  
+Situação: **concluído.** Todas as etapas (E0–E11) e todos os itens das seções 3 a 12 foram entregues; o que ficou em aberto está marcado como evolução na seção 13 (13.2 a 13.4), fora do escopo desta revisão.  
 Escopo: identidade, indicadores, tabelas, relatórios, agendamentos, clientes, sistemas, usuários, administração, configurações e evolução do produto.
 
 ## 1. Objetivo e limites da análise
@@ -48,7 +48,7 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 | I17 | Último acesso em minúscula | Template usa tempoRelativo diretamente | ✅ Concluído em E1: capitalização local da célula (seção 11.2) | P2 |
 | I18 | Melhorar Administração | Recursos importantes já existem em várias seções | ✅ Concluído em E8: 7 seções por finalidade de uso, incluindo Dados e Operação (seção 11) | P1 |
 | I19 | Configurações excessivamente visuais | Conta/segurança existem, mas apresentação ocupa várias abas | ✅ Concluído em E8: abertura em Minha conta e 6 seções por finalidade de uso (seção 12) | P1 |
-| I20 | Novas funcionalidades/abas | Acompanhamento de metas e versões críticas | Campanhas de atualização (E11) | P2/P3 |
+| I20 | Novas funcionalidades/abas | Acompanhamento de metas e versões críticas | ✅ Concluído em E11: aba Campanhas com meta de versão, baixa automática e progresso (seção 13.1; ADR-0009) | P2/P3 |
 
 P0: corrigir significado ou função importante. P1: revisão principal. P2: melhoria complementar. P3: expansão opcional. Prioridade não equivale a dificuldade.
 
@@ -207,12 +207,12 @@ Na consulta por sistema, a coluna “Oficial” foi retirada da tabela porque a 
 - [x] Manter borda perceptível em repouso, não apenas no hover. `btn--danger` sozinho já usa `--cor-borda-forte` em repouso; sem o `btn--ghost` por cima, a borda aparece.
 - [x] Distinguir ação destrutiva por rótulo e cor, não só por ícone. Já valia (rótulo + `btn--danger`); confirmado que nenhum desses botões dependia só do ícone `alerta`.
 - [x] Padronizar altura, raio, espessura do traço e distância ícone/texto (25/09/2026).
-- [ ] Revisar linhas, formulários, modais e rodapés; evitar substituição global cega.
-- [ ] Manter nome acessível e dica para ícones sem texto.
-- [ ] Padronizar desabilitado, processamento e foco por teclado.
-- [ ] Reduzir peso visual sem reduzir excessivamente alvo de toque.
+- [x] Revisar linhas, formulários, modais e rodapés; evitar substituição global cega (28/09/2026). Revisão tela a tela no navegador, com correções pontuais: colunas Versão e Data de Atualizações cortavam o ano ("26/09/2…") e passaram a 96 px; o novo modal de importação e o formulário de campanha seguem o rodapé padrão (`modal-box__actions`).
+- [x] Manter nome acessível e dica para ícones sem texto (28/09/2026). Auditoria no navegador em todas as abas: nenhum botão visível sem nome acessível. Os fechar "×" da gaveta e do relatório ganharam `title`. `client/tests/acessibilidade.test.mjs` trava a regra: todo `btn--icon` precisa de `aria-label` **e** `title`.
+- [x] Padronizar desabilitado, processamento e foco por teclado (28/09/2026). Botão processando (`aria-busy`, de `marcarOcupado`) deixou de parecer desabilitado: fica legível, com spinner e cursor de progresso. Desabilitado continua com opacidade 0.5; foco usa a regra global `:focus-visible`.
+- [x] Reduzir peso visual sem reduzir excessivamente alvo de toque (28/09/2026). Em tela de toque (`pointer: coarse`), botões só de ícone crescem de 26 para 40 px e `btn--small` ganha altura mínima de 40 px; o ícone e o desktop não mudam.
 - [x] Alinhar início das grades nas abas operacionais (25/09/2026).
-- [ ] Conferir largura aproveitada e equilíbrio à direita com sidebar recolhida.
+- [x] Conferir largura aproveitada e equilíbrio à direita com sidebar recolhida (28/09/2026). Medido em 1440 px nas 11 telas, barra aberta e recolhida: o conteúdo ocupa a área inteira, com a mesma margem (24 px) dos dois lados e sem rolagem horizontal.
 
 Aceite: botões reconhecíveis em claro/escuro, sem deslocamento no hover. Menus e navegação não devem receber indevidamente estilo de botão de formulário.
 
@@ -241,12 +241,14 @@ Hoje operadores podem importar. Mover exclusivamente para Administração pode r
 - [x] Criar menu Mais ações com teclado, Escape e restauração de foco (25/09/2026).
 - [x] Manter exportação perto dos filtros e sem privilégios novos para quem já consulta (25/09/2026).
 - [x] Indicar recorte e usar nome de arquivo identificável (25/09/2026).
-- [ ] Mover importação para fluxo com orientação do formato aceito.
-- [ ] Evolução: prévia com linhas válidas, erros e possíveis duplicidades.
-- [ ] Não aplicar versão oficial atual retroativamente a importações históricas.
-- [ ] Diferenciar erro de arquivo, coluna, data e cliente desconhecido.
-- [ ] Confirmar aplicação após prévia, com resultado no Histórico.
-- [ ] Planejar transação e recuperação de falha do lote.
+- [x] Mover importação para fluxo com orientação do formato aceito (28/09/2026). `components/ImportacaoModal.js`: orientação → prévia → resultado, aberto por Mais ações em Atualizações (operador e admin, como antes) e por Administração › Dados. Permissão inalterada.
+- [x] Prévia com linhas válidas, erros e possíveis duplicidades (28/09/2026). `POST /atualizacoes/import/previa` lê e classifica sem gravar nada, nem sistema novo no catálogo.
+- [x] Não aplicar versão oficial atual retroativamente a importações históricas (continua em `_versoesLegadas`; agora com teste).
+- [x] Diferenciar erro de arquivo, coluna, data e cliente desconhecido (28/09/2026). Arquivo que não abre, planilha vazia e falta da coluna Cliente recusam o arquivo; cliente em branco e data fora de dd/mm/aaaa são erros de linha (a linha fica de fora); cliente sem cadastro, sistema fora do catálogo e duplicidade são avisos. Colunas desconhecidas são listadas.
+- [x] Confirmar aplicação após prévia, com resultado no Histórico (28/09/2026). O botão diz quantas linhas entram; possíveis duplicidades são puladas por padrão (caixa marcada); o Histórico registra importadas e ignoradas.
+- [x] Transação e recuperação de falha do lote (28/09/2026). O lote grava numa transação única: uma falha no meio não deixa nada gravado, e a tela avisa "Nenhuma linha foi gravada".
+
+**Mudança de comportamento:** antes, linha com data fora do formato era importada assim mesmo; agora fica de fora e aparece na prévia. Testes em `server/tests/importacao.test.js`.
 
 A prévia da importação pode ser entrega posterior: reposicionar botões não precisa esperar a ampliação de todo o importador.
 
@@ -336,6 +338,8 @@ Melhorias posteriores: reagendamento com motivo, lembrete de retorno e checklist
 - [x] Evitar propagação do clique que abra simultaneamente o formulário (25/09/2026).
 - [x] Preservar restrições de usuários de consulta (25/09/2026).
 
+**Revisto em 28/09/2026 (decisão do usuário):** o botão Copiar acessos saiu da linha; fica só Gerenciar acessos, onde cada identificador tem cópia própria. O papel Consulta vê os acessos na ficha (subaba Acessos Remotos).
+
 ### 9.2 Grupo/Rede
 
 - [x] Priorizar largura do nome do cliente (25/09/2026).
@@ -364,6 +368,8 @@ Cadastro, Sistemas e Acessos já existem como subabas. O foco deve ser hierarqui
 - [x] Preservar seleção e pesquisa ao voltar da ficha (25/09/2026).
 
 Aceite: nome longo, sem grupo, sem sistemas, apenas fixos, sem histórico, vários acessos e histórico extenso.
+
+**Revisto em 28/09/2026 (decisão do usuário):** o resumo compacto ficou só com **Última atualização** (o rótulo dizia "Último atendimento"); o cartão Situação dos sistemas saiu, porque repetia a Matriz de Versões.
 
 ## 10. Sistemas e versões oficiais — I16
 
@@ -470,16 +476,20 @@ Pergunta: **como acompanhar o avanço e a entrega de uma versão crítica ou pra
 
 Substitui a proposta anterior da Central de pendências. Permite criar metas temporárias focadas em um sistema e versão mínima (ex.: B_NFe 25/09/2026 para uma Nota Técnica da SEFAZ), monitorando em tempo real o percentual de clientes atualizados contra os pendentes.
 
-- [ ] Nova aba no menu lateral: **Campanhas** (com ícone dedicado).
-- [ ] Criação de campanha: sistema, versão-alvo (dd/mm/aaaa), prazo limite opcional e título/descrição.
-- [ ] Reconhecimento automático via atendimentos: registrar atendimento normal em Atualizações com versão igual ou mais recente (ADR-0008) marca o cliente como atendido na campanha, sem baixa manual.
-- [ ] Imutabilidade da meta: novas versões oficiais cadastradas posteriormente em Sistemas não alteram a versão-alvo fixada na campanha.
-- [ ] Painel visual executivo: barra de progresso percentual, contagem de atualizados, pendentes e já agendados.
-- [ ] Tabela de clientes com filtros rápidos (Pendentes, Já agendados, Concluídos, Todos).
-- [ ] Ações na linha: botão rápido para criar agendamento direto para cliente pendente e botão de gerenciar acessos remotos.
-- [ ] Exportação de relatório em planilha (.xlsx) com a lista de clientes pendentes da campanha.
-- [ ] Ciclo de vida: campanha ativa e arquivamento/encerramento quando concluída.
-- [ ] Estrutura leve no banco SQLite: tabela `campanhas` com vínculos aos clientes daquele sistema (`clientes_sistemas`), sem duplicar tabelas de clientes.
+**Concluído em E11 (28/09/2026).** Decisões e motivos em [`docs/adr/0009-campanhas-de-atualizacao.md`](adr/0009-campanhas-de-atualizacao.md).
+
+- [x] Nova aba no menu lateral: **Campanhas** (ícone de bandeira), no grupo Distribuição, depois de Sistemas, para não mudar o Alt+N das abas existentes. A partir da 10ª aba não há atalho numérico, e a aba deixou de anunciar um "Alt+10" que não existia.
+- [x] Criação de campanha: sistema, versão-alvo (dd/mm/aaaa), prazo limite opcional e título/descrição. A versão-alvo vem sugerida com a oficial atual do sistema. Sistemas fixos e fora do catálogo são recusados.
+- [x] Reconhecimento automático via atendimentos: o último atendimento do cliente no sistema passa por `situacaoDoSistema` contra a versão-alvo (ADR-0008, inclusive "pela data" quando o atendimento não tem versão). Não existe baixa manual.
+- [x] Imutabilidade da meta: a versão-alvo é copiada na criação; editar a campanha muda só título, descrição e prazo, e uma oficial nova em Sistemas não altera a meta.
+- [x] Painel visual executivo: barra de progresso com atendidos, já agendados e pendentes (mesmas cores do card de situação do Resumo), contagens e percentual. Sem clientes, mostra "—" em vez de 0% ou 100%.
+- [x] Tabela de clientes com filtros rápidos (Pendentes, Já agendados, Concluídos, Todos), cada um com a contagem, e busca por nome, código ou cidade.
+- [x] Ações na linha: Agendar (cria a tarefa na hora, com o sistema da campanha, prioridade Alta se houver prazo e a origem no título), gerenciar acessos remotos e abrir a ficha. Agendar só aparece para pendente e para quem pode editar.
+- [x] Exportação em planilha (.xlsx) dos clientes que faltam (pendentes e já agendados), com código, cidade, última atualização, versão recebida e a tarefa; segunda aba com o resumo da campanha.
+- [x] Ciclo de vida: ativa → encerrada (placar congelado no encerramento) → reabrir, se preciso. Excluir é só do admin e não apaga atualizações nem tarefas. Tudo registrado no Histórico (tipo "Campanha").
+- [x] Estrutura leve no SQLite: migração 4 cria só `campanhas` (a meta). Os clientes saem ao vivo de `cliente_sistemas`; "já agendado" é uma tarefa em aberto do mesmo sistema. Nenhuma tabela de clientes duplicada.
+
+Validação E11: `server/tests/campanhas.test.js` (baixa automática, meta imutável, agendado só do mesmo sistema, placar congelado, validação, permissões e exportação), `server/tests/migracao.test.js` (banco na versão 3) e `client/tests/campanhas.test.mjs` (filtros, papéis, escape de HTML). No navegador, em 1280 e 390 px: criação, "Agendar" de ponta a ponta (pendentes 4 → 3, já agendados 1 → 2), sem erro de JavaScript nem rolagem horizontal; no celular a tabela vira blocos.
 
 ### 13.2 Relatórios gerenciais
 
@@ -498,10 +508,6 @@ Recomendação: seção em Dados, não nova aba principal. Listar clientes sem s
 - [ ] Persistência por usuário no servidor, validação de chaves e migração das preferências locais.
 - [ ] Não acrescentar idioma/fuso decorativos sem suporte integral nas datas e relatórios.
 
-### Fora da prioridade atual
-
-Chat interno, CRM completo, financeiro, grande editor de dashboards e automações sem revisão. Aumentariam escopo antes de resolver os problemas operacionais identificados.
-
 ## 14. Sequência de execução
 
 Numeração única: as etapas abaixo são a ordem de execução e cada uma é uma entrega verificável. Esforços são relativos, não prazos: migrações e permissões precisam estar consolidadas antes de estimar horas/dias com confiança. A marca (E9) já foi aplicada antes da ordem prevista; se E5 mudar o padrão de botões ou da barra lateral, conferir de novo a tabela "Aplicações da marca" da seção 4.
@@ -519,7 +525,7 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E8 | ✅ Administração e Configurações reorganizadas por finalidade (25/09/2026) | I18, I19 | — | Médio |
 | E9 | ✅ Identidade escolhida e aplicada (antecipada, 24/09/2026) | I01 | — | Médio |
 | E10 | ✅ Validação visual completa, README/ajuda, CHANGELOG (25/09/2026) | — | Todas | Pequeno |
-| E11 | Campanhas de atualização (aba no menu lateral, metas de versão e progresso) | I20 | E2, E4, E6 | Médio |
+| E11 | ✅ Campanhas de atualização (aba no menu lateral, metas de versão e progresso) e fechamento das pendências das seções 6 e 7.2 (28/09/2026) | I20, I06, I08 | E2, E4, E6 | Médio |
 
 E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída decidida foi julgar pela data o atendimento sem versão (3.3), e não criar a ação de confirmar versão.
 
@@ -536,7 +542,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 - [x] E8 — Administração e Configurações reagrupadas por finalidade, sem preferências novas (25/09/2026).
 - [x] E9 — identidade escolhida e aplicada (antecipada; 24/09/2026).
 - [x] E10 — validação completa e documentação (25/09/2026).
-- [ ] E11 — Campanhas de atualização (aba no menu lateral, metas de versão e progresso).
+- [x] E11 — Campanhas de atualização; importação com prévia e transação; revisão final de botões e acessibilidade (28/09/2026).
 
 ## 15. Validação e critérios gerais de aceite
 
@@ -606,6 +612,8 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 | Administração | `AdministracaoView.js`, `views/administracao/`, `templates/administracao.js` |
 | Configurações | `ConfiguracoesView.js`, `views/configuracoes/ajustes.js`, `ContaConfig.js`, `app/appearance.js` |
 | Regras/banco | `server/src/config/regrasEquipe.js`, `ConfiguracaoSistemaService.js`, `Database.js`, migrações atuais |
+| Campanhas | `CampanhasView.js`, `templates/campanhas.js`, `domain/campanhas.js`, `CampanhaService.js`, `CampanhaRepository.js`, migração 4 |
+| Importação | `components/ImportacaoModal.js`, `templates/importacao.js`, `AtualizacaoService.previaImportacao/importXlsx` |
 | Testes | `client/tests/`, `server/tests/` e navegador com dados descartáveis |
 
 Colunas e contratos devem seguir a normalização atual. Este mapa aponta investigação; não autoriza substituir mudanças recentes por arquivos de versões anteriores.
@@ -620,6 +628,12 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 | Fonte da versão para a situação | Só o atendimento; agente aparece separado |
 | Escopo de Configurações/Administração | Só reorganizar; novidades em 13.5 |
 | Central de pendências | Substituída por Campanhas de Atualização (E11, aba no menu lateral) |
+| Situação no Resumo | Barra e totais clicáveis, substituindo a rosca (E4) |
+| Arquivar pendente | Só concluídas (E1); arquivar pendente seria outra regra de negócio |
+| Importação de operador | Permissão preservada: Mais ações em Atualizações e Administração › Dados (7.2) |
+| Datas em Sistemas | Filtro recolhível e gerenciador de oficiais separado (E3) |
+| Duplicidade na importação | Avisada na prévia e pulada por padrão; importar mesmo assim é escolha explícita (28/09/2026) |
+| Campanha: quem entra e quem está atendido | Clientes ao vivo do cadastro; atendido pela regra da ADR-0008 contra a versão-alvo; sem baixa manual (ADR-0009) |
 | Nome/símbolo | Gestor de Atualizações, assinatura Bredas Sistemas; símbolo vetorial (seção 4) |
 | Atendimento sem versão registrada | Julgado pela data do atendimento contra a da oficial, marcado "(pela data)" (ADR-0008) |
 | Quem decide a situação do cliente | O B_Vendas, quando o cliente tem (fixo no código); sem ele, todos os sistemas |
@@ -628,14 +642,6 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 
 ### Em aberto
 
-Não impedem as correções objetivas. Resolver cada uma quando afetar a entrega, apresentando proposta concreta para visualizar.
-
-| Decisão | Recomendação inicial |
-|---|---|
-| Situação no Resumo | Barra e totais clicáveis, substituindo rosca; depende da contagem de E0 |
-| Sistemas fixos | Classificação no catálogo, administrável |
-| Arquivar pendente | Manter apenas concluídas nesta entrega |
-| Importação de operador | Preservar permissão com entrada discreta |
-| Datas em Sistemas | Filtro recolhível e gerenciador separado |
+Nenhuma decisão pendente para esta revisão. As evoluções da seção 13 (13.2 a 13.4) dependem de decisão própria quando forem priorizadas.
 
 O resultado esperado é um painel mais útil, com menos ambiguidade. Novas abas vêm depois de indicadores, filtros e ações principais representarem corretamente o trabalho da equipe.
