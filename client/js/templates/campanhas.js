@@ -43,9 +43,9 @@ export function cartaoCampanha(c, selecionada) {
     <button type="button" class="campanha-cartao${selecionada ? " is-selecionada" : ""}" data-campanha="${c.id}" aria-pressed="${selecionada ? "true" : "false"}">
       <span class="campanha-cartao__topo">
         <strong class="campanha-cartao__titulo">${c.titulo}</strong>
-        ${marcaPrazo(seloPrazo(c))}
+        <span class="campanha-cartao__pct">${c.percentual == null ? "—" : `${c.percentual}%`}</span>
       </span>
-      <span class="campanha-cartao__meta">${c.sistema} · versão ${c.versaoAlvo}</span>
+      <span class="campanha-cartao__meta">${c.sistema} · versão ${c.versaoAlvo} ${marcaPrazo(seloPrazo(c))}</span>
       ${barraProgresso(c)}
       <span class="campanha-cartao__meta">${textoProgresso(c)}</span>
     </button>`;
@@ -76,7 +76,7 @@ export function cabecalhoCampanha(c, usuario) {
       <div class="campanha__identidade">
         <h2 class="campanha__titulo">${c.titulo} ${marcaPrazo(seloPrazo(c))}</h2>
         <p class="campanha__meta">
-          <strong>${c.sistema}</strong> na versão <strong>${c.versaoAlvo}</strong> ou mais nova${c.prazo ? html` · prazo ${c.prazo}` : ""}
+          <strong>${c.sistema}</strong> na versão <strong>${c.versaoAlvo}</strong> ou mais nova
         </p>
         ${c.descricao ? html`<p class="campanha__descricao">${c.descricao}</p>` : ""}
       </div>
@@ -87,16 +87,18 @@ export function cabecalhoCampanha(c, usuario) {
         ${usuario?.role === "admin" ? html`<button type="button" class="btn btn--small btn--danger" data-action="excluir">${iconHtml("alerta")} Excluir</button>` : ""}
       </div>
     </div>
-    ${barraProgresso(c)}
-    <div class="campanha__placar">
-      <div class="campanha__numero is-boa"><span class="situacao__marca" aria-hidden="true"></span><strong>${c.atendidos}</strong> atualizados</div>
-      ${encerrada ? "" : html`<div class="campanha__numero is-media"><span class="situacao__marca" aria-hidden="true"></span><strong>${c.agendados}</strong> já agendados</div>`}
-      <div class="campanha__numero is-alta"><span class="situacao__marca" aria-hidden="true"></span><strong>${c.pendentes}</strong> pendentes</div>
-      <div class="campanha__numero campanha__numero--pct"><strong>${c.percentual == null ? "—" : `${c.percentual}%`}</strong> concluído</div>
-    </div>
-    <p class="campanha__nota">${encerrada
+    <div class="campanha__painel">
+      <div class="campanha__placar">
+        <div class="campanha__numero campanha__numero--pct"><strong>${c.percentual == null ? "—" : `${c.percentual}%`}</strong>concluído</div>
+        <div class="campanha__numero is-boa"><strong><span class="situacao__marca" aria-hidden="true"></span>${c.atendidos}</strong>atualizados</div>
+        ${encerrada ? "" : html`<div class="campanha__numero is-media"><strong><span class="situacao__marca" aria-hidden="true"></span>${c.agendados}</strong>já agendados</div>`}
+        <div class="campanha__numero is-alta"><strong><span class="situacao__marca" aria-hidden="true"></span>${c.pendentes}</strong>pendentes</div>
+      </div>
+      ${barraProgresso(c)}
+      <p class="campanha__nota">${encerrada
       ? `Encerrada em ${new Date(c.encerradaEm).toLocaleDateString("pt-BR")}${c.encerradaPor ? ` por ${c.encerradaPor}` : ""}: o placar acima é o do encerramento.`
-      : "A baixa é automática: registre a atualização em Atualizações e o cliente sai dos pendentes. Uma versão oficial nova em Sistemas não muda a meta."}</p>`;
+      : "A baixa é automática: registre a atualização em Atualizações e o cliente sai dos pendentes. Uma versão oficial nova em Sistemas não muda a meta."}</p>
+    </div>`;
 }
 
 /**

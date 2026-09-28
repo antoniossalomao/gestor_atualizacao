@@ -54,12 +54,11 @@ export class CampanhasView extends View {
     const podeCriar = this.user?.role !== "consulta";
     this.container.innerHTML = String(html`
       <div class="card campanhas">
-        <div class="toolbar">
-          <div class="filtros-rapidos campanhas__alternar" role="group" aria-label="Campanhas exibidas">
+        <div class="campanhas__topo">
+          <div class="campanhas__alternar" role="group" aria-label="Campanhas exibidas">
             <button type="button" class="filtro-rapido" data-lista="ativas">Ativas</button>
             <button type="button" class="filtro-rapido" data-lista="encerradas">Encerradas</button>
           </div>
-          <div class="toolbar-spacer"></div>
           ${podeCriar ? html`<button type="button" class="btn btn--accent btn--small" data-action="nova">${iconHtml("plus")} Nova campanha</button>` : ""}
         </div>
         <div class="campanhas__grade">
@@ -68,10 +67,7 @@ export class CampanhasView extends View {
             <div data-role="cabecalho"></div>
             <div class="toolbar campanhas__toolbar" data-role="toolbar-clientes" hidden>
               <div class="filtros-rapidos" data-role="filtros" role="group" aria-label="Filtrar clientes da campanha"></div>
-              <div class="field">
-                <label class="field__label" for="cmp-busca">Buscar cliente, código ou cidade</label>
-                <input class="input" id="cmp-busca" data-role="busca" type="search" autocomplete="off" />
-              </div>
+              <input class="input campanhas__busca" data-role="busca" type="search" autocomplete="off" placeholder="Buscar cliente, código ou cidade" aria-label="Buscar cliente, código ou cidade" />
               <div class="toolbar-spacer"></div>
               <span class="result-count" data-role="count" aria-live="polite"></span>
             </div>
@@ -161,6 +157,9 @@ export class CampanhasView extends View {
   }
 
   _pintarLista() {
+    // Sem nenhuma campanha, a coluna da lista some e o vazio do detalhe ocupa
+    // o cartão inteiro (ver .campanhas.is-vazia no CSS).
+    this.container.querySelector(".campanhas").classList.toggle("is-vazia", this.campanhas.length === 0);
     this.listaEl.innerHTML = String(listaCampanhas(this.campanhas, this.selecionadaId, { encerradas: this.mostrarEncerradas, podeCriar: this.user?.role !== "consulta" }));
   }
 
