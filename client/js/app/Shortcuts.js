@@ -18,7 +18,7 @@ export const ATALHOS = [
   ["Ctrl + ,", "Abrir as Configurações", "Global"],
   ["Ctrl + B", "Recolher ou abrir o menu lateral", "Global"],
   ["?", "Mostrar esta lista de atalhos", "Global"],
-  ["Alt + 1 … 9", "Ir direto para a aba de mesmo número", "Global"],
+  ["Alt + 1 … 9, 0", "Ir direto para a aba de mesmo número (0 = décima)", "Global"],
   ["Alt + N", "Abrir o menu de ação rápida", "Global"],
   ["Esc", "Fechar a janela ou a lista de sugestões aberta", "Global"],
   ["Enter", "Salvar o formulário (adicionar, ou atualizar o selecionado)", "Formulários"],

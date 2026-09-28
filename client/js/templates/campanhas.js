@@ -1,0 +1,199 @@
+import { html, plural } from "../utils/html.js";
+import { iconHtml } from "../utils/icons.js";
+import { FILTROS_CAMPANHA, SITUACAO_CAMPANHA, seloPrazo, textoProgresso } from "../domain/campanhas.js";
+
+/**
+ * Marcação da aba Campanhas. Sem DOM: a view (views/CampanhasView.js) só
+ * joga o resultado num innerHTML e liga os eventos.
+ */
+
+/**
+ * Barra de progresso com as três partes (atendidos, agendados, pendentes).
+ * Mesma técnica da barra de situação do Resumo: largura por `flex-grow` =
+ * quantidade, então a soma fecha a barra sem arredondar porcentagem.
+ * @param {{totalClientes: number, atendidos: number, agendados: number, pendentes: number, percentual: number|null}} c
+ */
+export function barraProgresso(c) {
+  if (!c.totalClientes) return html`<div class="situacao__barra campanha__barra" role="img" aria-label="Sem clientes"></div>`;
+  /** @type {Array<[string, number]>} */
+  const partes = [
+    ["boa", c.atendidos],
+    ["media", c.agendados],
+    ["alta", c.pendentes],
+  ];
+  const descricao = `${textoProgresso(c)}; ${c.agendados} já agendados; ${c.pendentes} pendentes.`;
+  return html`
+    <div class="situacao__barra campanha__barra" role="img" aria-label="${descricao}">
+      ${partes.filter(([, n]) => n > 0).map(([sev, n]) => html`<span class="situacao__parte is-${sev}" style="flex-grow: ${n}"></span>`)}
+    </div>`;
+}
+
+/** @param {ReturnType<typeof seloPrazo>} selo */
+function marcaPrazo(selo) {
+  return selo ? html`<span class="campanha__selo is-${selo.tipo}">${selo.texto}</span>` : "";
+}
+
+/**
+ * Cartão de uma campanha na lista lateral.
+ * @param {any} c campanha com placar (GET /campanhas)
+ * @param {boolean} selecionada
+ */
+export function cartaoCampanha(c, selecionada) {
+  return html`
+    <button type="button" class="campanha-cartao${selecionada ? " is-selecionada" : ""}" data-campanha="${c.id}" aria-pressed="${selecionada ? "true" : "false"}">
+      <span class="campanha-cartao__topo">
+        <strong class="campanha-cartao__titulo">${c.titulo}</strong>
+        <span class="campanha-cartao__pct">${c.percentual == null ? "—" : `${c.percentual}%`}</span>
+      </span>
+      <span class="campanha-cartao__meta">${c.sistema} · versão ${c.versaoAlvo} ${marcaPrazo(seloPrazo(c))}</span>
+      ${barraProgresso(c)}
+      <span class="campanha-cartao__meta">${textoProgresso(c)}</span>
+    </button>`;
+}
+
+/** Lista lateral inteira, ou o vazio que explica o próximo passo. */
+export function listaCampanhas(campanhas, selecionadaId, { encerradas, podeCriar }) {
+  if (campanhas.length === 0) {
+    return html`<p class="campanhas__vazio">${encerradas
+      ? "Nenhuma campanha encerrada."
+      : podeCriar
+        ? "Nenhuma campanha ativa. Crie uma para acompanhar uma versão crítica ou um prazo fiscal."
+        : "Nenhuma campanha ativa."}</p>`;
+  }
+  return html`${campanhas.map((c) => cartaoCampanha(c, c.id === selecionadaId))}`;
+}
+
+/**
+ * Cabeçalho do detalhe: meta, placar e ações da campanha.
+ * @param {any} c campanha com placar (GET /campanhas/:id)
+ * @param {{role?: string}} usuario
+ */
+export function cabecalhoCampanha(c, usuario) {
+  const podeEditar = usuario?.role !== "consulta";
+  const encerrada = Boolean(c.encerradaEm);
+  return html`
+    <div class="campanha__cabecalho">
+      <div class="campanha__identidade">
+        <h2 class="campanha__titulo">${c.titulo} ${marcaPrazo(seloPrazo(c))}</h2>
+        <p class="campanha__meta">
+          <strong>${c.sistema}</strong> na versão <strong>${c.versaoAlvo}</strong> ou mais nova
+        </p>
+        ${c.descricao ? html`<p class="campanha__descricao">${c.descricao}</p>` : ""}
+      </div>
+      <div class="campanha__acoes">
+        <button type="button" class="btn btn--small" data-action="exportar">${iconHtml("download")} Exportar pendentes (.xlsx)</button>
+        ${podeEditar && !encerrada ? html`<button type="button" class="btn btn--small" data-action="editar">${iconHtml("editar")} Editar</button>` : ""}
+        ${podeEditar ? html`<button type="button" class="btn btn--small" data-action="${encerrada ? "reabrir" : "encerrar"}">${encerrada ? "Reabrir" : "Encerrar"}</button>` : ""}
+        ${usuario?.role === "admin" ? html`<button type="button" class="btn btn--small btn--danger" data-action="excluir">${iconHtml("alerta")} Excluir</button>` : ""}
+      </div>
+    </div>
+    <div class="campanha__painel">
+      <div class="campanha__placar">
+        <div class="campanha__numero campanha__numero--pct"><strong>${c.percentual == null ? "—" : `${c.percentual}%`}</strong>concluído</div>
+        <div class="campanha__numero is-boa"><strong><span class="situacao__marca" aria-hidden="true"></span>${c.atendidos}</strong>atualizados</div>
+        ${encerrada ? "" : html`<div class="campanha__numero is-media"><strong><span class="situacao__marca" aria-hidden="true"></span>${c.agendados}</strong>já agendados</div>`}
+        <div class="campanha__numero is-alta"><strong><span class="situacao__marca" aria-hidden="true"></span>${c.pendentes}</strong>pendentes</div>
+      </div>
+      ${barraProgresso(c)}
+      <p class="campanha__nota">${encerrada
+      ? `Encerrada em ${new Date(c.encerradaEm).toLocaleDateString("pt-BR")}${c.encerradaPor ? ` por ${c.encerradaPor}` : ""}: o placar acima é o do encerramento.`
+      : "A baixa é automática: registre a atualização em Atualizações e o cliente sai dos pendentes. Uma versão oficial nova em Sistemas não muda a meta."}</p>
+    </div>`;
+}
+
+/**
+ * Filtros rápidos com a contagem de cada um.
+ * @param {string} ativo
+ * @param {Record<string, number>} contagens
+ */
+export function filtrosCampanha(ativo, contagens) {
+  return html`${FILTROS_CAMPANHA.map(
+    (f) => html`<button type="button" class="filtro-rapido${f.chave === ativo ? " is-active" : ""}" data-filtro="${f.chave}" aria-pressed="${f.chave === ativo ? "true" : "false"}">${f.rotulo} <span class="filtro-rapido__n">${contagens[f.chave] ?? 0}</span></button>`
+  )}`;
+}
+
+/** Nome do cliente, com código e cidade embaixo em tom de apoio. */
+export function celulaClienteCampanha(row) {
+  const apoio = [row.codigo && `Cód. ${row.codigo}`, row.cidade].filter(Boolean).join(" · ");
+  return html`<span class="campanha__cliente">${row.nome}${apoio ? html`<small>${apoio}</small>` : ""}</span>`;
+}
+
+/** Data do último atendimento no sistema, com a versão recebida embaixo. */
+export function celulaUltimaCampanha(row) {
+  if (!row.ultima) return html`<span class="campanha__cliente">Nunca</span>`;
+  return html`<span class="campanha__cliente">${row.ultima}<small>versão ${row.versaoRecebida || "não informada"}</small></span>`;
+}
+
+/** Célula de situação (o mesmo ponto colorido do Resumo, e o texto ao lado). */
+export function celulaSituacaoCampanha(row) {
+  const s = SITUACAO_CAMPANHA[row.situacao] || { rotulo: row.situacao, severidade: "media" };
+  const detalhe = row.situacao === "agendado" && row.agendamento
+    ? ` — ${row.agendamento.data || "sem data"}${row.agendamento.responsavel ? `, ${row.agendamento.responsavel}` : ""}`
+    : row.pelaData ? " (pela data)" : "";
+  return html`<span class="campanha__situacao is-${s.severidade}"><span class="situacao__marca" aria-hidden="true"></span>${s.rotulo}${detalhe}</span>`;
+}
+
+/**
+ * Botões da linha. Ícone sem texto, então nome acessível e dica sempre.
+ * "Agendar" só para quem ainda não está atendido nem agendado.
+ */
+export function acoesClienteCampanha(row, { role, encerrada }) {
+  /** @type {Array<[string, Parameters<typeof iconHtml>[0], string]>} */
+  const botoes = [];
+  if (role !== "consulta" && !encerrada && row.situacao === "pendente") botoes.push(["agendar", "calendario", "Criar agendamento"]);
+  if (role !== "consulta") botoes.push(["acessos", "acessos", "Gerenciar acessos remotos"]);
+  botoes.push(["ficha", "olho", "Abrir ficha do cliente"]);
+  return html`<div class="row-actions">${botoes.map(
+    ([acao, ico, titulo]) => html`<button type="button" class="btn btn--icon" data-row-action="${acao}" data-id="${row.id}" title="${titulo}" aria-label="${titulo}: ${row.nome}">${iconHtml(ico)}</button>`
+  )}</div>`;
+}
+
+/**
+ * Formulário de criação/edição. Na edição, sistema e versão-alvo aparecem
+ * só para leitura: são a meta, e o servidor recusaria mudar.
+ * @param {{sistemas: Array<{nome: string, data?: string}>, campanha?: any}} opts
+ */
+export function formularioCampanha({ sistemas, campanha }) {
+  const edicao = Boolean(campanha);
+  return html`
+    <h3 class="modal-box__title" id="campanha-form-titulo">${edicao ? "Editar campanha" : "Nova campanha"}</h3>
+    <form class="campanha-form" data-role="form" novalidate>
+      <div class="form-grid form-grid--2">
+        <div class="field">
+          <label class="field__label" for="cmp-sistema">Sistema</label>
+          ${edicao
+            ? html`<input class="input" id="cmp-sistema" value="${campanha.sistema}" disabled />`
+            : html`<select class="input" id="cmp-sistema" data-field="sistema" required>
+                ${sistemas.map((s) => html`<option value="${s.nome}" data-oficial="${s.data || ""}">${s.nome}</option>`)}
+              </select>`}
+        </div>
+        <div class="field">
+          <label class="field__label" for="cmp-versao">Versão-alvo</label>
+          <input class="input" id="cmp-versao" data-field="versaoAlvo" placeholder="dd/mm/aaaa" inputmode="numeric" value="${campanha?.versaoAlvo || ""}" ${edicao ? html`disabled` : html`required`} aria-describedby="cmp-versao-ajuda" />
+          <div class="field__help" id="cmp-versao-ajuda">${edicao ? "A meta não muda depois de criada." : "Quem receber esta versão ou mais nova conta como atualizado."}</div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="cmp-titulo">Título</label>
+          <input class="input" id="cmp-titulo" data-field="titulo" maxlength="120" value="${campanha?.titulo || ""}" required placeholder="ex.: NT 2026.001 da SEFAZ" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="cmp-prazo">Prazo (opcional)</label>
+          <input class="input" id="cmp-prazo" data-field="prazo" placeholder="dd/mm/aaaa" inputmode="numeric" value="${campanha?.prazo || ""}" />
+        </div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="cmp-descricao">Descrição (opcional)</label>
+        <textarea class="input" id="cmp-descricao" data-field="descricao" rows="3" maxlength="1000">${campanha?.descricao || ""}</textarea>
+      </div>
+      <p class="field__hint" data-role="erro" role="alert"></p>
+      <div class="modal-box__actions">
+        <button type="button" class="btn" data-action="cancelar">Cancelar</button>
+        <button type="submit" class="btn btn--accent" data-action="salvar">${edicao ? "Salvar" : "Criar campanha"}</button>
+      </div>
+    </form>`;
+}
+
+/** "3 clientes" para o contador da tabela. */
+export function contagemClientes(n) {
+  return plural(n, "cliente");
+}

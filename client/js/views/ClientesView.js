@@ -7,7 +7,7 @@ import { toast } from "../components/Toast.js";
 import { debounce } from "../utils/debounce.js";
 import { icon, iconHtml } from "../utils/icons.js";
 import { emptyState } from "../components/EmptyState.js";
-import { html, plural, copyToClipboard } from "../utils/html.js";
+import { html, plural } from "../utils/html.js";
 import { marcarOcupado } from "../utils/guard.js";
 import { prefs } from "../app/prefs.js";
 import { aparencia } from "../app/appearance.js";
@@ -156,7 +156,7 @@ export class ClientesView extends View {
           },
         },
         { key: "sistemasTexto", label: "Sistemas" },
-        { key: "maquinas", label: "Máquinas", type: "numeric", largura: "75px" },
+        { key: "maquinas", label: "Máquinas", type: "numeric", largura: "92px" },
         { key: "acoes", label: "Ações", largura: "140px", render: (row) => acoesCliente(row, this.user?.role) },
       ],
       onSelect: (row) => this._loadIntoForm(row),
@@ -286,14 +286,6 @@ export class ClientesView extends View {
       this.toggleForm(true);
     }
     if (botao.dataset.rowAction === "ficha") this.navigate("consulta", { cliente: row.nome });
-    if (botao.dataset.rowAction === "acesso") {
-      try {
-        const acessos = await this.api.get(`/clientes/${row.id}/acessos`);
-        const texto = acessos.flatMap((a) => [a.anydesk, a.suporte_bredas || a.suporteBredas]).filter(Boolean).join("\n");
-        if (!texto) return Modal.alert("Acessos", "Este cliente ainda não possui acesso remoto cadastrado.", "info");
-        if (await copyToClipboard(texto)) toast.success("Acessos remotos copiados.");
-      } catch { toast.error("Não foi possível copiar os acessos."); }
-    }
     if (botao.dataset.rowAction === "gerenciar-acesso") {
       this.abrirAcessos(row.id, row.nome);
     }
@@ -725,11 +717,13 @@ export class ClientesView extends View {
   }
 }
 
+// "Copiar acessos" saiu da linha a pedido da equipe (28/09/2026): dois
+// botões de acesso lado a lado confundiam, e a cópia continua dentro de
+// "Gerenciar acessos" (cópia por máquina, no AcessosModal).
 function acoesCliente(row, role) {
   const wrap = document.createElement("div");
   wrap.className = "row-actions";
   const botoes = [
-    ["acesso", "chave", "Copiar acessos"],
     ...(role === "consulta" ? [] : [["gerenciar-acesso", "acessos", "Gerenciar acessos"]]),
     ["ficha", "olho", "Abrir Ficha 360°"],
     ...(role === "consulta" ? [] : [["editar", "editar", "Editar"]]),

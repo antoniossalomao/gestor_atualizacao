@@ -16,6 +16,7 @@ import { AgendamentosView } from "../views/AgendamentosView.js";
 import { ClientesView } from "../views/ClientesView.js";
 import { ConsultaView } from "../views/ConsultaView.js";
 import { SistemasView } from "../views/SistemasView.js";
+import { CampanhasView } from "../views/CampanhasView.js";
 import { AdministracaoView } from "../views/AdministracaoView.js";
 import { ConfiguracoesView } from "../views/ConfiguracoesView.js";
 import { DistribuicaoView } from "../views/DistribuicaoView.js";
@@ -23,6 +24,7 @@ import { VersoesView } from "../views/VersoesView.js";
 import { MenuNotificacoes } from "../components/MenuNotificacoes.js";
 import { MenuConta } from "../components/MenuConta.js";
 import { montarNotificacoes } from "../domain/notificacoes.js";
+import { notificacoes } from "./notify.js";
 import { ConexaoBanner } from "../components/ConexaoBanner.js";
 
 /**
@@ -66,6 +68,12 @@ const TABS = [
     descricao: "Envie, publique e administre as versões distribuídas.", requerAtualizador: true },
   { key: "sistemas", label: "Sistemas", icon: "sistemas", View: SistemasView, grupo: "Distribuição",
     descricao: "Relatório por sistema, com data de corte opcional." },
+  // Depois de Sistemas, e não em Operação, para não mudar o Alt+N das abas
+  // de operação que a equipe usa o dia todo: as campanhas são metas de
+  // VERSÃO de um sistema. Com ela, a Administração (admin com o Atualizador
+  // ligado) vira a 10ª aba e passa de Alt+9 para Alt+0.
+  { key: "campanhas", label: "Campanhas", icon: "campanhas", View: CampanhasView, grupo: "Distribuição",
+    descricao: "Metas de versão por sistema: quantos clientes já receberam uma versão crítica." },
   // Só administrador (ver `papel`). O Histórico de alterações, que era uma
   // aba aberta a todos, mora agora dentro dela -- ver AdministracaoView.
   { key: "administracao", label: "Administração", icon: "escudo", View: AdministracaoView, grupo: "Administração",
@@ -222,7 +230,30 @@ export class App {
     // Os dois fora do ar é o único caso em que nada se pode afirmar: zerar o
     // sino aí apagaria avisos que continuam valendo, só que invisíveis.
     if (lembretes === null && painel === null) return;
-    this.menuNotificacoes.atualizar(montarNotificacoes({ lembretes, painel }));
+    this._dadosSino = { lembretes, painel };
+    this._redesenharSino({ podeTocar: true });
+    // Falhas guardadas durante o horário silencioso: o fim do silêncio é
+    // percebido aqui, no ritmo do sino (ver notify.liberarAcumuladas).
+    notificacoes.liberarAcumuladas();
+  }
+
+  /**
+   * Monta o sino com o filtro escolhido em Configurações > Notificações
+   * (tipos, "só as minhas"). Separado da busca porque mudar o filtro redesenha
+   * com o que já veio, sem ir ao servidor.
+   *
+   * O som toca quando o número de pendências NÃO VISTAS cresce -- não a cada
+   * ciclo, senão uma tarefa atrasada tocaria a cada cinco minutos o dia todo.
+   * Nunca na primeira carga: abrir o Gestor com pendências antigas não é
+   * novidade.
+   */
+  _redesenharSino({ podeTocar = false } = {}) {
+    if (!this._dadosSino) return;
+    const antes = this._naoVistasAntes;
+    this.menuNotificacoes.atualizar(montarNotificacoes(this._dadosSino, { ...aparencia.sino(), usuario: this.user?.nome || "" }));
+    const agora = this.menuNotificacoes.pendentesNaoVistas();
+    if (podeTocar && antes !== undefined && agora > antes) notificacoes.tocarSom();
+    this._naoVistasAntes = agora;
     this._atualizarTitulo();
   }
 
@@ -392,7 +423,11 @@ export class App {
       // Abrir o sino é a deixa para perguntar de novo: quem clica ali quer o
       // estado de agora, e sem isto a lista seria sempre a do último ciclo.
       aoAbrir: () => this._carregarNotificacoes(),
-      aoMarcarVistas: () => this._atualizarTitulo(),
+      // Marcar como vistas zera a base do som: a próxima pendência nova toca.
+      aoMarcarVistas: () => {
+        this._naoVistasAntes = 0;
+        this._atualizarTitulo();
+      },
       aoIr: (destino, params) => this.switchTab(destino, params || undefined),
     });
     this._cleanups.push(() => this.menuNotificacoes.destroy());
@@ -439,7 +474,8 @@ export class App {
     // "Pendências no título da aba" pode ser ligado e desligado a qualquer
     // momento -- o título tem que acompanhar na hora, não no próximo ciclo
     // do sino.
-    const aoMudarAparencia = () => this._atualizarTitulo();
+    // O mesmo vale para o filtro do sino (tipos e "só as minhas").
+    const aoMudarAparencia = () => this._redesenharSino();
     document.addEventListener("aparencia:mudou", aoMudarAparencia);
     this._cleanups.push(() => document.removeEventListener("aparencia:mudou", aoMudarAparencia));
   }
@@ -495,13 +531,17 @@ export class App {
       button.setAttribute("aria-controls", `painel-${tab.key}`);
       button.id = `aba-${tab.key}`;
       button.tabIndex = -1;
-      button.title = `${tab.label} (Alt+${i + 1})`;
+      // Uma tecla de número por aba: Alt+1…Alt+9 e, para a décima, Alt+0 --
+      // a convenção de navegadores e editores. Da 11ª em diante não há
+      // atalho; anunciar um "Alt+11" seria prometer uma tecla que não existe.
+      const atalho = numeroDoAtalho(i) === null ? "" : `Alt+${numeroDoAtalho(i)}`;
+      button.title = atalho ? `${tab.label} (${atalho})` : tab.label;
       // A dica do atalho fica na própria aba, aparecendo ao passar o mouse ou
       // ao focar pelo teclado. O `title` só conta a mesma coisa depois de um
       // segundo parado em cima -- e ninguém para em cima de um menu que já
       // sabe usar. Ela ocupa o espaço dela o tempo todo (muda só a opacidade),
       // senão cada aba mudaria de largura quando o mouse passasse.
-      button.innerHTML = `${icon(tab.icon)}<span>${tab.label}</span><kbd class="tab-button__atalho">Alt+${i + 1}</kbd>`;
+      button.innerHTML = `${icon(tab.icon)}<span>${tab.label}</span>${atalho ? `<kbd class="tab-button__atalho">${atalho}</kbd>` : ""}`;
       tabsNav.appendChild(button);
       container.setAttribute("aria-labelledby", `aba-${tab.key}`);
     }
@@ -591,14 +631,17 @@ export class App {
     this.root.querySelector(`#aba-${this.tabsNoMenu[alvo].key}`)?.focus();
   }
 
-  /** `Alt+1` … `Alt+9` levam direto à aba de mesmo número. */
+  /** `Alt+1` … `Alt+9` levam direto à aba de mesmo número; `Alt+0`, à décima. */
   _ligarAtalhosNumericos() {
     const handler = (e) => {
       if (!e.altKey || e.ctrlKey || e.metaKey) return;
-      const n = Number(e.key);
-      if (!Number.isInteger(n) || n < 1 || n > this.tabsNoMenu.length) return;
+      // Teste explícito do dígito: `Number(" ")` é 0, e o Alt+Espaço (menu da
+      // janela no Windows) viraria "ir para a décima aba".
+      if (!/^[0-9]$/.test(e.key)) return;
+      const indice = e.key === "0" ? 9 : Number(e.key) - 1;
+      if (indice >= this.tabsNoMenu.length) return;
       e.preventDefault();
-      this.switchTab(this.tabsNoMenu[n - 1].key);
+      this.switchTab(this.tabsNoMenu[indice].key);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -733,7 +776,7 @@ export class App {
         ? [
             ["pessoas", "Pessoas e permissões", "Criar conta, mudar papel, remover acesso", "users"],
             ["operacao", "Operação da equipe", "Prazos, arquivamento e classificação de sistemas", "ajustes"],
-            ["dados", "Dados e importação", "Exportação completa, planilha de atendimentos e base", "download"],
+            ["dados", "Dados e importação", "Exportação completa, planilha de atualizações e base", "download"],
             ["integracoes", "Integrações e alertas", "Alertas no Discord, Atualizador e endereço do servidor", "distribuicao"],
             ["backups", "Backups e recuperação", "Cópias de segurança, retenção e restauração", "backups"],
             ["auditoria", "Auditoria do sistema", "Quem criou, editou ou excluiu registros no sistema", "historico"],
@@ -1048,4 +1091,10 @@ export class App {
       this._onAuthenticated(user);
     });
   }
+}
+
+/** Dígito do atalho Alt+N da aba de índice `i` (0 = primeira), ou null. */
+function numeroDoAtalho(i) {
+  if (i < 9) return String(i + 1);
+  return i === 9 ? "0" : null;
 }

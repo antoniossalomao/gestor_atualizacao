@@ -29,6 +29,8 @@ const { UsersController } = require("./controllers/UsersController");
 const { VersoesController } = require("./controllers/VersoesController");
 const { PreferenciasController } = require("./controllers/PreferenciasController");
 const { ConfiguracaoSistemaController } = require("./controllers/ConfiguracaoSistemaController");
+const { CampanhaService } = require("./services/CampanhaService");
+const { CampanhasController } = require("./controllers/CampanhasController");
 const { SaudeService } = require("./services/SaudeService");
 const { SaudeController } = require("./controllers/SaudeController");
 const { LoginRateLimiter } = require("./middlewares/LoginRateLimiter");
@@ -93,6 +95,7 @@ class Server {
       clientes: new ClienteService(this.db, historico),
       atualizacoes: new AtualizacaoService(this.db, historico, notifications, configuracaoSistema),
       agendamentos: new AgendamentoService(this.db, historico, configuracaoSistema),
+      campanhas: new CampanhaService(this.db, historico),
       backups: new BackupService(this.db, historico),
       versoes,
       configuracaoSistema,
@@ -125,6 +128,7 @@ class Server {
       preferencias: new PreferenciasController(s.preferencias),
       configuracaoSistema: new ConfiguracaoSistemaController(s.configuracaoSistema, s.notifications),
       saude: new SaudeController(s.saude),
+      campanhas: new CampanhasController(s.campanhas),
     };
     this.loginLimiter = new LoginRateLimiter();
   }

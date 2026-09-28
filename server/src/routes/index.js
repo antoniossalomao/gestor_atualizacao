@@ -96,6 +96,7 @@ class ApiRouter {
       preferencias,
       configuracaoSistema,
       saude,
+      campanhas,
     } = this.controllers;
     const api = express.Router();
     api.use(requireAuth);
@@ -153,6 +154,9 @@ class ApiRouter {
     api.get("/atualizacoes/versoes-por-sistema", atualizacoes.latestVersionBySystem);
     api.get("/atualizacoes/por-sistema", atualizacoes.porSistema);
     api.get("/atualizacoes/export", atualizacoes.exportXlsx);
+    // Prévia antes de importar: só lê, mas com o mesmo papel da importação --
+    // quem não pode importar não tem por que conferir.
+    api.post("/atualizacoes/import/previa", requireRole("operador", "admin"), upload.single("arquivo"), atualizacoes.previaImport);
     api.post("/atualizacoes/import", requireRole("operador", "admin"), upload.single("arquivo"), atualizacoes.importXlsx);
     api.post("/atualizacoes/excluir-lote", requireRole("admin"), atualizacoes.removeMany);
     api.post("/atualizacoes", requireRole("operador", "admin"), atualizacoes.create);
@@ -171,6 +175,17 @@ class ApiRouter {
     api.patch("/agendamentos/:id/reabrir", requireRole("operador", "admin"), agendamentos.reabrir);
     api.patch("/agendamentos/:id/arquivar", requireRole("operador", "admin"), agendamentos.arquivar);
     api.delete("/agendamentos/:id", requireRole("operador", "admin"), agendamentos.remove);
+
+    // Campanhas: leitura para todos; criar, editar e encerrar para quem já
+    // registra atendimentos; excluir só Admin (apaga a meta e o placar).
+    api.get("/campanhas", campanhas.list);
+    api.get("/campanhas/:id", campanhas.get);
+    api.get("/campanhas/:id/export", campanhas.exportXlsx);
+    api.post("/campanhas", requireRole("operador", "admin"), campanhas.create);
+    api.put("/campanhas/:id", requireRole("operador", "admin"), campanhas.update);
+    api.patch("/campanhas/:id/encerrar", requireRole("operador", "admin"), campanhas.encerrar);
+    api.patch("/campanhas/:id/reabrir", requireRole("operador", "admin"), campanhas.reabrir);
+    api.delete("/campanhas/:id", requireRole("admin"), campanhas.remove);
 
     // Resumo e Histórico
     api.get("/resumo", resumo.get);

@@ -7,6 +7,7 @@ const { dataValida, parseData } = require("../shared/validation");
 const { normalizarSistemas, normalizarResponsavel } = require("../shared/normalizacao");
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
 const { situacaoDoSistema, situacaoDoCliente, contaParaVersao } = require("./situacaoVersao");
+const { acharSistema } = require("../database/SistemaRepository");
 
 // Sentinela: cliente nunca atualizado, sempre no topo da lista de
 // pendencias (ninguem esta "mais atrasado" do que quem nunca foi atualizado).
@@ -474,6 +475,8 @@ class AtualizacaoService {
     const grupos = { desatualizado: [], pendente: [], em_dia: [], sem_atualizaveis: [] };
     /** Quantos clientes estão atrasados em cada sistema -- os "mais atrasados" do card. */
     const atrasosPorSistema = new Map();
+    /** Quantos clientes avaliados usam cada sistema -- o "de quantos" do card. */
+    const clientesPorSistema = new Map();
     for (const { id, nome, cidade } of this.db.clientes.allBasic()) {
       const doCliente = ultimas.get(id) || new Map();
       const ids = new Set([...(cadastro.get(id) || []), ...doCliente.keys()]);
@@ -483,6 +486,7 @@ class AtualizacaoService {
         if (!contaParaVersao(sistema)) continue;
         const { situacao, pelaData } = situacaoDoSistema(doCliente.get(sistemaId), sistema.ultima_versao);
         sistemas.push({ sistema: sistema.nome, situacao, pelaData });
+        clientesPorSistema.set(sistema.nome, (clientesPorSistema.get(sistema.nome) || 0) + 1);
         if (situacao === "Desatualizado") atrasosPorSistema.set(sistema.nome, (atrasosPorSistema.get(sistema.nome) || 0) + 1);
       }
       sistemas.sort((a, b) => a.sistema.localeCompare(b.sistema, "pt-BR"));
@@ -494,7 +498,9 @@ class AtualizacaoService {
     return {
       ...grupos,
       sistemasMaisAtrasados: [...atrasosPorSistema]
-        .map(([sistema, total]) => ({ sistema, total }))
+        // `clientes` é o denominador: "196 atrasados" sozinho não diz se é
+        // quase todo mundo ou uma fração de uma base grande.
+        .map(([sistema, total]) => ({ sistema, total, clientes: clientesPorSistema.get(sistema) || total }))
         .sort((a, b) => b.total - a.total || a.sistema.localeCompare(b.sistema, "pt-BR")),
     };
   }
@@ -537,71 +543,178 @@ class AtualizacaoService {
   }
 
   /**
-   * Le uma planilha (.xlsx) e cria um registro de atualizacao para cada
-   * linha, com deteccao de cabecalho (nomes de coluna) ou, se nao
-   * reconhecer, cai para a ordem fixa de COLUMNS.
+   * Prévia da importação: lê a planilha e diz o que aconteceria, SEM gravar
+   * nada -- nem sistema novo no catálogo (por isso a checagem usa
+   * `acharSistema`, e não `resolverOuCriar`). É o passo que a tela mostra
+   * antes do "Importar", para ninguém descobrir depois de aplicado que metade
+   * das datas estava em outro formato.
+   * @param {Buffer} buffer
+   */
+  async previaImportacao(buffer) {
+    return this._resumoLeitura(await this._lerPlanilha(buffer));
+  }
+
+  /**
+   * Importa a planilha: cria uma atualização por linha VÁLIDA.
+   *
+   * Como era: toda linha com cliente entrava, inclusive com data fora do
+   * formato (que quebra ordenação e situação em silêncio), e cada linha era
+   * gravada por conta própria -- uma falha no meio deixava metade do arquivo
+   * dentro, sem aviso de onde parou.
+   *
+   * Como é:
+   *  - linha com erro (cliente em branco, data inválida) fica de fora e volta
+   *    na resposta com o número da linha e o tipo do erro;
+   *  - possível duplicidade (mesmo cliente, data e sistemas de uma
+   *    atualização já registrada, ou repetida na própria planilha) fica de
+   *    fora quando `pularDuplicadas` -- o padrão da tela, porque o caso comum
+   *    é importar o mesmo arquivo duas vezes;
+   *  - tudo numa transação só: ou o lote inteiro entra, ou nada entra.
+   *
+   * Continua valendo: planilha é histórico, grava como registro legado, sem
+   * atribuir a versão oficial de hoje a um atendimento de meses atrás
+   * (`_versoesLegadas`).
    * @param {Buffer} buffer conteudo do arquivo enviado
    * @param {{id:number, nome:string}|null} usuario
+   * @param {{pularDuplicadas?: boolean}} [opcoes]
    */
-  async importXlsx(buffer, usuario) {
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
-    const ws = workbook.worksheets[0];
-    if (!ws || ws.rowCount === 0) {
-      return { inserted: 0, naoCadastrados: [] };
+  async importXlsx(buffer, usuario, { pularDuplicadas = false } = {}) {
+    const leitura = await this._lerPlanilha(buffer);
+    const aplicar = leitura.linhas.filter((l) => !l.erro && !(pularDuplicadas && l.duplicada));
+    const naoCadastrados = new Set();
+    this.db.conn.transaction(() => {
+      for (const { registro } of aplicar) {
+        const sistemas = this._versoesLegadas(registro, this._resolverSistemas(registro));
+        const linha = this._paraTabela(registro);
+        if (linha.cliente_id == null) naoCadastrados.add(registro.cliente);
+        this.db.atualizacoes.insert(linha, sistemas);
+        this._marcarSuporteBredasSeNecessario(registro, usuario);
+      }
+    })();
+    const resumo = this._resumoLeitura(leitura);
+    const inserted = aplicar.length;
+    const ignoradas = leitura.linhas.length - inserted;
+    // Só quando algo entrou: a entrada é "criar atualização", e registrar
+    // "0 importados" encheria a Auditoria de criações que não aconteceram.
+    if (inserted > 0) {
+      this.historico.registrar(
+        usuario,
+        "criar",
+        "atualizacao",
+        `Importação de planilha: ${inserted} registro(s) importado(s)${ignoradas ? `, ${ignoradas} ignorado(s)` : ""}`,
+        { importados: inserted, comErro: resumo.comErro, duplicadasIgnoradas: pularDuplicadas ? resumo.duplicadas : 0 }
+      );
     }
+    return { ...resumo, inserted, ignoradas, naoCadastrados: [...naoCadastrados].sort() };
+  }
+
+  /**
+   * Lê e classifica cada linha, sem gravar. Erro de ARQUIVO (não abre, sem
+   * linhas, sem a coluna Cliente) é ValidationError: não há o que prever.
+   * Erro de LINHA (cliente em branco, data) e aviso (cliente sem cadastro,
+   * sistema fora do catálogo, duplicidade) ficam em cada linha.
+   * @param {Buffer} buffer
+   */
+  async _lerPlanilha(buffer) {
+    const workbook = new ExcelJS.Workbook();
+    try {
+      await workbook.xlsx.load(buffer);
+    } catch {
+      throw new ValidationError("Não foi possível abrir o arquivo. Envie uma planilha Excel (.xlsx) sem senha.");
+    }
+    const ws = workbook.worksheets[0];
+    if (!ws || ws.rowCount < 1) throw new ValidationError("A planilha está vazia: a primeira aba precisa ter ao menos uma linha.");
 
     const expected = COLUMNS.map((c) => c.key);
-    const header = rowToStrings(ws.getRow(1)).map((h) => h.trim().toLowerCase());
+    const cabecalho = rowToStrings(ws.getRow(1)).map((h) => h.trim());
     const colMap = {};
-    header.forEach((h, idx) => {
-      const match = COLUMNS.find((c) => h === c.key || h === c.label.toLowerCase());
+    const colunasIgnoradas = [];
+    cabecalho.forEach((h, idx) => {
+      const match = COLUMNS.find((c) => h.toLowerCase() === c.key || h.toLowerCase() === c.label.toLowerCase());
       if (match) colMap[match.key] = idx;
+      else if (h) colunasIgnoradas.push(h);
     });
-    const usePositional = Object.keys(colMap).length < 2;
+    // Menos de duas colunas reconhecidas: a planilha não tem o nosso
+    // cabeçalho, e vale a ordem fixa de COLUMNS (como sempre foi).
+    const semCabecalho = Object.keys(colMap).length < 2;
+    if (!semCabecalho && colMap.cliente == null) {
+      throw new ValidationError('A coluna "Cliente" não foi encontrada no cabeçalho. Ela é obrigatória.');
+    }
+    // Sem cabeçalho, a linha 1 já é DADO: começa nela, e o que havia nela não
+    // é "coluna ignorada". (Começar sempre na 2 descartava o primeiro
+    // atendimento em silêncio -- e uma planilha de uma linha só dava "vazia".)
+    const primeira = semCabecalho ? 1 : 2;
+    if (semCabecalho) colunasIgnoradas.length = 0;
 
-    const naoCadastrados = new Set();
-    // Fora do laço: a planilha pode ter centenas de linhas, e catálogo e
-    // responsáveis não mudam no meio da importação.
+    // Fora do laço: a planilha pode ter centenas de linhas, e catálogo,
+    // responsáveis e o que já está gravado não mudam no meio da leitura.
     const contexto = this._contextoNormalizacao();
-    let inserted = 0;
-
-    for (let r = 2; r <= ws.rowCount; r++) {
+    const catalogo = this.db.sistemas.todos();
+    const existentes = new Set(this.db.atualizacoes.linhasParaDuplicidade().map((l) => chaveDuplicidade(l.cliente, l.data, l.sistema, catalogo)));
+    const vistas = new Set();
+    const linhas = [];
+    for (let r = primeira; r <= ws.rowCount; r++) {
       const valores = rowToStrings(ws.getRow(r));
       if (valores.every((v) => v === "")) continue;
-
       const record = {};
-      if (usePositional) {
-        expected.forEach((key, idx) => {
-          record[key] = valores[idx] ?? "";
-        });
-      } else {
-        expected.forEach((key) => {
-          const idx = colMap[key];
-          record[key] = idx != null ? valores[idx] ?? "" : "";
-        });
+      expected.forEach((key, idx) => {
+        const pos = semCabecalho ? idx : colMap[key];
+        record[key] = pos != null ? String(valores[pos] ?? "").trim() : "";
+      });
+      const linha = { linha: r, cliente: record.cliente, data: record.data, sistema: record.sistema, erro: null, avisos: [], duplicada: false, registro: null };
+      linhas.push(linha);
+      if (!record.cliente) {
+        linha.erro = { tipo: "cliente", mensagem: "Cliente em branco." };
+        continue;
       }
-      if (!record.cliente) continue;
-
+      if (!dataValida(record.data)) {
+        linha.erro = { tipo: "data", mensagem: `Data "${record.data}" fora do formato dd/mm/aaaa.` };
+        continue;
+      }
       // A planilha é a origem MAIS suja de todas -- foi dela que vieram as
       // 144 grafias de sistema do histórico antigo. Normalizar aqui também
       // (e não só no cadastro pela tela) é o que impede a próxima importação
       // de desfazer a faxina.
       const registro = this._normalizar(record, contexto);
-      // Planilha é histórico: grava como registro legado, sem atribuir a
-      // versão oficial de hoje a um atendimento de meses atrás.
-      const sistemas = this._versoesLegadas(registro, this._resolverSistemas(registro));
-      const linha = this._paraTabela(registro);
-      if (linha.cliente_id == null) naoCadastrados.add(registro.cliente);
-      this.db.atualizacoes.insert(linha, sistemas);
-      this._marcarSuporteBredasSeNecessario(registro, usuario);
-      inserted += 1;
+      linha.registro = registro;
+      linha.sistema = registro.sistema;
+      if (!this.db.clientes.resolverNome(registro.cliente)) {
+        linha.avisos.push({ tipo: "cliente", mensagem: "Cliente sem cadastro: entra no histórico, mas só aparece no Resumo e na ficha quando houver cliente com o mesmo nome." });
+      }
+      const foraDoCatalogo = splitSystems(registro.sistema).filter((nome) => !acharSistema(catalogo, nome));
+      if (foraDoCatalogo.length) {
+        linha.avisos.push({ tipo: "sistema", mensagem: `Sistema fora do catálogo (${foraDoCatalogo.join(", ")}): entra como inativo.` });
+      }
+      const chave = chaveDuplicidade(registro.cliente, registro.data, registro.sistema, catalogo);
+      if (existentes.has(chave) || vistas.has(chave)) {
+        linha.duplicada = true;
+        linha.avisos.push({ tipo: "duplicidade", mensagem: existentes.has(chave) ? "Já existe atualização com o mesmo cliente, data e sistemas." : "Repetida nesta planilha." });
+      }
+      vistas.add(chave);
     }
+    if (linhas.length === 0) throw new ValidationError(semCabecalho ? "A planilha está vazia." : "A planilha não tem nenhuma linha preenchida abaixo do cabeçalho.");
+    return { linhas, colunasIgnoradas, semCabecalho };
+  }
 
-    if (inserted > 0) {
-      this.historico.registrar(usuario, "criar", "atualizacao", `Importação de planilha: ${inserted} registro(s)`);
-    }
-    return { inserted, naoCadastrados: [...naoCadastrados].sort() };
+  /** O que a tela mostra: contagens e as linhas com erro ou aviso (não as limpas). */
+  _resumoLeitura({ linhas, colunasIgnoradas, semCabecalho }) {
+    const comErro = linhas.filter((l) => l.erro).length;
+    const semCadastro = new Set(linhas.filter((l) => l.avisos.some((a) => a.tipo === "cliente")).map((l) => l.registro.cliente));
+    return {
+      total: linhas.length,
+      validas: linhas.length - comErro,
+      comErro,
+      duplicadas: linhas.filter((l) => !l.erro && l.duplicada).length,
+      clientesSemCadastro: semCadastro.size,
+      colunasIgnoradas,
+      semCabecalho,
+      // Só as linhas que pedem atenção, e no máximo 200 -- uma planilha de
+      // mil linhas toda errada não precisa virar uma resposta de mil itens.
+      ocorrencias: linhas
+        .filter((l) => l.erro || l.avisos.length)
+        .slice(0, 200)
+        .map(({ linha, cliente, data, sistema, erro, avisos }) => ({ linha, cliente, data, sistema, erro, avisos })),
+    };
   }
 
   /**
@@ -629,6 +742,27 @@ class AtualizacaoService {
     meta.getRow(1).font = { bold: true, size: 16 };
     return workbook.xlsx.writeBuffer();
   }
+}
+
+/**
+ * Chave da "possível duplicidade" de importação: cliente (sem caixa nem
+ * espaços nas pontas), data e os sistemas RESOLVIDOS no catálogo, sem caixa e
+ * em ordem alfabética. Usada dos dois lados -- o que já está gravado e o que
+ * vem da planilha --, e é por isso que mora num lugar só.
+ *
+ * Resolver no catálogo é o que faz "Vendas" na planilha casar com o "B_Vendas"
+ * gravado (a normalização da planilha mantém o nome como veio; quem casa sem
+ * o prefixo B_ é `acharSistema`). E ordenar é o que faz "B_NFe, B_Vendas"
+ * casar com "B_Vendas, B_NFe". Sem as duas coisas, reimportar o mesmo arquivo
+ * com "pular duplicidades" duplicava o histórico mesmo assim.
+ * @param {Array<{nome: string}>} catalogo `sistemas.todos()`
+ */
+function chaveDuplicidade(cliente, data, sistema, catalogo) {
+  const sistemas = splitSystems(sistema)
+    .map((nome) => (acharSistema(catalogo, nome)?.nome || nome).toLowerCase())
+    .sort()
+    .join(",");
+  return `${String(cliente || "").trim().toLowerCase()}|${data || ""}|${sistemas}`;
 }
 
 /** Todas as celulas de uma linha do exceljs como strings (numero/data viram texto; vazio vira ""). */

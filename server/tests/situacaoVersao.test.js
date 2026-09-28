@@ -150,7 +150,8 @@ test("Resumo - situação dos clientes", async (t) => {
     });
 
     await t.test("o card aponta o sistema com mais clientes atrasados", () => {
-      assert.deepEqual(s.sistemasMaisAtrasados, [{ sistema: "B_NFe", total: 2 }]);
+      // Os dois clientes com B_NFe estão atrasados nele: 2 de 2.
+      assert.deepEqual(s.sistemasMaisAtrasados, [{ sistema: "B_NFe", total: 2, clientes: 2 }]);
     });
 
     await t.test("novo atendimento recebe a oficial e tira o cliente do atraso", () => {

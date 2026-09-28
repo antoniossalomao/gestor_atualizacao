@@ -30,6 +30,7 @@ const ENTIDADE_LABEL = {
   versao: "Versão",
   agente: "Agente",
   configuracao: "Configuração",
+  campanha: "Campanha",
 };
 
 const ENTIDADES = Object.keys(ENTIDADE_LABEL);

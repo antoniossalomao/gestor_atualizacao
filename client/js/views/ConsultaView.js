@@ -211,33 +211,18 @@ export class ConsultaView extends View {
     const resumoPanel = this.detailBox.querySelector('[data-role="resumo-panel"]');
     const ultimaData = historico?.[0]?.data || null;
     const tempoUltima = ultimaData ? haQuantoTempo(ultimaData) : "";
-    const ultimoTexto = ultimaData ? `${ultimaData}${tempoUltima ? ` (${tempoUltima})` : ""}` : "Nenhum atendimento";
+    const ultimoTexto = ultimaData ? `${ultimaData}${tempoUltima ? ` (${tempoUltima})` : ""}` : "Nenhuma atualização";
 
-    const atualizaveis = (situacaoSistemas || []).filter((s) => !s.fixo);
-    const emDia = atualizaveis.filter((s) => s.situacao === "Em dia").length;
-    const atrasados = atualizaveis.filter((s) => s.situacao === "Desatualizado").length;
-    const pendentes = atualizaveis.filter((s) => s.situacao !== "Em dia" && s.situacao !== "Desatualizado").length;
-
-    let statusTexto = "Sem sistemas";
-    if (atualizaveis.length > 0) {
-      const partes = [];
-      if (emDia > 0) partes.push(`${emDia} em dia`);
-      if (atrasados > 0) partes.push(`${atrasados} ${plural(atrasados, "desatualizado")}`);
-      if (pendentes > 0) partes.push(`${pendentes} ${plural(pendentes, "pendente")}`);
-      statusTexto = partes.join(" · ") || "Todos em dia";
-    }
-
+    // O cartão "Situação dos sistemas" que ficava ao lado saiu a pedido da
+    // equipe (28/09/2026): repetia, resumido, o que a subaba Matriz de
+    // Versões já mostra por sistema -- e resumia mal ("2 2 pendentes").
     const statsGrid = document.createElement("div");
     statsGrid.className = "resumo-compacto-grid";
     statsGrid.style.cssText = "display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:var(--sp-3); margin-bottom:var(--sp-4);";
     statsGrid.innerHTML = html`
       <div class="card stat-card" style="padding:var(--sp-3); margin:0;">
-        <div class="stat-card__label" style="font-size:var(--txt-xs); color:var(--cor-texto-fraco); text-transform:uppercase; font-weight:var(--peso-forte);">Último atendimento</div>
+        <div class="stat-card__label" style="font-size:var(--txt-xs); color:var(--cor-texto-fraco); text-transform:uppercase; font-weight:var(--peso-forte);">Última atualização</div>
         <div class="stat-card__value" style="font-size:var(--txt-base); font-weight:var(--peso-medio); margin-top:4px;">${ultimoTexto}</div>
-      </div>
-      <div class="card stat-card" style="padding:var(--sp-3); margin:0;">
-        <div class="stat-card__label" style="font-size:var(--txt-xs); color:var(--cor-texto-fraco); text-transform:uppercase; font-weight:var(--peso-forte);">Situação dos sistemas</div>
-        <div class="stat-card__value" style="font-size:var(--txt-base); font-weight:var(--peso-medio); margin-top:4px;">${statusTexto}</div>
       </div>
     `;
     resumoPanel.appendChild(statsGrid);
@@ -410,7 +395,7 @@ export class ConsultaView extends View {
       telemetriaSecao.innerHTML = html`
         <h4 style="margin:0 0 var(--sp-1);">Telemetria dos Agentes</h4>
         <p class="text-muted" style="font-size:var(--txt-xs); margin-bottom:var(--sp-3);">
-          Dados reportados em tempo real pelas máquinas clientes. A versão oficial é determinada pelos atendimentos registrados.
+          Dados reportados em tempo real pelas máquinas clientes. A situação de cada sistema vem das atualizações registradas, não destes dados.
         </p>
         <div class="table-wrap">
           <table class="data-table">

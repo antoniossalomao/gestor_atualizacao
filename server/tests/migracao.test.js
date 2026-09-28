@@ -258,7 +258,9 @@ test("Migração 3 - banco já existente recebe autoria sem perder dados", () =>
     inicial.conn.close();
 
     const antigo = new Sqlite3(arquivo);
-    antigo.exec("ALTER TABLE sistemas DROP COLUMN ultima_versao_autor; ALTER TABLE sistemas DROP COLUMN ultima_versao_em");
+    // Um banco na versão 2 de verdade não tem nada das migrações seguintes:
+    // nem a autoria (3) nem as campanhas (4).
+    antigo.exec("ALTER TABLE sistemas DROP COLUMN ultima_versao_autor; ALTER TABLE sistemas DROP COLUMN ultima_versao_em; DROP TABLE campanhas");
     antigo.pragma("user_version = 2");
     antigo.close();
 
@@ -272,5 +274,33 @@ test("Migração 3 - banco já existente recebe autoria sem perder dados", () =>
       assert.equal(migrado.conn.prepare("SELECT ultima_versao FROM sistemas WHERE nome = ?").get("B_Vendas").ultima_versao, "24/09/2026");
       assert.equal(migrado.conn.pragma("integrity_check", { simple: true }), "ok");
     } finally { migrado.conn.close(); }
+  } finally { fs.rmSync(tmpDir, { recursive: true, force: true }); }
+});
+
+test("Migração 4 - banco na versão 3 ganha campanhas sem perder dados", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-migr4-"));
+  const arquivo = path.join(tmpDir, "gestao.db");
+  try {
+    const inicial = new Database(arquivo);
+    inicial.conn.prepare("INSERT INTO clientes (nome) VALUES (?)").run("Cliente existente");
+    inicial.conn.close();
+
+    const antigo = new Sqlite3(arquivo);
+    antigo.exec("DROP TABLE campanhas");
+    antigo.pragma("user_version = 3");
+    antigo.close();
+
+    const migrado = new Database(arquivo);
+    try {
+      assert.equal(migrado.conn.pragma("user_version", { simple: true }), VERSAO_ATUAL);
+      const colunas = migrado.conn.prepare("PRAGMA table_info(campanhas)").all().map((c) => c.name);
+      for (const c of ["titulo", "sistema_id", "versao_alvo", "prazo", "encerrada_em", "total_final", "atendidos_final"]) assert.ok(colunas.includes(c), c);
+      assert.equal(migrado.campanhas.list("todas").length, 0);
+      assert.equal(migrado.conn.prepare("SELECT nome FROM clientes").get().nome, "Cliente existente");
+      assert.equal(migrado.conn.pragma("foreign_key_check").length, 0);
+    } finally { migrado.conn.close(); }
+    // Reabrir não roda a migração de novo (senão o CREATE TABLE falharia).
+    const reaberto = new Database(arquivo);
+    reaberto.conn.close();
   } finally { fs.rmSync(tmpDir, { recursive: true, force: true }); }
 });

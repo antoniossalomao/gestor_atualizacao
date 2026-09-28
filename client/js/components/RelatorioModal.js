@@ -1,6 +1,7 @@
 import { Modal } from "./Modal.js";
 import { html, copyToClipboard } from "../utils/html.js";
 import { toast } from "./Toast.js";
+import { aparencia } from "../app/appearance.js";
 
 /**
  * Janela de relatórios com abas curtas, prévia rolável e rodapé estável (I09).
@@ -13,11 +14,15 @@ export function abrirRelatorio({ tipos, gerar, periodo = false }) {
   const id = `relatorio-${Date.now()}`;
   box.setAttribute("aria-labelledby", id);
 
-  let tipoAtivo = tipos[0]?.valor || "atualizacao";
+  // A aba inicial é preferência (Configurações > Trabalho diário), mas só vale
+  // se a tela oferecer aquela aba -- sem atualização selecionada, "Cliente" é
+  // a única, e a preferência não pode abrir numa aba que não existe.
+  const preferida = aparencia.relatorioAba();
+  let tipoAtivo = tipos.some((t) => t.valor === preferida) ? preferida : tipos[0]?.valor || "atualizacao";
 
   // Rótulos curtos recomendados no planejamento (I09)
   const rotulosAba = {
-    atualizacao: "Atendimento",
+    atualizacao: "Atualização",
     cliente: "Cliente",
     periodo: "Período",
   };
@@ -27,14 +32,14 @@ export function abrirRelatorio({ tipos, gerar, periodo = false }) {
   box.innerHTML = html`
     <div class="modal-box__head relatorio-controles" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--sp-3);">
       <h3 class="modal-box__title" id="${id}" style="margin:0;">Relatório de Atualizações</h3>
-      <button type="button" class="btn btn--icon btn--ghost" data-action="fechar-x" aria-label="Fechar relatório">✕</button>
+      <button type="button" class="btn btn--icon btn--ghost" data-action="fechar-x" aria-label="Fechar relatório" title="Fechar relatório">✕</button>
     </div>
 
     <div class="relatorio-controles">
       ${temAbas && html`
         <nav class="client-hub-tabs relatorio-abas" role="tablist" aria-label="Tipo de relatório" style="margin-bottom:var(--sp-3);">
-          ${tipos.map((t, idx) => html`
-            <button type="button" class="btn ${idx === 0 ? "is-active" : ""}" role="tab" data-tipo="${t.valor}" aria-selected="${String(idx === 0)}">
+          ${tipos.map((t) => html`
+            <button type="button" class="btn ${t.valor === tipoAtivo ? "is-active" : ""}" role="tab" data-tipo="${t.valor}" aria-selected="${String(t.valor === tipoAtivo)}">
               ${rotulosAba[t.valor] || t.nome}
             </button>
           `)}
@@ -118,6 +123,7 @@ export function abrirRelatorio({ tipos, gerar, periodo = false }) {
   box.querySelector('[data-action="copiar"]').addEventListener("click", async () => {
     if (await copyToClipboard(texto)) {
       toast.success("Relatório copiado.");
+      if (aparencia.relatorioFecharAoCopiar()) close();
     } else {
       const area = document.createElement("textarea");
       area.className = "input";

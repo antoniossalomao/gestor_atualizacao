@@ -5971,7 +5971,7 @@ h1, h2, h3, strong {
     border: 0;
     background: transparent;
   }
-  .distribution-agent-table,
+  table.data-table.distribution-agent-table,
   .distribution-agent-table tbody,
   .distribution-agent-table tr,
   .distribution-agent-table td {
@@ -6174,7 +6174,9 @@ h1, h2, h3, strong {
 /* -- Kanban Board (Aba Agendamentos) -- */
 .kanban-board {
   display: grid;
-  grid-template-columns: repeat(var(--kanban-colunas, 4), minmax(340px, 1fr));
+  /* 220px (antes 340): com o menu aberto em 1280 px, as quatro colunas cabem
+     sem a última ("Concluído") ficar cortada atrás de uma rolagem lateral. */
+  grid-template-columns: repeat(var(--kanban-colunas, 4), minmax(220px, 1fr));
   gap: var(--sp-4);
   overflow-x: auto;
   padding-block: var(--sp-3);
@@ -6873,4 +6875,423 @@ h1, h2, h3, strong {
   .relatorio-imprimir .modal-box { width: 100% !important; max-width: none !important; max-height: none !important; overflow: visible !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; border: 0 !important; background: white !important; color: black !important; }
   .relatorio-imprimir .relatorio-controles { display: none !important; }
   .relatorio-imprimir .relatorio-previa { border: 0; padding: 0; margin: 0; }
+}
+
+/* ==========================================================================
+   Campanhas de atualização (E11 -- views/CampanhasView.js)
+
+   Um cartão só, da altura da tela: faixa de cima com Ativas/Encerradas e
+   "Nova campanha"; embaixo, a lista de campanhas (coluna com fundo próprio,
+   rolando sozinha) e o detalhe da escolhida. A barra de progresso reaproveita
+   as cores e a técnica (flex-grow = quantidade) do card de situação do
+   Resumo, para "verde = atualizado" significar a mesma coisa nas duas telas.
+   ========================================================================== */
+.campanhas {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+/* Até embaixo da tela: 100dvh menos o cabeçalho do app (64px) e o respiro
+   de .app-main (28px em cima, 44px embaixo). Só no desktop -- no celular a
+   página cresce com o conteúdo, e uma altura fixa só criaria rolagem dupla. */
+@media (min-width: 901px) {
+  .campanhas { height: calc(100dvh - 136px); min-height: 520px; }
+}
+
+.campanhas__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin: 0;
+  padding: var(--sp-3) var(--sp-5);
+  border-bottom: 1px solid var(--cor-borda);
+}
+.campanhas__alternar {
+  display: inline-flex;
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pilula);
+  background: var(--cor-superficie);
+}
+.campanhas__alternar .filtro-rapido {
+  padding: 5px 14px;
+  border: 0;
+  background: transparent;
+  font-size: var(--txt-sm);
+}
+.campanhas__alternar .filtro-rapido.is-active { background: var(--cor-accent); color: var(--cor-sobre-accent); }
+
+.campanhas__grade {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+}
+/* Nenhuma campanha: some a coluna da lista, e o vazio ocupa o cartão
+   inteiro, centralizado -- antes eram dois avisos (um espremido no canto). */
+.campanhas.is-vazia .campanhas__grade { grid-template-columns: minmax(0, 1fr); }
+.campanhas.is-vazia .campanhas__lista { display: none; }
+.campanhas.is-vazia .campanhas__detalhe { display: flex; align-items: center; justify-content: center; }
+
+/* Sem isto a coluna 1fr cresce até caber a tabela inteira e o cartão vaza
+   pela direita no celular: item de grade tem `min-width: auto` por padrão. */
+.campanhas__lista,
+.campanhas__detalhe { min-width: 0; min-height: 0; overflow: auto; }
+.campanhas__lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+  border-right: 1px solid var(--cor-borda);
+  background: var(--cor-superficie);
+}
+.campanhas__detalhe { padding: var(--sp-5); }
+.campanhas__detalhe .empty-state { max-width: 460px; margin: 0 auto; text-align: center; }
+
+.campanha-cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--card-gradiente);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--transicao), background var(--transicao);
+}
+.campanha-cartao:hover { border-color: var(--cor-borda-forte); }
+.campanha-cartao.is-selecionada { border-color: var(--cor-accent); box-shadow: inset 3px 0 0 var(--cor-accent); }
+.campanha-cartao__topo { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); }
+.campanha-cartao__titulo { overflow-wrap: anywhere; }
+.campanha-cartao__pct { font-family: var(--fonte-display); font-weight: var(--peso-forte); font-variant-numeric: tabular-nums; }
+.campanha-cartao__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--cor-texto-fraco); font-size: var(--txt-sm); }
+.campanha-cartao .campanha__barra { margin: 0; height: 6px; }
+
+.campanha__cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.campanha__identidade { min-width: 0; flex: 1 1 280px; }
+.campanha__titulo { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: 0 0 4px; font-size: var(--txt-lg); overflow-wrap: anywhere; }
+.campanha__meta, .campanha__descricao { margin: 0; color: var(--cor-texto-fraco); }
+.campanha__descricao { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.campanha__acoes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+
+/* Placar: quatro números no mesmo desenho, com a barra por baixo. */
+.campanha__painel {
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie);
+}
+.campanha__placar { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.campanha__numero { display: flex; flex-direction: column; gap: 2px; color: var(--cor-texto-fraco); font-size: var(--txt-sm); }
+.campanha__numero strong { display: flex; align-items: center; gap: 8px; color: var(--cor-texto); font-family: var(--fonte-display); font-size: var(--txt-xl, 24px); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.campanha__numero--pct strong { color: var(--cor-accent); }
+.campanha__barra { height: 10px; margin: 0; }
+.campanha__nota { margin: var(--sp-3) 0 0; color: var(--cor-texto-fraco); font-size: var(--txt-sm); }
+.campanha__situacao { display: inline-flex; align-items: center; gap: 6px; white-space: normal; }
+.campanha__numero .situacao__marca,
+.campanha__situacao .situacao__marca { flex: 0 0 auto; }
+.campanha__selo {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pilula);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-medio);
+  white-space: nowrap;
+}
+.campanha__selo.is-alerta { border-color: var(--severidade-alta); color: var(--severidade-alta); }
+.campanha__selo.is-encerrada { background: var(--cor-superficie-alta); }
+/* Filtros e busca numa linha só, centrados: a busca não tem rótulo visível
+   (placeholder + aria-label) para não empurrar os filtros para baixo. */
+.campanhas__toolbar { align-items: center; gap: var(--sp-3); }
+.campanhas__toolbar .campanhas__busca { flex: 0 1 280px; width: auto; min-width: 180px; }
+.campanhas__toolbar .filtros-rapidos { margin: 0; }
+.filtro-rapido__n { opacity: 0.8; font-variant-numeric: tabular-nums; }
+.campanha-form textarea.input { resize: vertical; min-height: 72px; }
+.campanha__cliente { display: flex; flex-direction: column; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.campanha__cliente small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
+
+@media (max-width: 900px) {
+  .campanhas__grade { grid-template-columns: 1fr; }
+  .campanhas__lista { border-right: 0; border-bottom: 1px solid var(--cor-borda); overflow: visible; }
+  .campanhas__detalhe { overflow: visible; padding: var(--sp-4); }
+  .campanhas.is-vazia .campanhas__detalhe { min-height: 360px; }
+}
+/* No celular a tabela vira blocos (nome em cima, data e situação embaixo,
+   ações à direita) em vez de rolar para o lado. As células já dizem o que
+   são ("Nunca", "Pendente", "versão ..."), então não precisam de rótulo. */
+@media (max-width: 600px) {
+  .campanhas__topo { padding: var(--sp-3) var(--sp-4); }
+  .campanhas__tabela thead { display: none; }
+  .campanhas__tabela table, .campanhas__tabela tbody { display: block; width: 100%; }
+  .campanhas__tabela tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px var(--sp-3);
+    padding: var(--sp-3);
+    border-bottom: 1px solid var(--cor-borda);
+  }
+  .campanhas__tabela tbody td { display: block; width: auto !important; padding: 0; border: 0; }
+  .campanhas__tabela tbody td:nth-child(1) { grid-column: 1 / -1; }
+  .campanhas__tabela tbody td:nth-child(4) { grid-column: 2; grid-row: 2 / span 2; align-self: center; }
+  .campanhas__toolbar .campanhas__busca { flex: 1 1 100%; }
+}
+
+/* Importação de planilha (components/ImportacaoModal.js): orientação,
+   prévia e resultado. A tabela de ocorrências rola dentro do modal para o
+   rodapé com "Importar" continuar à vista. */
+.importacao { text-align: left; }
+.importacao__orientacao ul { margin: var(--sp-2) 0 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.importacao__arquivo { margin: 0 0 var(--sp-3); color: var(--cor-texto-fraco); font-size: var(--txt-sm); overflow-wrap: anywhere; }
+.importacao__numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.importacao__numero { padding: var(--sp-2) var(--sp-3); border: 1px solid var(--cor-borda); border-radius: var(--raio-pequeno); font-size: var(--txt-sm); }
+.importacao__numero strong { display: block; font-size: var(--txt-lg); }
+.importacao__numero.is-boa strong { color: var(--severidade-boa); }
+.importacao__numero.is-alta strong { color: var(--severidade-alta); }
+.importacao__numero.is-media strong { color: var(--cor-amarelo); }
+.importacao__aviso { margin: 0 0 var(--sp-2); color: var(--cor-texto-fraco); font-size: var(--txt-sm); }
+.importacao__ok { display: flex; align-items: center; gap: 6px; color: var(--severidade-boa); }
+.importacao__ok svg { width: 16px; height: 16px; }
+.importacao__ocorrencias { max-height: 280px; overflow: auto; margin-bottom: var(--sp-3); border: 1px solid var(--cor-borda); border-radius: var(--raio-pequeno); }
+.importacao__ocorrencias table { width: 100%; }
+.importacao__ocorrencias td { vertical-align: top; font-size: var(--txt-sm); overflow-wrap: anywhere; }
+.importacao__tipo { font-weight: var(--peso-forte); }
+.importacao__tipo.is-erro { color: var(--severidade-alta); }
+.importacao__opcao { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); font-size: var(--txt-sm); cursor: pointer; }
+/* A tabela padrão corta com reticências; aqui a mensagem é o conteúdo. */
+.importacao__ocorrencias td { white-space: normal; text-overflow: clip; overflow: visible; }
+.importacao__ocorrencias th:first-child, .importacao__ocorrencias td:first-child { width: 56px; }
+@media (max-width: 600px) {
+  .importacao__ocorrencias thead { display: none; }
+  .importacao__ocorrencias table, .importacao__ocorrencias tbody { display: block; }
+  .importacao__ocorrencias tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--cor-borda); }
+  .importacao__ocorrencias td { display: block; padding: 0; border: 0; }
+  .importacao__ocorrencias td:first-child { width: auto; color: var(--cor-texto-fraco); }
+  .importacao__ocorrencias td:first-child::before { content: "Linha "; }
+  .importacao__ocorrencias td:nth-child(4) { grid-column: 1 / -1; }
+}
+
+/* ==========================================================================
+   Estados de botão e alvo de toque (seção 6 do planejamento, fechamento)
+
+   Processando não é desabilitado. `marcarOcupado` (utils/guard.js) desabilita
+   o botão para impedir o segundo clique, e antes disso ele ficava com a
+   mesma cara de "você não pode usar isto" (opacidade 0.5, cursor proibido).
+   Agora o botão ocupado continua legível, com o spinner e o cursor de
+   progresso: a pessoa vê que o clique pegou, e não que foi recusado.
+   ========================================================================== */
+.btn[aria-busy="true"]:disabled {
+  opacity: 0.85;
+  cursor: progress;
+}
+
+/* Em tela de toque, os botões só de ícone (26 px, pensados para o mouse no
+   fim da linha) ficam pequenos demais para o dedo. Cresce o ALVO, não o
+   desenho: o ícone continua com 14 px, e no desktop nada muda. */
+@media (pointer: coarse) {
+  .row-actions .btn,
+  .btn--icon {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+  .row-actions { gap: 6px; }
+  .btn--small { min-height: 40px; }
+}
+
+/* Estado que o Gestor só informa (Configurações > Notificações > Permissão
+   do navegador). Texto, não interruptor: quem decide é o navegador. */
+.cfg-estado {
+  max-width: 340px;
+  padding: 6px 10px;
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-borda-forte);
+  border-radius: var(--raio-pequeno);
+  color: var(--cor-texto);
+  font-size: var(--txt-sm);
+}
+.cfg-estado[data-tom="boa"] { border-left-color: var(--severidade-boa); }
+.cfg-estado[data-tom="alta"] { border-left-color: var(--severidade-alta); }
+.cfg-estado[data-tom="media"] { border-left-color: var(--cor-amarelo); }
+
+/* ==========================================================================
+   Card "Atualização dos Clientes" (Resumo), revisão de 28/09/2026
+
+   O card respondia "quantos em cada grupo", mas não a pergunta que se faz ao
+   abrir o Resumo -- "como estamos?". O percentual em dia vira o número
+   principal (em tinta de texto, não na cor da série: a cor fica na barra e
+   nos pontos), a barra engorda para ser lida de relance, e cada sistema da
+   lista de atrasos ganha o denominador ("196 de 250") e uma mini-barra,
+   porque a contagem sozinha não dizia se era quase todo mundo ou uma fração.
+   ========================================================================== */
+.situacao__destaque {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.situacao__hero {
+  font-family: var(--fonte-display);
+  font-size: calc(34px * var(--escala, 1));
+  font-weight: var(--peso-extra);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--cor-texto);
+}
+.situacao__hero-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--txt-sm); }
+.situacao__hero-texto small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
+.situacao__barra { height: 14px; margin-bottom: var(--sp-3); }
+
+.situacao__sistema {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "nome  conta"
+    "trilho pct";
+  align-items: center;
+  gap: 4px 10px;
+  padding: 7px 8px;
+  text-align: left;
+}
+.situacao__sistema-nome { grid-area: nome; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--peso-medio); }
+.situacao__sistema-conta { grid-area: conta; color: var(--cor-texto-fraco); font-size: var(--txt-xs); font-variant-numeric: tabular-nums; }
+.situacao__sistema-trilho {
+  grid-area: trilho;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--raio-pilula);
+  background: var(--cor-superficie-alta);
+}
+.situacao__sistema-barra { display: block; height: 100%; border-radius: var(--raio-pilula); background: var(--severidade-alta); }
+.situacao__sistema .situacao__sistema-pct {
+  grid-area: pct;
+  min-width: 34px;
+  color: var(--cor-texto);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-forte);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ==========================================================================
+   Administração e Configurações -- polimento visual (28/09/2026)
+   ========================================================================== */
+
+/* Os cartões de uma seção vinham encostados um no outro: o contêiner não
+   tinha regra nenhuma (a classe existia só no HTML). */
+.admin-grade-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+/* Rodapé de salvar: encaixado no fim do cartão (sem a faixa de outra cor
+   que sobrava abaixo dele), só com a linha de cima separando. */
+.admin-form__rodape {
+  margin: var(--sp-2) calc(var(--sp-5) * -1) calc(var(--sp-2) * -1);
+  background: transparent;
+}
+
+/* Classificação dos sistemas: uma linha curta por sistema, em duas colunas
+   quando cabe. A linha alterada ganha o realce e o botão Salvar. */
+.admin-sistemas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 440px), 1fr));
+  column-gap: var(--sp-6, 32px);
+  padding: var(--sp-2) 0 var(--sp-3);
+}
+.admin-sistema {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-2);
+  border-bottom: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  transition: background var(--transicao);
+}
+.admin-sistema.is-alterado { background: var(--cor-accent-fraco); }
+.admin-sistema__nome { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.admin-sistema__nome strong { overflow-wrap: anywhere; }
+.admin-sistema__nome small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
+.admin-sistema .segmented { flex: 0 0 auto; }
+
+/* Diagnóstico: título e selo quebram de linha em vez de espremer o título. */
+.admin-saude__bloco header { flex-wrap: wrap; }
+
+/* Abas das telas com abas: quando as abas e a busca não cabem numa linha, a
+   busca sobe para cima (como no celular) em vez de cortar a última aba --
+   "Sobre e ajuda" ficava escondida atrás da busca, rolando sem barra. */
+.tela-abas__barra { flex-wrap: wrap-reverse; }
+.tela-abas__lista { flex: 1 1 max-content; }
+.tela-abas__extra { margin-left: auto; }
+/* Mais estreita (as seis abas somam ~910 px), para caber ao lado delas em
+   1440 px com o menu aberto; abaixo disso
+   ela sobe para cima das abas (regra acima). */
+@media (min-width: 761px) {
+  .tela-abas__extra .cfg-busca { width: 200px; }
+}
+/* No celular vale a regra de sempre: busca em cima, na largura toda. Repetida
+   aqui porque as regras acima vêm depois da versão original na cascata. */
+@media (max-width: 760px) {
+  .tela-abas__barra { flex-wrap: nowrap; }
+  .tela-abas__lista { flex: 0 0 auto; }
+  .tela-abas__extra { margin-left: 0; }
+  .tela-abas__extra .cfg-busca { width: 100%; }
+}
+/* Classificação no celular: nome em cima, escolha e Salvar embaixo -- lado a
+   lado, o nome ficava espremido em duas letras por linha. */
+@media (max-width: 600px) {
+  .admin-sistema { flex-wrap: wrap; }
+  .admin-sistema__nome { flex-basis: 100%; }
+}
+
+/* ==========================================================================
+   Tabelas no celular (polimento final, 28/09/2026)
+
+   Com `table-layout: fixed`, as colunas em px (ID, datas, ações) somavam
+   mais que a largura do celular e as colunas em % -- justamente Cliente e
+   Sistema -- ficavam com largura ZERO: a tabela de Atualizações mostrava
+   ID, Versão e Quem atualizou, e nenhum nome de cliente. E o contêiner
+   cortava o excesso (`overflow-x: hidden`) sem deixar rolar.
+
+   No celular a tabela ganha uma largura mínima em que todas as colunas
+   cabem, e o contêiner rola na horizontal. As tabelas que já viram blocos no
+   celular ficam fora da regra.
+   ========================================================================== */
+@media (max-width: 760px) {
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.data-table { min-width: 1000px; }
+  .campanhas__tabela table.data-table,
+  .importacao__ocorrencias table.data-table,
+  table.data-table.distribution-agent-table,
+  .cfg-previa table.data-table { min-width: 0; }
+}
+
+/* Atualizações: busca, responsável e seis controles numa linha só em 1440 px
+   com o menu aberto. Com os mínimos genéricos da barra (280 + 200 px), o
+   "+ Nova Atualização" -- a ação principal -- quebrava sozinho para uma
+   segunda linha. */
+@media (min-width: 761px) {
+  .atualizacoes-toolbar { gap: var(--sp-3); }
+  .atualizacoes-toolbar .field { min-width: 150px; }
+  .atualizacoes-toolbar .field:has(input[type="search"]) { min-width: 200px; flex: 1 1 220px; }
+  .atualizacoes-toolbar .toolbar__clear:not(:has(:not([hidden]))) { display: none; }
 }

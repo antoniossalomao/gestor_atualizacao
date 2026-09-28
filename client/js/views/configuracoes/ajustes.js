@@ -14,6 +14,9 @@ import {
   FOCOS,
   DURACOES_AVISO,
   PERIODOS_INICIAIS,
+  ESCOPOS_AGENDA,
+  HORARIOS,
+  ABAS_RELATORIO,
 } from "../../app/appearance.js";
 import { settings, prefs } from "../../app/prefs.js";
 import { notificacoes } from "../../app/notify.js";
@@ -181,6 +184,34 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
             },
           ],
         },
+        {
+          // Só COMO o relatório abre e fecha. O conteúdo do chamado tem formato
+          // aprovado (seção 7.3 do planejamento) e não vira editor: nenhuma
+          // opção aqui acrescenta ou tira campo do texto.
+          titulo: "Relatórios",
+          itens: [
+            {
+              id: "relatorio-aba",
+              titulo: "Abrir o relatório em",
+              ajuda: "Quando há uma atualização selecionada, qual aba aparece primeiro.",
+              chaves: ["relatorioAba"],
+              busca: "relatório aba inicial atualização cliente abrir",
+              opcoes: ABAS_RELATORIO,
+              atual: () => aparencia.relatorioAba(),
+              aoEscolher: (valor) => aparencia.aplicar({ relatorioAba: valor }),
+            },
+            {
+              id: "relatorio-fechar",
+              tipo: "alternar",
+              titulo: "Fechar o relatório depois de copiar",
+              ajuda: "Desligado, o relatório continua aberto para você conferir ou imprimir.",
+              chaves: ["relatorioFecharAoCopiar"],
+              busca: "relatório copiar fechar chamado texto",
+              atual: () => aparencia.relatorioFecharAoCopiar(),
+              aoEscolher: (valor) => aparencia.aplicar({ relatorioFecharAoCopiar: valor }),
+            },
+          ],
+        },
       ],
     },
 
@@ -245,8 +276,129 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
           ],
         },
         {
+          titulo: "O que aparece no sino",
+          descricao: "O que fica desligado some do sino e do contador na aba do navegador.",
+          itens: [
+            {
+              id: "sino-atrasados",
+              tipo: "alternar",
+              titulo: "Agendamentos atrasados",
+              chaves: ["sinoAtrasados"],
+              busca: "sino notificação agendamento atrasado vencido",
+              atual: () => aparencia.sino().atrasados,
+              aoEscolher: (valor) => aparencia.aplicar({ sinoAtrasados: valor }),
+            },
+            {
+              id: "sino-hoje",
+              tipo: "alternar",
+              titulo: "Agendamentos para hoje",
+              chaves: ["sinoHoje"],
+              busca: "sino notificação agendamento hoje",
+              atual: () => aparencia.sino().hoje,
+              aoEscolher: (valor) => aparencia.aplicar({ sinoHoje: valor }),
+            },
+            {
+              id: "sino-escopo",
+              titulo: "Agendamentos de quem",
+              ajuda: '"Só as minhas": tarefas em que o responsável é você.',
+              chaves: ["sinoEscopo"],
+              busca: "sino minhas tarefas equipe responsável agendamento",
+              opcoes: ESCOPOS_AGENDA,
+              atual: () => aparencia.sino().escopo,
+              aoEscolher: (valor) => aparencia.aplicar({ sinoEscopo: valor }),
+            },
+            {
+              id: "sino-agentes",
+              tipo: "alternar",
+              titulo: "Situação dos agentes",
+              ajuda: "Agentes com falha, pendência, sem contato ou esperando autorização.",
+              chaves: ["sinoAgentes"],
+              busca: "sino notificação agente falha offline atualizador",
+              oculto: () => !atualizadorHabilitado,
+              atual: () => aparencia.sino().agentes,
+              aoEscolher: (valor) => aparencia.aplicar({ sinoAgentes: valor }),
+            },
+          ],
+        },
+        {
+          titulo: "Som",
+          itens: [
+            {
+              id: "som",
+              tipo: "alternar",
+              titulo: "Tocar um som em pendência nova",
+              ajuda: "Um toque curto quando o número do sino cresce ou quando chega um aviso de falha. Não toca no horário silencioso.",
+              chaves: ["somAvisos"],
+              busca: "som toque barulho alerta sonoro aviso",
+              atual: () => aparencia.somAvisos(),
+              aoEscolher: (valor) => {
+                aparencia.aplicar({ somAvisos: valor });
+                if (valor) notificacoes.tocarSom();
+              },
+            },
+          ],
+        },
+        {
+          titulo: "Horário silencioso",
+          descricao: `Pelo relógio deste computador${fusoLocal()}.`,
+          itens: [
+            {
+              id: "silencio",
+              tipo: "alternar",
+              titulo: "Silenciar em um horário",
+              ajuda: "Sem som e sem notificação do sistema nesse intervalo. O sino continua contando.",
+              chaves: ["silencioAtivo"],
+              busca: "silencioso silêncio horário não perturbe noite madrugada",
+              atual: () => aparencia.silencio().ativo,
+              aoEscolher: (valor) => aparencia.aplicar({ silencioAtivo: valor }),
+            },
+            {
+              id: "silencio-inicio",
+              tipo: "select",
+              titulo: "Das",
+              chaves: ["silencioInicio"],
+              busca: "silencioso início horário começa",
+              opcoes: HORARIOS,
+              atual: () => aparencia.silencio().inicio,
+              aoEscolher: (valor) => aparencia.aplicar({ silencioInicio: valor }),
+            },
+            {
+              id: "silencio-fim",
+              tipo: "select",
+              titulo: "Até as",
+              ajuda: "Pode virar a noite (19:00 até 07:00). Início igual ao fim não silencia nada.",
+              chaves: ["silencioFim"],
+              busca: "silencioso fim horário termina",
+              opcoes: HORARIOS,
+              atual: () => aparencia.silencio().fim,
+              aoEscolher: (valor) => aparencia.aplicar({ silencioFim: valor }),
+            },
+            {
+              id: "silencio-criticos",
+              tipo: "alternar",
+              titulo: "Falhas de agente avisam mesmo assim",
+              ajuda: "Ligado: a falha aparece no silêncio, sem som. Desligado: as falhas do período viram um aviso só quando o silêncio acaba.",
+              chaves: ["silencioCriticos"],
+              busca: "silencioso crítico falha agente urgente acumuladas",
+              oculto: () => !atualizadorHabilitado,
+              atual: () => aparencia.silencio().criticos,
+              aoEscolher: (valor) => aparencia.aplicar({ silencioCriticos: valor }),
+            },
+          ],
+        },
+        {
           titulo: "Notificações do sistema",
           itens: [
+            {
+              id: "permissao-notificacoes",
+              tipo: "estado",
+              titulo: "Permissão do navegador",
+              busca: "permissão notificação bloqueada navegador cadeado liberar",
+              oculto: () => !atualizadorHabilitado,
+              texto: () => notificacoes.estadoPermissao().texto,
+              tom: () => ({ concedida: "boa", negada: "alta", indisponivel: "media", nao_pedida: "neutro" })[notificacoes.estadoPermissao().estado],
+              observar: (fn) => notificacoes.aoMudarPermissao(fn),
+            },
             {
               id: "notificar-falhas",
               tipo: "alternar",
@@ -258,7 +410,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
               aoEscolher: async (ligar) => {
                 const ligou = await notificacoes.definir(ligar);
                 if (ligar && !ligou) {
-                  toast.error("O navegador bloqueou as notificações para este site.");
+                  toast.error(notificacoes.estadoPermissao().texto);
                   return false;
                 }
                 return true;
@@ -489,7 +641,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
               id: "situacoes-sistemas",
               tipo: "info",
               titulo: "Significado das situações de versão",
-              ajuda: "Em dia: atendido na versão oficial mais recente. Atrasado: versão recebida é anterior à oficial. Sem informação: cliente sem atendimento registrado no sistema. Verificação pendente: formato recebido não comparável automaticamente. Componente fixo: sistema não atualizável.",
+              ajuda: "Em dia: atualizado na versão oficial mais recente, ou em uma mais nova. Atrasado: versão recebida é anterior à oficial. Sem informação: nenhuma atualização registrada no sistema. Verificação pendente: formato recebido não comparável automaticamente. Componente fixo: sistema não atualizável.",
               busca: "situacao situacoes em dia atrasado sem informacao pendente fixo significado legenda",
             },
           ],
@@ -539,4 +691,14 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
 /** As preferências de que uma aba inteira é dona -- o "restaurar esta seção". */
 export function chavesDaAba(aba) {
   return aba.cartoes.flatMap((cartao) => cartao.itens.flatMap((item) => item.chaves || []));
+}
+
+/** " (America/Sao_Paulo)", só para informar -- o Gestor não converte fuso. */
+function fusoLocal() {
+  try {
+    const fuso = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return fuso ? ` (${fuso})` : "";
+  } catch {
+    return "";
+  }
 }

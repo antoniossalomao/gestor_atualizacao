@@ -32,6 +32,7 @@ export function montarControle(item, acoes) {
   if (item.tipo === "acao") return acao(item);
   if (item.tipo === "atalhos") return atalhos(item);
   if (item.tipo === "info") return info(item);
+  if (item.tipo === "estado") return estado(item);
   return segmentado(item);
 }
 
@@ -313,5 +314,36 @@ function perfis({ aoAplicarPerfil }) {
 function info(item) {
   const el = linha(item);
   const sincronizar = () => {};
+  return { el, sincronizar };
+}
+
+/**
+ * Uma linha que só INFORMA um estado que o Gestor não controla -- hoje, a
+ * permissão de notificação, que é decidida pelo navegador. O texto é relido
+ * a cada sincronização e quando `observar` avisa de mudança por fora (o
+ * cadeado do navegador), para a tela nunca dizer "permitidas" sobre um
+ * bloqueio feito depois.
+ */
+function estado(item) {
+  const el = linha(item);
+  const selo = document.createElement("span");
+  selo.className = "cfg-estado";
+  selo.setAttribute("role", "status");
+  el.appendChild(selo);
+  const sincronizar = () => {
+    selo.textContent = item.texto();
+    selo.dataset.tom = item.tom?.() || "neutro";
+  };
+  sincronizar();
+  // O aviso de mudança vem do navegador e sobreviveria à linha: quando a seção
+  // é redesenhada, a linha antiga sai do documento e o ouvinte se desliga na
+  // primeira chamada, em vez de continuar preso a um nó que ninguém vê.
+  const desligar = item.observar?.(() => {
+    if (!el.isConnected) {
+      desligar?.();
+      return;
+    }
+    sincronizar();
+  });
   return { el, sincronizar };
 }

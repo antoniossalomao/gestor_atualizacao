@@ -42,8 +42,9 @@ export function deltaTendencia(tendencia) {
 }
 
 /**
- * Corpo do card "Atualização dos Clientes": barra de distribuição, os três
- * totais clicáveis e os sistemas com mais clientes atrasados.
+ * Corpo do card "Atualização dos Clientes": o percentual em dia em destaque,
+ * a barra de distribuição, os três totais clicáveis e onde estão os atrasos
+ * (cada sistema com a proporção dos seus clientes que está atrasada).
  *
  * Substituiu uma rosca de duas fatias ("Em dia" x "Desatualizados") em que
  * "em dia" era só quem teve algum atendimento nos últimos 60 dias -- não
@@ -51,7 +52,7 @@ export function deltaTendencia(tendencia) {
  * funcionam sem ela, e ela some quando não há ninguém para dividir.
  *
  * @param {ReturnType<typeof import("../domain/situacao.js").totaisSituacao>} totais
- * @param {Array<{sistema: string, total: number}>} maisAtrasados
+ * @param {Array<{sistema: string, total: number, clientes?: number}>} maisAtrasados clientes = quantos avaliados usam o sistema
  */
 export function corpoSituacao(totais, maisAtrasados) {
   if (totais.avaliados === 0) {
@@ -64,11 +65,19 @@ export function corpoSituacao(totais, maisAtrasados) {
           : "Nenhum cliente cadastrado para avaliar. Cadastre clientes e seus sistemas na tela Clientes."}
       </p>`;
   }
-  const descricaoBarra = totais.grupos.map((g) => `${g.rotulo}: ${g.pct}%`).join(", ");
+  const descricaoBarra = totais.grupos.map((g) => `${g.rotulo}: ${g.total} (${g.pct}%)`).join(", ");
+  const emDia = totais.grupos.find((g) => g.chave === "em_dia");
   const top = maisAtrasados.slice(0, 3);
   return html`
+    <div class="situacao__destaque">
+      <strong class="situacao__hero">${emDia?.pct ?? 0}%</strong>
+      <span class="situacao__hero-texto">
+        <span>dos clientes em dia</span>
+        <small>${emDia?.total ?? 0} de ${plural(totais.avaliados, "cliente")} com sistema que controla versão</small>
+      </span>
+    </div>
     <div class="situacao__barra" role="img" aria-label="${descricaoBarra}">
-      ${totais.grupos.filter((g) => g.total > 0).map((g) => html`<span class="situacao__parte is-${g.severidade}" style="flex-grow: ${g.total}"></span>`)}
+      ${totais.grupos.filter((g) => g.total > 0).map((g) => html`<span class="situacao__parte is-${g.severidade}" style="flex-grow: ${g.total}" title="${g.rotulo}: ${g.total} (${g.pct}%)"></span>`)}
     </div>
     <div class="situacao__totais">
       ${totais.grupos.map(
@@ -81,25 +90,30 @@ export function corpoSituacao(totais, maisAtrasados) {
           </button>`
       )}
     </div>
-    <p class="situacao__nota">
-      De ${plural(totais.avaliados, "cliente")} com sistema que controla versão.${totais.foraDaAvaliacao
-        ? ` ${plural(totais.foraDaAvaliacao, "cliente")} fora da conta (só sistemas fixos ou nenhum).`
-        : ""}
-    </p>
+    ${totais.foraDaAvaliacao
+      ? html`<p class="situacao__nota">${plural(totais.foraDaAvaliacao, "cliente")} fora da conta (só sistemas fixos ou nenhum).</p>`
+      : ""}
     ${totais.grupos.find((g) => g.chave === "pendente")?.total === totais.avaliados
       ? html`<p class="situacao__nota">Todos aguardam verificação. Abra a lista acima para ver o que falta; as referências oficiais ficam em Versões oficiais na aba Sistemas.</p>`
       : ""}
     ${top.length
       ? html`
         <div class="situacao__sistemas">
-          <h3 class="situacao__subtitulo">Sistemas com mais clientes atrasados</h3>
+          <h3 class="situacao__subtitulo">Onde estão os atrasos</h3>
           <ul>
-            ${top.map(
-              (s) => html`
-                <li><button type="button" class="situacao__sistema" data-sistema="${s.sistema}">
-                  <span>${s.sistema}</span><span>${plural(s.total, "cliente")}</span>
-                </button></li>`
-            )}
+            ${top.map((s) => {
+              // Proporção DENTRO do sistema: 196 atrasados de 250 clientes que o
+              // usam. A contagem sozinha não dizia se era quase todos ou poucos.
+              const base = s.clientes || s.total;
+              const pct = base > 0 ? Math.round((s.total / base) * 100) : 0;
+              return html`
+                <li><button type="button" class="situacao__sistema" data-sistema="${s.sistema}" title="${s.sistema}: ${s.total} de ${plural(base, "cliente")} atrasados (${pct}%). Clique para abrir em Sistemas.">
+                  <span class="situacao__sistema-nome">${s.sistema}</span>
+                  <span class="situacao__sistema-conta">${s.total} de ${base}</span>
+                  <span class="situacao__sistema-trilho" aria-hidden="true"><span class="situacao__sistema-barra" style="width: ${pct}%"></span></span>
+                  <span class="situacao__sistema-pct">${pct}%</span>
+                </button></li>`;
+            })}
           </ul>
           ${maisAtrasados.length > top.length ? html`<button type="button" class="btn btn--small" data-action="todos-sistemas">Ver todos (${maisAtrasados.length})</button>` : ""}
         </div>`

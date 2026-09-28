@@ -22,7 +22,7 @@ escolha deliberada, não uma limitação.
 sistemas atualizados, versão, responsável, data, motivo, quantas máquinas e
 observações. Toolbar unificada com busca instantânea, filtro por responsável,
 filtros de data recolhíveis com chips visíveis, menu **Mais ações** (com exportar
-e importar `.xlsx`), seleção em lote (`Shift` + clique em duas linhas marca tudo
+`.xlsx` e importar planilha com prévia antes de gravar), seleção em lote (`Shift` + clique em duas linhas marca tudo
 entre elas) e relatórios estruturados (atendimento, situação e histórico do
 cliente) com abas ágeis, cópia de texto limpo e impressão/salvar PDF.
 
@@ -34,10 +34,16 @@ na edição ficam sem versão; use um novo atendimento para registrar uma atuali
 Histórico e importações antigos não recebem a versão oficial retroativamente.
 Uma referência posterior à data do atendimento também não é atribuída.
 
+A **importação de planilha** mostra antes uma prévia: linhas válidas, erros
+(cliente em branco, data fora de dd/mm/aaaa — essas ficam de fora), avisos
+(cliente sem cadastro, sistema fora do catálogo) e possíveis duplicidades
+(mesmo cliente, data e sistemas), puladas por padrão. O lote grava numa
+transação só: ou entra inteiro, ou nada entra.
+
 **Clientes** — cadastro com código, cidade, grupo/rede compacto (para clientes
 com várias unidades sob a mesma bandeira) e quais sistemas cada um usa. A ação
-**Acessos** na linha de cada cliente permite gerenciar os identificadores de
-acesso remoto de cada máquina, com botão de cópia rápida individual.
+**Gerenciar acessos** na linha de cada cliente abre os identificadores de
+acesso remoto de cada máquina, com cópia individual de cada um.
 
 **Agendamentos** — agenda das tarefas internas ("atualizar o cliente X"), com
 status, horário e responsável, organizada com criação rápida e toolbar unificada.
@@ -61,15 +67,23 @@ de referência com autoria (quem alterou por último) e detecção de edição c
 garantindo que referências não retroajam sobre atendimentos antigos (ADR-0008).
 
 **Consulta** — a ficha completa de um cliente: cabeçalho com código, cidade e
-grupo/rede, resumo da situação de sistemas atualizáveis, componentes fixos (sem
+grupo/rede, data da última atualização, componentes fixos (sem
 falso status de atraso), acessos remotos com cópia direta por máquina, telemetria
 de agentes isolada e linha do tempo das últimas atualizações com opção de copiar
 relatório em texto limpo.
 
+**Campanhas** — metas temporárias de versão: "todo cliente de B_NFe na
+25/09/2026 até o dia 30". Mostra o progresso (atualizados, já agendados,
+pendentes), a lista de clientes com filtros rápidos, cria o agendamento de
+quem falta com um clique e exporta os pendentes em `.xlsx`. A baixa é
+automática: registrar a atualização em Atualizações com a versão da meta (ou
+mais nova) tira o cliente dos pendentes. Uma versão oficial nova em Sistemas
+não muda a meta; encerrar a campanha congela o placar (ADR-0009).
+
 **Administração** — restrita a administradores e organizada em 7 seções por finalidade:
 1. **Pessoas e permissões** (usuários, perfis e permissões);
 2. **Operação** (prazos para clientes desatualizados, arquivamento de tarefas e classificação de sistemas atualizáveis vs fixos);
-3. **Dados** (exportação completa, importação em lote e download do banco);
+3. **Dados** (exportação completa, importação em lote com prévia e download do banco);
 4. **Integrações** (notificações no Discord com mensagem de teste e liga/desliga do Atualizador);
 5. **Backups e recuperação** (cópias automáticas a cada inicialização, retenção, download e restauração protegida);
 6. **Auditoria** (histórico completo de alterações por entidade e autor);
@@ -99,6 +113,14 @@ a situação de cada agente em campo. O agente vive em
   **Minha conta** e agrupa as opções em 6 seções (Minha conta, Trabalho
   diário, Notificações, Interface e acessibilidade, Regras da equipe, Sobre
   e ajuda), com perfis prontos, prévia ao vivo das tabelas e busca instantânea.
+- **Notificações sob medida**: em Configurações › Notificações cada pessoa
+  escolhe o que o sino conta (agendamentos atrasados, de hoje, situação dos
+  agentes; da equipe ou só as suas), liga um som curto para pendência nova e
+  define um horário silencioso (pode virar a noite; falhas de agente podem
+  passar mesmo assim, ou chegar num resumo quando o silêncio acaba). A tela
+  mostra o estado real da permissão de notificação do navegador, inclusive
+  bloqueio. Em Trabalho diário, a aba com que o relatório abre e se ele fecha
+  ao copiar.
 - **Nomes de sistema e de responsável são padronizados na gravação** —
   quem digitar `B_NFE` grava `B_NFe`, e `CAMILA` grava `Camila`. Sem isso, o
   relatório por sistema erra em silêncio (ver a seção de 11/09 abaixo, que

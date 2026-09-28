@@ -184,3 +184,41 @@ test("Busca de ajustes", async (t) => {
     assert.deepEqual(achados.map((i) => i.titulo), ["Tema", "Contraste"]);
   });
 });
+
+test("Preferências de notificação e relatório (13.4)", async (t) => {
+  zerar();
+  await t.test("padrões: sino com tudo, sem som, sem silêncio, relatório abre na atualização", () => {
+    assert.deepEqual(aparencia.sino(), { atrasados: true, hoje: true, agentes: true, escopo: "equipe" });
+    assert.equal(aparencia.somAvisos(), false);
+    assert.deepEqual(aparencia.silencio(), { ativo: false, inicio: "19:00", fim: "07:00", criticos: true });
+    assert.equal(aparencia.relatorioAba(), "atualizacao");
+    assert.equal(aparencia.relatorioFecharAoCopiar(), false);
+  });
+
+  await t.test("valor salvo fora da lista cai no padrão, em vez de chegar à regra", () => {
+    localStorage.setItem("gestor:silencioInicio", JSON.stringify("7h"));
+    localStorage.setItem("gestor:sinoEscopo", JSON.stringify("todos"));
+    assert.equal(aparencia.silencio().inicio, "19:00");
+    assert.equal(aparencia.sino().escopo, "equipe");
+    zerar();
+  });
+
+  await t.test("exportar e importar leva as escolhas de notificação e relatório", () => {
+    aparencia.aplicar({ sinoHoje: false, sinoEscopo: "minhas", silencioAtivo: true, silencioInicio: "22:30", relatorioAba: "cliente" });
+    const arquivo = aparencia.exportar();
+    zerar();
+    const r = aparencia.importar(arquivo);
+    assert.equal(r.ignoradas, 0);
+    assert.equal(aparencia.sino().hoje, false);
+    assert.equal(aparencia.sino().escopo, "minhas");
+    assert.deepEqual(aparencia.silencio(), { ativo: true, inicio: "22:30", fim: "07:00", criticos: true });
+    assert.equal(aparencia.relatorioAba(), "cliente");
+  });
+
+  await t.test("importação recusa horário fora da grade de meia hora", () => {
+    zerar();
+    const r = aparencia.importar({ preferencias: { silencioInicio: "22:15", silencioFim: "06:00" } });
+    assert.equal(r.aplicadas, 1);
+    assert.equal(r.ignoradas, 1);
+  });
+});
