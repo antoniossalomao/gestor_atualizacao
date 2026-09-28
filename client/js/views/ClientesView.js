@@ -156,7 +156,7 @@ export class ClientesView extends View {
           },
         },
         { key: "sistemasTexto", label: "Sistemas" },
-        { key: "maquinas", label: "Máquinas", type: "numeric", largura: "75px" },
+        { key: "maquinas", label: "Máquinas", type: "numeric", largura: "92px" },
         { key: "acoes", label: "Ações", largura: "140px", render: (row) => acoesCliente(row, this.user?.role) },
       ],
       onSelect: (row) => this._loadIntoForm(row),

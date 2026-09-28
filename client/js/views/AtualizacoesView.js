@@ -82,7 +82,7 @@ export class AtualizacoesView extends View {
 
       <div class="card">
         <!-- Toolbar principal: controles sempre visíveis -->
-        <div class="toolbar">
+        <div class="toolbar atualizacoes-toolbar">
           <div class="field">
             <label class="field__label" for="atu-busca">Buscar</label>
             <input type="search" class="input" id="atu-busca" data-role="search" placeholder="Cliente, sistema, responsável, motivo..." />

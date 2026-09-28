@@ -5971,7 +5971,7 @@ h1, h2, h3, strong {
     border: 0;
     background: transparent;
   }
-  .distribution-agent-table,
+  table.data-table.distribution-agent-table,
   .distribution-agent-table tbody,
   .distribution-agent-table tr,
   .distribution-agent-table td {
@@ -6174,7 +6174,9 @@ h1, h2, h3, strong {
 /* -- Kanban Board (Aba Agendamentos) -- */
 .kanban-board {
   display: grid;
-  grid-template-columns: repeat(var(--kanban-colunas, 4), minmax(340px, 1fr));
+  /* 220px (antes 340): com o menu aberto em 1280 px, as quatro colunas cabem
+     sem a última ("Concluído") ficar cortada atrás de uma rolagem lateral. */
+  grid-template-columns: repeat(var(--kanban-colunas, 4), minmax(220px, 1fr));
   gap: var(--sp-4);
   overflow-x: auto;
   padding-block: var(--sp-3);
@@ -7259,4 +7261,37 @@ h1, h2, h3, strong {
 @media (max-width: 600px) {
   .admin-sistema { flex-wrap: wrap; }
   .admin-sistema__nome { flex-basis: 100%; }
+}
+
+/* ==========================================================================
+   Tabelas no celular (polimento final, 28/09/2026)
+
+   Com `table-layout: fixed`, as colunas em px (ID, datas, ações) somavam
+   mais que a largura do celular e as colunas em % -- justamente Cliente e
+   Sistema -- ficavam com largura ZERO: a tabela de Atualizações mostrava
+   ID, Versão e Quem atualizou, e nenhum nome de cliente. E o contêiner
+   cortava o excesso (`overflow-x: hidden`) sem deixar rolar.
+
+   No celular a tabela ganha uma largura mínima em que todas as colunas
+   cabem, e o contêiner rola na horizontal. As tabelas que já viram blocos no
+   celular ficam fora da regra.
+   ========================================================================== */
+@media (max-width: 760px) {
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.data-table { min-width: 1000px; }
+  .campanhas__tabela table.data-table,
+  .importacao__ocorrencias table.data-table,
+  table.data-table.distribution-agent-table,
+  .cfg-previa table.data-table { min-width: 0; }
+}
+
+/* Atualizações: busca, responsável e seis controles numa linha só em 1440 px
+   com o menu aberto. Com os mínimos genéricos da barra (280 + 200 px), o
+   "+ Nova Atualização" -- a ação principal -- quebrava sozinho para uma
+   segunda linha. */
+@media (min-width: 761px) {
+  .atualizacoes-toolbar { gap: var(--sp-3); }
+  .atualizacoes-toolbar .field { min-width: 150px; }
+  .atualizacoes-toolbar .field:has(input[type="search"]) { min-width: 200px; flex: 1 1 220px; }
+  .atualizacoes-toolbar .toolbar__clear:not(:has(:not([hidden]))) { display: none; }
 }
