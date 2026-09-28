@@ -10,6 +10,7 @@ import { debounce } from "../utils/debounce.js";
 import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { icon, iconHtml } from "../utils/icons.js";
 import { html, plural, copyToClipboard } from "../utils/html.js";
+import { ImportacaoModal } from "../components/ImportacaoModal.js";
 import { abrirRelatorio } from "../components/RelatorioModal.js";
 import { relatorioDeAtualizacao, relatorioDoCliente, relatorioSituacao, relatorioDoPeriodo, versaoRegistrada } from "../domain/relatorio.js";
 import { splitSistemas } from "../domain/matrizVersoes.js";
@@ -110,10 +111,9 @@ export class AtualizacoesView extends View {
             <button type="button" class="btn btn--ghost btn--small" data-action="toggle-mais-acoes" aria-haspopup="menu" aria-expanded="false">Mais ações ▾</button>
             <div class="menu-acoes__lista" role="menu" hidden>
               <button type="button" class="menu-acoes__item" role="menuitem" data-action="export">${iconHtml("download")} Exportar resultado (.xlsx)</button>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="import">${iconHtml("upload")} Importar planilha (.xlsx)</button>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="import">${iconHtml("upload")} Importar planilha…</button>
             </div>
           </div>
-          <input type="file" accept=".xlsx,.xls" data-role="file-input" hidden />
           <!-- Excluir: aparece só quando há seleção; lote oculta este -->
           <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
           <button type="button" class="btn btn--accent btn--small" data-action="nova-atualizacao">+ Nova Atualização</button>
@@ -371,13 +371,7 @@ export class AtualizacoesView extends View {
     const exportBtn = menuAcoes.querySelector('[data-action="export"]');
     this._configurarMenuDropdown(menuAcoes, (acao, fechar) => {
       if (acao === "export") { fechar(); withBusyButton(exportBtn, () => this.exportXlsx())(); }
-      if (acao === "import") { fechar(); fileInput.click(); }
-    });
-
-    const fileInput = this.container.querySelector('[data-role="file-input"]');
-    fileInput.addEventListener("change", () => {
-      if (fileInput.files[0]) this.importXlsx(fileInput.files[0]);
-      fileInput.value = "";
+      if (acao === "import") { fechar(); this.abrirImportacao(); }
     });
 
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
@@ -954,36 +948,20 @@ export class AtualizacoesView extends View {
     }
   }
 
-  async importXlsx(file) {
-    const ok = await Modal.confirm(
-      "Importar planilha",
-      `Importar "${file.name}"?\n\nOs registros da planilha são acrescentados aos que já existem — nada é substituído.`,
-      { confirmLabel: "Importar", danger: false }
-    );
-    if (!ok) return;
-
-    try {
-      const resultado = await this.api.postFile("/atualizacoes/import", file);
-      this.page = 1;
-      this._invalidar();
-      await this._reloadList();
-
-      let msg = `${plural(resultado.inserted, "registro")} importado(s).`;
-      if (resultado.naoCadastrados.length > 0) {
-        const exemplos = resultado.naoCadastrados.slice(0, 5).join(", ");
-        const reticencias = resultado.naoCadastrados.length > 5 ? "..." : "";
-        msg +=
-          `\n\nAtenção: ${plural(resultado.naoCadastrados.length, "cliente")} da planilha não ` +
-          `${resultado.naoCadastrados.length === 1 ? "está cadastrado" : "estão cadastrados"} na aba Clientes ` +
-          `(${exemplos}${reticencias}). Esses registros foram salvos, mas não vão aparecer no Resumo nem na ` +
-          "Consulta até o cliente ser cadastrado com o nome exatamente igual.";
-        Modal.alert("Importar", msg, "warning");
-      } else {
-        toast.success(msg);
-      }
-    } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
-    }
+  /**
+   * Abre o fluxo de importação (orientação, prévia e resultado -- ver
+   * components/ImportacaoModal.js). A lista só recarrega se algo entrou.
+   */
+  abrirImportacao() {
+    new ImportacaoModal(this.api, {
+      aoImportar: async (resultado) => {
+        if (!resultado.inserted) return;
+        this.page = 1;
+        this._invalidar();
+        this.cache?.invalidar("campanhas:");
+        await this._reloadList();
+      },
+    }).open();
   }
 
   /**

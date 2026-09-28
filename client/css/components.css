@@ -6988,3 +6988,37 @@ h1, h2, h3, strong {
   .campanhas__tabela tbody td:nth-child(4) { grid-column: 2; grid-row: 2 / span 2; align-self: center; }
   .campanhas__toolbar .field { width: 100%; }
 }
+
+/* Importação de planilha (components/ImportacaoModal.js): orientação,
+   prévia e resultado. A tabela de ocorrências rola dentro do modal para o
+   rodapé com "Importar" continuar à vista. */
+.importacao { text-align: left; }
+.importacao__orientacao ul { margin: var(--sp-2) 0 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.importacao__arquivo { margin: 0 0 var(--sp-3); color: var(--cor-texto-fraco); font-size: var(--txt-sm); overflow-wrap: anywhere; }
+.importacao__numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.importacao__numero { padding: var(--sp-2) var(--sp-3); border: 1px solid var(--cor-borda); border-radius: var(--raio-pequeno); font-size: var(--txt-sm); }
+.importacao__numero strong { display: block; font-size: var(--txt-lg); }
+.importacao__numero.is-boa strong { color: var(--severidade-boa); }
+.importacao__numero.is-alta strong { color: var(--severidade-alta); }
+.importacao__numero.is-media strong { color: var(--cor-amarelo); }
+.importacao__aviso { margin: 0 0 var(--sp-2); color: var(--cor-texto-fraco); font-size: var(--txt-sm); }
+.importacao__ok { display: flex; align-items: center; gap: 6px; color: var(--severidade-boa); }
+.importacao__ok svg { width: 16px; height: 16px; }
+.importacao__ocorrencias { max-height: 280px; overflow: auto; margin-bottom: var(--sp-3); border: 1px solid var(--cor-borda); border-radius: var(--raio-pequeno); }
+.importacao__ocorrencias table { width: 100%; }
+.importacao__ocorrencias td { vertical-align: top; font-size: var(--txt-sm); overflow-wrap: anywhere; }
+.importacao__tipo { font-weight: var(--peso-forte); }
+.importacao__tipo.is-erro { color: var(--severidade-alta); }
+.importacao__opcao { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); font-size: var(--txt-sm); cursor: pointer; }
+/* A tabela padrão corta com reticências; aqui a mensagem é o conteúdo. */
+.importacao__ocorrencias td { white-space: normal; text-overflow: clip; overflow: visible; }
+.importacao__ocorrencias th:first-child, .importacao__ocorrencias td:first-child { width: 56px; }
+@media (max-width: 600px) {
+  .importacao__ocorrencias thead { display: none; }
+  .importacao__ocorrencias table, .importacao__ocorrencias tbody { display: block; }
+  .importacao__ocorrencias tr { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px var(--sp-2); padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--cor-borda); }
+  .importacao__ocorrencias td { display: block; padding: 0; border: 0; }
+  .importacao__ocorrencias td:first-child { width: auto; color: var(--cor-texto-fraco); }
+  .importacao__ocorrencias td:first-child::before { content: "Linha "; }
+  .importacao__ocorrencias td:nth-child(4) { grid-column: 1 / -1; }
+}

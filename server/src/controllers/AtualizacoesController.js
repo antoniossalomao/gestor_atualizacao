@@ -115,8 +115,18 @@ class AtualizacoesController {
   importXlsx = async (req, res, next) => {
     try {
       if (!req.file) throw new ValidationError("Selecione um arquivo .xlsx para importar.");
-      const resultado = await this.atualizacaoService.importXlsx(req.file.buffer, req.session.user);
-      res.json(resultado);
+      // "pularDuplicadas" chega como texto no multipart ("1"/"0").
+      const pularDuplicadas = String(req.body?.pularDuplicadas ?? "") === "1";
+      res.json(await this.atualizacaoService.importXlsx(req.file.buffer, req.session.user, { pularDuplicadas }));
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  previaImport = async (req, res, next) => {
+    try {
+      if (!req.file) throw new ValidationError("Selecione um arquivo .xlsx para conferir.");
+      res.json(await this.atualizacaoService.previaImportacao(req.file.buffer));
     } catch (err) {
       next(err);
     }

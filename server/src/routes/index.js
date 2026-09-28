@@ -154,6 +154,9 @@ class ApiRouter {
     api.get("/atualizacoes/versoes-por-sistema", atualizacoes.latestVersionBySystem);
     api.get("/atualizacoes/por-sistema", atualizacoes.porSistema);
     api.get("/atualizacoes/export", atualizacoes.exportXlsx);
+    // Prévia antes de importar: só lê, mas com o mesmo papel da importação --
+    // quem não pode importar não tem por que conferir.
+    api.post("/atualizacoes/import/previa", requireRole("operador", "admin"), upload.single("arquivo"), atualizacoes.previaImport);
     api.post("/atualizacoes/import", requireRole("operador", "admin"), upload.single("arquivo"), atualizacoes.importXlsx);
     api.post("/atualizacoes/excluir-lote", requireRole("admin"), atualizacoes.removeMany);
     api.post("/atualizacoes", requireRole("operador", "admin"), atualizacoes.create);

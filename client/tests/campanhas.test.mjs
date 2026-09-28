@@ -96,3 +96,37 @@ test("filtros mostram a contagem de cada grupo; lista vazia orienta", () => {
   assert.doesNotMatch(String(listaCampanhas([], null, { encerradas: false, podeCriar: false })), /Crie uma/);
 });
 
+/*
+ * Importação de planilha (templates/importacao.js) -- mesmo arquivo porque
+ * é o outro fluxo entregue junto com as Campanhas no fechamento do plano.
+ */
+import { previaImportacao, resultadoImportacao, orientacaoImportacao } from "../js/templates/importacao.js";
+
+const PREVIA = {
+  total: 4, validas: 3, comErro: 1, duplicadas: 1, clientesSemCadastro: 1, colunasIgnoradas: [], semCabecalho: false,
+  ocorrencias: [
+    { linha: 3, cliente: MALICIOSO, data: "2026-08-12", sistema: "", erro: { tipo: "data", mensagem: MALICIOSO }, avisos: [] },
+    { linha: 4, cliente: "Loja", data: "10/08/2026", sistema: "B_NFe", erro: null, avisos: [{ tipo: "duplicidade", mensagem: "Repetida nesta planilha." }] },
+  ],
+};
+
+test("prévia: o botão diz quantas linhas entram, conforme pular duplicidades", () => {
+  assert.match(String(previaImportacao(PREVIA, "a.xlsx", true)), /Importar 2 linhas/);
+  assert.match(String(previaImportacao(PREVIA, "a.xlsx", false)), /Importar 3 linhas/);
+  const nada = String(previaImportacao({ ...PREVIA, validas: 1, duplicadas: 1 }, "a.xlsx", true));
+  assert.match(nada, /data-action="importar" disabled/);
+});
+
+test("prévia: erro e aviso são distinguidos, e nada digitado vira HTML", () => {
+  const m = String(previaImportacao(PREVIA, MALICIOSO, true));
+  assert.doesNotMatch(m, /<img/);
+  assert.match(m, /Erro · Data:/);
+  assert.match(m, /Aviso · Duplicidade:/);
+  assert.doesNotMatch(String(resultadoImportacao({ inserted: 1, ignoradas: 0, naoCadastrados: [MALICIOSO] })), /<img/);
+});
+
+test("orientação explica o formato antes de escolher o arquivo", () => {
+  const m = String(orientacaoImportacao());
+  assert.match(m, /dd\/mm\/aaaa/);
+  assert.match(m, /versão oficial atual <strong>não<\/strong> é aplicada/);
+});

@@ -2,10 +2,11 @@ import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
 import { toast } from "../../components/Toast.js";
 import { marcarOcupado } from "../../utils/guard.js";
-import { html, plural } from "../../utils/html.js";
+import { html } from "../../utils/html.js";
 import { iconHtml } from "../../utils/icons.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
-import { escolherArquivo, baixarBlob } from "../../utils/arquivo.js";
+import { baixarBlob } from "../../utils/arquivo.js";
+import { ImportacaoModal } from "../../components/ImportacaoModal.js";
 
 /**
  * Seção Dados da Administração:
@@ -43,7 +44,7 @@ export class DadosAdmin extends View {
             <div class="cfg-group">
               <div class="cfg-group__labels">
                 <span class="cfg-group__title">Importar planilha de atendimentos</span>
-                <span class="cfg-group__help">Acrescenta registros ao histórico a partir de um arquivo .xlsx. Registros existentes não são apagados.</span>
+                <span class="cfg-group__help">Acrescenta registros ao histórico a partir de um arquivo .xlsx, com prévia antes de gravar. Registros existentes não são alterados.</span>
               </div>
               <button type="button" class="btn btn--small btn--accent" data-action="importar-planilha">
                 ${iconHtml("upload")} Importar planilha
@@ -95,7 +96,7 @@ export class DadosAdmin extends View {
     });
 
     this.container.querySelector('[data-action="importar-planilha"]')?.addEventListener("click", (e) => {
-      this._importar(e.currentTarget);
+      this._importar();
     });
 
     this.container.querySelector('[data-action="ir-clientes"]')?.addEventListener("click", () => {
@@ -122,39 +123,13 @@ export class DadosAdmin extends View {
     }
   }
 
-  async _importar(botao) {
-    const file = await escolherArquivo({ accept: ".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    if (!file) return;
-
-    const ok = await Modal.confirm(
-      "Importar planilha",
-      `Importar "${file.name}"?\n\nOs registros da planilha são acrescentados aos que já existem — nada é substituído.`,
-      { confirmLabel: "Importar", danger: false }
-    );
-    if (!ok) return;
-
-    const liberar = marcarOcupado(botao);
-    try {
-      const resultado = await this.api.postFile("/atualizacoes/import", file);
-      for (const chave of ["resumo", "atualizacoes:", "consulta:", "sistemas:"]) this.cache?.invalidar(chave);
-
-      let msg = `${plural(resultado.inserted, "registro")} importado(s).`;
-      if (resultado.naoCadastrados?.length > 0) {
-        const exemplos = resultado.naoCadastrados.slice(0, 5).join(", ");
-        const reticencias = resultado.naoCadastrados.length > 5 ? "..." : "";
-        msg +=
-          `\n\nAtenção: ${plural(resultado.naoCadastrados.length, "cliente")} da planilha não ` +
-          `${resultado.naoCadastrados.length === 1 ? "está cadastrado" : "estão cadastrados"} na aba Clientes ` +
-          `(${exemplos}${reticencias}). Esses registros foram salvos, mas não vão aparecer no Resumo nem na ` +
-          "Consulta até o cliente ser cadastrado com o nome exatamente igual.";
-        Modal.alert("Importar", msg, "warning");
-      } else {
-        toast.success(msg);
-      }
-    } catch (err) {
-      Modal.alert("Erro ao importar", err.message || "Não foi possível importar a planilha.", "error");
-    } finally {
-      liberar();
-    }
+  /** Mesmo fluxo de Atualizações: orientação, prévia e resultado (components/ImportacaoModal.js). */
+  _importar() {
+    new ImportacaoModal(this.api, {
+      aoImportar: (resultado) => {
+        if (!resultado.inserted) return;
+        for (const chave of ["resumo", "atualizacoes:", "consulta:", "sistemas:", "campanhas:"]) this.cache?.invalidar(chave);
+      },
+    }).open();
   }
 }
