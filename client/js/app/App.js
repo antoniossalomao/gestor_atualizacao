@@ -24,6 +24,7 @@ import { VersoesView } from "../views/VersoesView.js";
 import { MenuNotificacoes } from "../components/MenuNotificacoes.js";
 import { MenuConta } from "../components/MenuConta.js";
 import { montarNotificacoes } from "../domain/notificacoes.js";
+import { notificacoes } from "./notify.js";
 import { ConexaoBanner } from "../components/ConexaoBanner.js";
 
 /**
@@ -227,7 +228,30 @@ export class App {
     // Os dois fora do ar é o único caso em que nada se pode afirmar: zerar o
     // sino aí apagaria avisos que continuam valendo, só que invisíveis.
     if (lembretes === null && painel === null) return;
-    this.menuNotificacoes.atualizar(montarNotificacoes({ lembretes, painel }));
+    this._dadosSino = { lembretes, painel };
+    this._redesenharSino({ podeTocar: true });
+    // Falhas guardadas durante o horário silencioso: o fim do silêncio é
+    // percebido aqui, no ritmo do sino (ver notify.liberarAcumuladas).
+    notificacoes.liberarAcumuladas();
+  }
+
+  /**
+   * Monta o sino com o filtro escolhido em Configurações > Notificações
+   * (tipos, "só as minhas"). Separado da busca porque mudar o filtro redesenha
+   * com o que já veio, sem ir ao servidor.
+   *
+   * O som toca quando o número de pendências NÃO VISTAS cresce -- não a cada
+   * ciclo, senão uma tarefa atrasada tocaria a cada cinco minutos o dia todo.
+   * Nunca na primeira carga: abrir o Gestor com pendências antigas não é
+   * novidade.
+   */
+  _redesenharSino({ podeTocar = false } = {}) {
+    if (!this._dadosSino) return;
+    const antes = this._naoVistasAntes;
+    this.menuNotificacoes.atualizar(montarNotificacoes(this._dadosSino, { ...aparencia.sino(), usuario: this.user?.nome || "" }));
+    const agora = this.menuNotificacoes.pendentesNaoVistas();
+    if (podeTocar && antes !== undefined && agora > antes) notificacoes.tocarSom();
+    this._naoVistasAntes = agora;
     this._atualizarTitulo();
   }
 
@@ -397,7 +421,11 @@ export class App {
       // Abrir o sino é a deixa para perguntar de novo: quem clica ali quer o
       // estado de agora, e sem isto a lista seria sempre a do último ciclo.
       aoAbrir: () => this._carregarNotificacoes(),
-      aoMarcarVistas: () => this._atualizarTitulo(),
+      // Marcar como vistas zera a base do som: a próxima pendência nova toca.
+      aoMarcarVistas: () => {
+        this._naoVistasAntes = 0;
+        this._atualizarTitulo();
+      },
       aoIr: (destino, params) => this.switchTab(destino, params || undefined),
     });
     this._cleanups.push(() => this.menuNotificacoes.destroy());
@@ -444,7 +472,8 @@ export class App {
     // "Pendências no título da aba" pode ser ligado e desligado a qualquer
     // momento -- o título tem que acompanhar na hora, não no próximo ciclo
     // do sino.
-    const aoMudarAparencia = () => this._atualizarTitulo();
+    // O mesmo vale para o filtro do sino (tipos e "só as minhas").
+    const aoMudarAparencia = () => this._redesenharSino();
     document.addEventListener("aparencia:mudou", aoMudarAparencia);
     this._cleanups.push(() => document.removeEventListener("aparencia:mudou", aoMudarAparencia));
   }

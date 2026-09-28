@@ -11,6 +11,8 @@
  * opcao nova no painel nao deveria mexer no backend. O backend garante so que
  * o que entra e' pequeno e simples. Sem esse limite, a tabela de preferencias
  * vira deposito de qualquer coisa que uma conta queira guardar.
+ * Desde a 13.4 do planejamento, o NOME da chave tem formato, e as chaves que
+ * mudam comportamento (silencio, sino, relatorio) tem valor conferido.
  */
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -168,6 +170,30 @@ test("PreferenciaService - o que pode ser guardado", async (t) => {
       assert.throws(() => env.prefs.salvar(usuario, { x: [1, 2] }), /texto, número ou sim\/não/);
       assert.throws(() => env.prefs.salvar(usuario, { x: NaN }), /texto, número ou sim\/não/);
       assert.throws(() => env.prefs.salvar(usuario, { x: Infinity }), /texto, número ou sim\/não/);
+    });
+
+    await t.test("recusa nome de chave fora do formato (13.4)", () => {
+      // "__proto__" num objeto comum não é chave, é o protótipo -- e nome
+      // com espaço, acento ou símbolo não é nenhuma preferência do painel.
+      for (const ruim of ["__proto__", "com espaço", "préferência", "1comeca", "a".repeat(61), ""]) {
+        assert.throws(() => env.prefs.salvar(usuario, { [ruim]: 1 }), /Nome de preferência inválido/, ruim);
+      }
+      assert.doesNotThrow(() => env.prefs.salvar(usuario, { "tabela:colunas": "a", sino_1: 1, "x.y-z": 2 }));
+    });
+
+    await t.test("chaves que mudam comportamento têm formato próprio (13.4)", () => {
+      const validas = {
+        sinoAtrasados: false, sinoHoje: true, sinoAgentes: true, sinoEscopo: "minhas", somAvisos: true,
+        silencioAtivo: true, silencioInicio: "19:00", silencioFim: "07:30", silencioCriticos: false,
+        relatorioAba: "cliente", relatorioFecharAoCopiar: true,
+      };
+      assert.deepEqual(env.prefs.salvar(usuario, validas), validas);
+      for (const [chave, ruim] of [
+        ["silencioInicio", "25:00"], ["silencioInicio", "7:00"], ["silencioFim", "07:15"],
+        ["sinoEscopo", "todos"], ["relatorioAba", "periodo"], ["somAvisos", "sim"], ["sinoHoje", 1],
+      ]) {
+        assert.throws(() => env.prefs.salvar(usuario, { [chave]: ruim }), /Valor inválido/, `${chave}=${ruim}`);
+      }
     });
 
     await t.test("recusa texto longo demais", () => {

@@ -94,6 +94,9 @@ const SO_DESTE_APARELHO = new Set(["notificarFalhas"]);
 /** De quem são as preferências que estão no cache local agora. */
 const CHAVE_DONO = "prefsDe";
 
+/** O mesmo formato de nome que o servidor aceita (ver PreferenciaService). */
+const NOME_CHAVE = /^[A-Za-z][A-Za-z0-9_:.-]{0,59}$/;
+
 // Instalados por `conectarPreferencias`. Antes do login (e se o servidor não
 // responder) são no-ops: o app segue funcionando só com o cache local.
 //
@@ -147,6 +150,11 @@ function coletarDuradouras() {
       if (!bruta.startsWith(PREFIXO)) continue;
       const chave = bruta.slice(PREFIXO.length);
       if (SO_DESTE_APARELHO.has(chave) || chave === CHAVE_DONO) continue;
+      // O servidor recusa o conjunto INTEIRO se um nome de chave sair do
+      // formato (PreferenciaService, NOME_CHAVE). Uma chave estranha deixada
+      // por uma versão antiga não pode parar a sincronização de todas as
+      // outras -- fica só neste navegador.
+      if (!NOME_CHAVE.test(chave)) continue;
       tudo[chave] = ler(localStorage, chave, null);
     }
   } catch {

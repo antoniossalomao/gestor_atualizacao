@@ -166,6 +166,33 @@ export const PERIODOS_INICIAIS = [
 ];
 
 /**
+ * Quais tarefas o sino conta: as da equipe inteira ou só as da pessoa
+ * (ver `ehResponsavel` em domain/pessoa.js, que decide o que é "minha").
+ */
+export const ESCOPOS_AGENDA = [
+  { valor: "equipe", rotulo: "Da equipe" },
+  { valor: "minhas", rotulo: "Só as minhas" },
+];
+
+/**
+ * Horários do silêncio, de meia em meia hora. Lista fechada, e não um campo
+ * livre, pelo mesmo motivo das outras: nenhum valor que a tela não saiba
+ * mostrar entra pela importação. É o relógio DESTE computador -- não há
+ * escolha de fuso de propósito (ver o planejamento, 13.4: nada de fuso
+ * decorativo sem suporte integral nas datas).
+ */
+export const HORARIOS = Array.from({ length: 48 }, (_, i) => {
+  const hora = `${String(Math.floor(i / 2)).padStart(2, "0")}:${i % 2 ? "30" : "00"}`;
+  return { valor: hora, rotulo: hora };
+});
+
+/** Aba com que o relatório abre, quando a tela oferece as duas. */
+export const ABAS_RELATORIO = [
+  { valor: "atualizacao", rotulo: "Atualização" },
+  { valor: "cliente", rotulo: "Cliente" },
+];
+
+/**
  * Valor de fábrica de CADA preferência, num lugar só.
  *
  * Antes eram sete constantes soltas (`PADRAO_DENSIDADE`, `PADRAO_LINHAS`…)
@@ -208,6 +235,19 @@ const PADROES = {
   posicaoAvisos: "rodape",
   duracaoAvisos: "normal",
   contadorNoTitulo: true,
+  // -- o que o sino conta, som e silêncio (planejamento 13.4) --
+  sinoAtrasados: true,
+  sinoHoje: true,
+  sinoAgentes: true,
+  sinoEscopo: "equipe",
+  somAvisos: false,
+  silencioAtivo: false,
+  silencioInicio: "19:00",
+  silencioFim: "07:00",
+  silencioCriticos: true,
+  // -- relatórios --
+  relatorioAba: "atualizacao",
+  relatorioFecharAoCopiar: false,
 };
 
 /**
@@ -253,6 +293,17 @@ const VALIDOS = {
   confirmarSaida: [true, false],
   duracaoAvisos: DURACOES_AVISO.map((d) => d.valor),
   contadorNoTitulo: [true, false],
+  sinoAtrasados: [true, false],
+  sinoHoje: [true, false],
+  sinoAgentes: [true, false],
+  sinoEscopo: ESCOPOS_AGENDA.map((e) => e.valor),
+  somAvisos: [true, false],
+  silencioAtivo: [true, false],
+  silencioInicio: HORARIOS.map((h) => h.valor),
+  silencioFim: HORARIOS.map((h) => h.valor),
+  silencioCriticos: [true, false],
+  relatorioAba: ABAS_RELATORIO.map((a) => a.valor),
+  relatorioFecharAoCopiar: [true, false],
 };
 
 /**
@@ -431,6 +482,51 @@ export const aparencia = {
   },
 
   /**
+   * O que o sino conta. Cada tipo desligado some do sino E do contador no
+   * título da aba -- os dois leem a mesma lista (ver App._carregarNotificacoes).
+   * @returns {{atrasados: boolean, hoje: boolean, agentes: boolean, escopo: "equipe"|"minhas"}}
+   */
+  sino() {
+    const escopo = umDe("sinoEscopo", ESCOPOS_AGENDA, PADROES.sinoEscopo);
+    return {
+      atrasados: settings.get("sinoAtrasados", true) !== false,
+      hoje: settings.get("sinoHoje", true) !== false,
+      agentes: settings.get("sinoAgentes", true) !== false,
+      escopo: escopo === "minhas" ? "minhas" : "equipe",
+    };
+  },
+
+  /** Toque curto quando surge pendência nova no sino ou falha de agente. Desligado por padrão. */
+  somAvisos() {
+    return settings.get("somAvisos", false) === true;
+  },
+
+  /**
+   * Horário silencioso: sem som e sem notificação do sistema nesse
+   * intervalo (que pode virar a noite, 19:00 às 07:00). `criticos` deixa as
+   * falhas de agente passarem mesmo assim, sem som.
+   * @returns {{ativo: boolean, inicio: string, fim: string, criticos: boolean}}
+   */
+  silencio() {
+    return {
+      ativo: settings.get("silencioAtivo", false) === true,
+      inicio: umDe("silencioInicio", HORARIOS, PADROES.silencioInicio),
+      fim: umDe("silencioFim", HORARIOS, PADROES.silencioFim),
+      criticos: settings.get("silencioCriticos", true) !== false,
+    };
+  },
+
+  /** Aba com que o relatório abre (quando a tela oferece mais de uma). */
+  relatorioAba() {
+    return umDe("relatorioAba", ABAS_RELATORIO, PADROES.relatorioAba);
+  },
+
+  /** Se "Copiar texto" também fecha o relatório. Desligado: copiar não fecha (decisão do 7.3). */
+  relatorioFecharAoCopiar() {
+    return settings.get("relatorioFecharAoCopiar", false) === true;
+  },
+
+  /**
    * Se busca, filtro e ordenação sobrevivem à troca de aba. Ligado por padrão
    * -- é o comportamento que o app já tinha, e desligá-lo é o caso raro (a
    * máquina compartilhada do balcão, onde quem senta depois não quer herdar o
@@ -576,10 +672,10 @@ export const aparencia = {
     // As preferências mais novas usam o MESMO nome no painel e no
     // armazenamento (sem a tradução de `altura` para `alturaTabela`), então
     // passam todas pelo mesmo caminho: texto de uma lista fechada, ou booleano.
-    for (const chave of ["fonte", "largura", "foco", "duracaoAvisos", "periodoAtualizacoes"]) {
+    for (const chave of ["fonte", "largura", "foco", "duracaoAvisos", "periodoAtualizacoes", "sinoEscopo", "silencioInicio", "silencioFim", "relatorioAba"]) {
       if (mudancas[chave] !== undefined && valorValido(chave, mudancas[chave])) settings.set(chave, mudancas[chave]);
     }
-    for (const chave of ["dicasAtalho", "confirmarSaida", "contadorNoTitulo"]) {
+    for (const chave of ["dicasAtalho", "confirmarSaida", "contadorNoTitulo", "sinoAtrasados", "sinoHoje", "sinoAgentes", "somAvisos", "silencioAtivo", "silencioCriticos", "relatorioFecharAoCopiar"]) {
       if (mudancas[chave] !== undefined) settings.set(chave, Boolean(mudancas[chave]));
     }
 

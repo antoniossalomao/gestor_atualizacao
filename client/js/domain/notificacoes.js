@@ -1,3 +1,5 @@
+import { ehResponsavel } from "./pessoa.js";
+
 /**
  * O que o Gestor tem a dizer sem ter sido perguntado, reunido num lugar só:
  * agendamento vencido ou vencendo hoje, e agente que parou de se comportar.
@@ -53,6 +55,12 @@ const SITUACOES_DE_AGENTE = [
 ];
 
 /**
+ * O que a pessoa escolheu ver no sino (Configurações > Notificações). Tudo
+ * ligado e "equipe" é o comportamento de antes.
+ * @typedef {{atrasados?: boolean, hoje?: boolean, agentes?: boolean, escopo?: "equipe"|"minhas", usuario?: string}} FiltroSino
+ */
+
+/**
  * Monta a lista que o sino mostra, da pior notícia para a menos urgente.
  *
  * Agrupa em vez de listar item a item: com trinta agentes fora do ar, trinta
@@ -63,10 +71,17 @@ const SITUACOES_DE_AGENTE = [
  * @param {{lembretes?: any, painel?: any}} [dados] como vieram da API --
  *   `lembretes` de `/agendamentos/lembretes`, `painel` de `/versoes/painel`
  *   (que é `null` com o Atualizador desativado).
+ * @param {FiltroSino} [filtro] tipos desligados somem da lista -- e, com
+ *   ela, do contador do sino e do título da aba, que somam esta mesma lista.
+ *   "Só as minhas" vale para tarefas; agente não tem responsável.
  * @returns {Notificacao[]}
  */
-export function montarNotificacoes({ lembretes, painel } = {}) {
-  const tarefas = Array.isArray(lembretes) ? lembretes : [];
+export function montarNotificacoes({ lembretes, painel } = {}, filtro = {}) {
+  const { atrasados: verAtrasados = true, hoje: verHoje = true, agentes: verAgentes = true, escopo = "equipe", usuario = "" } = filtro;
+  const todas = Array.isArray(lembretes) ? lembretes : [];
+  // Sem nome de usuário não há como saber o que é "meu": mostrar tudo é
+  // melhor do que esconder tudo em silêncio.
+  const tarefas = escopo === "minhas" && usuario ? todas.filter((t) => ehResponsavel(t?.responsavel, usuario)) : todas;
   const hoje = comoNumero(new Date());
   // Uma data ilegível não prova atraso: fica em "hoje", que é o balde que
   // pede atenção sem acusar. Ela chegou aqui porque o SQL já a julgou vencida.
@@ -76,14 +91,14 @@ export function montarNotificacoes({ lembretes, painel } = {}) {
   });
   const deHoje = tarefas.filter((t) => !atrasadas.includes(t));
 
-  const agentes = Array.isArray(painel?.agentes) ? painel.agentes : [];
+  const agentes = verAgentes && Array.isArray(painel?.agentes) ? painel.agentes : [];
 
   return [
     grupo({
       chave: "agendamentos-atrasados",
       tom: "erro",
       icone: "calendario",
-      itens: atrasadas,
+      itens: verAtrasados ? atrasadas : [],
       singular: "agendamento atrasado",
       plural: "agendamentos atrasados",
       nomeDe: (t) => t?.cliente || t?.tarefa,
@@ -106,7 +121,7 @@ export function montarNotificacoes({ lembretes, painel } = {}) {
       chave: "agendamentos-hoje",
       tom: "alerta",
       icone: "relogio",
-      itens: deHoje,
+      itens: verHoje ? deHoje : [],
       singular: "agendamento para hoje",
       plural: "agendamentos para hoje",
       nomeDe: (t) => t?.cliente || t?.tarefa,
@@ -170,4 +185,31 @@ function dataComoNumero(texto) {
 function comoNumero(d) {
   const pad = (n) => String(n).padStart(2, "0");
   return Number(`${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`);
+}
+
+/**
+ * `agora` cai dentro do horário silencioso?
+ *
+ * O intervalo pode virar a noite (19:00 às 07:00): aí vale "depois do
+ * início OU antes do fim". Início igual ao fim quer dizer intervalo vazio --
+ * silenciar o dia inteiro por engano é pior do que não silenciar. O fim é
+ * exclusivo: às 07:00 em ponto o silêncio já acabou.
+ *
+ * É o relógio deste computador; não há conversão de fuso (13.4).
+ * @param {Date} agora
+ * @param {{ativo: boolean, inicio: string, fim: string}} silencio
+ */
+export function emSilencio(agora, { ativo, inicio, fim }) {
+  if (!ativo) return false;
+  const ini = minutos(inicio);
+  const f = minutos(fim);
+  if (ini === null || f === null || ini === f) return false;
+  const m = agora.getHours() * 60 + agora.getMinutes();
+  return ini < f ? m >= ini && m < f : m >= ini || m < f;
+}
+
+/** "07:30" -> 450. `null` se não for hh:mm. */
+function minutos(hhmm) {
+  const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(String(hhmm || ""));
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
 }

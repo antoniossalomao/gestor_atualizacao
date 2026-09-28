@@ -7050,3 +7050,18 @@ h1, h2, h3, strong {
   .row-actions { gap: 6px; }
   .btn--small { min-height: 40px; }
 }
+
+/* Estado que o Gestor só informa (Configurações > Notificações > Permissão
+   do navegador). Texto, não interruptor: quem decide é o navegador. */
+.cfg-estado {
+  max-width: 340px;
+  padding: 6px 10px;
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-borda-forte);
+  border-radius: var(--raio-pequeno);
+  color: var(--cor-texto);
+  font-size: var(--txt-sm);
+}
+.cfg-estado[data-tom="boa"] { border-left-color: var(--severidade-boa); }
+.cfg-estado[data-tom="alta"] { border-left-color: var(--severidade-alta); }
+.cfg-estado[data-tom="media"] { border-left-color: var(--cor-amarelo); }

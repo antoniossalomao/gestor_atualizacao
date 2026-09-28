@@ -43,3 +43,26 @@ const DESCRICOES_PAPEL = {
 export function descricaoPapel(role) {
   return DESCRICOES_PAPEL[role === "admin" || role === "consulta" ? role : "operador"];
 }
+
+/**
+ * A tarefa é desta pessoa? O campo Responsável é texto livre, e o servidor o
+ * normaliza para a grafia mais usada -- que costuma ser só o primeiro nome
+ * ("Antonio"), enquanto a conta tem o nome inteiro ("Antonio Salomão").
+ * Comparar os dois textos inteiros diria "não é minha" para quase tudo.
+ *
+ * Vale quando, sem caixa e sem acento, os dois são iguais ou um é o começo
+ * do outro em palavras inteiras ("Antonio" x "Antonio Salomão"; mas não
+ * "Ana" x "Anabela").
+ * @param {string} responsavel
+ * @param {string} nome
+ */
+export function ehResponsavel(responsavel, nome) {
+  const a = normalizarNome(responsavel);
+  const b = normalizarNome(nome);
+  if (!a || !b) return false;
+  return a === b || b.startsWith(`${a} `) || a.startsWith(`${b} `);
+}
+
+function normalizarNome(texto) {
+  return String(texto || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/\s+/g, " ");
+}
