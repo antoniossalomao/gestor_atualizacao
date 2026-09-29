@@ -337,12 +337,19 @@ test("Regras - rotas HTTP", async (t) => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  const pedir = (caminho, { cookie, metodo = "GET", corpo } = {}) =>
-    fetch(`${base}/api${caminho}`, {
+  // O navegador guarda o token CSRF que vem com cada sessão e o devolve nas
+  // escritas (ver middlewares/protecaoCsrf.js); aqui, por cookie.
+  const tokens = new Map();
+  const pedir = async (caminho, { cookie, metodo = "GET", corpo } = {}) => {
+    const r = await fetch(`${base}/api${caminho}`, {
       method: metodo,
-      headers: { "Content-Type": "application/json", ...(cookie ? { Cookie: cookie } : {}) },
+      headers: { "Content-Type": "application/json", ...(cookie ? { Cookie: cookie, "X-CSRF-Token": tokens.get(cookie) ?? "" } : {}) },
       body: corpo ? JSON.stringify(corpo) : undefined,
     });
+    const novoCookie = r.headers.get("set-cookie")?.split(";")[0];
+    if (r.headers.get("x-csrf-token")) tokens.set(novoCookie || cookie, r.headers.get("x-csrf-token"));
+    return r;
+  };
   const entrar = async (usuario, senha) => {
     const r = await pedir("/auth/login", { metodo: "POST", corpo: { usuario, senha } });
     return r.headers.get("set-cookie").split(";")[0];

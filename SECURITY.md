@@ -22,6 +22,7 @@ trate como incidente: rotacione primeiro, avise depois.
 |---|---|---|
 | Senhas com `bcrypt` | `services/AuthService.js` | nunca se guarda senha legível |
 | Sessão em SQLite, cookie `httpOnly` + `sameSite=lax` | `database/SqliteSessionStore.js`, `Server.js` | JS da página não lê o cookie; reduz CSRF |
+| Token CSRF por sessão em toda escrita da API | `middlewares/protecaoCsrf.js`, `client/js/api/ApiClient.js` | outra página aberta no navegador não altera nada em nome de quem está logado, nem por formulário multipart |
 | Limite de tentativas de login | `middlewares/LoginRateLimiter.js` | força bruta contra senha fraca |
 | Papéis (RBAC) por subárvore de rota | `middlewares/requireRole.js`, `routes/index.js` | padrão fechado: rota nova nasce protegida |
 | CSP sem `script-src unsafe-inline` | `Server.js` | reduz o estrago de um XSS |
@@ -63,9 +64,10 @@ revistas:
   `TRUST_PROXY=true` confia em quem conectar direto no Node; é seguro porque
   o `docker-compose.yml` não publica a porta dele. Publicá-la de volta abre
   o furo.
-- **Não há proteção de CSRF por token.** A defesa hoje é `sameSite=lax` no
-  cookie, que cobre o caso comum (formulário postado de outro site), mas não é
-  equivalente a um token por requisição.
+- **Login e configuração inicial não exigem o token CSRF** (não há sessão
+  antes deles). Outra página não consegue enviá-los porque só aceitam JSON,
+  que o navegador não manda para outra origem sem autorização (CORS), que o
+  servidor não dá. Habilitar CORS no servidor abre esse caminho.
 - **Não há auditoria de leitura.** O `HistoricoService` registra quem *alterou*
   o quê; não registra quem *consultou* — inclusive quem abriu a tela de Acessos.
 - **Backups do banco ficam em disco, sem criptografia**, em `server/data/backups/`.

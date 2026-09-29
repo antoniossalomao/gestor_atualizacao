@@ -7,6 +7,7 @@ const { requireAuth } = require("../middlewares/requireAuth");
 const { requireRole } = require("../middlewares/requireRole");
 const { requireAgent } = require("../middlewares/requireAgent");
 const { requireAtualizadorHabilitado } = require("../middlewares/requireAtualizadorHabilitado");
+const { protecaoCsrf } = require("../middlewares/protecaoCsrf");
 
 // Planilhas de import: limite de 15 MB e validação rigorosa de extensão (.xlsx / .xls)
 const upload = multer({
@@ -57,6 +58,9 @@ class ApiRouter {
     this.loginLimiter = loginLimiter;
     this.configuracaoSistemaService = configuracaoSistemaService;
     this.router = express.Router();
+    // Antes de qualquer rota, inclusive dos uploads: uma escrita recusada
+    // não pode deixar nem o arquivo gravado pelo multer. Ver protecaoCsrf.js.
+    this.router.use(protecaoCsrf);
     this._registerAuthRoutes();
     this._registerProtectedRoutes();
   }

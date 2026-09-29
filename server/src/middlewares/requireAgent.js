@@ -1,7 +1,8 @@
 const crypto = require("crypto");
 
 /**
- * Compara token e segredo em tempo constante. `timingSafeEqual` exige os
+ * Compara token e segredo em tempo constante (usado também pela proteção
+ * CSRF, middlewares/protecaoCsrf.js). `timingSafeEqual` exige os
  * dois buffers do mesmo tamanho -- por isso o comprimento é checado antes
  * (vazar o comprimento por timing não importa aqui, só o conteúdo).
  */
@@ -22,4 +23,4 @@ function requireAgent(req, res, next) {
   next();
 }
 
-module.exports = { requireAgent };
+module.exports = { requireAgent, tokensIguais };

@@ -206,12 +206,17 @@ test("Campanhas - rotas e permissões", async (t) => {
     try { server.db.close(); } catch { /* ignore */ }
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
+  // O navegador guarda o token CSRF que vem com cada sessão e o devolve nas
+  // escritas (ver middlewares/protecaoCsrf.js); aqui, por cookie.
+  const tokens = new Map();
   const pedir = async (caminho, { metodo = "GET", corpo, cookie } = {}) => {
     const r = await fetch(`${base}${caminho}`, {
       method: metodo,
-      headers: { ...(corpo !== undefined ? { "content-type": "application/json" } : {}), ...(cookie ? { cookie } : {}) },
+      headers: { ...(corpo !== undefined ? { "content-type": "application/json" } : {}), ...(cookie ? { cookie, "x-csrf-token": tokens.get(cookie) ?? "" } : {}) },
       body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
     });
+    const novoCookie = r.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+    if (r.headers.get("x-csrf-token")) tokens.set(novoCookie || cookie, r.headers.get("x-csrf-token"));
     const tipo = r.headers.get("content-type") || "";
     const corpoResp = tipo.includes("json") ? await r.json() : null;
     return { status: r.status, corpo: corpoResp, tipo, disposicao: r.headers.get("content-disposition"), cookie: r.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ") };

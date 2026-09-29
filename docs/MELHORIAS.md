@@ -82,18 +82,26 @@ instalação usada de fato.
 `server/src/routes/index.js` não aplica proteção CSRF às rotas de escrita.
 `SECURITY.md` registra essa limitação.
 
-- [ ] Escolher proteção compatível com sessão e com chamadas JSON e multipart:
+- [x] Escolher proteção compatível com sessão e com chamadas JSON e multipart:
       token vinculado à sessão ou validação robusta de origem, documentando a
-      razão da escolha.
-- [ ] Centralizar a verificação para `POST`, `PUT`, `PATCH` e `DELETE` da API
+      razão da escolha. *(Token por sessão, no cabeçalho `X-CSRF-Token`.)*
+- [x] Centralizar a verificação para `POST`, `PUT`, `PATCH` e `DELETE` da API
       usada pelo navegador, incluindo importação, conta e restauração.
-- [ ] Entregar o token pelo fluxo de autenticação e incluí-lo no `ApiClient`
+      *(`middlewares/protecaoCsrf.js`, no topo do `ApiRouter`, antes do multer.)*
+- [x] Entregar o token pelo fluxo de autenticação e incluí-lo no `ApiClient`
       para JSON e `FormData`; tratar token ausente ou vencido com mensagem clara.
-- [ ] Confirmar que login e configuração inicial têm o tratamento correto e
-      que clientes de API sem cookie não sofrem regressão indevida.
-- [ ] Testar sessão válida sem proteção, proteção inválida, sessão expirada e
+      *(Vem em toda resposta com sessão, inclusive a do login; token velho é
+      renovado e o pedido repetido uma vez, e só então aparece "Recarregue a
+      página".)*
+- [x] Confirmar que login e configuração inicial têm o tratamento correto e
+      que clientes de API sem cookie não sofrem regressão indevida. *(Os dois
+      ficam fora, protegidos por só aceitarem JSON; sem sessão, continua o
+      401; agentes C# não são afetados.)*
+- [x] Testar sessão válida sem proteção, proteção inválida, sessão expirada e
       envio multipart; verificar que nenhuma alteração é gravada nos casos
-      recusados.
+      recusados. *(`server/tests/csrf.test.js`, `client/tests/apiclient.test.mjs`.)*
+
+**Decisão:** token por sessão ([ADR-0011](DOCUMENTACAO_CONSOLIDADA.md#adr-0011)).
 
 **Aceite:** todas as escritas autenticadas do navegador exigem a proteção;
 as recusas devolvem erro consistente; os fluxos normais continuam operando.

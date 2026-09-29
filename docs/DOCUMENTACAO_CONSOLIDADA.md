@@ -1219,6 +1219,7 @@ escolha deliberada — e reintroduz o problema que ela evitava.
 | [4.9](#adr-0008) | Uma regra para a situação do cliente | Aceita |
 | [4.10](#adr-0009) | Campanhas: meta guardada, andamento calculado | Aceita |
 | [4.11](#adr-0010) | Somente HTTPS na rede, com Caddy na frente | Aceita |
+| [4.12](#adr-0011) | Proteção CSRF por token de sessão | Aceita |
 
 **Como escrever um novo:** copie a estrutura de qualquer um — Contexto → Decisão → Consequências →
 Alternativas consideradas — como uma nova subseção `4.N` no fim desta lista. Um ADR não se edita
@@ -1828,6 +1829,63 @@ jeito de implantar.
   processo; o Caddy faz isso sozinho.
 - **`TRUST_PROXY` com lista de IPs/`loopback`:** só seria necessário com
   proxy fora do Docker, que deixou de existir.
+
+<a id="adr-0011"></a>
+### 4.12 ADR-0011 — Proteção CSRF por token de sessão
+
+**Situação:** Aceita (29/09/2026)
+
+#### Contexto
+
+Com o painel na rede (ADR-0010), qualquer página aberta no navegador de quem
+está logado podia tentar mandar o painel alterar dados (P02 do
+[plano de melhorias](MELHORIAS.md#plano-vigente)). A defesa era o cookie
+`SameSite=Lax` mais o fato de a API só entender JSON. Isso barrava o caso
+comum, mas deixava passar o que um `<form>` de outra página consegue mandar
+sem preflight: multipart (importação de planilha, envio de pacote) e POST
+sem corpo (publicar, promover e reverter versão; sair). E o `SameSite`
+considera "o mesmo site" outros serviços do mesmo domínio.
+
+#### Decisão
+
+- **Token aleatório por sessão** (`req.session.csrf`, 32 bytes), criado no
+  login ou, para sessões anteriores a esta mudança, na primeira chamada.
+- **Entregue no cabeçalho `X-CSRF-Token` de toda resposta da API com
+  sessão**, inclusive a do login. Outra origem não lê essas respostas (sem
+  CORS), então não tem como saber o token.
+- **Exigido no mesmo cabeçalho em todo POST/PUT/PATCH/DELETE de `/api`**
+  (`middlewares/protecaoCsrf.js`), antes de qualquer rota e antes do
+  multer: uma escrita recusada não grava nada, nem o arquivo do upload.
+  Recusa: 403 `{error, codigo: "csrf"}`.
+- **Fora da regra:** pedido sem usuário na sessão (continua recebendo o 401
+  que leva ao login; cobre os agentes C#, que não usam cookie), login e
+  configuração inicial.
+- **O `ApiClient` guarda o último token visto e o manda nas escritas**,
+  inclusive no upload por XHR. Numa recusa com `codigo: "csrf"` (token de
+  uma sessão anterior: a pessoa saiu e entrou de novo em outra aba), busca
+  o atual em `/auth/status` e repete o pedido uma vez.
+
+#### Consequências
+
+- Nenhuma mudança visível para quem usa: o token circula sozinho, e a
+  atualização não derruba as sessões abertas.
+- Cliente de API novo que use sessão de navegador precisa ler e devolver o
+  cabeçalho. Os testes HTTP do servidor fazem isso por cookie.
+- Habilitar CORS no servidor, um dia, precisa rever este ADR: tanto o token
+  (legível por outra origem) quanto a proteção do login dependem de não haver.
+
+#### Alternativas consideradas
+
+- **Conferir o `Origin`/`Sec-Fetch-Site`:** sem estado nenhum, mas exige
+  comparar com o endereço pelo qual o painel foi acessado (nome, IP ou
+  localhost, através do proxy), e extensões de privacidade às vezes removem
+  o cabeçalho. O token depende só do nosso código e se testa sem navegador.
+- **Token no corpo ou em cookie legível pelo JS ("double submit"):** o
+  corpo não serve para multipart sem mexer em cada formulário; o cookie
+  legível exigiria tirar o `HttpOnly` de um cookie ou criar um segundo.
+- **Token novo a cada pedido:** quebra abas paralelas e pedidos simultâneos
+  sem proteção a mais contra o que importa aqui (outra origem não lê nenhum
+  dos dois).
 
 ---
 

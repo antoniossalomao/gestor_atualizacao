@@ -15,6 +15,11 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Proteção CSRF — P02 (29/09/2026):** toda escrita da API feita com sessão (POST, PUT, PATCH, DELETE, inclusive upload de planilha e de pacote) passa a exigir o token da sessão no cabeçalho `X-CSRF-Token`. Outra página aberta no navegador de quem está logado não consegue mais alterar nada em nome dessa pessoa. Antes, `SameSite=Lax` e "só JSON" barravam o caso comum, mas não um formulário multipart nem os POST sem corpo (publicar versão, sair). Decisão em [ADR-0011](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0011).
+  - *Invisível para quem usa*: o servidor entrega o token em toda resposta com sessão, e o `ApiClient` o devolve sozinho. Se a pessoa entrou de novo em outra aba (sessão nova, token novo), o pedido recusado é repetido uma vez com o token atual. Sessões abertas antes da atualização ganham o token na primeira chamada, sem precisar entrar de novo.
+  - *Fora da regra*: login e configuração inicial (não há sessão antes deles) e pedidos sem sessão, que continuam recebendo o 401 que leva ao login. Os agentes C# não são afetados.
+  - *Testes*: `server/tests/csrf.test.js`, `client/tests/apiclient.test.mjs`; os testes HTTP antigos passam a devolver o token como o navegador.
+
 - **Somente HTTPS na rede — P01 (29/09/2026):** o painel deixa de atender `http://IP:3000`. A equipe passa a acessar `https://gestoratualizacao` (ou `https://IP`). Decisão em [ADR-0010](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0010).
   - *Docker com proxy*: o `docker-compose.yml` sobe o painel e um Caddy na frente. O painel não publica porta; o Caddy atende só a 443 (sem a 80, nem para redirecionar) e emite o certificado com autoridade própria, instalada uma vez em cada PC. Endereço no `web/.env` (`GESTOR_ENDERECO`, e `GESTOR_IP` para o acesso por IP: o navegador não manda SNI para IP e, sem a dica, o Caddy não entregava certificado nenhum — pelo nome abria, pelo IP não).
   - *Servidor*: sem HTTPS, escuta só em `127.0.0.1` (desenvolvimento). Com HTTPS, recusa com 403 o que não vier pelo proxy — inclusive o POST do login, que antes passaria a senha em texto puro por `http://IP:3000` mesmo com o cookie `Secure`. HSTS e `upgrade-insecure-requests` só com HTTPS.

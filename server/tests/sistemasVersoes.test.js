@@ -23,18 +23,22 @@ async function subirServidor() {
   await server.start();
   const base = `http://127.0.0.1:${server.httpServer.address().port}`;
 
+  // O navegador guarda o token CSRF que vem com cada sessão e o devolve nas
+  // escritas (ver middlewares/protecaoCsrf.js); aqui, por cookie.
+  const tokens = new Map();
   /** @param {string} caminho @param {{metodo?: string, corpo?: unknown, cookie?: string, agente?: string}} [opcoes] */
   const pedir = async (caminho, { metodo = "GET", corpo, cookie, agente } = {}) => {
     const r = await fetch(`${base}/api${caminho}`, {
       method: metodo,
       headers: {
         ...(corpo !== undefined ? { "content-type": "application/json" } : {}),
-        ...(cookie ? { cookie } : {}),
+        ...(cookie ? { cookie, "x-csrf-token": tokens.get(cookie) ?? "" } : {}),
         ...(agente ? { "user-agent": agente } : {}),
       },
       body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
     });
     const texto = await r.text();
+    if (r.headers.get("x-csrf-token")) tokens.set(cookieDe(r) || cookie, r.headers.get("x-csrf-token"));
     return { status: r.status, corpo: texto ? JSON.parse(texto) : null, cookie: cookieDe(r) };
   };
 
