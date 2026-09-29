@@ -121,8 +121,10 @@ class AtualizacaoRepository extends BaseRepository {
   insert(data, sistemas) {
     const colunas = COLUNAS_DA_TABELA.join(", ");
     const valores = COLUNAS_DA_TABELA.map(valorDe).join(", ");
+    // _preparado: roda uma vez por linha de planilha importada. O SQL só
+    // depende de COLUNAS_DA_TABELA, que é fixo (ver BaseRepository._preparado).
     return this.conn.transaction(() => {
-      const id = Number(this.conn.prepare(`INSERT INTO ${this.table} (${colunas}) VALUES (${valores})`).run(this._valores(data)).lastInsertRowid);
+      const id = Number(this._preparado(`INSERT INTO ${this.table} (${colunas}) VALUES (${valores})`).run(this._valores(data)).lastInsertRowid);
       this._gravarSistemas(id, sistemas);
       return id;
     })();
@@ -156,8 +158,8 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   _gravarSistemas(id, sistemas) {
-    this.conn.prepare("DELETE FROM atualizacao_sistemas WHERE atualizacao_id = ?").run(id);
-    const ligar = this.conn.prepare("INSERT INTO atualizacao_sistemas (atualizacao_id, sistema_id, ordem, versao) VALUES (?, ?, ?, ?)");
+    this._preparado("DELETE FROM atualizacao_sistemas WHERE atualizacao_id = ?").run(id);
+    const ligar = this._preparado("INSERT INTO atualizacao_sistemas (atualizacao_id, sistema_id, ordem, versao) VALUES (?, ?, ?, ?)");
     sistemas.forEach((s, i) => ligar.run(id, s.id, i, s.versao ?? null));
   }
 
@@ -192,6 +194,15 @@ class AtualizacaoRepository extends BaseRepository {
     const { where, params } = this._filtros(search, responsavel, periodo);
     const sql = `SELECT ${COLUMNS.join(", ")}, versoes_sistemas FROM atualizacoes_v ${where} ORDER BY ${DATE_SORT_EXPR} DESC, id DESC`;
     return this.conn.prepare(sql).all(params);
+  }
+
+  /**
+   * Quantas linhas a exportação teria, com os mesmos filtros -- para recusar
+   * acima do limite ANTES de trazer tudo para a memória (P05).
+   */
+  contarFiltrados(search = "", responsavel = "Todos", periodo = {}) {
+    const { where, params } = this._filtros(search, responsavel, periodo);
+    return this.conn.prepare(`SELECT COUNT(*) AS total FROM atualizacoes_v ${where}`).get(params).total;
   }
 
   /** Clausula WHERE + parametros compartilhados por `list` e `exportAll`. */

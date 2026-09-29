@@ -35,6 +35,6 @@ client/tests/
 docs/
 *.md
 
-# Scripts de instalação do serviço do Windows -- o equivalente em Docker é
-# a política de restart do compose.
-*.ps1
+# Configuração do proxy HTTPS: é montada no container do Caddy pelo
+# docker-compose.yml, não faz parte da imagem do painel.
+proxy/

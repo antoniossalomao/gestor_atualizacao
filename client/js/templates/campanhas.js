@@ -45,7 +45,7 @@ export function cartaoCampanha(c, selecionada) {
         <strong class="campanha-cartao__titulo">${c.titulo}</strong>
         <span class="campanha-cartao__pct">${c.percentual == null ? "—" : `${c.percentual}%`}</span>
       </span>
-      <span class="campanha-cartao__meta">${c.sistema} · versão ${c.versaoAlvo} ${marcaPrazo(seloPrazo(c))}</span>
+      <span class="campanha-cartao__meta">${c.sistema} · versão ${c.versaoAlvo}${c.cidade ? ` · ${c.cidade}` : ""} ${marcaPrazo(seloPrazo(c))}</span>
       ${barraProgresso(c)}
       <span class="campanha-cartao__meta">${textoProgresso(c)}</span>
     </button>`;
@@ -77,6 +77,7 @@ export function cabecalhoCampanha(c, usuario) {
         <h2 class="campanha__titulo">${c.titulo} ${marcaPrazo(seloPrazo(c))}</h2>
         <p class="campanha__meta">
           <strong>${c.sistema}</strong> na versão <strong>${c.versaoAlvo}</strong> ou mais nova
+          · <strong>${c.cidade || "Todas as cidades"}</strong>
         </p>
         ${c.descricao ? html`<p class="campanha__descricao">${c.descricao}</p>` : ""}
       </div>
@@ -151,10 +152,11 @@ export function acoesClienteCampanha(row, { role, encerrada }) {
 /**
  * Formulário de criação/edição. Na edição, sistema e versão-alvo aparecem
  * só para leitura: são a meta, e o servidor recusaria mudar.
- * @param {{sistemas: Array<{nome: string, data?: string}>, campanha?: any}} opts
+ * @param {{sistemas: Array<{nome: string, data?: string}>, cidades: string[], campanha?: any}} opts
  */
-export function formularioCampanha({ sistemas, campanha }) {
+export function formularioCampanha({ sistemas, cidades = [], campanha }) {
   const edicao = Boolean(campanha);
+  const opcoesCidade = campanha?.cidade && !cidades.includes(campanha.cidade) ? [...cidades, campanha.cidade] : cidades;
   return html`
     <h3 class="modal-box__title" id="campanha-form-titulo">${edicao ? "Editar campanha" : "Nova campanha"}</h3>
     <form class="campanha-form" data-role="form" novalidate>
@@ -179,6 +181,13 @@ export function formularioCampanha({ sistemas, campanha }) {
         <div class="field">
           <label class="field__label" for="cmp-prazo">Prazo (opcional)</label>
           <input class="input" id="cmp-prazo" data-field="prazo" placeholder="dd/mm/aaaa" inputmode="numeric" value="${campanha?.prazo || ""}" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="cmp-cidade">Cidade</label>
+          <select class="input" id="cmp-cidade" data-field="cidade">
+            <option value="">Todas as cidades</option>
+            ${opcoesCidade.map((cidade) => html`<option value="${cidade}" ${campanha?.cidade === cidade ? html`selected` : ""}>${cidade}</option>`)}
+          </select>
         </div>
       </div>
       <div class="field">

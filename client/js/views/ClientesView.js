@@ -47,6 +47,7 @@ export class ClientesView extends View {
           <div class="field field--full"><label class="field__label" for="cli-nome">Cliente</label><input type="text" class="input" id="cli-nome" data-field="nome" required /></div>
           <div class="field"><label class="field__label" for="cli-codigo">Código</label><input type="text" class="input" id="cli-codigo" data-field="codigo" /></div>
           <div class="field"><label class="field__label" for="cli-cidade">Cidade</label><input type="text" class="input" id="cli-cidade" data-field="cidade" /></div>
+          <div class="field"><label class="field__label" for="cli-regime">Regime tributário</label><input type="text" class="input" id="cli-regime" data-field="regimeTributario" maxlength="100" placeholder="Opcional" /></div>
           <div class="field">
             <label class="field__label" for="cli-grupo">Grupo/Rede</label>
             <input type="text" class="input" id="cli-grupo" data-field="grupo" placeholder="ex.: REDE EXEMPLO" autocomplete="off" />
@@ -117,6 +118,7 @@ export class ClientesView extends View {
       codigo: this.formCard.querySelector('[data-field="codigo"]'),
       nome: this.formCard.querySelector('[data-field="nome"]'),
       cidade: this.formCard.querySelector('[data-field="cidade"]'),
+      regimeTributario: this.formCard.querySelector('[data-field="regimeTributario"]'),
       grupo: this.formCard.querySelector('[data-field="grupo"]'),
     };
     for (const input of Object.values(this.fields)) {
@@ -144,6 +146,7 @@ export class ClientesView extends View {
         { key: "codigo", label: "Código", largura: "80px" },
         { key: "nome", label: "Cliente", largura: "26%" },
         { key: "cidade", label: "Cidade", largura: "120px" },
+        { key: "regimeTributario", label: "Regime tributário", largura: "150px", render: (row) => row.regimeTributario || "—" },
         {
           key: "grupo",
           label: "Grupo/Rede",
@@ -318,9 +321,24 @@ export class ClientesView extends View {
     }
   }
 
+  /**
+   * Pelo swr, e não com `api.get` direto: é a primeira busca do refresh(), e
+   * direto ela derrubava a tela inteira quando o servidor caía -- a lista,
+   * mesmo guardada, nem chegava a ser desenhada, e em vez do aviso de dados
+   * desatualizados aparecia um toast genérico (P03).
+   */
   async _reloadSistemas() {
+    await this.swr(
+      "clientes:sistemas",
+      () => this.api.get("/sistemas", null, { key: "clientes:sistemas" }),
+      (lista) => this._desenharSistemas(lista)
+    );
+  }
+
+  /** @param {string[]} lista */
+  _desenharSistemas(lista) {
     const marcados = new Set([...this.sistemasGrid.querySelectorAll("input:checked")].map((el) => el.value));
-    this.sistemasDisponiveis = await this.api.get("/sistemas", null, { key: "clientes:sistemas" });
+    this.sistemasDisponiveis = lista;
     this.sistemasGrid.innerHTML = "";
     for (const sistema of this.sistemasDisponiveis) {
       // <label> e o botão de excluir ficam IRMÃOS, não um dentro do outro:
@@ -448,6 +466,7 @@ export class ClientesView extends View {
     this.fields.codigo.value = row.codigo || "";
     this.fields.nome.value = row.nome || "";
     this.fields.cidade.value = row.cidade || "";
+    this.fields.regimeTributario.value = row.regimeTributario || "";
     this.fields.grupo.value = row.grupo || "";
     const ativos = new Set(row.sistemas || []);
     for (const cb of this.sistemasGrid.querySelectorAll("input[type=checkbox]")) {
@@ -495,6 +514,7 @@ export class ClientesView extends View {
       codigo: this.fields.codigo.value.trim(),
       nome,
       cidade: this.fields.cidade.value.trim(),
+      regimeTributario: this.fields.regimeTributario.value.trim(),
       grupo: this.fields.grupo.value.trim(),
       sistemas,
     };
@@ -658,6 +678,7 @@ export class ClientesView extends View {
       codigo: this.fields?.codigo?.value || "",
       nome: this.fields?.nome?.value || "",
       cidade: this.fields?.cidade?.value || "",
+      regimeTributario: this.fields?.regimeTributario?.value || "",
       grupo: this.fields?.grupo?.value || "",
       sistemas: this.sistemasGrid ? [...this.sistemasGrid.querySelectorAll("input:checked")].map((el) => el.value) : [],
     };
@@ -670,6 +691,7 @@ export class ClientesView extends View {
       this.fields.codigo.value = "";
       this.fields.nome.value = "";
       this.fields.cidade.value = "";
+      this.fields.regimeTributario.value = "";
       this.fields.grupo.value = "";
     }
     if (this.sistemasGrid) {
@@ -682,6 +704,7 @@ export class ClientesView extends View {
         this.fields.codigo.value = antes.codigo;
         this.fields.nome.value = antes.nome;
         this.fields.cidade.value = antes.cidade;
+        this.fields.regimeTributario.value = antes.regimeTributario;
         this.fields.grupo.value = antes.grupo;
         const ativos = new Set(antes.sistemas);
         for (const cb of this.sistemasGrid.querySelectorAll("input[type=checkbox]")) cb.checked = ativos.has(cb.value);
@@ -698,6 +721,7 @@ export class ClientesView extends View {
 
   _invalidar() {
     this.cache?.invalidar("clientes:");
+    this.cache?.invalidar("campanhas:");
     // O Resumo conta clientes e a Consulta lista nomes -- os dois ficam
     // desatualizados se este cache não for derrubado junto.
     this.cache?.invalidar("resumo");

@@ -1,4 +1,7 @@
 import { RequestCancelled } from "../api/ApiClient.js";
+import { EstadoDados } from "../utils/estadoDados.js";
+import { el } from "../utils/html.js";
+import { icon } from "../utils/icons.js";
 
 /**
  * Quanto uma revalidação precisa demorar para valer a pena avisar.
@@ -26,7 +29,9 @@ const ATRASO_INDICADOR_MS = 180;
  *
  * **2. Carregamento instantâneo entre abas.** `this.swr(...)` implementa o
  * ciclo "mostra o que tem guardado, revalida por trás, redesenha só se mudou"
- * (ver SwrCache) e ainda cuida do indicador de atualização em segundo plano.
+ * (ver SwrCache) e ainda cuida do indicador de atualização em segundo plano
+ * e do aviso de dados desatualizados quando a busca falha (ver
+ * utils/estadoDados.js).
  */
 export class View {
   /**
@@ -62,6 +67,11 @@ export class View {
     /** Quantas revalidações estão em voo agora (ver _indicarRevalidacao). */
     this._revalidando = 0;
     this._timerIndicador = null;
+    /** De quando é o que está na tela e o que falhou (ver _mostrarAvisoDados). */
+    this._estadoDados = new EstadoDados();
+    /** @type {HTMLElement|null} */
+    this._avisoDados = null;
+    this._tentandoDeNovo = false;
   }
 
   /**
@@ -107,6 +117,7 @@ export class View {
     const avisando = guardado !== undefined;
     if (avisando) {
       desenhar(guardado, { doCache: true });
+      this._estadoDados.exibido(chave, this.cache?.buscadoEm(chave) ?? Date.now());
       this._indicarRevalidacao(true);
     }
 
@@ -120,13 +131,23 @@ export class View {
         desenhar(frescos, { doCache: false });
       }
       this.cache?.set(chave, frescos);
+      this._estadoDados.sucesso(chave);
+      this._mostrarAvisoDados();
       return frescos;
     } catch (erro) {
       // Cancelamento não é falha: outra busca, mais nova, tomou o lugar desta.
       if (erro instanceof RequestCancelled) return guardado;
+      // A tela diz que o dado é velho, de quando, e por quê -- antes o dado
+      // velho ficava na tela em silêncio, parecendo atual.
+      const avisado = !this._destruido && this._estadoDados.falhou(chave, erro);
+      if (avisado) this._mostrarAvisoDados();
       // Já tínhamos algo na tela: melhor manter o dado velho visível do que
       // trocar a tela inteira por uma mensagem de erro.
       if (guardado !== undefined) return guardado;
+      // Sem dado guardado, o erro segue para quem chamou (o fluxo da view
+      // para ali). A marca diz ao App que a tela já avisou: sem ela, cada
+      // tentativa somava um toast ao aviso.
+      if (avisado && erro && typeof erro === "object") erro.avisadoNaTela = true;
       throw erro;
     } finally {
       if (avisando) this._indicarRevalidacao(false);
@@ -165,6 +186,60 @@ export class View {
     clearTimeout(this._timerIndicador);
     this._timerIndicador = null;
     this.container.classList.remove("is-revalidating");
+  }
+
+  /**
+   * Mostra, atualiza ou tira o aviso de dados desatualizados no topo da view.
+   *
+   * Um aviso fixo na tela, e não um toast: é um estado que continua valendo
+   * enquanto a tela mostrar o dado velho, e que some sozinho quando a busca
+   * volta a dar certo (inclusive pela volta da conexão, que recarrega a aba
+   * -- ver ConexaoBanner). Toast a cada tentativa seria o contrário: ruído
+   * repetido, e nada na tela depois que ele some.
+   */
+  _mostrarAvisoDados() {
+    if (this._destruido) return;
+    const aviso = this._estadoDados.aviso();
+    if (!aviso) {
+      this._avisoDados?.remove();
+      this._avisoDados = null;
+      return;
+    }
+    if (!this._avisoDados) {
+      this._avisoDados = el("div", { class: "dados-aviso", role: "status" }, [
+        el("span", { class: "dados-aviso__icone", "aria-hidden": "true", html: icon("alerta") }),
+        el("span", { class: "dados-aviso__texto" }, [el("strong", { dataset: { role: "titulo" } }), el("span", { dataset: { role: "detalhe" } })]),
+        el("button", { type: "button", class: "btn btn--small", text: "Tentar novamente", onclick: () => this._tentarDeNovo() }),
+      ]);
+    }
+    // A view pode ter refeito o próprio conteúdo (innerHTML) desde a última
+    // vez; aí o aviso ficou solto e precisa voltar para o topo.
+    if (!this._avisoDados.isConnected) this.container.prepend(this._avisoDados);
+    this._avisoDados.classList.toggle("dados-aviso--sem-dados", aviso.semDados);
+    /** @type {HTMLElement} */ (this._avisoDados.querySelector('[data-role="titulo"]')).textContent = aviso.titulo;
+    /** @type {HTMLElement} */ (this._avisoDados.querySelector('[data-role="detalhe"]')).textContent = aviso.detalhe;
+  }
+
+  /** O botão do aviso: busca tudo de novo. O próprio swr tira ou atualiza o aviso. */
+  async _tentarDeNovo() {
+    if (this._tentandoDeNovo || typeof this.refresh !== "function") return;
+    this._tentandoDeNovo = true;
+    const botao = this._avisoDados?.querySelector("button");
+    if (botao) {
+      botao.disabled = true;
+      botao.textContent = "Tentando…";
+    }
+    try {
+      await this.refresh();
+    } catch {
+      /* o aviso continua na tela, com o motivo novo */
+    } finally {
+      this._tentandoDeNovo = false;
+      if (botao) {
+        botao.disabled = false;
+        botao.textContent = "Tentar novamente";
+      }
+    }
   }
 
   /** Sobrescrito pelas views que precisam soltar recursos próprios. */

@@ -18,6 +18,33 @@ class BaseRepository {
   /** @param {import('better-sqlite3').Database} conn conexao aberta com o banco */
   constructor(conn) {
     this.conn = conn;
+    /** @type {Map<string, import('better-sqlite3').Statement>} */
+    this._preparados = new Map();
+  }
+
+  /**
+   * O comando preparado para este SQL, compilado uma vez só por repositório.
+   *
+   * Para os caminhos que rodam uma vez POR LINHA (importação de planilha):
+   * `conn.prepare` a cada chamada compilava o SQL de novo e deixava um objeto
+   * nativo para o coletor de lixo -- medido em 29/09/2026 (P05,
+   * server/ferramentas/medir-planilhas.js), era a maior parte dos 21 s e do
+   * 1 GB de memória para importar 20 mil linhas.
+   *
+   * Só para SQL de texto FIXO (nunca com valor interpolado: o cache cresceria
+   * sem fim) e sem `.pluck()`/`.raw()`/`.expand()`: esses mudam o comando
+   * para sempre, e quem pegasse o mesmo SQL do cache depois receberia o
+   * formato trocado.
+   *
+   * @param {string} sql
+   */
+  _preparado(sql) {
+    let stmt = this._preparados.get(sql);
+    if (!stmt) {
+      stmt = this.conn.prepare(sql);
+      this._preparados.set(sql, stmt);
+    }
+    return stmt;
   }
 
   /** Nome da tabela no banco -- cada subclasse deve sobrescrever isto. */

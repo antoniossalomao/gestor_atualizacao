@@ -37,6 +37,7 @@ const { LoginRateLimiter } = require("./middlewares/LoginRateLimiter");
 const { ApiRouter } = require("./routes/index");
 const { errorHandler } = require("./middlewares/errorHandler");
 const { notFoundHandler } = require("./middlewares/notFoundHandler");
+const { exigirHttps } = require("./middlewares/exigirHttps");
 
 const CLIENT_DIR = path.join(__dirname, "..", "..", "client");
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
@@ -61,7 +62,7 @@ const NAO_SERVIR = [/^\/package(-lock)?\.json$/, /^\/tests(\/|$)/];
  */
 class Server {
   /**
-   * @param {{dbPath: string, port: number, sessionSecret: string, sessionSecure: boolean, agentApiToken?: string, trustProxy?: boolean, ambiente?: Record<string, string|undefined>}} config
+   * @param {{dbPath: string, port: number, host?: string, sessionSecret: string, sessionSecure: boolean, agentApiToken?: string, trustProxy?: boolean, ambiente?: Record<string, string|undefined>}} config
    *   `ambiente` (normalmente process.env) só serve para importar, uma vez, as
    *   regras da equipe que antes moravam no .env -- ver
    *   ConfiguracaoSistemaService.importarValoresIniciais.
@@ -146,7 +147,9 @@ class Server {
     // Configuravel via TRUST_PROXY=true no .env: falso por padrao (rede
     // local sem proxy) para que o IP real do cliente nunca venha de um
     // cabecalho X-Forwarded-For que o cliente possa forjar e usar para
-    // burlar o rate limiter do login.
+    // burlar o rate limiter do login. Confiar em "um salto, seja quem for"
+    // só é seguro porque, no docker-compose.yml, a porta do Node não é
+    // publicada: o único que alcança o Node é o proxy.
     this.app.set("trust proxy", this.config.trustProxy ? 1 : false);
 
     // Cabeçalhos HTTP de segurança padrão (X-Content-Type-Options,
@@ -183,11 +186,24 @@ class Server {
             // Chrome trata "localhost" como confiavel e ignora isso, mas
             // aplica a regra para qualquer IP (ex.: 192.168.0.85), fazendo
             // todo recurso falhar em silencio e a pagina ficar em branco.
-            upgradeInsecureRequests: null,
+            // Com SESSION_SECURE=true o HTTPS existe (o exigirHttps acima
+            // garante), e a diretiva volta: nada da página sai por HTTP.
+            upgradeInsecureRequests: this.config.sessionSecure ? [] : null,
           },
         },
+        // HSTS só com HTTPS de verdade. Por HTTP o navegador já ignora o
+        // cabeçalho, mas mandá-lo sempre prende o nome do servidor ao HTTPS
+        // por um ano no navegador de quem testou o HTTPS uma vez -- e voltar
+        // para HTTP (ex.: certificado vencido, proxy fora do ar) vira "site
+        // inacessível" sem botão de "continuar mesmo assim".
+        strictTransportSecurity: this.config.sessionSecure,
       })
     );
+
+    // Com HTTPS ligado, nada passa por HTTP: nem a API, nem o login, nem os
+    // arquivos da tela. Logo depois do helmet, para a recusa também levar os
+    // cabeçalhos de segurança. Ver middlewares/exigirHttps.js.
+    if (this.config.sessionSecure) this.app.use(exigirHttps);
 
     this.app.use(express.json({ limit: "1mb" }));
     this.sessionStore = new SqliteSessionStore({ filePath: path.join(dbDir, "sessions.sqlite") });
@@ -270,7 +286,10 @@ class Server {
       }
     });
     return new Promise((resolve) => {
-      this.httpServer = this.app.listen(this.config.port, () => resolve(this.httpServer));
+      // host indefinido = todas as interfaces (o Node no container, atrás do
+      // proxy). Em HTTP puro, server.js passa 127.0.0.1: a rede não alcança
+      // -- ver config/transporte.js.
+      this.httpServer = this.app.listen(this.config.port, this.config.host, () => resolve(this.httpServer));
     });
   }
 

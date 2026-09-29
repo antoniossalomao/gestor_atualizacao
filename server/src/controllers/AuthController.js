@@ -9,6 +9,8 @@
  * sem isso, precisariamos escrever `.bind(this)` toda vez que registrassemos
  * a rota.
  */
+const { garantirTokenCsrf, CABECALHO_CSRF } = require("../middlewares/protecaoCsrf");
+
 class AuthController {
   /**
    * @param {import('../services/AuthService').AuthService} authService
@@ -39,7 +41,7 @@ class AuthController {
   setupAdmin = (req, res, next) => {
     try {
       const user = this.authService.setupAdmin(req.body || {});
-      this._iniciarSessao(req, user, next, () => res.status(201).json({ user }));
+      this._iniciarSessao(req, res, user, next, () => res.status(201).json({ user }));
     } catch (err) {
       next(err);
     }
@@ -49,7 +51,7 @@ class AuthController {
     try {
       const { usuario, senha } = req.body || {};
       const user = this.authService.login(usuario, senha);
-      this._iniciarSessao(req, user, next, () => res.json({ user }));
+      this._iniciarSessao(req, res, user, next, () => res.json({ user }));
     } catch (err) {
       next(err);
     }
@@ -67,7 +69,7 @@ class AuthController {
    * "fixacao de sessao"; trocar o identificador no momento do login corta a
    * ligacao entre o "antes" e o "depois".
    */
-  _iniciarSessao(req, user, next, onOk) {
+  _iniciarSessao(req, res, user, next, onOk) {
     req.session.regenerate((err) => {
       if (err) return next(err);
       req.session.user = user;
@@ -79,6 +81,11 @@ class AuthController {
         agente: String(req.get("user-agent") || "").slice(0, 300),
         desde: new Date().toISOString(),
       };
+      // A sessão é nova (regenerate), então o token também: o que a página
+      // tinha antes do login não vale mais. Vai já nesta resposta para a
+      // primeira alteração depois de entrar não precisar de uma ida extra
+      // ao servidor -- ver middlewares/protecaoCsrf.js.
+      res.set(CABECALHO_CSRF, garantirTokenCsrf(req.session));
       req.session.save((saveErr) => (saveErr ? next(saveErr) : onOk()));
     });
   }

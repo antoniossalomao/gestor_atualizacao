@@ -5,10 +5,16 @@
  * precisar saber nada sobre o formato da resposta HTTP.
  */
 export class ApiError extends Error {
-  constructor(message, status) {
+  /**
+   * @param {string} message
+   * @param {number} status
+   * @param {string} [codigo] quando o servidor manda um (ex.: "csrf")
+   */
+  constructor(message, status, codigo) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.codigo = codigo;
   }
 }
 
@@ -30,6 +36,18 @@ const TIMEOUT_PADRAO_MS = 15000;
 // rede lenta, 15s não dão nem para o primeiro terço do arquivo.
 const TIMEOUT_UPLOAD_MS = 10 * 60 * 1000;
 
+// Proteção CSRF (ver server/src/middlewares/protecaoCsrf.js): o servidor
+// entrega o token da sessão neste cabeçalho em toda resposta da API com
+// sessão, e exige o mesmo valor de volta em toda escrita.
+const CABECALHO_CSRF = "X-CSRF-Token";
+const METODOS_SEGUROS = new Set(["GET", "HEAD"]);
+
+// Com o Caddy na frente (docker-compose.yml), o painel fora do ar não
+// aparece como "não conectou": o proxy está de pé e responde 502/503/504.
+// Contando isso como resposta, a faixa de "sem conexão" nunca aparecia
+// justamente no caso mais comum de queda -- o container reiniciando.
+const PAINEL_INDISPONIVEL = new Set([502, 503, 504]);
+
 /**
  * Encapsula todas as chamadas HTTP para o backend (`/api/...`). Nenhuma
  * outra parte do front-end usa `fetch` diretamente -- assim, se um dia a
@@ -48,6 +66,11 @@ const TIMEOUT_UPLOAD_MS = 10 * 60 * 1000;
  *     isso -- um 401 ao clicar em "Adicionar" virava "erro inesperado".
  *  3. **Timeout em tudo**, inclusive nos envios/downloads de arquivo, que
  *     antes ficavam pendurados para sempre se o servidor sumisse no meio.
+ *  4. **Token CSRF.** Guarda o último token visto e o manda em toda escrita,
+ *     inclusive no upload por XHR. Se o servidor recusar por token
+ *     desatualizado -- a pessoa saiu e entrou de novo em outra aba, e a
+ *     sessão (com o token) é outra --, busca o atual e repete UMA vez, sem a
+ *     pessoa perceber.
  */
 export class ApiClient {
   constructor(baseUrl = "/api") {
@@ -64,6 +87,8 @@ export class ApiClient {
      * piscando no arranque de toda sessão seria ruído puro.
      */
     this._online = true;
+    /** @type {string|null} último token CSRF recebido do servidor */
+    this._tokenCsrf = null;
   }
 
   /**
@@ -110,12 +135,26 @@ export class ApiClient {
    * @param {FormData} form
    * @param {{onProgress?: (pct: number|null) => void}} [options]
    */
-  postForm(path, form, { onProgress } = {}) {
+  async postForm(path, form, { onProgress } = {}) {
+    try {
+      return await this._enviarForm(path, form, onProgress);
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.codigo !== "csrf") throw error;
+      // A recusa chega antes de o arquivo ser processado (o servidor confere
+      // o token antes do multer), então repetir não duplica nada.
+      await this._renovarTokenCsrf();
+      return this._enviarForm(path, form, onProgress);
+    }
+  }
+
+  /** @param {string} path @param {FormData} form @param {((pct: number|null) => void)} [onProgress] */
+  _enviarForm(path, form, onProgress) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", `${this.baseUrl}${path}`);
       xhr.withCredentials = true;
       xhr.timeout = TIMEOUT_UPLOAD_MS;
+      if (this._tokenCsrf) xhr.setRequestHeader(CABECALHO_CSRF, this._tokenCsrf);
 
       if (onProgress) {
         xhr.upload.addEventListener("progress", (e) => {
@@ -130,6 +169,7 @@ export class ApiClient {
       }
 
       xhr.addEventListener("load", () => {
+        this._guardarTokenCsrf(xhr.getResponseHeader(CABECALHO_CSRF));
         if (xhr.status === 204) return resolve(null);
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
@@ -139,7 +179,8 @@ export class ApiClient {
           }
         }
         if (xhr.status === 401) this._notifyUnauthorized();
-        reject(new ApiError(extractXhrError(xhr), xhr.status));
+        const { mensagem, codigo } = extractXhrError(xhr);
+        reject(new ApiError(mensagem, xhr.status, codigo));
       });
       xhr.addEventListener("error", () => reject(new ApiError("Não foi possível conectar ao servidor.", 0)));
       xhr.addEventListener("timeout", () => reject(new ApiError("O envio demorou demais e foi cancelado.", 408)));
@@ -159,9 +200,11 @@ export class ApiClient {
         credentials: "same-origin",
         signal: controller.signal,
       });
+      this._guardarTokenCsrf(res.headers.get(CABECALHO_CSRF));
       if (!res.ok) {
         if (res.status === 401) this._notifyUnauthorized();
-        throw new ApiError(await this._extractError(res), res.status);
+        const { mensagem, codigo } = await this._extractError(res);
+        throw new ApiError(mensagem, res.status, codigo);
       }
       return await res.blob();
     } catch (error) {
@@ -186,7 +229,17 @@ export class ApiClient {
     this._unauthorizedNotified = false;
   }
 
-  async _request(path, options, { key } = {}) {
+  async _request(path, options, opcoes = {}) {
+    try {
+      return await this._requestUmaVez(path, options, opcoes);
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.codigo !== "csrf") throw error;
+      await this._renovarTokenCsrf();
+      return this._requestUmaVez(path, options, opcoes);
+    }
+  }
+
+  async _requestUmaVez(path, options, { key } = {}) {
     // Uma chave = no máximo uma requisição viva. A anterior é abortada, e o
     // `await` de quem a esperava rejeita com RequestCancelled (ignorado por
     // quem chamou), então só a resposta mais nova chega a renderizar.
@@ -204,15 +257,21 @@ export class ApiClient {
     }, TIMEOUT_PADRAO_MS);
 
     try {
+      /** @type {Record<string, string>} */
+      const headers = {};
+      if (options.body) headers["Content-Type"] = "application/json";
+      if (!METODOS_SEGUROS.has(options.method) && this._tokenCsrf) headers[CABECALHO_CSRF] = this._tokenCsrf;
       const res = await fetch(`${this.baseUrl}${path}`, {
         credentials: "same-origin",
-        headers: options.body ? { "Content-Type": "application/json" } : undefined,
+        headers,
         signal: controller.signal,
         ...options,
       });
+      this._guardarTokenCsrf(res.headers.get(CABECALHO_CSRF));
       // Respondeu -- inclusive com 4xx/5xx. Um 400 é o servidor conversando:
-      // quem está fora do ar não recusa nada, não responde.
-      this._marcarConexao(true);
+      // quem está fora do ar não recusa nada, não responde. Menos quando quem
+      // respondeu foi o proxy, no lugar do painel (PAINEL_INDISPONIVEL).
+      this._marcarConexao(!PAINEL_INDISPONIVEL.has(res.status));
       return await this._parse(res);
     } catch (error) {
       if (error.name === "AbortError") {
@@ -235,8 +294,8 @@ export class ApiClient {
    * Avisa a tela quando o servidor cai e quando ele volta -- só na TROCA de
    * estado, nunca a cada requisição.
    *
-   * Existe porque o serviço do Windows reinicia (atualização, reboot da
-   * máquina que hospeda) enquanto as pessoas estão com o app aberto. Até aqui
+   * Existe porque o servidor reinicia (atualização, reboot da máquina que
+   * hospeda) enquanto as pessoas estão com o app aberto. Até aqui
    * isso era invisível: a tela continuava mostrando os dados de antes, e o
    * primeiro clique em "Adicionar" é que virava um "não foi possível conectar"
    * solto, sem dizer se o problema era daquele registro ou de tudo.
@@ -272,11 +331,28 @@ export class ApiClient {
     return this._online;
   }
 
+  /**
+   * Busca o token da sessão atual. `/auth/status` é a chamada mais barata
+   * com sessão, e a resposta traz o cabeçalho como qualquer outra. Se a
+   * sessão tiver acabado, não vem token -- e a repetição recebe 401, que leva
+   * ao login como deve.
+   */
+  async _renovarTokenCsrf() {
+    this._tokenCsrf = null;
+    await this._requestUmaVez("/auth/status", { method: "GET" });
+  }
+
+  /** @param {string|null} token */
+  _guardarTokenCsrf(token) {
+    if (token) this._tokenCsrf = token;
+  }
+
   async _parse(res) {
     if (res.status === 204) return null;
     if (!res.ok) {
       if (res.status === 401) this._notifyUnauthorized();
-      throw new ApiError(await this._extractError(res), res.status);
+      const { mensagem, codigo } = await this._extractError(res);
+      throw new ApiError(mensagem, res.status, codigo);
     }
     const texto = await res.text();
     return texto ? JSON.parse(texto) : null;
@@ -292,21 +368,28 @@ export class ApiClient {
     if (this.onUnauthorized) this.onUnauthorized();
   }
 
+  /** @returns {Promise<{mensagem: string, codigo?: string}>} */
   async _extractError(res) {
     try {
-      const data = await res.json();
-      return data.error || "Ocorreu um erro inesperado.";
+      return lerErro(await res.json());
     } catch {
-      return "Ocorreu um erro inesperado.";
+      return { mensagem: ERRO_GENERICO };
     }
   }
 }
 
+const ERRO_GENERICO = "Ocorreu um erro inesperado.";
+
+/** @returns {{mensagem: string, codigo?: string}} */
+function lerErro(data) {
+  return { mensagem: data?.error || ERRO_GENERICO, codigo: typeof data?.codigo === "string" ? data.codigo : undefined };
+}
+
 function extractXhrError(xhr) {
   try {
-    return JSON.parse(xhr.responseText).error || "Ocorreu um erro inesperado.";
+    return lerErro(JSON.parse(xhr.responseText));
   } catch {
-    return "Ocorreu um erro inesperado.";
+    return { mensagem: ERRO_GENERICO };
   }
 }
 

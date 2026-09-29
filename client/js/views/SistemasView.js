@@ -144,13 +144,21 @@ export class SistemasView extends View {
   }
 
   async refresh() {
-    this.versoes = await this.api.get("/sistemas/versoes", null, { key: "sistemas:versoes" });
-    this.sistemaFilter.innerHTML = this.versoes.map((s) => `<option value="${escapeHtml(s.nome)}">${escapeHtml(s.nome)}</option>`).join("");
-    if (this.versoes.some((s) => s.nome === this.sistema)) this.sistemaFilter.value = this.sistema;
-    this.sistema = this.sistemaFilter.value;
-    this._salvarFiltros();
-    this._mostrarReferencia();
-    this._renderOficiais();
+    // Pelo swr (P03): com `api.get` direto, o servidor fora do ar derrubava a
+    // tela sem dizer de quando eram as versões oficiais mostradas.
+    await this.swr(
+      "sistemas:versoes",
+      () => this.api.get("/sistemas/versoes", null, { key: "sistemas:versoes" }),
+      (versoes) => {
+        this.versoes = versoes;
+        this.sistemaFilter.innerHTML = this.versoes.map((s) => `<option value="${escapeHtml(s.nome)}">${escapeHtml(s.nome)}</option>`).join("");
+        if (this.versoes.some((s) => s.nome === this.sistema)) this.sistemaFilter.value = this.sistema;
+        this.sistema = this.sistemaFilter.value;
+        this._salvarFiltros();
+        this._mostrarReferencia();
+        this._renderOficiais();
+      }
+    );
     await this._reloadList();
   }
 
@@ -245,7 +253,9 @@ export class SistemasView extends View {
         (rows) => { this.rows = rows; this._filtrarRows(); }
       );
     } catch (err) {
-      if (!err?.cancelled) Modal.alert("Erro", errorMessage(err), "error");
+      // Falha de carga já aparece no aviso fixo da tela (View.swr); um modal
+      // em cima dele era o mesmo recado duas vezes.
+      if (!err?.cancelled && !err?.avisadoNaTela) Modal.alert("Erro", errorMessage(err), "error");
     } finally {
       this.table.setRefreshing(false);
     }

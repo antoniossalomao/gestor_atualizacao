@@ -241,9 +241,9 @@ uma. As principais:
 | `PORT` | Porta em que o servidor escuta (padrão 3000). |
 | `DB_PATH` | Caminho do arquivo `gestao.db`. |
 | `SESSION_SECRET` | Texto usado para assinar o cookie de login. **Obrigatório:** o servidor não sobe sem ele nem com o valor de exemplo do `.env.example`. Use um valor longo e aleatório. |
-| `SESSION_SECURE` | `true` quando o servidor roda atrás de HTTPS. |
+| `SESSION_SECURE` | `true` atrás do proxy HTTPS. No Docker vem fixo do `docker-compose.yml`; em desenvolvimento, deixe vazio. |
 | `AGENT_API_TOKEN` | Chave compartilhada com os agentes do Atualizador. Para trocar, ver "Rotacionar o token dos agentes" em `docs/OPERACAO.md`. |
-| `TRUST_PROXY` | `true` só quando há um proxy reverso na frente (ver "Na internet", abaixo). |
+| `TRUST_PROXY` | `true` atrás do proxy HTTPS, junto com `SESSION_SECURE`. Mesmo caso: fixo no Docker, vazio em desenvolvimento. |
 
 **Regras da equipe** (webhook do Discord, URL pública para os agentes, dias até
 um cliente contar como desatualizado, dias até arquivar tarefa concluída,
@@ -292,92 +292,20 @@ A restauração de backup conta com proteção operacional reforçada:
 
 ## Implantação (deixar acessível para a equipe)
 
-O código não decide isso por você — depende de onde e para quem o app
-vai ficar disponível:
+Na rede, o painel **só atende por HTTPS** (decisão de 29/09/2026, P01 de
+[`docs/MELHORIAS.md`](docs/MELHORIAS.md#plano-vigente)). O caminho é o
+Docker: o `docker-compose.yml` sobe o painel e, na frente dele, um proxy
+[Caddy](https://caddyserver.com/) que cuida do certificado. Ver
+[Rodar em Docker](#rodar-em-docker) e [HTTPS](#https).
 
-- **Só na rede local (escritório):** rode `npm start` num PC/servidor
-  que fique ligado, e o resto da equipe acessa por `http://IP-DA-MAQUINA:3000`
-  (descubra o IP com `ipconfig`). Mais simples, mas só funciona dentro
-  da mesma rede.
-- **Pela internet:** recomendado colocar um proxy reverso na frente
-  (ex.: [Caddy](https://caddyserver.com/) ou Nginx) cuidando do HTTPS, e
-  apontá-lo para a porta do Node. Nesse caso, defina `SESSION_SECURE=true`
-  no `.env`. Sem HTTPS, o login trafega sem criptografia — não exponha
-  a porta do Node direto na internet sem isso.
-- **Em container:** há um `Dockerfile` e um `docker-compose.yml` prontos —
-  ver [Rodar em Docker](#rodar-em-docker-alternativa-ao-serviço-do-windows).
+`npm start` e `npm run dev` fora do Docker atendem em HTTP puro, e **só na
+própria máquina** (`http://localhost:3000`): os outros PCs recebem "conexão
+recusada". Isso é para quem desenvolve, não para a equipe usar.
 
-## Rodar como serviço do Windows (recomendado)
+## Rodar em Docker
 
-`Iniciar Gestor.bat` roda o servidor numa janela de console em primeiro
-plano: se a janela fechar sem querer, o processo travar ou a máquina
-reiniciar, a equipe inteira fica sem o painel até alguém notar e abrir a
-janela de novo na mão. Para produção (a máquina que fica ligada
-atendendo a equipe), instale como serviço do Windows via
-[NSSM](https://nssm.cc/) — sobe sozinho com o Windows e **reinicia
-sozinho se cair**.
-
-```powershell
-# Uma vez só, num PowerShell aberto como Administrador
-# (botão direito no ícone do PowerShell > "Executar como administrador"),
-# a partir da raiz do repositório:
-.\instalar-servico.ps1
-```
-
-O script é idempotente (rodar de novo reinstala do zero, sem duplicar) e
-faz tudo sozinho: baixa o NSSM se não estiver instalado, para uma
-instância manual que porventura já esteja rodando na mesma porta, cria o
-serviço `GestorAtualizacoes` apontando pro `node.exe`/`server.js`
-corretos, com log em `server/logs/` (`service-out.log`/`service-err.log`,
-rotacionado por tamanho pra um arquivo não crescer indefinidamente), e
-liga o serviço.
-
-```powershell
-Get-Service GestorAtualizacoes                              # status
-Restart-Service GestorAtualizacoes                           # reiniciar
-Get-Content server\logs\service-out.log -Tail 50 -Wait        # acompanhar log
-```
-
-Para desinstalar (volta a rodar só pelo `Iniciar Gestor.bat`), também como
-Administrador: `.\desinstalar-servico.ps1`. Nada do projeto é apagado —
-só o registro do serviço no Windows.
-
-Precisa ser rodado elevado porque criar/remover serviço do Windows exige
-privilégio de administrador — o `#Requires -RunAsAdministrator` no topo
-dos dois scripts recusa a execução sem elevação, com uma mensagem clara,
-em vez de falhar pela metade.
-
-### Pendências conhecidas do serviço (set/2026)
-
-Duas coisas que `instalar-servico.ps1` ainda não resolve, identificadas
-depois de instalar de verdade — nenhuma delas impede o uso, mas valem
-correção numa próxima passada pelo script:
-
-- **Roda como `LocalSystem`.** O script não define `ObjectName` na
-  instalação, então o NSSM usa o padrão dele — a conta mais privilegiada
-  do Windows (controle total da máquina). O servidor nunca chama
-  processo externo (sem `child_process`/`spawn`, só `.exec()` do SQLite),
-  só precisa ler/escrever a própria pasta e escutar uma porta — não
-  precisa de SYSTEM pra nada disso. Numa app que recebe upload de
-  arquivo pela rede, isso importa: uma vulnerabilidade de execução
-  remota numa dependência, no cenário atual, dá acesso de SYSTEM à
-  máquina inteira. O ideal é uma conta virtual por serviço
-  (`NT SERVICE\GestorAtualizacoes`, recurso nativo do Windows desde o
-  Vista/2008 — sem senha pra gerenciar) com permissão NTFS só na pasta
-  do projeto.
-- **Log rotacionado, mas nunca podado.** `AppRotateBytes` evita um único
-  arquivo crescer sem limite, mas o NSSM não apaga os arquivos já
-  rotacionados (`service-out-<timestamp>.log`) — eles se acumulam pra
-  sempre em `server/logs/`. Na prática o volume de log deste app é
-  pequeno (bytes por dia), então isso não vira problema por muito tempo,
-  mas seria bom ter uma tarefa agendada apagando rotações com mais de
-  ~90 dias.
-
-## Rodar em Docker (alternativa ao serviço do Windows)
-
-Mesmo painel, empacotado. Faz sentido quando o app vai para uma máquina
-Linux, ou quando se quer o servidor isolado do resto do que roda no PC —
-não substitui o serviço do Windows acima, é a outra opção. Requer o
+Mesmo painel, empacotado, com o proxy HTTPS na frente. É o jeito de
+deixar o painel acessível para a equipe. Requer o
 [Docker Desktop](https://www.docker.com/products/docker-desktop/) (no
 Windows, ele usa o WSL 2).
 
@@ -391,16 +319,24 @@ subir**: o container fica reiniciando, e `docker compose logs` mostra o motivo.
 O mesmo acontece se o `SESSION_SECRET` continuar com o valor de exemplo
 copiado do `.env.example`, que é público.
 
+O **`web/.env`** (outro arquivo, o do compose) diz por qual endereço a
+equipe vai acessar — ver [HTTPS](#https). Sem ele, o `docker compose up`
+para com a mensagem "defina GESTOR_ENDERECO".
+
 ```powershell
 cd web
 Copy-Item server\.env.example server\.env
-# Gere um segredo de verdade e cole no SESSION_SECRET do .env:
+# Gere um segredo de verdade e cole no SESSION_SECRET do server\.env:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+Copy-Item .env.example .env
+# Ajuste o GESTOR_ENDERECO do .env (nome ou IP do servidor)
 docker compose up -d --build
 ```
 
-Abra `http://localhost:3000`. A tela de criação do administrador aparece
-igual, e as migrações rodam sozinhas no primeiro início.
+Abra `https://` + o `GESTOR_ENDERECO` (ex.: `https://gestoratualizacao`). A
+tela de criação do administrador aparece igual, e as migrações rodam
+sozinhas no primeiro início. O navegador vai avisar do certificado até a
+raiz ser instalada — ver [HTTPS](#https).
 
 ### O dia a dia
 
@@ -412,9 +348,8 @@ docker compose up -d --build   # depois de atualizar o código
 docker compose stop        # parar sem apagar nada
 ```
 
-O container tem `restart: unless-stopped`: volta sozinho depois de travar e
-depois de a máquina reiniciar — é o que o serviço do Windows faz, pelo
-outro caminho.
+Os containers têm `restart: unless-stopped`: voltam sozinhos depois de
+travar e depois de a máquina reiniciar.
 
 A verificação de saúde bate em `/api/auth/status` a cada 30 segundos. Ela
 responde do banco, então `healthy` significa "o SQLite abriu e respondeu", e
@@ -422,7 +357,7 @@ não só "o processo está de pé".
 
 ### Onde ficam os dados
 
-Em dois volumes do Docker (`gestor-data` e `gestor-logs`), **não** numa
+No volume `gestor-data` do Docker, **não** numa
 pasta do Windows. É de propósito: o SQLite em modo WAL depende de travas de
 arquivo que não funcionam de forma confiável através da tradução de sistema
 de arquivos do Docker Desktop. Trocar a imagem (`up -d --build`) não mexe
@@ -465,23 +400,6 @@ a primeira que vem à cabeça:
   volume nomeado (que o Docker deriva do nome da pasta do projeto e muda se
   ela for renomeada).
 
-### Atrás de um proxy reverso (HTTPS)
-
-Com Caddy/Nginx na frente terminando o HTTPS, ajuste no `server/.env` —
-não no `docker-compose.yml`, pelo motivo explicado no item seguinte:
-
-| Variável | Valor | Por quê |
-|---|---|---|
-| `SESSION_SECURE` | `true` | Sem isso o cookie de login trafega sem exigir HTTPS. |
-| `TRUST_PROXY` | `true` | Sem isso o Express enxerga só o IP do proxy, e com `SESSION_SECURE=true` ninguém consegue entrar. |
-
-E, em **Administração → Atualizador**, ponha o endereço público
-(`https://seu-dominio`) em "Endereço deste servidor para os agentes": é o
-que monta os links de download enviados aos agentes.
-
-Troque também o mapeamento de portas para `"127.0.0.1:3000:3000"`, de modo que
-só o proxy alcance o Node.
-
 ### Duas armadilhas
 
 - **Regra da equipe não é variável de ambiente.** Pôr `DISCORD_WEBHOOK_URL`
@@ -492,6 +410,78 @@ só o proxy alcance o Node.
   Container sem fuso roda em UTC, e o app usa o relógio local para decidir o
   que é "hoje": das 21h à meia-noite, os agendamentos de amanhã apareceriam
   como atrasados. Se a equipe não estiver em São Paulo, mude ali.
+
+## HTTPS
+
+O painel (`gestor`) não publica porta nenhuma; quem atende a rede é o proxy
+(`proxy`, Caddy), **só na porta 443**. Não há porta 80: `http://` não
+responde, nem para redirecionar. `SESSION_SECURE=true` e `TRUST_PROXY=true`
+vêm fixos do `docker-compose.yml` — não é preciso pôr no `server/.env`.
+
+Se a máquina já usa a 443 (IIS, outro site), o `up` falha com "port is
+already allocated". Mude o número da esquerda em `"443:443"`; o endereço
+passa a ser `https://nome:PORTA`.
+
+### Nome em vez de IP
+
+`GESTOR_ENDERECO` no `web/.env` pode ser o IP do servidor
+(`192.168.0.10`) ou um nome (`gestoratualizacao`). O nome precisa existir
+na rede, e isso é fora do painel:
+
+- **DNS da empresa** (roteador ou servidor de domínio): cadastre o nome
+  apontando para o IP do servidor. Vale para todas as máquinas de uma vez.
+  O servidor precisa de IP fixo (reserva no DHCP), senão o nome passa a
+  apontar para o lugar errado.
+- **Sem DNS:** em cada PC, como administrador, acrescente ao
+  `C:\Windows\System32\drivers\etc\hosts` a linha
+  `192.168.0.10  gestoratualizacao`.
+
+Os dois ao mesmo tempo também valem, separados por vírgula
+(`GESTOR_ENDERECO=gestoratualizacao, 192.168.0.10`) — útil enquanto o nome
+ainda não chegou ao DNS ou ao `hosts` de todo mundo. **Para o acesso pelo IP
+abrir, repita o IP em `GESTOR_IP`**: quando o endereço é um IP, o navegador
+não informa ao servidor qual certificado quer, e sem essa dica o Caddy não
+entrega nenhum. O certificado vale
+**só** para o que estiver em `GESTOR_ENDERECO`: acessar por outro nome ou
+IP dá aviso de certificado. Evite
+nomes terminados em `.local` (o Windows os resolve por outro mecanismo, e o
+nome falha às vezes). Nome sem ponto funciona, mas o Chrome trata
+`gestoratualizacao` digitado sozinho como pesquisa: digite
+`https://gestoratualizacao` ou crie um favorito.
+
+### Certificado
+
+O Caddy emite o certificado com uma **autoridade própria** (`tls internal`
+em `proxy/Caddyfile`), criada na primeira subida e guardada no volume
+`caddy-data`. Nenhuma autoridade pública assina nome interno nem IP, então
+cada máquina da equipe precisa confiar nessa raiz uma vez:
+
+```powershell
+# No servidor, com os containers de pé:
+docker compose cp proxy:/data/caddy/pki/authorities/local/root.crt caddy-raiz.crt
+
+# Em cada PC da equipe, num PowerShell como administrador. Caminho
+# COMPLETO: o PowerShell de administrador abre em C:\Windows\system32, e
+# só o nome do arquivo dá "O sistema não pode encontrar o arquivo".
+certutil -addstore -f Root "C:\caminho\para\caddy-raiz.crt"
+```
+
+Chrome e Edge usam o repositório do Windows e param de avisar depois disso
+(feche e abra o navegador). Se o Firefox ainda avisar, importe o mesmo
+arquivo em Configurações → Privacidade e Segurança → Certificados. Celular
+ou tablet: instale o `caddy-raiz.crt` pelo menu de segurança do aparelho.
+
+A raiz vale 10 anos; o certificado do site é renovado sozinho pelo Caddy.
+**Não apague o volume `caddy-data`**: perdê-lo gera uma raiz nova, e todas
+as máquinas precisam instalá-la de novo.
+
+### Endereço para os agentes
+
+Em **Administração → Atualizador**, o "Endereço deste servidor para os
+agentes" passa a ser `https://` + o `GESTOR_ENDERECO`. Os agentes C# que
+apontavam para `http://IP:3000` param de alcançar o painel; ao reativar o
+Atualizador, cada um precisa do endereço novo no `atualizador.ini` e da raiz
+instalada na máquina do cliente.
 
 ## Limitações conhecidas
 

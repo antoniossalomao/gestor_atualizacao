@@ -690,38 +690,10 @@ Administração. As variáveis antigas do `.env` para elas são lidas só uma ve
 do servidor (mantém as 10 mais recentes). O botão **Backups** no cabeçalho lista e restaura — a
 página recarrega inteira depois, para garantir que nenhuma tela fique com dado antigo.
 
-**Implantação:**
-
-- **Rede local:** `npm start` num PC/servidor que fique ligado; a equipe acessa por
-  `http://IP-DA-MÁQUINA:3000`.
-- **Pela internet:** proxy reverso (Caddy/Nginx) cuidando do HTTPS na frente, com
-  `SESSION_SECURE=true`. Sem HTTPS, o login trafega sem criptografia.
-
-**Como serviço do Windows (recomendado para produção):** `Iniciar Gestor.bat` roda numa janela de
-console em primeiro plano — se ela fechar, o processo travar ou a máquina reiniciar, a equipe fica
-sem o painel até alguém notar. Para produção, instalar via [NSSM](https://nssm.cc/):
-
-```powershell
-# Num PowerShell como Administrador
-cd web
-.\instalar-servico.ps1
-```
-
-Idempotente (reinstala do zero sem duplicar); baixa o NSSM se preciso, para uma instância manual
-que já esteja na mesma porta, cria o serviço `GestorAtualizacoes`, com log em `server/logs/`
-rotacionado por tamanho. `Get-Service GestorAtualizacoes` / `Restart-Service GestorAtualizacoes` /
-`Get-Content server\logs\service-out.log -Tail 50 -Wait`. Para desinstalar:
-`.\desinstalar-servico.ps1` (não apaga nada do projeto, só o registro do serviço).
-
-**Duas pendências conhecidas do serviço** (identificadas após instalar de verdade, não impedem o
-uso):
-
-- **Roda como `LocalSystem`** — o script não define `ObjectName`; o ideal é uma conta virtual por
-  serviço (`NT SERVICE\GestorAtualizacoes`) com permissão NTFS só na pasta do projeto, já que o
-  servidor não precisa de privilégio de SYSTEM para nada do que faz.
-- **Log rotacionado mas nunca podado** — `AppRotateBytes` evita um arquivo crescer sem limite, mas
-  as rotações antigas (`service-out-<timestamp>.log`) se acumulam para sempre; o volume é pequeno
-  hoje, mas valeria uma tarefa agendada podando rotações com mais de ~90 dias.
+**Implantação:** na rede, o painel só atende por HTTPS, pelo `docker-compose.yml` com o proxy
+Caddy na frente (P01, 29/09/2026). `npm start` fora do Docker atende só a própria máquina. Passo a
+passo, nome em vez de IP e instalação do certificado nas seções "Rodar em Docker" e "HTTPS" do
+[README](../README.md#https).
 
 ### 2.6 Limitações conhecidas desta versão
 
@@ -1246,6 +1218,9 @@ escolha deliberada — e reintroduz o problema que ela evitava.
 | [4.8](#adr-0007) | Sistemas e clientes em tabelas de ligação | Aceita |
 | [4.9](#adr-0008) | Uma regra para a situação do cliente | Aceita |
 | [4.10](#adr-0009) | Campanhas: meta guardada, andamento calculado | Aceita |
+| [4.11](#adr-0010) | Somente HTTPS na rede, com Caddy na frente | Aceita |
+| [4.12](#adr-0011) | Proteção CSRF por token de sessão | Aceita |
+| [4.13](#adr-0012) | Testes de navegador pelo protocolo do Chrome | Aceita |
 
 **Como escrever um novo:** copie a estrutura de qualquer um — Contexto → Decisão → Consequências →
 Alternativas consideradas — como uma nova subseção `4.N` no fim desta lista. Um ADR não se edita
@@ -1796,6 +1771,183 @@ Código: `server/src/services/CampanhaService.js`,
 - **Ligar a tarefa à campanha por uma coluna nova em `agendamentos`:** "já
   agendado" por sistema já responde a pergunta sem mexer na tabela de tarefas,
   e continua certo para tarefas criadas fora da campanha.
+
+<a id="adr-0010"></a>
+### 4.11 ADR-0010 — Somente HTTPS na rede, com o Caddy do compose na frente
+
+**Situação:** Aceita (29/09/2026)
+
+#### Contexto
+
+O painel ia sair do PC de quem o usa para a rede (P01 do
+[plano de melhorias](MELHORIAS.md#plano-vigente)). Até aqui, a equipe acessava
+`http://IP:3000`: senha e cookie de sessão atravessavam a rede em texto puro.
+HTTPS era opcional (`SESSION_SECURE`), e as combinações erradas falhavam em
+silêncio — "ninguém consegue entrar" sem erro nenhum. Os scripts do serviço
+do Windows tinham acabado de ser removidos: o Docker passou a ser o único
+jeito de implantar.
+
+#### Decisão
+
+- **HTTP puro não escuta na rede.** Sem `SESSION_SECURE=true`, o servidor
+  escuta só em `127.0.0.1` (`config/transporte.js`); é o desenvolvimento.
+- **O `docker-compose.yml` sobe o painel e um Caddy.** O painel não publica
+  porta; o Caddy atende só a 443 (sem 80, nem para redirecionar) e emite o
+  certificado com autoridade própria (`tls internal`), que cada máquina da
+  equipe instala uma vez. `SESSION_SECURE=true` e `TRUST_PROXY=true` vêm
+  fixos do compose.
+- **Com HTTPS ligado, o Node recusa com 403 o que não chegar por HTTPS**
+  (`middlewares/exigirHttps.js`), exceto o `GET /api/auth/status` do
+  healthcheck. Recusa em vez de redirecionar: num POST a senha já passou
+  quando o redirecionamento volta, e montar o destino pelo `Host` seria
+  redirecionamento aberto.
+- **Combinação inválida recusa a subida**, com o motivo em português, como o
+  `SESSION_SECRET`.
+- **HSTS e `upgrade-insecure-requests` só com HTTPS.**
+
+#### Consequências
+
+- Endereço novo para todos: `https://` + `GESTOR_ENDERECO` (nome e/ou IP, no
+  `web/.env`). Por IP, só com `GESTOR_IP` — o navegador não manda SNI para
+  IP, e sem `default_sni` o Caddy não entrega certificado (descoberto na
+  primeira subida em produção).
+- Cada PC precisa da raiz do Caddy instalada; perder o volume `caddy-data`
+  gera uma raiz nova e obriga a reinstalar em todos.
+- A proteção contra `X-Forwarded-Proto` forjado é a porta do Node não ser
+  publicada — está no compose, não no código.
+- Os agentes do Atualizador (pausado) precisam do endereço `https://` e da
+  raiz ao voltar.
+- Rodar fora do Docker para a equipe deixou de ser opção.
+
+#### Alternativas consideradas
+
+- **HTTPS opcional, com aviso no log:** foi a primeira versão desta mudança;
+  descartada a pedido — aviso em log não impede ninguém de usar HTTP.
+- **Redirecionar HTTP → HTTPS (porta 80):** ninguém digita `http://` e fica
+  sem acesso, mas deixa uma porta a mais só para isso; com HSTS, depois da
+  primeira visita o navegador já nem tenta `http://`.
+- **TLS no próprio Node:** exigiria carregar e renovar certificado no
+  processo; o Caddy faz isso sozinho.
+- **`TRUST_PROXY` com lista de IPs/`loopback`:** só seria necessário com
+  proxy fora do Docker, que deixou de existir.
+
+<a id="adr-0011"></a>
+### 4.12 ADR-0011 — Proteção CSRF por token de sessão
+
+**Situação:** Aceita (29/09/2026)
+
+#### Contexto
+
+Com o painel na rede (ADR-0010), qualquer página aberta no navegador de quem
+está logado podia tentar mandar o painel alterar dados (P02 do
+[plano de melhorias](MELHORIAS.md#plano-vigente)). A defesa era o cookie
+`SameSite=Lax` mais o fato de a API só entender JSON. Isso barrava o caso
+comum, mas deixava passar o que um `<form>` de outra página consegue mandar
+sem preflight: multipart (importação de planilha, envio de pacote) e POST
+sem corpo (publicar, promover e reverter versão; sair). E o `SameSite`
+considera "o mesmo site" outros serviços do mesmo domínio.
+
+#### Decisão
+
+- **Token aleatório por sessão** (`req.session.csrf`, 32 bytes), criado no
+  login ou, para sessões anteriores a esta mudança, na primeira chamada.
+- **Entregue no cabeçalho `X-CSRF-Token` de toda resposta da API com
+  sessão**, inclusive a do login. Outra origem não lê essas respostas (sem
+  CORS), então não tem como saber o token.
+- **Exigido no mesmo cabeçalho em todo POST/PUT/PATCH/DELETE de `/api`**
+  (`middlewares/protecaoCsrf.js`), antes de qualquer rota e antes do
+  multer: uma escrita recusada não grava nada, nem o arquivo do upload.
+  Recusa: 403 `{error, codigo: "csrf"}`.
+- **Fora da regra:** pedido sem usuário na sessão (continua recebendo o 401
+  que leva ao login; cobre os agentes C#, que não usam cookie), login e
+  configuração inicial.
+- **O `ApiClient` guarda o último token visto e o manda nas escritas**,
+  inclusive no upload por XHR. Numa recusa com `codigo: "csrf"` (token de
+  uma sessão anterior: a pessoa saiu e entrou de novo em outra aba), busca
+  o atual em `/auth/status` e repete o pedido uma vez.
+
+#### Consequências
+
+- Nenhuma mudança visível para quem usa: o token circula sozinho, e a
+  atualização não derruba as sessões abertas.
+- Cliente de API novo que use sessão de navegador precisa ler e devolver o
+  cabeçalho. Os testes HTTP do servidor fazem isso por cookie.
+- Habilitar CORS no servidor, um dia, precisa rever este ADR: tanto o token
+  (legível por outra origem) quanto a proteção do login dependem de não haver.
+
+#### Alternativas consideradas
+
+- **Conferir o `Origin`/`Sec-Fetch-Site`:** sem estado nenhum, mas exige
+  comparar com o endereço pelo qual o painel foi acessado (nome, IP ou
+  localhost, através do proxy), e extensões de privacidade às vezes removem
+  o cabeçalho. O token depende só do nosso código e se testa sem navegador.
+- **Token no corpo ou em cookie legível pelo JS ("double submit"):** o
+  corpo não serve para multipart sem mexer em cada formulário; o cookie
+  legível exigiria tirar o `HttpOnly` de um cookie ou criar um segundo.
+- **Token novo a cada pedido:** quebra abas paralelas e pedidos simultâneos
+  sem proteção a mais contra o que importa aqui (outra origem não lê nenhum
+  dos dois).
+
+<a id="adr-0012"></a>
+### 4.13 ADR-0012 — Testes de navegador pelo protocolo do Chrome, sem Playwright
+
+**Situação:** Aceita (29/09/2026)
+
+#### Contexto
+
+`npm test` cobre regras e módulos, mas não roda os fluxos completos no
+navegador (P04 do [plano de melhorias](MELHORIAS.md#plano-vigente)): foco,
+teclado, o que fica por cima do quê, o que acontece quando a API falha no
+meio de um envio. A ferramenta óbvia seria o Playwright, mas o repositório
+não tem dependência de front-end nem etapa de build
+([ADR-0001](#adr-0001)), e o Playwright baixa centenas de megabytes de
+navegadores a cada instalação.
+
+#### Decisão
+
+- **O Chrome (ou Edge) já instalado, controlado pelo protocolo de depuração
+  (CDP)**, com um driver próprio em `navegador/apoio/` (~400 linhas): abre o
+  navegador sem janela, clica e digita com eventos de entrada de verdade,
+  espera, intercepta pedidos, lê a árvore de acessibilidade. O transporte é
+  o `WebSocket` que já vem no Node 22. Nenhuma dependência nova.
+- **Servidor de verdade num banco descartável** por arquivo de teste, porta
+  escolhida pelo sistema; dados de apoio entram pela API, o fluxo testado
+  entra pela tela.
+- **Fora do `npm test`** (`npm run test:navegador`): precisa do Chrome e leva
+  minutos. No CI roda em todo PR, com o Chrome do runner, e falha se ele
+  faltar (`EXIGIR_NAVEGADOR=1`); na máquina de quem desenvolve, pula com
+  aviso.
+- **Clique só acerta o que está por cima**, e "visível" inclui estar por
+  cima: um elemento coberto falha o teste. Foi assim que o primeiro teste
+  achou o modal aberto atrás da gaveta.
+- **Acessibilidade automática como apoio**: nome acessível em todo elemento
+  acionável, pela árvore do próprio Chrome. Contraste e sentido dos textos
+  continuam sendo revisão de gente.
+- **Sem comparação de imagens.** Capturas só como diagnóstico de falha
+  (`navegador/.falhas/`, fora do git); referência visual quebra a cada ajuste
+  de CSS sem apontar defeito.
+
+#### Consequências
+
+- Só Chromium é testado; Firefox e Safari não.
+- O driver é código nosso para manter. Em troca, é pequeno, sem versão de
+  navegador para casar, e o que ele faz está à vista num arquivo.
+- Seletores dos testes dependem dos `data-action`/`data-role` das telas —
+  renomear um deles quebra o teste de propósito.
+- O Node 22 passa a ser necessário para esta suíte (o `WebSocket` global);
+  o resto do projeto continua em Node 20+.
+
+#### Alternativas consideradas
+
+- **Playwright:** API melhor e vários navegadores, ao custo do download dos
+  navegadores e de uma dependência pesada num projeto que tem uma só de
+  desenvolvimento (o TypeScript do `check`).
+- **Puppeteer (`puppeteer-core`, sem baixar Chrome):** menor, mas ainda uma
+  dependência com versão de protocolo para acompanhar, para usar uma fração.
+- **axe-core para acessibilidade:** mais completo que a checagem de nome,
+  mas seria a primeira dependência de código que roda DENTRO da página.
+  Fica como próximo passo se a checagem própria não bastar.
+
 ---
 
 ## 5. Como verificar

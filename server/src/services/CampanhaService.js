@@ -70,10 +70,10 @@ class CampanhaService {
     return this.detalhe(id);
   }
 
-  /** Título, descrição e prazo. Sistema e versão-alvo são a meta: ficam como foram criados. */
+  /** Título, descrição, prazo e cidade. Sistema e versão-alvo são a meta: ficam como foram criados. */
   update(id, input, usuario) {
     const atual = this._achar(id);
-    const dados = this._validar({ ...input, sistema: atual.sistema, versaoAlvo: atual.versaoAlvo }, { nova: false });
+    const dados = this._validar({ ...input, cidade: input.cidade ?? atual.cidade, sistema: atual.sistema, versaoAlvo: atual.versaoAlvo }, { nova: false, cidadeAtual: atual.cidade });
     this.db.campanhas.update(atual.id, dados);
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${dados.titulo}"`);
     return this.detalhe(atual.id);
@@ -125,6 +125,7 @@ class CampanhaService {
       ["Sistema", campanha.sistema],
       ["Versão-alvo", campanha.versaoAlvo],
       ["Prazo", campanha.prazo || "Sem prazo"],
+      ["Cidade", campanha.cidade || "Todas as cidades"],
       ["Clientes na campanha", campanha.totalClientes],
       ["Atualizados", campanha.atendidos],
       ["Já agendados", campanha.agendados],
@@ -141,23 +142,26 @@ class CampanhaService {
     return campanha;
   }
 
-  _validar(input, { nova }) {
+  _validar(input, { nova, cidadeAtual = "" }) {
     const titulo = String(input.titulo || "").trim();
     const descricao = String(input.descricao || "").trim();
     const prazo = String(input.prazo || "").trim();
+    const cidadeInformada = String(input.cidade || "").trim();
+    const cidade = cidadeInformada ? [cidadeAtual, ...this.db.clientes.cidades()].find((item) => item.toLocaleLowerCase("pt-BR") === cidadeInformada.toLocaleLowerCase("pt-BR")) : "";
+    if (cidadeInformada && !cidade) throw new ValidationError("Escolha uma cidade cadastrada nos clientes.");
     const versaoAlvo = String(input.versaoAlvo || "").trim();
     if (!titulo) throw new ValidationError("Informe o título da campanha.");
     if (titulo.length > 120) throw new ValidationError("O título pode ter no máximo 120 caracteres.");
     if (descricao.length > 1000) throw new ValidationError("A descrição pode ter no máximo 1000 caracteres.");
     if (!dataValida(prazo)) throw new ValidationError("Campo 'Prazo' precisa estar no formato dd/mm/aaaa.");
-    if (!nova) return { titulo, descricao, prazo };
+    if (!nova) return { titulo, descricao, prazo, cidade };
     if (!versaoAlvo || !dataValida(versaoAlvo)) throw new ValidationError("Campo 'Versão-alvo' precisa estar no formato dd/mm/aaaa.");
     const sistema = this.db.sistemas.resolver(String(input.sistema || ""));
     if (!sistema || !sistema.ativo) throw new ValidationError("Escolha um sistema do catálogo.");
     // Fixos (B_Atualizador, Suporte Bredas) não têm versão para cobrar -- a
     // campanha nunca terminaria, e ficaria todo mundo "pendente" de nada.
     if (!contaParaVersao(sistema)) throw new ValidationError(`"${sistema.nome}" não controla versão e não pode ter campanha.`);
-    return { titulo, descricao, prazo, versaoAlvo, sistemaId: sistema.id, sistemaNome: sistema.nome };
+    return { titulo, descricao, prazo, cidade, versaoAlvo, sistemaId: sistema.id, sistemaNome: sistema.nome };
   }
 
   /** Tarefas em aberto por cliente, com os ids dos sistemas que cada uma cita. */
@@ -183,7 +187,7 @@ class CampanhaService {
       });
     }
     const { ultimas, cadastro } = porSistema.get(campanha.sistemaId);
-    const lista = cadastro.map(({ id, nome, codigo, cidade }) => {
+    const lista = cadastro.filter((cliente) => !campanha.cidade || (cliente.cidade || "").trim().toLocaleLowerCase("pt-BR") === campanha.cidade.toLocaleLowerCase("pt-BR")).map(({ id, nome, codigo, cidade }) => {
       const registro = ultimas.get(id);
       const { situacao: frente, pelaData } = situacaoDoSistema(registro, campanha.versaoAlvo);
       const agendamento = (agendas.get(id) || []).find((t) => t.sistemas.has(campanha.sistemaId));

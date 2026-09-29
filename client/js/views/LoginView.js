@@ -65,15 +65,17 @@ export class LoginView {
           ? "Esta é a primeira vez que o sistema é aberto. Crie a conta principal para começar a usar."
           : "Gestor de Atualizações"
       }</p>
-      <div class="auth-card__error"></div>
+      <div class="auth-card__error" role="alert"></div>
       <form>
-        ${isSetup ? `<div class="field"><label class="field__label">Seu nome</label><input class="input" type="text" name="nome" required autocomplete="name" /></div>` : ""}
+        ${isSetup ? `<div class="field"><label class="field__label" for="login-nome">Seu nome</label><input class="input" type="text" id="login-nome" name="nome" required autocomplete="name" /></div>` : ""}
         <div class="field">
-          <label class="field__label">Usuário</label>
-          <input class="input" type="text" name="usuario" required autocomplete="username" />
+          <!-- for/id: sem eles, o leitor de tela anunciava só "caixa de texto"
+               nos três campos (achado pelo teste de navegador). -->
+          <label class="field__label" for="login-usuario">Usuário</label>
+          <input class="input" type="text" id="login-usuario" name="usuario" required autocomplete="username" />
         </div>
         <div class="field">
-          <label class="field__label">Senha</label>
+          <label class="field__label" for="login-senha">Senha</label>
           <!--
             O olho de "mostrar senha" não é enfeite: a senha é digitada às
             cegas, e quando ela é longa (ou o teclado é de notebook, com o
@@ -81,7 +83,7 @@ export class LoginView {
             é digitá-la errado duas vezes seguidas sem nunca ver o que saiu.
           -->
           <div class="input-com-acao">
-            <input class="input" type="password" name="senha" required
+            <input class="input" type="password" id="login-senha" name="senha" required
                    autocomplete="${isSetup ? "new-password" : "current-password"}" />
             <button type="button" class="input-acao" data-action="ver-senha"
                     aria-label="Mostrar a senha" aria-pressed="false" title="Mostrar a senha">${icon("olho")}</button>

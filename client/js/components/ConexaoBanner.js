@@ -6,7 +6,7 @@ const INTERVALO_MS = 5000;
 /**
  * A faixa de "sem conexão com o servidor", no alto da tela.
  *
- * O servidor deste app é um serviço do Windows numa máquina da rede local, e
+ * O servidor deste app roda num container numa máquina da rede local, e
  * ele reinicia: atualização do Gestor, reboot da máquina, queda do switch.
  * Até agora isso era invisível para quem estava com o app aberto -- a tela
  * continuava mostrando os dados de antes (que é o certo: dado velho é melhor

@@ -177,9 +177,14 @@ test("Importação - permissões da prévia e da importação", async (t) => {
     try { server.db.close(); } catch { /* ignore */ }
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
+  // O navegador guarda o token CSRF que vem com cada sessão e o devolve nas
+  // escritas (ver middlewares/protecaoCsrf.js); aqui, por cookie.
+  const tokens = new Map();
   const json = async (caminho, corpo, cookie) => {
-    const r = await fetch(`${base}${caminho}`, { method: "POST", headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) }, body: JSON.stringify(corpo) });
-    return { r, cookie: r.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ") };
+    const r = await fetch(`${base}${caminho}`, { method: "POST", headers: { "content-type": "application/json", ...(cookie ? { cookie, "x-csrf-token": tokens.get(cookie) ?? "" } : {}) }, body: JSON.stringify(corpo) });
+    const novoCookie = r.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+    if (r.headers.get("x-csrf-token")) tokens.set(novoCookie || cookie, r.headers.get("x-csrf-token"));
+    return { r, cookie: novoCookie };
   };
   const SENHA = "senha-de-teste-123";
   const admin = (await json("/auth/setup", { nome: "Admin", usuario: "admin", senha: SENHA })).cookie;
@@ -190,7 +195,7 @@ test("Importação - permissões da prévia e da importação", async (t) => {
     const form = new FormData();
     form.append("arquivo", new Blob([arquivo]), "atualizacoes.xlsx");
     for (const [k, v] of Object.entries(extra)) form.append(k, v);
-    const r = await fetch(`${base}${caminho}`, { method: "POST", headers: { cookie }, body: form });
+    const r = await fetch(`${base}${caminho}`, { method: "POST", headers: { cookie, "x-csrf-token": tokens.get(cookie) ?? "" }, body: form });
     return { status: r.status, corpo: await r.json().catch(() => null) };
   };
 
