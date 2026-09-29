@@ -27,6 +27,11 @@ npm-debug.log*
 # segurança de quem está mexendo, redundantes com o próprio commit.
 _backup/
 
+# Capturas de tela que os testes de navegador salvam quando um passo falha
+# (navegador/apoio/pagina.mjs): diagnóstico da máquina de quem rodou, não
+# referência visual -- mudam a cada execução.
+navegador/.falhas/
+
 # Diretório local do Claude Code (worktrees, configurações da máquina). Hoje
 # está vazio, mas num repositório público vale ignorar antes: o que cai ali
 # são caminhos e preferências desta máquina, não código do projeto.

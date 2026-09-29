@@ -973,12 +973,22 @@ export class AtualizacoesView extends View {
    * exatamente o oposto do que a pessoa pediu ao filtrar.
    */
   async exportXlsx() {
-    const blob = await this.api.getFile("/atualizacoes/export", {
-      search: this.busca,
-      responsavel: this.responsavel,
-      desde: this.desde,
-      ate: this.ate,
-    });
+    let blob;
+    try {
+      blob = await this.api.getFile("/atualizacoes/export", {
+        search: this.busca,
+        responsavel: this.responsavel,
+        desde: this.desde,
+        ate: this.ate,
+      });
+    } catch (err) {
+      // Antes não havia catch: uma exportação recusada (acima do limite de
+      // linhas, período inválido) ou falha de rede não mostrava NADA -- o
+      // botão voltava ao normal e o arquivo simplesmente não vinha (P05).
+      if (err?.status === 401) return; // já tratado pelo ApiClient (login)
+      Modal.alert("Não foi possível exportar", errorMessage(err), "warning");
+      return;
+    }
     // Nome identifica o recorte: com período fica "atualizacoes_01-09-2026_25-09-2026.xlsx"
     const sufixo = this.desde || this.ate
       ? `_${(this.desde || "inicio").replace(/\//g, "-")}_${(this.ate || "fim").replace(/\//g, "-")}`

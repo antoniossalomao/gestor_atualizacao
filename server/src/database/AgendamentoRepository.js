@@ -1,7 +1,18 @@
 const { BaseRepository } = require("./BaseRepository");
 const { DATE_SORT_EXPR, titleCase } = require("./AtualizacaoRepository");
 const { buildOrderBy } = require("../shared/sortHelper");
-const { FILTRO_ARQUIVADAS } = require("../config/constants");
+const { FILTRO_ARQUIVADAS, STATUS_OPTIONS } = require("../config/constants");
+
+const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+
+/**
+ * Hoje no relógio LOCAL, na forma aaaammdd de DATE_SORT_EXPR. Local, e não
+ * UTC, pelo mesmo motivo do TZ no Dockerfile: das 21h à meia-noite de
+ * Brasília o UTC já é amanhã.
+ */
+function hojeOrdenavel(agora = new Date()) {
+  return `${agora.getFullYear()}${String(agora.getMonth() + 1).padStart(2, "0")}${String(agora.getDate()).padStart(2, "0")}`;
+}
 
 const COLUMNS = ["tarefa", "cliente", "sistema", "responsavel", "prioridade", "data", "horario", "status", "obs"];
 
@@ -53,7 +64,13 @@ class AgendamentoRepository extends BaseRepository {
    * Uma página de tarefas, pendentes primeiro (ordenadas por data),
    * concluidas no final. Devolve `{ rows, total, page, pageSize }`.
    */
-  list(search = "", status = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, prioridade } = {}) {
+  /**
+   * @param {{page?: number, pageSize?: number, sortBy?: string, sortDir?: string, prioridade?: string,
+   *   quando?: string}} [opcoes] `quando`: "hoje" (data de hoje) ou "atrasadas" (data anterior a
+   *   hoje e não concluída -- a mesma regra do selo "Vencida" do cartão, em
+   *   client/js/templates/agendamentos.js). Outro valor é ignorado.
+   */
+  list(search = "", status = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, prioridade, quando } = {}) {
     const clauses = [];
     const params = {};
     if (search) {
@@ -75,6 +92,18 @@ class AgendamentoRepository extends BaseRepository {
     if (prioridade && prioridade !== "Todas") {
       clauses.push("prioridade = @prioridade");
       params.prioridade = prioridade;
+    }
+    // Os botões "Hoje" e "Atrasadas" da tela. Antes eles escreviam uma DATA
+    // (ou "__atrasadas__") na busca -- que só procura em tarefa, cliente e
+    // responsável --, e os dois devolviam sempre "nenhuma tarefa", em
+    // silêncio. Achado ao mapear AgendamentosView para a P06.
+    if (quando === "hoje") {
+      clauses.push(`${DATE_SORT_EXPR} = @hoje`);
+      params.hoje = hojeOrdenavel();
+    } else if (quando === "atrasadas") {
+      clauses.push(`data != '' AND ${DATE_SORT_EXPR} < @hoje AND status != @concluido`);
+      params.hoje = hojeOrdenavel();
+      params.concluido = STATUS_CONCLUIDO;
     }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 
@@ -283,11 +312,7 @@ class AgendamentoRepository extends BaseRepository {
    * ou anterior -- usadas pelo banner de lembrete que aparece ao abrir o app.
    */
   dueSoon() {
-    const hoje = new Date();
-    const cutoff =
-      `${hoje.getFullYear()}` +
-      `${String(hoje.getMonth() + 1).padStart(2, "0")}` +
-      `${String(hoje.getDate()).padStart(2, "0")}`;
+    const cutoff = hojeOrdenavel();
     const sql = `
       SELECT id, ${COLUMNS.join(", ")} FROM ${this.table}
       WHERE status NOT IN ('Concluído', 'Sem resposta') AND data != '' AND ${DATE_SORT_EXPR} <= @cutoff

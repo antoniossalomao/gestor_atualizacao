@@ -67,7 +67,17 @@ test("ClienteService - cadastro", async (t) => {
       const c = env.service.create({ nome: "Só o nome" }, USUARIO);
       assert.equal(c.codigo, "");
       assert.equal(c.cidade, "");
+      assert.equal(c.regimeTributario, "");
       assert.deepEqual(c.sistemas, []);
+    });
+
+    await t.test("regime tributário pode ser preenchido, alterado e limpo", () => {
+      const criado = env.service.create({ nome: "Cliente Fiscal", regimeTributario: "Simples Nacional" }, USUARIO);
+      assert.equal(criado.regimeTributario, "Simples Nacional");
+      const alterado = env.service.update(criado.id, { nome: criado.nome, regimeTributario: "Lucro Presumido", revisao: criado.revisao }, USUARIO);
+      assert.equal(alterado.regimeTributario, "Lucro Presumido");
+      assert.equal(env.service.list("Presumido").rows[0].id, criado.id);
+      assert.equal(env.service.update(criado.id, { nome: criado.nome, regimeTributario: "", revisao: alterado.revisao }, USUARIO).regimeTributario, "");
     });
 
     await t.test("bordas do nome são aparadas", () => {

@@ -24,6 +24,10 @@ class ClientesController {
     res.json(this.clienteService.grupos());
   };
 
+  cidades = (req, res) => {
+    res.json(this.clienteService.cidades());
+  };
+
   getByNome = (req, res) => {
     res.json(this.clienteService.getByNome(req.params.nome));
   };

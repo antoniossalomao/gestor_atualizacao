@@ -52,6 +52,32 @@ testes novos:
   `find(id)` com o id vindo de `SELECT MAX(id)`, não a última linha da lista.
 - `list()` não traz `criado_em`/`concluido_em`; só `find(id)` traz.
 
+### Testes de navegador
+
+```bash
+npm run test:navegador    # fluxos completos num Chrome sem janela (~2 min)
+node --test navegador/login.test.mjs   # um arquivo só
+```
+
+Sobem um `Server` de verdade num banco descartável e controlam o Chrome (ou
+Edge) já instalado pelo protocolo de depuração — sem Playwright, sem baixar
+navegador ([ADR-0012](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0012)). Cobrem
+login e sessão, atendimentos (criar, editar, conflito, falha da API, filtro,
+relatório, exclusão), tarefas, campanhas, importação, teclado e foco, nome
+acessível em tudo que se aciona e rolagem horizontal nas larguras de uso.
+
+- **Não fazem parte do `npm test`**: precisam do Chrome e levam minutos. Rode
+  sempre que mexer em tela, componente ou CSS; o CI roda em todo PR.
+- Sem Chrome, os testes são pulados com aviso. Chrome em outro lugar:
+  `CHROME_PATH=...`.
+- Um passo que falha salva a tela em `navegador/.falhas/` (fora do git) — é a
+  primeira coisa a olhar.
+- Cliques e teclas são eventos de entrada de verdade: um botão coberto por
+  outro elemento **falha o teste**, como falharia para a pessoa. Não troque
+  `pagina.clicar` por `elemento.click()` para "fazer passar".
+- Dados de apoio (clientes, atendimentos de exemplo) entram pela API
+  (`amb.api`), não pela tela: o que se testa pela tela é o fluxo.
+
 ### Verificação de tipos
 
 ```bash

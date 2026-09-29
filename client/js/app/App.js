@@ -1074,6 +1074,10 @@ export class App {
     return instance.refresh().catch((error) => {
       if (error instanceof RequestCancelled) return;
       if (error?.status === 401) return; // já tratado por api.onUnauthorized
+      // A própria tela já mostra o aviso fixo, com o motivo e "Tentar
+      // novamente" (View.swr). Toast em cima seria o mesmo recado duas vezes,
+      // e de novo a cada tentativa.
+      if (error?.avisadoNaTela) return;
       toast.error("Não foi possível carregar os dados desta tela.");
     });
   }

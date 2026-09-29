@@ -18,6 +18,7 @@ Os comandos assumem que você está no servidor onde o painel roda, na pasta
 | O que a pessoa diz | Vá para |
 |---|---|
 | "O painel não abre" / "deu erro de conexão" | [Servidor fora do ar](#servidor-fora-do-ar) |
+| Faixa vermelha "Sem conexão com o servidor" no alto, ou aviso amarelo "Não foi possível atualizar" numa tela | [Servidor fora do ar](#servidor-fora-do-ar) (se o aviso diz "erro ao buscar os dados", veja o log do `gestor`) |
 | "Ninguém consegue entrar" | [Ninguém consegue entrar](#ninguém-consegue-entrar) |
 | "Esqueci minha senha" | [Recuperar acesso](#recuperar-acesso-de-uma-conta) |
 | "O cliente X não está atualizando" | [Agente parado](#um-agente-parou-de-atualizar) |
@@ -30,34 +31,41 @@ Os comandos assumem que você está no servidor onde o painel roda, na pasta
 
 ## Servidor fora do ar
 
-**Sintoma:** o navegador diz "não foi possível acessar esse site".
+**Sintoma:** o navegador diz "não foi possível acessar esse site". Com o
+painel já aberto: a faixa vermelha "Sem conexão com o servidor" no alto e,
+nas telas, o aviso "Não foi possível atualizar. Mostrando os dados de …" —
+os números na tela são daquele horário, não de agora. Com o `proxy` de pé e
+o `gestor` caído, o aviso diz "O servidor do painel não está respondendo".
+Os dois somem sozinhos quando o servidor volta.
 
-1. **O serviço está rodando?**
+1. **Os containers estão de pé?** Na pasta `web/` do servidor:
    ```powershell
-   Get-Service -Name "*gestor*"
+   docker compose ps
    ```
-   Parado → `Start-Service <nome>` (como administrador).
+   `gestor` precisa estar `healthy` e `proxy` rodando. Parado →
+   `docker compose up -d`.
 
-2. **Subiu e caiu na hora?** Os logs ficam em `server/logs/`:
+2. **Subiu e caiu na hora?** O motivo fica no log do container:
    ```powershell
-   Get-Content server\logs\service-err.log -Tail 40
+   docker compose logs --tail 40 gestor
+   docker compose logs --tail 40 proxy
    ```
 
 3. **Causas mais comuns**, em ordem de frequência:
 
    | No log aparece | Causa | O que fazer |
    |---|---|---|
-   | `EADDRINUSE` | outra coisa já usa a porta | `Get-NetTCPConnection -LocalPort 3000` e decida quem fica |
-   | `SQLITE_CANTOPEN` | caminho do `DB_PATH` errado, ou unidade de rede fora | conferir `server/.env` e se o caminho existe |
-   | `SQLITE_BUSY` / `database is locked` | duas instâncias abrindo o mesmo banco | garantir que só o serviço está rodando (ninguém com `npm start` aberto) |
-   | `Cannot find module` | `npm install` não rodou depois de uma atualização | `npm ci --prefix server` |
+   | `port is already allocated` (ao dar `up`) | outra coisa já usa a 443 (IIS, outro site) | `Get-NetTCPConnection -LocalPort 443` e decida quem fica, ou mude a porta do `proxy` no `docker-compose.yml` |
+   | `defina GESTOR_ENDERECO` (ao dar `up`) | falta o `web/.env` | copiar `web/.env.example` para `web/.env` e ajustar |
+   | `O servidor NÃO foi iniciado: SESSION_SECRET ...` | `server/.env` ausente ou com o segredo de exemplo | ver "Primeira vez" em "Rodar em Docker" no README |
+   | `O servidor NÃO foi iniciado: SESSION_SECURE ...` / `TRUST_PROXY ...` | alguém mexeu nessas variáveis | no Docker elas vêm fixas do `docker-compose.yml`; desfaça a mudança |
+   | `SQLITE_CANTOPEN` | caminho do `DB_PATH` errado | conferir `server/.env` (no Docker, deixe o padrão) |
+   | `SQLITE_BUSY` / `database is locked` | duas instâncias abrindo o mesmo banco | garantir que ninguém está com `npm start` aberto no mesmo banco |
 
-4. **Para ver o erro na cara**, sem o serviço no meio:
-   ```powershell
-   npm start --prefix server
-   ```
-   Isso escreve no terminal em vez do log. `Ctrl+C` para sair — e **pare o
-   serviço antes**, senão os dois brigam pelo mesmo banco.
+4. **Nome não encontrado** ("não foi possível encontrar o endereço IP do
+   servidor"): o problema é o nome, não o painel. Confira o DNS da empresa ou
+   o `hosts` daquele PC — ver "Nome em vez de IP" no README. Se funciona pelo
+   IP e não pelo nome, é isto.
 
 ---
 
@@ -66,18 +74,14 @@ Os comandos assumem que você está no servidor onde o painel roda, na pasta
 **Sintoma:** a tela de login aceita a senha e volta para o login, ou diz
 "não autenticado" sem explicação.
 
-Quase sempre é **cookie de sessão que não chega**. Três causas conhecidas:
+Quase sempre é **cookie de sessão que não chega**. Duas causas conhecidas:
 
-1. **`SESSION_SECURE=true` sem HTTPS.** Com essa opção ligada, o navegador só
-   manda o cookie por conexão segura. Se o acesso é `http://192.168.x.x:3000`,
-   o cookie nunca volta e o login "não gruda", sem erro nenhum.
-   → No `.env`, `SESSION_SECURE=false` para rede local. Reinicie o serviço.
+1. **Acesso por `http://` ou pela porta 3000.** Na rede, o painel só atende
+   `https://` + o endereço oficial (o `GESTOR_ENDERECO` do `web/.env`). Por
+   `http://` ele nem responde; batendo direto no Node, recusa com "só aceita
+   conexões HTTPS".
 
-2. **Proxy reverso sem `trust proxy` do lado de lá.** O app já confia em um
-   proxy (`app.set("trust proxy", 1)`), mas o proxy precisa repassar
-   `X-Forwarded-Proto`. Sem isso, o Express acha que a conexão é HTTP.
-
-3. **`SESSION_SECRET` mudou.** Trocar esse valor invalida todas as sessões —
+2. **`SESSION_SECRET` mudou.** Trocar esse valor invalida todas as sessões —
    é o comportamento correto, e todo mundo só precisa entrar de novo. Se isso
    aconteceu sem ninguém ter mexido, alguém recriou o `.env` a partir do
    `.env.example`, e aí o segredo voltou a ser o valor público de exemplo.
@@ -94,7 +98,7 @@ Não há envio de e-mail neste sistema — de propósito. O fator de recuperaç�
 **ter acesso ao arquivo do banco**, o que só quem chega no servidor tem.
 
 ```powershell
-npm run resetar-senha --prefix server -- <usuario> "<nova senha>"
+docker compose exec gestor node resetar-senha.js <usuario> "<nova senha>"
 ```
 
 Funciona mesmo para o único administrador, e não exige saber a senha antiga.
@@ -143,7 +147,7 @@ Investigue nesta ordem — do mais provável para o menos:
 
 4. **O endereço para os agentes está certo?** (Administração → Atualizador →
    "Endereço deste servidor para os agentes".) Esta é a armadilha clássica: se
-   estiver `http://localhost:3000`, o link de download que o agente recebe
+   estiver `https://localhost`, o link de download que o agente recebe
    aponta para **ele mesmo**, e o download falha sempre. Tem que ser o endereço
    pelo qual *os outros* enxergam o servidor. Se o IP veio de DHCP e mudou, é
    isto. Atenção: o link vai gravado no pacote no momento do upload -- pacote
@@ -220,12 +224,7 @@ simplesmente param de se comunicar, como se estivessem offline.
    `index.html`, então o console aponta o caminho certo. Confira se o arquivo
    está onde o import diz.
 
-3. **Tudo falhando em silêncio, e o acesso é por IP** (não `localhost`): pode
-   ser `upgrade-insecure-requests` no cabeçalho CSP mandando o navegador buscar
-   tudo por HTTPS, que não existe aqui. Essa diretiva está desligada de
-   propósito em `Server.js` — se alguém reativou o padrão do `helmet`, é isso.
-
-4. **Só o estilo sumiu:** `/css/theme.css` ou `/css/components.css` deu 404.
+3. **Só o estilo sumiu:** `/css/theme.css` ou `/css/components.css` deu 404.
 
 ---
 
@@ -237,22 +236,26 @@ volume atual isso é teórico, mas se acontecer:
 
 1. **Confira o tamanho do banco** em **Administração → Saúde do servidor**.
 2. **Alguém pediu uma página gigante?** O `pageSize` tem teto de 200 no
-   servidor, então não é isso — mas exportação de `.xlsx` de milhares de linhas
-   é legitimamente pesada e bloqueia enquanto roda.
+   servidor, então não é isso. Importação e exportação de planilha travam o
+   processo enquanto rodam, mas têm limite (5.000 e 10.000 linhas — no limite,
+   ~3 s e ~2 s na máquina de produção; ver `server/src/config/limitesPlanilha.js`).
+   "A planilha tem mais de 5.000 linhas" e "A exportação teria N linhas" são
+   essa proteção funcionando: divida o arquivo, ou filtre por período. Antes
+   de subir um limite, rode `node server/ferramentas/medir-planilhas.js`.
 3. **O arquivo `-wal` cresceu muito?** Acontece quando o banco fica muito tempo
-   sem fechar direito. Reiniciar o serviço faz o *checkpoint*.
+   sem fechar direito. `docker compose restart gestor` faz o *checkpoint*.
 
 ---
 
 ## Espaço em disco
 
-Três coisas crescem sozinhas:
+Duas coisas crescem sozinhas (o log sai em `docker compose logs`, que o
+Docker guarda com o container):
 
 | Pasta | O que é | Pode apagar? |
 |---|---|---|
 | `server/data/backups/` | cópias do banco na subida | as 10 mais recentes são mantidas automaticamente; as antigas já saem sozinhas |
 | `server/data/packages/` | pacotes de versão servidos aos agentes | **cuidado**: um pacote apagado quebra o download de quem ainda não atualizou |
-| `server/logs/` | saída do serviço | sim, os rotacionados antigos |
 
 O painel de **Saúde** mostra o total e o tamanho dos pacotes. (Esse número ficou
 zerado por um bug até set/2026 — se você lembra dele sempre mostrando zero, era

@@ -112,11 +112,14 @@ class SistemaRepository extends BaseRepository {
    * guarda o que foi digitado sem inventar outro destino, e o nome não
    * aparece nas telas de cadastro até alguém ativá-lo em "+ Novo Sistema".
    * @param {string[]} nomes
+   * @param {ReturnType<SistemaRepository["todos"]>} [catalogo] o catálogo já
+   *   lido, para quem resolve MUITAS listas seguidas (a importação, uma por
+   *   linha): sem ele, cada chamada lia a tabela inteira de novo. Um sistema
+   *   criado aqui entra nesse mesmo array, e a linha seguinte já o encontra.
    * @returns {{id: number, nome: string}[]}
    */
-  resolverOuCriar(nomes) {
-    const catalogo = this.todos();
-    const inserir = this.conn.prepare("INSERT INTO sistemas (nome, ativo) VALUES (?, 0)");
+  resolverOuCriar(nomes, catalogo = this.todos()) {
+    const inserir = this._preparado("INSERT INTO sistemas (nome, ativo) VALUES (?, 0)");
     const saida = [];
     for (const bruto of nomes) {
       const nome = String(bruto || "").trim();

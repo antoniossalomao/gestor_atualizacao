@@ -8,6 +8,8 @@ const { normalizarSistemas, normalizarResponsavel } = require("../shared/normali
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
 const { situacaoDoSistema, situacaoDoCliente, contaParaVersao } = require("./situacaoVersao");
 const { acharSistema } = require("../database/SistemaRepository");
+const { LIMITE_LINHAS_IMPORTACAO, LIMITE_LINHAS_EXPORTACAO } = require("../config/limitesPlanilha");
+const { contarLinhasXlsx } = require("./contarLinhasXlsx");
 
 // Sentinela: cliente nunca atualizado, sempre no topo da lista de
 // pendencias (ninguem esta "mais atrasado" do que quem nunca foi atualizado).
@@ -215,8 +217,9 @@ class AtualizacaoService {
   }
 
   /** Os sistemas do atendimento, resolvidos no catálogo (ver SistemaRepository.resolverOuCriar). */
-  _resolverSistemas(data) {
-    const lista = this.db.sistemas.resolverOuCriar(splitSystems(data.sistema));
+  /** @param {Array<any>} [catalogo] ver SistemaRepository.resolverOuCriar */
+  _resolverSistemas(data, catalogo) {
+    const lista = this.db.sistemas.resolverOuCriar(splitSystems(data.sistema), catalogo);
     // O nome que fica é o do catálogo: "Vendas" digitado vira "B_Vendas".
     data.sistema = lista.map((s) => s.nome).join(", ");
     return lista;
@@ -302,11 +305,17 @@ class AtualizacaoService {
   }
 
   relatorioPeriodo(search = "", responsavel = "Todos", periodo = {}) {
-    for (const data of [periodo.desde, periodo.ate]) {
-      if (data && !dataValida(data)) throw new ValidationError("Período inválido.");
-    }
-    if (periodo.desde && periodo.ate && parseData(periodo.desde) > parseData(periodo.ate)) throw new ValidationError("A data inicial deve ser anterior à final.");
-    const registros = this.db.atualizacoes.exportAll(search, responsavel, periodo);
+    validarPeriodo(periodo);
+    return this._resumoPeriodo(this.db.atualizacoes.exportAll(search, responsavel, periodo), { search, responsavel, periodo });
+  }
+
+  /**
+   * As contagens do relatório sobre registros JÁ lidos. Separado de
+   * relatorioPeriodo para a exportação montar a aba Resumo com a mesma lista
+   * da aba de dados: antes ela consultava o histórico inteiro duas vezes, e
+   * guardava as duas cópias na memória ao mesmo tempo (medido: P05).
+   */
+  _resumoPeriodo(registros, { search, responsavel, periodo }) {
     const contar = (extrair) => {
       const mapa = new Map();
       for (const registro of registros) for (const nome of new Set(extrair(registro))) {
@@ -582,9 +591,11 @@ class AtualizacaoService {
     const leitura = await this._lerPlanilha(buffer);
     const aplicar = leitura.linhas.filter((l) => !l.erro && !(pularDuplicadas && l.duplicada));
     const naoCadastrados = new Set();
+    // Lido uma vez para o lote todo, e não uma por linha (medido: P05).
+    const catalogo = this.db.sistemas.todos();
     this.db.conn.transaction(() => {
       for (const { registro } of aplicar) {
-        const sistemas = this._versoesLegadas(registro, this._resolverSistemas(registro));
+        const sistemas = this._versoesLegadas(registro, this._resolverSistemas(registro, catalogo));
         const linha = this._paraTabela(registro);
         if (linha.cliente_id == null) naoCadastrados.add(registro.cliente);
         this.db.atualizacoes.insert(linha, sistemas);
@@ -616,17 +627,11 @@ class AtualizacaoService {
    * @param {Buffer} buffer
    */
   async _lerPlanilha(buffer) {
-    const workbook = new ExcelJS.Workbook();
-    try {
-      await workbook.xlsx.load(buffer);
-    } catch {
-      throw new ValidationError("Não foi possível abrir o arquivo. Envie uma planilha Excel (.xlsx) sem senha.");
-    }
-    const ws = workbook.worksheets[0];
-    if (!ws || ws.rowCount < 1) throw new ValidationError("A planilha está vazia: a primeira aba precisa ter ao menos uma linha.");
+    const brutas = await lerLinhasDaPlanilha(buffer, LIMITE_LINHAS_IMPORTACAO);
+    if (brutas.length === 0) throw new ValidationError("A planilha está vazia: a primeira aba precisa ter ao menos uma linha.");
 
     const expected = COLUMNS.map((c) => c.key);
-    const cabecalho = rowToStrings(ws.getRow(1)).map((h) => h.trim());
+    const cabecalho = (brutas[0].numero === 1 ? brutas[0].valores : []).map((h) => h.trim());
     const colMap = {};
     const colunasIgnoradas = [];
     cabecalho.forEach((h, idx) => {
@@ -653,9 +658,8 @@ class AtualizacaoService {
     const existentes = new Set(this.db.atualizacoes.linhasParaDuplicidade().map((l) => chaveDuplicidade(l.cliente, l.data, l.sistema, catalogo)));
     const vistas = new Set();
     const linhas = [];
-    for (let r = primeira; r <= ws.rowCount; r++) {
-      const valores = rowToStrings(ws.getRow(r));
-      if (valores.every((v) => v === "")) continue;
+    for (const { numero: r, valores } of brutas) {
+      if (r < primeira) continue;
       const record = {};
       expected.forEach((key, idx) => {
         const pos = semCabecalho ? idx : colMap[key];
@@ -726,7 +730,18 @@ class AtualizacaoService {
     const workbook = new ExcelJS.Workbook();
     const ws = workbook.addWorksheet("Atualizações");
     ws.addRow(COLUMNS.map((c) => c.label));
-    for (const row of this.db.atualizacoes.exportAll(search, responsavel, periodo)) {
+    validarPeriodo(periodo);
+    // Conta ANTES de ler: acima do limite, recusa sem montar nada na memória
+    // (ver config/limitesPlanilha.js).
+    const total = this.db.atualizacoes.contarFiltrados(search, responsavel, periodo);
+    if (total > LIMITE_LINHAS_EXPORTACAO) {
+      throw new ValidationError(
+        `A exportação teria ${total.toLocaleString("pt-BR")} linhas; o limite é ${LIMITE_LINHAS_EXPORTACAO.toLocaleString("pt-BR")}. ` +
+          "Filtre por período (botão Filtros) e exporte em partes."
+      );
+    }
+    const registros = this.db.atualizacoes.exportAll(search, responsavel, periodo);
+    for (const row of registros) {
       ws.addRow(COLUMNS.map((c) => row[c.key]));
     }
     ws.views = [{ state: "frozen", ySplit: 1 }];
@@ -735,13 +750,21 @@ class AtualizacaoService {
     ws.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
     ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF24476B" } };
     ws.eachRow((row) => { row.alignment = { vertical: "top", wrapText: true }; });
-    const resumo = this.relatorioPeriodo(search, responsavel, periodo);
+    const resumo = this._resumoPeriodo(registros, { search, responsavel, periodo });
     const meta = workbook.addWorksheet("Resumo");
     meta.addRows([["Relatório de atualizações"], ["De", periodo.desde || "Sem limite"], ["Até", periodo.ate || "Sem limite"], ["Busca", search || "Todas"], ["Responsável", responsavel], ["Atualizações", resumo.total], ["Clientes distintos", resumo.clientes], [], ["Sistema", "Atualizações"], ...resumo.porSistema.map((r) => [r.nome, r.total]), [], ["Responsável", "Atualizações"], ...resumo.porResponsavel.map((r) => [r.nome, r.total])]);
     meta.columns = [{ width: 38 }, { width: 35 }];
     meta.getRow(1).font = { bold: true, size: 16 };
     return workbook.xlsx.writeBuffer();
   }
+}
+
+/** Período do relatório e da exportação: datas válidas, e a inicial antes da final. */
+function validarPeriodo(periodo) {
+  for (const data of [periodo.desde, periodo.ate]) {
+    if (data && !dataValida(data)) throw new ValidationError("Período inválido.");
+  }
+  if (periodo.desde && periodo.ate && parseData(periodo.desde) > parseData(periodo.ate)) throw new ValidationError("A data inicial deve ser anterior à final.");
 }
 
 /**
@@ -765,21 +788,67 @@ function chaveDuplicidade(cliente, data, sistema, catalogo) {
   return `${String(cliente || "").trim().toLowerCase()}|${data || ""}|${sistemas}`;
 }
 
-/** Todas as celulas de uma linha do exceljs como strings (numero/data viram texto; vazio vira ""). */
-function rowToStrings(row) {
-  const out = [];
-  // row.values[0] nao existe (exceljs comeca em 1); percorremos ate row.cellCount.
-  for (let i = 1; i <= row.cellCount; i++) {
-    const cell = row.getCell(i);
-    out[i - 1] = cellToString(cell.value);
+/**
+ * As linhas preenchidas da PRIMEIRA aba, como texto (número e data viram
+ * texto; célula vazia vira ""), recusando planilha acima do limite.
+ *
+ * Duas barreiras, porque o `workbook.xlsx.load` do ExcelJS monta a planilha
+ * INTEIRA na memória antes de dar para contar uma linha sequer:
+ *  1. antes do load, a contagem barata de <row> no zip (contarLinhasXlsx),
+ *     com folga de 2x -- é o teto de MEMÓRIA: um arquivo errado de 50 mil
+ *     linhas é recusado sem custar 1,75 GB (medido, P05);
+ *  2. depois do load, o limite exato, de linhas PREENCHIDAS.
+ * Nos dois casos nada é gravado: a leitura vem antes da transação.
+ *
+ * Linhas totalmente vazias ficam de fora; `numero` é o da planilha, que é o
+ * que a tela mostra ao apontar uma linha com erro.
+ *
+ * @param {Buffer} buffer
+ * @param {number} limite linhas de dados aceitas (o cabeçalho não conta)
+ * @returns {Promise<Array<{numero: number, valores: string[]}>>}
+ */
+async function lerLinhasDaPlanilha(buffer, limite) {
+  const grande = () =>
+    new ValidationError(
+      `A planilha tem mais de ${limite.toLocaleString("pt-BR")} linhas, o limite por importação. ` +
+        "Divida o arquivo em partes menores e importe uma de cada vez. Nada foi gravado."
+    );
+  const aproximado = contarLinhasXlsx(buffer);
+  if (aproximado !== null && aproximado > (limite + 1) * 2) throw grande();
+
+  const workbook = new ExcelJS.Workbook();
+  try {
+    await workbook.xlsx.load(buffer);
+  } catch {
+    throw new ValidationError("Não foi possível abrir o arquivo. Envie uma planilha Excel (.xlsx) sem senha.");
   }
-  return out;
+  const ws = workbook.worksheets[0];
+  if (!ws) return [];
+  const linhas = [];
+  for (let r = 1; r <= ws.rowCount; r++) {
+    const row = ws.getRow(r);
+    const valores = [];
+    // row.values[0] não existe (o ExcelJS começa em 1).
+    for (let i = 1; i <= row.cellCount; i++) valores[i - 1] = cellToString(row.getCell(i).value);
+    if (valores.every((v) => v === "")) continue;
+    linhas.push({ numero: r, valores });
+    // +1: o cabeçalho, quando houver, também é uma linha lida aqui.
+    if (linhas.length > limite + 1) throw grande();
+  }
+  return linhas;
 }
 
 function cellToString(value) {
   if (value === null || value === undefined || value === "") return "";
   if (value instanceof Date) return formatDate(value);
-  if (typeof value === "object" && value.text) return String(value.text);
+  if (typeof value === "object") {
+    // Texto com formatação (parte em negrito, cor): antes virava
+    // "[object Object]" -- e era gravado assim, em silêncio.
+    if (Array.isArray(value.richText)) return value.richText.map((t) => t.text ?? "").join("");
+    if (value.text != null) return String(value.text); // hiperlink
+    // Fórmula: vale o resultado calculado que o Excel guardou no arquivo.
+    if ("result" in value) return cellToString(value.result);
+  }
   return String(value);
 }
 

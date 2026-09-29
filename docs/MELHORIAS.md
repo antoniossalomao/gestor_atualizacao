@@ -45,16 +45,31 @@ conforme a configuração; `server/server.js` lê `SESSION_SECURE` e `TRUST_PROX
 possível de HTTP em rede local. O risco depende de como cada instalação é
 acessada; não foi feita auditoria da infraestrutura instalada.
 
-- [ ] Inventariar os endereços usados pela equipe, inclusive acesso remoto,
-      dispositivos móveis e eventual proxy já existente.
-- [ ] Definir URL canônica HTTPS e certificado confiável para os navegadores da
-      equipe. Registrar quem renova o certificado.
-- [ ] Ajustar o proxy e `TRUST_PROXY` para a quantidade real de saltos; impedir
-      acesso direto à porta HTTP a partir de redes não previstas.
-- [ ] Ativar `SESSION_SECURE=true` somente depois que o proxy HTTPS estiver
-      funcional; verificar login, renovação e encerramento da sessão.
-- [ ] Atualizar instruções de instalação e recuperação em `README.md`,
+- [x] Inventariar os endereços usados pela equipe, inclusive acesso remoto,
+      dispositivos móveis e eventual proxy já existente. *(29/09: uma
+      instalação, Docker em 192.168.0.85, acessada por `http://IP:3000`, sem
+      proxy; o serviço do Windows já tinha sido removido.)*
+- [x] Definir URL canônica HTTPS e certificado confiável para os navegadores da
+      equipe. Registrar quem renova o certificado. *(`https://gestoratualizacao`
+      e `https://192.168.0.85`; autoridade própria do Caddy, raiz de 10 anos,
+      certificado do site renovado pelo próprio Caddy.)*
+- [x] Ajustar o proxy e `TRUST_PROXY` para a quantidade real de saltos; impedir
+      acesso direto à porta HTTP a partir de redes não previstas. *(Caddy no
+      `docker-compose.yml`, um salto; a porta do Node não é publicada; só a
+      443, sem 80.)*
+- [x] Ativar `SESSION_SECURE=true` somente depois que o proxy HTTPS estiver
+      funcional; verificar login, renovação e encerramento da sessão. *(Fixo
+      no compose. Login com cookie `Secure` verificado numa pilha de teste e
+      em produção; HTTP direto no Node recusado com 403.)*
+- [x] Atualizar instruções de instalação e recuperação em `README.md`,
       `SECURITY.md` e `docs/OPERACAO.md`.
+- [ ] Cadastrar `gestoratualizacao` no DNS da empresa (ou no `hosts` de cada
+      PC) e instalar a raiz do Caddy nos PCs e aparelhos da equipe — passo
+      operacional, fora do código (README, "HTTPS").
+
+**Decisão:** somente HTTPS na rede ([ADR-0010](DOCUMENTACAO_CONSOLIDADA.md#adr-0010)):
+HTTP puro só escuta em `127.0.0.1`, e combinação inválida de
+`SESSION_SECURE`/`TRUST_PROXY` recusa a subida.
 
 **Aceite:** senha e cookie não cruzam o trecho acessado pelo usuário em HTTP;
 login e logout funcionam pela URL oficial; o painel não aceita um caminho
@@ -67,18 +82,26 @@ instalação usada de fato.
 `server/src/routes/index.js` não aplica proteção CSRF às rotas de escrita.
 `SECURITY.md` registra essa limitação.
 
-- [ ] Escolher proteção compatível com sessão e com chamadas JSON e multipart:
+- [x] Escolher proteção compatível com sessão e com chamadas JSON e multipart:
       token vinculado à sessão ou validação robusta de origem, documentando a
-      razão da escolha.
-- [ ] Centralizar a verificação para `POST`, `PUT`, `PATCH` e `DELETE` da API
+      razão da escolha. *(Token por sessão, no cabeçalho `X-CSRF-Token`.)*
+- [x] Centralizar a verificação para `POST`, `PUT`, `PATCH` e `DELETE` da API
       usada pelo navegador, incluindo importação, conta e restauração.
-- [ ] Entregar o token pelo fluxo de autenticação e incluí-lo no `ApiClient`
+      *(`middlewares/protecaoCsrf.js`, no topo do `ApiRouter`, antes do multer.)*
+- [x] Entregar o token pelo fluxo de autenticação e incluí-lo no `ApiClient`
       para JSON e `FormData`; tratar token ausente ou vencido com mensagem clara.
-- [ ] Confirmar que login e configuração inicial têm o tratamento correto e
-      que clientes de API sem cookie não sofrem regressão indevida.
-- [ ] Testar sessão válida sem proteção, proteção inválida, sessão expirada e
+      *(Vem em toda resposta com sessão, inclusive a do login; token velho é
+      renovado e o pedido repetido uma vez, e só então aparece "Recarregue a
+      página".)*
+- [x] Confirmar que login e configuração inicial têm o tratamento correto e
+      que clientes de API sem cookie não sofrem regressão indevida. *(Os dois
+      ficam fora, protegidos por só aceitarem JSON; sem sessão, continua o
+      401; agentes C# não são afetados.)*
+- [x] Testar sessão válida sem proteção, proteção inválida, sessão expirada e
       envio multipart; verificar que nenhuma alteração é gravada nos casos
-      recusados.
+      recusados. *(`server/tests/csrf.test.js`, `client/tests/apiclient.test.mjs`.)*
+
+**Decisão:** token por sessão ([ADR-0011](DOCUMENTACAO_CONSOLIDADA.md#adr-0011)).
 
 **Aceite:** todas as escritas autenticadas do navegador exigem a proteção;
 as recusas devolvem erro consistente; os fluxos normais continuam operando.
@@ -89,15 +112,38 @@ as recusas devolvem erro consistente; os fluxos normais continuam operando.
 cache quando uma nova consulta falha. Isso protege a tela vazia, mas não
 informa por que o dado mostrado pode estar velho.
 
-- [ ] Definir estados comuns: carregando pela primeira vez, atualizado,
+- [x] Definir estados comuns: carregando pela primeira vez, atualizado,
       revalidando, erro com dados anteriores e erro sem dados.
-- [ ] Exibir horário da última resposta válida e ação **Tentar novamente**
+      *(`client/js/utils/estadoDados.js`: esqueleto, nada, barra fina, aviso
+      amarelo com o horário, aviso vermelho sem horário.)*
+- [x] Exibir horário da última resposta válida e ação **Tentar novamente**
       apenas quando houver falha; manter a informação anterior visível.
-- [ ] Diferenciar erro de rede, sessão expirada e resposta 4xx/5xx; evitar
+- [x] Diferenciar erro de rede, sessão expirada e resposta 4xx/5xx; evitar
       notificações repetidas a cada atualização de uma mesma tela.
-- [ ] Aplicar primeiro às telas que orientam decisões diárias: Resumo,
-      Atualizações, Clientes, Sistemas e Campanhas.
-- [ ] Verificar que troca rápida de aba e busca cancelada não mostram erro falso.
+      *(Sem conexão, painel fora do ar atrás do proxy (502/503/504), demora,
+      erro do servidor e recusa com a mensagem dele; 401 continua indo para o
+      login. O aviso é fixo e substitui o toast que se repetia a cada
+      tentativa.)*
+- [x] Aplicar primeiro às telas que orientam decisões diárias: Resumo,
+      Atualizações, Clientes, Sistemas e Campanhas. *(Ficou na `View.swr`, e
+      por isso vale para todas as telas que usam o cache: também Agendamentos,
+      Consulta, Histórico, Distribuição e Versões.)*
+- [x] Verificar que troca rápida de aba e busca cancelada não mostram erro falso.
+      *(Cancelamento não avisa nem apaga uma falha real; falha num filtro some
+      quando outro filtro carrega. `client/tests/estadoDados.test.mjs`.)*
+
+**Verificado no navegador** (Chrome sem janela, servidor descartável derrubado
+e religado): Resumo e Clientes mostram "Mostrando os dados de hoje às HH:MM";
+Sistemas, Atualizações e Campanhas nunca abertas mostram "Não foi possível
+carregar"; nenhum toast; os avisos somem quando o servidor volta. O teste
+achou três telas que não passavam pelo aviso — Clientes e Sistemas buscavam a
+primeira coisa fora do `swr`, e Campanhas abria um modal de erro por cima —,
+corrigidas; e o aviso ficava meio coberto pelo cabeçalho quando a faixa de
+"sem conexão" também estava na tela.
+
+**Achado junto:** com o Caddy da P01 na frente, o painel fora do ar respondia
+502 pelo proxy, e o `ApiClient` contava isso como "conectado" — a faixa de
+"sem conexão" nunca aparecia no caso mais comum de queda. Corrigido.
 
 **Aceite:** ao interromper a API após uma leitura válida, a tela identifica
 que os dados são anteriores, mostra quando foram obtidos e permite nova
@@ -109,17 +155,42 @@ tentativa. Ao recuperar a conexão, o aviso desaparece.
 não executa os fluxos completos em navegador. A aprovação dos 416 testes não
 prova foco, recorte, navegação por teclado ou responsividade reais.
 
-- [ ] Preparar banco descartável e usuário de teste, isolados de qualquer
+- [x] Preparar banco descartável e usuário de teste, isolados de qualquer
       instalação real. A suíte deve criar e limpar seus próprios dados.
-- [ ] Cobrir login, criação/edição de atendimento, filtros, geração e cópia de
+      *(`navegador/apoio/ambiente.mjs`: `Server` de verdade numa pasta
+      temporária e porta do sistema, apagados no fim.)*
+- [x] Cobrir login, criação/edição de atendimento, filtros, geração e cópia de
       relatório, prévia/importação de planilha, tarefas e campanha.
-- [ ] Cobrir erros relevantes: sessão expirada, conflito de revisão, falha da
+- [x] Cobrir erros relevantes: sessão expirada, conflito de revisão, falha da
       API durante envio e confirmação antes de exclusão.
-- [ ] Validar teclado e foco em menu, drawer, modal, tabela, ações em lote e
+- [x] Validar teclado e foco em menu, drawer, modal, tabela, ações em lote e
       mensagens de erro. Incluir checagem automatizada de acessibilidade como
-      apoio, com revisão manual dos resultados importantes.
-- [ ] Conferir larguras 390, 768, 1280 e 1440 px, temas claro/escuro e zoom
+      apoio, com revisão manual dos resultados importantes. *(Automático: nome
+      acessível em tudo que se aciona, ids únicos, idioma. Contraste de cor
+      segue manual.)*
+- [x] Conferir larguras 390, 768, 1280 e 1440 px, temas claro/escuro e zoom
       do navegador. Registrar imagens apenas para regressões visuais estáveis.
+      *(Sem rolagem horizontal em nenhuma tela, nos dois temas e com zoom de
+      200%. Sem imagem de referência: capturas só como diagnóstico de falha.)*
+
+**Decisão:** Chrome já instalado, controlado pelo protocolo de depuração, sem
+Playwright ([ADR-0012](DOCUMENTACAO_CONSOLIDADA.md#adr-0012)).
+`npm run test:navegador`, 39 testes em ~2 min, também no CI.
+
+**Defeitos achados e corrigidos** (nenhum aparecia no `npm test`):
+- modal aberto **atrás** da gaveta — "Descartar alterações?", o erro ao salvar
+  e o aviso de conflito ficavam invisíveis, e Esc/Salvar pareciam não fazer
+  nada;
+- a gaveta não devolvia o foco a quem a abriu e deixava o Tab escapar para a
+  tela de trás;
+- o fundo da gaveta engolia o clique seguinte durante os 180 ms de saída;
+- login sem rótulo associado aos campos e erro não anunciado ao leitor de tela;
+- ids repetidos em Agendamentos (filtros × formulário), que deixavam um dos
+  `<select>` sem nome.
+
+**Observado e não corrigido** (decisão de layout, não defeito): os botões da
+gaveta de Agendamento ficam abaixo da dobra numa janela de 900 px de altura; a
+barra flutuante de lote cobre a linha selecionada quando a tabela é curta.
 
 **Aceite:** os fluxos essenciais completam no navegador sem erro de console,
 perda de foco ou ação inacessível por teclado; não há rolagem horizontal da
@@ -132,17 +203,51 @@ até 15 MB; `AtualizacaoRepository.exportAll()` materializa todas as linhas
 filtradas; `AtualizacaoService.exportXlsxBuffer()` monta o arquivo completo em
 memória. Isso é um risco de crescimento, não uma falha medida na instalação.
 
-- [ ] Medir tempo, pico de memória e tamanho de resposta para arquivos e
+- [x] Medir tempo, pico de memória e tamanho de resposta para arquivos e
       bases pequenos, médios e no maior volume esperado; registrar os números.
-- [ ] Definir limite funcional de linhas por importação/exportação e resposta
+      *(`server/ferramentas/medir-planilhas.js`; números abaixo.)*
+- [x] Definir limite funcional de linhas por importação/exportação e resposta
       legível ao excedê-lo. Alinhar o limite ao volume real da equipe.
-- [ ] Se a medição justificar, trocar importação por leitura em fluxo ou por
+      *(5.000 por importação, 10.000 por exportação —
+      `server/src/config/limitesPlanilha.js`.)*
+- [x] Se a medição justificar, trocar importação por leitura em fluxo ou por
       arquivo temporário com limpeza garantida; manter prévia e aplicação
-      transacional.
-- [ ] Se a medição justificar, paginar a leitura da exportação e usar escrita
-      XLSX em fluxo, preservando filtros, colunas e aba Resumo.
-- [ ] Repetir testes com datas inválidas, duplicatas e falha no meio do lote;
-      nenhuma importação parcial pode ficar gravada.
+      transacional. *(Justificou, mas o leitor em fluxo do ExcelJS 4.4.0 falha
+      de forma intermitente e grava arquivo temporário — descartado. No lugar:
+      contagem de linhas direto no zip antes de carregar, que recusa arquivo
+      grande em ~0,1 s sem montar nada.)*
+- [x] Se a medição justificar, paginar a leitura da exportação e usar escrita
+      XLSX em fluxo, preservando filtros, colunas e aba Resumo. *(Não
+      justificou: no limite de 10.000 linhas, 1,8 s e 181 MB. A exportação
+      conta antes de ler e recusa acima do limite; a leitura dobrada do
+      histórico saiu. Escrita em fluxo fica para quando o histórico se
+      aproximar do limite.)*
+- [x] Repetir testes com datas inválidas, duplicatas e falha no meio do lote;
+      nenhuma importação parcial pode ficar gravada. *(Já cobertos em
+      `importacao.test.js`; os limites em `limitesPlanilha.test.js`.)*
+
+**Volume real (29/09/2026):** 945 atualizações no histórico, ~1.000 por ano
+(pico de 162 num mês), 368 clientes.
+
+**Medição** (i5-2410M, 8 GB — a máquina do Docker de produção; tempo e pico de
+memória acima do processo parado):
+
+| Cenário | Antes | Depois |
+|---|---|---|
+| Importar 5.000 linhas | 6,0 s / 290 MB | 2,9 s / 95 MB |
+| Importar 20.000 linhas | 21 s / 1 GB | recusada em 0,07 s / 17 MB |
+| Importar 50.000 linhas | 62 s / 1,75 GB | recusada em 0,14 s / 31 MB |
+| Exportar 10.000 linhas | ~2 s / ~180 MB | 1,8 s / 181 MB |
+| Exportar 50.000 linhas | 7,6 s / 755 MB | recusada em 0,05 s / 8 MB |
+
+O ganho da importação veio de parar de compilar SQL e reler o catálogo de
+sistemas **a cada linha** (`BaseRepository._preparado`). Limites definidos
+para o maior arquivo aceito: até 5 s e 200 MB nessa máquina.
+
+**Achados junto:** arquivo acima de 15 MB ou de formato errado respondia
+"Erro interno do servidor" (500); exportação recusada não mostrava nada na
+tela; célula com texto formatado era importada como `[object Object]`.
+Corrigidos.
 
 **Aceite:** o maior arquivo suportado conclui dentro dos limites definidos de
 tempo e memória; falha ou cancelamento não deixam dados parciais nem arquivo

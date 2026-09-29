@@ -1,6 +1,10 @@
 # Sobe o painel com "docker compose up -d", a partir desta pasta (web/).
-# Instruções completas -- inclusive o passo obrigatório do .env antes do
-# primeiro "up" -- na seção "Rodar em Docker" do README.md.
+# Instruções completas -- inclusive os passos obrigatórios antes do primeiro
+# "up": o server/.env e o GESTOR_ENDERECO no web/.env -- nas seções "Rodar em
+# Docker" e "HTTPS" do README.md.
+#
+# Somente HTTPS: o painel (gestor) não publica porta nenhuma; quem atende a
+# rede é o proxy (Caddy), na 443. Ver P01 em docs/MELHORIAS.md.
 
 services:
   gestor:
@@ -12,8 +16,7 @@ services:
     image: gestor-de-atualizacoes:local
     container_name: gestor-de-atualizacoes
 
-    # Equivalente em Docker ao serviço do Windows descrito no README: o
-    # container volta sozinho depois de um travamento e depois de a máquina
+    # O container volta sozinho depois de um travamento e depois de a máquina
     # reiniciar. "unless-stopped" (e não "always") para que um "docker
     # compose stop" feito de propósito continue valendo depois do reboot.
     restart: unless-stopped
@@ -24,19 +27,26 @@ services:
     # recolher processos filhos órfãos.
     init: true
 
-    ports:
-      # <porta no Windows>:<porta dentro do container>. Para atender noutra
-      # porta, mude SÓ o número da esquerda -- a da direita é fixada pelo
-      # PORT logo abaixo.
-      - "3000:3000"
+    # SEM "ports:", de propósito: a porta do Node não é publicada, e só o
+    # proxy, pela rede interna do compose, alcança o painel. Isso é o que
+    # impede um http://IP:3000 aberto na rede e o que torna seguro o
+    # TRUST_PROXY=true abaixo -- com a porta aberta, quem batesse nela
+    # poderia mandar um "X-Forwarded-Proto: https" inventado.
 
     environment:
-      # Só PORT mora aqui: fixá-la é o que mantém o mapeamento de portas
-      # acima sempre válido. O resto fica no .env (infraestrutura e
-      # segredos). As regras da equipe (URL pública, webhook do Discord,
-      # intervalos) não são mais variável de ambiente nenhuma: moram no
-      # banco e se editam na tela Administração.
+      # PORT, SESSION_SECURE e TRUST_PROXY moram aqui, e não no server/.env,
+      # porque dependem do desenho DESTE arquivo: o proxy encaminha para a
+      # 3000, termina o HTTPS e é o único na frente do Node. Mudar qualquer
+      # um sem mudar o resto quebra o acesso (ou a segurança); por isso não
+      # ficam onde se ajusta caso a caso. O dotenv não sobrescreve o que já
+      # veio do ambiente, então estes valem mesmo que o server/.env diga
+      # outra coisa. O resto do .env é infraestrutura e segredos. As regras
+      # da equipe (URL pública, webhook do Discord, intervalos) não são mais
+      # variável de ambiente nenhuma: moram no banco e se editam na tela
+      # Administração.
       PORT: 3000
+      SESSION_SECURE: "true"
+      TRUST_PROXY: "true"
 
     volumes:
       # Dados reais, o que não pode se perder ao trocar a imagem: gestao.db,
@@ -48,7 +58,6 @@ services:
       # fora, use o download de backup do próprio painel -- ele existe
       # justamente para isso.
       - gestor-data:/app/server/data
-      - gestor-logs:/app/server/logs
 
       # O .env é montado como ARQUIVO e SÓ LEITURA (":ro"): nada no painel
       # escreve nele desde que as regras da equipe foram para o banco. Não
@@ -64,13 +73,43 @@ services:
 
     healthcheck:
       # Definido no Dockerfile (bate em /api/auth/status). Repetido aqui só
-      # para o "docker compose ps" mostrar o estado como "healthy".
+      # para o "docker compose ps" mostrar o estado como "healthy". Roda
+      # dentro do container, por HTTP direto no Node: é o único pedido que o
+      # servidor aceita sem HTTPS (ver middlewares/exigirHttps.js).
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/auth/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 30s
       timeout: 5s
       start_period: 20s
       retries: 3
 
+  proxy:
+    image: caddy:2-alpine
+    container_name: gestor-de-atualizacoes-proxy
+    restart: unless-stopped
+    depends_on:
+      - gestor
+    ports:
+      # Só a 443. Sem a 80, "http://" nem responde: ninguém é redirecionado,
+      # quem digitar sem "https://" vê conexão recusada (decisão de
+      # 29/09/2026: somente HTTPS). Para mudar a porta, só o número da
+      # esquerda -- e o endereço passa a ser https://IP:PORTA.
+      - "443:443"
+    environment:
+      # ":?" faz o compose recusar a subida com esta mensagem quando falta o
+      # valor -- sem ele, o Caddy subiria atendendo um endereço vazio.
+      GESTOR_ENDERECO: ${GESTOR_ENDERECO:?defina GESTOR_ENDERECO no web/.env, ex. GESTOR_ENDERECO=192.168.0.10}
+      # Opcional: só para o acesso por https://IP funcionar -- ver o
+      # default_sni em proxy/Caddyfile.
+      GESTOR_IP: ${GESTOR_IP:-}
+    volumes:
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # A autoridade certificadora própria (tls internal) e os certificados
+      # moram aqui. Perder este volume gera uma raiz NOVA, e todas as
+      # máquinas da equipe precisam instalar a raiz de novo.
+      - caddy-data:/data
+      - caddy-config:/config
+
 volumes:
   gestor-data:
-  gestor-logs:
+  caddy-data:
+  caddy-config:

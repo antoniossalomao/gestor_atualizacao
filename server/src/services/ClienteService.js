@@ -40,6 +40,10 @@ class ClienteService {
     return this.db.clientes.grupos();
   }
 
+  cidades() {
+    return this.db.clientes.cidades();
+  }
+
   getById(id) {
     const row = this.db.clientes.getById(id);
     if (!row) throw new NotFoundError("Cliente não encontrado.");
@@ -57,14 +61,14 @@ class ClienteService {
    * @param {{id:number, nome:string}|null} usuario quem está fazendo a ação (para o histórico)
    */
   create(input, usuario) {
-    const { nome, codigo, cidade, sistemas, grupo } = this._validate(input);
+    const { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validate(input);
     // Bloqueia nome duplicado ANTES de inserir: dois clientes com o mesmo
     // nome seriam indistinguiveis nas telas que listam por nome, e o vinculo
     // de um atendimento digitado pelo nome escolheria um deles as cegas.
     if (this.db.clientes.nameExists(nome)) {
       throw new ValidationError(`Já existe um cliente chamado '${nome}'.`);
     }
-    const id = this.db.clientes.insert(codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo);
+    const id = this.db.clientes.insert(codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo, regimeTributario);
     this.historico.registrar(usuario, "criar", "cliente", `Cliente "${nome}"`);
     return toClienteDTO(this.db.clientes.getById(id), this.db.atualizacoes.maquinasDoCliente(id));
   }
@@ -72,14 +76,14 @@ class ClienteService {
   update(id, input, usuario) {
     const existente = this.db.clientes.getById(id);
     if (!existente) throw new NotFoundError("Cliente não encontrado.");
-    const { nome, codigo, cidade, sistemas, grupo } = this._validate(input);
+    const { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validate(input);
     if (this.db.clientes.nameExists(nome, id)) {
       throw new ValidationError(`Já existe um cliente chamado '${nome}'.`);
     }
     // O nome copiado nos atendimentos/agendamentos ligados acompanha o
     // rename dentro de ClienteRepository.update.
     const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
-    if (this.db.clientes.update(id, codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo, revisaoEsperada, usuario?.nome || "") === 0) {
+    if (this.db.clientes.update(id, codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo, revisaoEsperada, usuario?.nome || "", regimeTributario) === 0) {
       const agora = this.db.clientes.getById(id);
       if (agora && revisaoEsperada != null) throw new ConflictError(`Este cliente foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, toClienteDTO(agora));
       throw new NotFoundError("Cliente não encontrado.");
@@ -226,8 +230,10 @@ class ClienteService {
     const codigo = (input.codigo || "").trim();
     const cidade = (input.cidade || "").trim();
     const grupo = (input.grupo || "").trim();
+    const regimeTributario = String(input.regimeTributario || "").trim();
+    if (regimeTributario.length > 100) throw new ValidationError("Regime tributário pode ter no máximo 100 caracteres.");
     const sistemas = Array.isArray(input.sistemas) ? input.sistemas.map((s) => String(s || "").trim()).filter(Boolean) : [];
-    return { nome, codigo, cidade, sistemas, grupo };
+    return { nome, codigo, cidade, sistemas, grupo, regimeTributario };
   }
 
   /** Acessos remotos (AnyDesk / Suporte Bredas) das máquinas de um cliente -- aba Clientes, botão "Acessos". */
@@ -292,6 +298,7 @@ function toClienteDTO(row, maquinas = 0) {
     codigo: row.codigo || "",
     nome: row.nome,
     cidade: row.cidade || "",
+    regimeTributario: row.regimeTributario || "",
     sistemas: row.sistemas ? row.sistemas.split(",").map((s) => s.trim()).filter(Boolean) : [],
     grupo: row.grupo || "",
     revisao: row.revisao,
