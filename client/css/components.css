@@ -2223,7 +2223,9 @@ table.data-table {
   position: fixed;
   right: var(--sp-5);
   bottom: var(--sp-5);
-  z-index: 1000;
+  /* Acima da gaveta e do modal (ver as camadas em .modal-overlay): em 1000,
+     o aviso que sai com a gaveta aberta ficava atrás do fundo desfocado. */
+  z-index: 1400;
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
@@ -2330,10 +2332,17 @@ table.data-table {
    9. MODAIS, PALETA DE COMANDOS, ATALHOS
    ========================================================================== */
 
+/* Camadas, de baixo para cima: faixa de conexão (1050), gaveta e paleta
+   (1200), modal (1300), avisos (1400). O modal tem que ficar ACIMA da gaveta:
+   ele nasce dela -- "Descartar alterações?", o erro ao salvar, o conflito de
+   revisão. Com o modal em 1100, abaixo da gaveta, tudo isso abria ESCONDIDO
+   atrás do formulário: Esc e Salvar pareciam não fazer nada, e a pessoa
+   ficava presa sem ver a pergunta. Achado pelo teste de navegador, que
+   clica como gente (navegador/atualizacoes.test.mjs). */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: 1300;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6157,6 +6166,11 @@ h1, h2, h3, strong {
 }
 
 .drawer-backdrop.is-open { opacity: 1; visibility: visible; }
+/* Fechando, o fundo ainda leva 180 ms sumindo (visibility só vira "hidden"
+   no fim da transição) -- e nesse meio-tempo engolia o clique seguinte: salvar
+   e clicar logo em outra linha não fazia nada. Achado pelo teste de
+   navegador (navegador/atualizacoes.test.mjs). */
+.drawer-backdrop:not(.is-open) { pointer-events: none; }
 .drawer-panel {
   width: min(640px, 94vw);
   max-height: min(90vh, 760px);

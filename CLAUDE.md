@@ -13,6 +13,11 @@ npm test          # servidor + cliente
 
 Os dois têm que passar. Não relate conclusão sem ter rodado.
 
+Mexeu em tela, componente ou CSS? Rode também `npm run test:navegador`
+(Chrome sem janela, ~2 min; ver CONTRIBUTING, "Testes de navegador"). Ele já
+achou modal aberto atrás da gaveta e foco perdido ao fechar formulário —
+coisas que `npm test` não enxerga.
+
 ## O que NÃO fazer
 
 - **Não introduza etapa de build no front-end.** Sem bundler, sem transpilação,

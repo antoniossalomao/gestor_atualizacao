@@ -15,6 +15,12 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Testes de navegador — P04 (29/09/2026):** `npm run test:navegador` roda os fluxos completos num Chrome sem janela: login e sessão expirada, atendimentos (criar, editar, conflito de revisão, falha da API no envio, filtro, relatório copiado, excluir e desfazer, exclusão em lote com confirmação), tarefas, campanhas, importação, teclado e foco, nome acessível e rolagem horizontal em 390/768/1280/1440 px, nos dois temas e com zoom de 200%. Sem dependência nova: o Chrome instalado é controlado pelo protocolo de depuração ([ADR-0012](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0012)). Roda no CI.
+  - *Modal atrás da gaveta*: "Descartar alterações?", o erro ao salvar e o aviso de conflito abriam **escondidos** atrás do formulário (camada 1100 contra 1200). Esc e Salvar pareciam não fazer nada. Agora o modal fica acima da gaveta, e os avisos acima de tudo.
+  - *Gaveta e teclado*: ao fechar, o foco volta para quem a abriu (antes caía no começo da página); o Tab circula dentro dela em vez de escapar para a tela de trás; o fundo deixa de engolir o clique seguinte enquanto some.
+  - *Login*: os campos ganharam rótulo associado (o leitor de tela anunciava só "caixa de texto") e o erro de senha passa a ser anunciado.
+  - *Agendamentos*: os filtros de Status e Prioridade tinham o mesmo id dos campos do formulário, e um dos dois ficava sem nome acessível.
+
 - **Aviso de dados desatualizados — P03 (29/09/2026):** quando uma tela não consegue atualizar, ela diz isso. Antes o dado anterior ficava na tela em silêncio, parecendo atual. Agora aparece no topo "Não foi possível atualizar. Mostrando os dados de hoje às 14:32.", com o motivo e o botão **Tentar novamente**. Sem dado anterior: "Não foi possível carregar os dados desta tela.". O aviso some sozinho quando a busca volta a dar certo, inclusive na volta da conexão.
   - *Motivo em palavras de quem usa*: sem conexão, painel fora do ar, servidor demorando, erro do servidor ou recusa (com a mensagem do servidor). Sessão expirada continua indo para o login, e troca de filtro ou de aba não gera aviso falso.
   - *Um aviso, não uma pilha de toasts*: o toast "Não foi possível carregar os dados desta tela", que voltava a cada tentativa, não aparece mais nas telas que mostram o aviso.

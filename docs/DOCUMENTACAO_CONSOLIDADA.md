@@ -1220,6 +1220,7 @@ escolha deliberada — e reintroduz o problema que ela evitava.
 | [4.10](#adr-0009) | Campanhas: meta guardada, andamento calculado | Aceita |
 | [4.11](#adr-0010) | Somente HTTPS na rede, com Caddy na frente | Aceita |
 | [4.12](#adr-0011) | Proteção CSRF por token de sessão | Aceita |
+| [4.13](#adr-0012) | Testes de navegador pelo protocolo do Chrome | Aceita |
 
 **Como escrever um novo:** copie a estrutura de qualquer um — Contexto → Decisão → Consequências →
 Alternativas consideradas — como uma nova subseção `4.N` no fim desta lista. Um ADR não se edita
@@ -1886,6 +1887,66 @@ considera "o mesmo site" outros serviços do mesmo domínio.
 - **Token novo a cada pedido:** quebra abas paralelas e pedidos simultâneos
   sem proteção a mais contra o que importa aqui (outra origem não lê nenhum
   dos dois).
+
+<a id="adr-0012"></a>
+### 4.13 ADR-0012 — Testes de navegador pelo protocolo do Chrome, sem Playwright
+
+**Situação:** Aceita (29/09/2026)
+
+#### Contexto
+
+`npm test` cobre regras e módulos, mas não roda os fluxos completos no
+navegador (P04 do [plano de melhorias](MELHORIAS.md#plano-vigente)): foco,
+teclado, o que fica por cima do quê, o que acontece quando a API falha no
+meio de um envio. A ferramenta óbvia seria o Playwright, mas o repositório
+não tem dependência de front-end nem etapa de build
+([ADR-0001](#adr-0001)), e o Playwright baixa centenas de megabytes de
+navegadores a cada instalação.
+
+#### Decisão
+
+- **O Chrome (ou Edge) já instalado, controlado pelo protocolo de depuração
+  (CDP)**, com um driver próprio em `navegador/apoio/` (~400 linhas): abre o
+  navegador sem janela, clica e digita com eventos de entrada de verdade,
+  espera, intercepta pedidos, lê a árvore de acessibilidade. O transporte é
+  o `WebSocket` que já vem no Node 22. Nenhuma dependência nova.
+- **Servidor de verdade num banco descartável** por arquivo de teste, porta
+  escolhida pelo sistema; dados de apoio entram pela API, o fluxo testado
+  entra pela tela.
+- **Fora do `npm test`** (`npm run test:navegador`): precisa do Chrome e leva
+  minutos. No CI roda em todo PR, com o Chrome do runner, e falha se ele
+  faltar (`EXIGIR_NAVEGADOR=1`); na máquina de quem desenvolve, pula com
+  aviso.
+- **Clique só acerta o que está por cima**, e "visível" inclui estar por
+  cima: um elemento coberto falha o teste. Foi assim que o primeiro teste
+  achou o modal aberto atrás da gaveta.
+- **Acessibilidade automática como apoio**: nome acessível em todo elemento
+  acionável, pela árvore do próprio Chrome. Contraste e sentido dos textos
+  continuam sendo revisão de gente.
+- **Sem comparação de imagens.** Capturas só como diagnóstico de falha
+  (`navegador/.falhas/`, fora do git); referência visual quebra a cada ajuste
+  de CSS sem apontar defeito.
+
+#### Consequências
+
+- Só Chromium é testado; Firefox e Safari não.
+- O driver é código nosso para manter. Em troca, é pequeno, sem versão de
+  navegador para casar, e o que ele faz está à vista num arquivo.
+- Seletores dos testes dependem dos `data-action`/`data-role` das telas —
+  renomear um deles quebra o teste de propósito.
+- O Node 22 passa a ser necessário para esta suíte (o `WebSocket` global);
+  o resto do projeto continua em Node 20+.
+
+#### Alternativas consideradas
+
+- **Playwright:** API melhor e vários navegadores, ao custo do download dos
+  navegadores e de uma dependência pesada num projeto que tem uma só de
+  desenvolvimento (o TypeScript do `check`).
+- **Puppeteer (`puppeteer-core`, sem baixar Chrome):** menor, mas ainda uma
+  dependência com versão de protocolo para acompanhar, para usar uma fração.
+- **axe-core para acessibilidade:** mais completo que a checagem de nome,
+  mas seria a primeira dependência de código que roda DENTRO da página.
+  Fica como próximo passo se a checagem própria não bastar.
 
 ---
 

@@ -155,17 +155,42 @@ tentativa. Ao recuperar a conexão, o aviso desaparece.
 não executa os fluxos completos em navegador. A aprovação dos 416 testes não
 prova foco, recorte, navegação por teclado ou responsividade reais.
 
-- [ ] Preparar banco descartável e usuário de teste, isolados de qualquer
+- [x] Preparar banco descartável e usuário de teste, isolados de qualquer
       instalação real. A suíte deve criar e limpar seus próprios dados.
-- [ ] Cobrir login, criação/edição de atendimento, filtros, geração e cópia de
+      *(`navegador/apoio/ambiente.mjs`: `Server` de verdade numa pasta
+      temporária e porta do sistema, apagados no fim.)*
+- [x] Cobrir login, criação/edição de atendimento, filtros, geração e cópia de
       relatório, prévia/importação de planilha, tarefas e campanha.
-- [ ] Cobrir erros relevantes: sessão expirada, conflito de revisão, falha da
+- [x] Cobrir erros relevantes: sessão expirada, conflito de revisão, falha da
       API durante envio e confirmação antes de exclusão.
-- [ ] Validar teclado e foco em menu, drawer, modal, tabela, ações em lote e
+- [x] Validar teclado e foco em menu, drawer, modal, tabela, ações em lote e
       mensagens de erro. Incluir checagem automatizada de acessibilidade como
-      apoio, com revisão manual dos resultados importantes.
-- [ ] Conferir larguras 390, 768, 1280 e 1440 px, temas claro/escuro e zoom
+      apoio, com revisão manual dos resultados importantes. *(Automático: nome
+      acessível em tudo que se aciona, ids únicos, idioma. Contraste de cor
+      segue manual.)*
+- [x] Conferir larguras 390, 768, 1280 e 1440 px, temas claro/escuro e zoom
       do navegador. Registrar imagens apenas para regressões visuais estáveis.
+      *(Sem rolagem horizontal em nenhuma tela, nos dois temas e com zoom de
+      200%. Sem imagem de referência: capturas só como diagnóstico de falha.)*
+
+**Decisão:** Chrome já instalado, controlado pelo protocolo de depuração, sem
+Playwright ([ADR-0012](DOCUMENTACAO_CONSOLIDADA.md#adr-0012)).
+`npm run test:navegador`, 39 testes em ~2 min, também no CI.
+
+**Defeitos achados e corrigidos** (nenhum aparecia no `npm test`):
+- modal aberto **atrás** da gaveta — "Descartar alterações?", o erro ao salvar
+  e o aviso de conflito ficavam invisíveis, e Esc/Salvar pareciam não fazer
+  nada;
+- a gaveta não devolvia o foco a quem a abriu e deixava o Tab escapar para a
+  tela de trás;
+- o fundo da gaveta engolia o clique seguinte durante os 180 ms de saída;
+- login sem rótulo associado aos campos e erro não anunciado ao leitor de tela;
+- ids repetidos em Agendamentos (filtros × formulário), que deixavam um dos
+  `<select>` sem nome.
+
+**Observado e não corrigido** (decisão de layout, não defeito): os botões da
+gaveta de Agendamento ficam abaixo da dobra numa janela de 900 px de altura; a
+barra flutuante de lote cobre a linha selecionada quando a tabela é curta.
 
 **Aceite:** os fluxos essenciais completam no navegador sem erro de console,
 perda de foco ou ação inacessível por teclado; não há rolagem horizontal da

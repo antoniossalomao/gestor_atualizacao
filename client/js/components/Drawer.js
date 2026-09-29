@@ -42,6 +42,7 @@ export class Drawer {
         e.preventDefault();
         this.fechar();
       }
+      if (e.key === "Tab" && this.aberta) this._prenderFoco(e);
     };
     this.overlay.addEventListener("click", this._aoClique);
     document.addEventListener("keydown", this._aoTecla);
@@ -57,6 +58,8 @@ export class Drawer {
   abrir({ foco } = {}) {
     if (this.aberta) return;
     this.aberta = true;
+    // Para devolver o foco ao fechar (ver fechar()).
+    this._focoAnterior = document.activeElement;
     this._estadoLimpo = this._serializar();
     this.corpo.appendChild(this.conteudo);
     this.conteudo.hidden = false;
@@ -82,7 +85,36 @@ export class Drawer {
     this.conteudo.hidden = true;
     this.marcador.after(this.conteudo);
     this.aoFechar();
+    // O foco volta para quem abriu a gaveta (o "+ Nova Atualização", o lápis
+    // da linha). Sem isto ele caía no <body>: quem usa teclado ou leitor de
+    // tela voltava para o começo da página a cada formulário fechado. Achado
+    // pelo teste de navegador (navegador/atualizacoes.test.mjs). Se quem
+    // abriu não existe mais -- a tabela foi redesenhada depois de salvar --,
+    // não há para onde voltar, e o foco fica onde o navegador puser.
+    const anterior = this._focoAnterior;
+    this._focoAnterior = null;
+    if (anterior instanceof HTMLElement && anterior.isConnected && anterior.offsetParent !== null) anterior.focus();
     return true;
+  }
+
+  /**
+   * A gaveta é um diálogo modal (aria-modal): o Tab circula dentro dela, como
+   * no Modal. Antes, depois do último campo o foco ia para a tela de trás,
+   * escondida pelo fundo escurecido -- a pessoa seguia apertando Tab sem ver
+   * onde estava. Achado pelo teste de navegador.
+   *
+   * @param {KeyboardEvent} e
+   */
+  _prenderFoco(e) {
+    // Um Modal aberto por cima (confirmação, erro) cuida do próprio foco.
+    if (document.activeElement?.closest(".modal-overlay")) return;
+    const painel = /** @type {HTMLElement} */ (this.overlay.querySelector(".drawer-panel"));
+    if (!painel.contains(document.activeElement)) {
+      e.preventDefault();
+      /** @type {HTMLElement|null} */ (this.conteudo.querySelector("input, select, textarea, button"))?.focus();
+      return;
+    }
+    Modal._prenderFoco(e, painel);
   }
 
   marcarLimpa() {

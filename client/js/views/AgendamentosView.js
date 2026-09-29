@@ -97,16 +97,20 @@ export class AgendamentosView extends View {
             <input type="search" class="input" id="age-busca" data-role="search" placeholder="Tarefa, cliente, responsável..." />
           </div>
           <div class="field">
-            <label class="field__label" for="age-status">Status</label>
-            <select class="input" id="age-status" data-role="status-filter">
+            <!-- id "age-filtro-*", e não "age-status": esse é o do campo do
+                 formulário (ver _buildFields). Com os dois iguais, o <label>
+                 de um apontava para o outro e um dos <select> ficava sem nome
+                 para o leitor de tela (achado pelo teste de navegador). -->
+            <label class="field__label" for="age-filtro-status">Status</label>
+            <select class="input" id="age-filtro-status" data-role="status-filter">
               <option>Todos</option>
               ${STATUS_OPTIONS.map((s) => html`<option>${s}</option>`)}
               <option value="${FILTRO_ARQUIVADAS}">${FILTRO_ARQUIVADAS}</option>
             </select>
           </div>
           <div class="field">
-            <label class="field__label" for="age-prioridade">Prioridade</label>
-            <select class="input" id="age-prioridade" data-role="prioridade-filter">
+            <label class="field__label" for="age-filtro-prioridade">Prioridade</label>
+            <select class="input" id="age-filtro-prioridade" data-role="prioridade-filter">
               <option value="Todas">Todas</option>
               ${PRIORIDADE_OPTIONS.slice().reverse().map((p) => html`<option>${p}</option>`)}
             </select>
