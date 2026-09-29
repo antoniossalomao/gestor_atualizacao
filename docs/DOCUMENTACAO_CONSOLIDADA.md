@@ -690,38 +690,10 @@ Administração. As variáveis antigas do `.env` para elas são lidas só uma ve
 do servidor (mantém as 10 mais recentes). O botão **Backups** no cabeçalho lista e restaura — a
 página recarrega inteira depois, para garantir que nenhuma tela fique com dado antigo.
 
-**Implantação:**
-
-- **Rede local:** `npm start` num PC/servidor que fique ligado; a equipe acessa por
-  `http://IP-DA-MÁQUINA:3000`.
-- **Pela internet:** proxy reverso (Caddy/Nginx) cuidando do HTTPS na frente, com
-  `SESSION_SECURE=true`. Sem HTTPS, o login trafega sem criptografia.
-
-**Como serviço do Windows (recomendado para produção):** `Iniciar Gestor.bat` roda numa janela de
-console em primeiro plano — se ela fechar, o processo travar ou a máquina reiniciar, a equipe fica
-sem o painel até alguém notar. Para produção, instalar via [NSSM](https://nssm.cc/):
-
-```powershell
-# Num PowerShell como Administrador
-cd web
-.\instalar-servico.ps1
-```
-
-Idempotente (reinstala do zero sem duplicar); baixa o NSSM se preciso, para uma instância manual
-que já esteja na mesma porta, cria o serviço `GestorAtualizacoes`, com log em `server/logs/`
-rotacionado por tamanho. `Get-Service GestorAtualizacoes` / `Restart-Service GestorAtualizacoes` /
-`Get-Content server\logs\service-out.log -Tail 50 -Wait`. Para desinstalar:
-`.\desinstalar-servico.ps1` (não apaga nada do projeto, só o registro do serviço).
-
-**Duas pendências conhecidas do serviço** (identificadas após instalar de verdade, não impedem o
-uso):
-
-- **Roda como `LocalSystem`** — o script não define `ObjectName`; o ideal é uma conta virtual por
-  serviço (`NT SERVICE\GestorAtualizacoes`) com permissão NTFS só na pasta do projeto, já que o
-  servidor não precisa de privilégio de SYSTEM para nada do que faz.
-- **Log rotacionado mas nunca podado** — `AppRotateBytes` evita um arquivo crescer sem limite, mas
-  as rotações antigas (`service-out-<timestamp>.log`) se acumulam para sempre; o volume é pequeno
-  hoje, mas valeria uma tarefa agendada podando rotações com mais de ~90 dias.
+**Implantação:** na rede, o painel só atende por HTTPS, pelo `docker-compose.yml` com o proxy
+Caddy na frente (P01, 29/09/2026). `npm start` fora do Docker atende só a própria máquina. Passo a
+passo, nome em vez de IP e instalação do certificado nas seções "Rodar em Docker" e "HTTPS" do
+[README](../README.md#https).
 
 ### 2.6 Limitações conhecidas desta versão
 
@@ -1246,6 +1218,7 @@ escolha deliberada — e reintroduz o problema que ela evitava.
 | [4.8](#adr-0007) | Sistemas e clientes em tabelas de ligação | Aceita |
 | [4.9](#adr-0008) | Uma regra para a situação do cliente | Aceita |
 | [4.10](#adr-0009) | Campanhas: meta guardada, andamento calculado | Aceita |
+| [4.11](#adr-0010) | Somente HTTPS na rede, com Caddy na frente | Aceita |
 
 **Como escrever um novo:** copie a estrutura de qualquer um — Contexto → Decisão → Consequências →
 Alternativas consideradas — como uma nova subseção `4.N` no fim desta lista. Um ADR não se edita
@@ -1796,6 +1769,66 @@ Código: `server/src/services/CampanhaService.js`,
 - **Ligar a tarefa à campanha por uma coluna nova em `agendamentos`:** "já
   agendado" por sistema já responde a pergunta sem mexer na tabela de tarefas,
   e continua certo para tarefas criadas fora da campanha.
+
+<a id="adr-0010"></a>
+### 4.11 ADR-0010 — Somente HTTPS na rede, com o Caddy do compose na frente
+
+**Situação:** Aceita (29/09/2026)
+
+#### Contexto
+
+O painel ia sair do PC de quem o usa para a rede (P01 do
+[plano de melhorias](MELHORIAS.md#plano-vigente)). Até aqui, a equipe acessava
+`http://IP:3000`: senha e cookie de sessão atravessavam a rede em texto puro.
+HTTPS era opcional (`SESSION_SECURE`), e as combinações erradas falhavam em
+silêncio — "ninguém consegue entrar" sem erro nenhum. Os scripts do serviço
+do Windows tinham acabado de ser removidos: o Docker passou a ser o único
+jeito de implantar.
+
+#### Decisão
+
+- **HTTP puro não escuta na rede.** Sem `SESSION_SECURE=true`, o servidor
+  escuta só em `127.0.0.1` (`config/transporte.js`); é o desenvolvimento.
+- **O `docker-compose.yml` sobe o painel e um Caddy.** O painel não publica
+  porta; o Caddy atende só a 443 (sem 80, nem para redirecionar) e emite o
+  certificado com autoridade própria (`tls internal`), que cada máquina da
+  equipe instala uma vez. `SESSION_SECURE=true` e `TRUST_PROXY=true` vêm
+  fixos do compose.
+- **Com HTTPS ligado, o Node recusa com 403 o que não chegar por HTTPS**
+  (`middlewares/exigirHttps.js`), exceto o `GET /api/auth/status` do
+  healthcheck. Recusa em vez de redirecionar: num POST a senha já passou
+  quando o redirecionamento volta, e montar o destino pelo `Host` seria
+  redirecionamento aberto.
+- **Combinação inválida recusa a subida**, com o motivo em português, como o
+  `SESSION_SECRET`.
+- **HSTS e `upgrade-insecure-requests` só com HTTPS.**
+
+#### Consequências
+
+- Endereço novo para todos: `https://` + `GESTOR_ENDERECO` (nome e/ou IP, no
+  `web/.env`). Por IP, só com `GESTOR_IP` — o navegador não manda SNI para
+  IP, e sem `default_sni` o Caddy não entrega certificado (descoberto na
+  primeira subida em produção).
+- Cada PC precisa da raiz do Caddy instalada; perder o volume `caddy-data`
+  gera uma raiz nova e obriga a reinstalar em todos.
+- A proteção contra `X-Forwarded-Proto` forjado é a porta do Node não ser
+  publicada — está no compose, não no código.
+- Os agentes do Atualizador (pausado) precisam do endereço `https://` e da
+  raiz ao voltar.
+- Rodar fora do Docker para a equipe deixou de ser opção.
+
+#### Alternativas consideradas
+
+- **HTTPS opcional, com aviso no log:** foi a primeira versão desta mudança;
+  descartada a pedido — aviso em log não impede ninguém de usar HTTP.
+- **Redirecionar HTTP → HTTPS (porta 80):** ninguém digita `http://` e fica
+  sem acesso, mas deixa uma porta a mais só para isso; com HSTS, depois da
+  primeira visita o navegador já nem tenta `http://`.
+- **TLS no próprio Node:** exigiria carregar e renovar certificado no
+  processo; o Caddy faz isso sozinho.
+- **`TRUST_PROXY` com lista de IPs/`loopback`:** só seria necessário com
+  proxy fora do Docker, que deixou de existir.
+
 ---
 
 ## 5. Como verificar

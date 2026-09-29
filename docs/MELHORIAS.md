@@ -45,16 +45,31 @@ conforme a configuração; `server/server.js` lê `SESSION_SECURE` e `TRUST_PROX
 possível de HTTP em rede local. O risco depende de como cada instalação é
 acessada; não foi feita auditoria da infraestrutura instalada.
 
-- [ ] Inventariar os endereços usados pela equipe, inclusive acesso remoto,
-      dispositivos móveis e eventual proxy já existente.
-- [ ] Definir URL canônica HTTPS e certificado confiável para os navegadores da
-      equipe. Registrar quem renova o certificado.
-- [ ] Ajustar o proxy e `TRUST_PROXY` para a quantidade real de saltos; impedir
-      acesso direto à porta HTTP a partir de redes não previstas.
-- [ ] Ativar `SESSION_SECURE=true` somente depois que o proxy HTTPS estiver
-      funcional; verificar login, renovação e encerramento da sessão.
-- [ ] Atualizar instruções de instalação e recuperação em `README.md`,
+- [x] Inventariar os endereços usados pela equipe, inclusive acesso remoto,
+      dispositivos móveis e eventual proxy já existente. *(29/09: uma
+      instalação, Docker em 192.168.0.85, acessada por `http://IP:3000`, sem
+      proxy; o serviço do Windows já tinha sido removido.)*
+- [x] Definir URL canônica HTTPS e certificado confiável para os navegadores da
+      equipe. Registrar quem renova o certificado. *(`https://gestoratualizacao`
+      e `https://192.168.0.85`; autoridade própria do Caddy, raiz de 10 anos,
+      certificado do site renovado pelo próprio Caddy.)*
+- [x] Ajustar o proxy e `TRUST_PROXY` para a quantidade real de saltos; impedir
+      acesso direto à porta HTTP a partir de redes não previstas. *(Caddy no
+      `docker-compose.yml`, um salto; a porta do Node não é publicada; só a
+      443, sem 80.)*
+- [x] Ativar `SESSION_SECURE=true` somente depois que o proxy HTTPS estiver
+      funcional; verificar login, renovação e encerramento da sessão. *(Fixo
+      no compose. Login com cookie `Secure` verificado numa pilha de teste e
+      em produção; HTTP direto no Node recusado com 403.)*
+- [x] Atualizar instruções de instalação e recuperação em `README.md`,
       `SECURITY.md` e `docs/OPERACAO.md`.
+- [ ] Cadastrar `gestoratualizacao` no DNS da empresa (ou no `hosts` de cada
+      PC) e instalar a raiz do Caddy nos PCs e aparelhos da equipe — passo
+      operacional, fora do código (README, "HTTPS").
+
+**Decisão:** somente HTTPS na rede ([ADR-0010](DOCUMENTACAO_CONSOLIDADA.md#adr-0010)):
+HTTP puro só escuta em `127.0.0.1`, e combinação inválida de
+`SESSION_SECURE`/`TRUST_PROXY` recusa a subida.
 
 **Aceite:** senha e cookie não cruzam o trecho acessado pelo usuário em HTTP;
 login e logout funcionam pela URL oficial; o painel não aceita um caminho

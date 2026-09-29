@@ -27,6 +27,8 @@ trate como incidente: rotacione primeiro, avise depois.
 | CSP sem `script-src unsafe-inline` | `Server.js` | reduz o estrago de um XSS |
 | `ORDER BY` só a partir de lista fixa | `shared/sortHelper.js` | injeção de SQL via `?sortBy=` |
 | Escape de HTML na montagem de tela | `client/js/utils/html.js` | XSS armazenado vindo de campo de texto |
+| Somente HTTPS na rede | `docker-compose.yml`, `proxy/Caddyfile`, `config/transporte.js`, `middlewares/exigirHttps.js` | senha e cookie nunca trafegam em texto puro; HTTP puro só escuta em `127.0.0.1` |
+| Cookie `Secure` + HSTS com HTTPS ligado | `Server.js` | o navegador não manda a sessão nem volta a tentar `http://` |
 | Token compartilhado para os agentes C# | `middlewares/requireAgent.js` | as rotas do agente não usam sessão de navegador |
 | 404 explícito em vez de fallback de SPA | `middlewares/notFoundHandler.js` | rota de API errada devolvia HTML e escondia o erro |
 
@@ -52,9 +54,15 @@ Isto não é uma lista de pendências: são escolhas conscientes, dado o context
 de rede interna. Se o sistema for exposto à internet, **todas** precisam ser
 revistas:
 
-- **Roda em HTTP puro na rede local.** Sessão e senha trafegam sem TLS. Quem
-  estiver na mesma rede e souber capturar tráfego vê tudo. Exposto à internet,
-  exige proxy reverso com HTTPS e `SESSION_SECURE=true`.
+- **Certificado de autoridade própria.** O Caddy assina com uma raiz gerada
+  na instalação (`tls internal`), que cada máquina da equipe instala. Quem
+  tiver a chave da raiz (volume `caddy-data`) consegue emitir certificado
+  aceito por essas máquinas. Na internet, com domínio público, troque por
+  certificado público (ver `proxy/Caddyfile`).
+- **A proteção contra `X-Forwarded-Proto` forjado é a rede, não o código.**
+  `TRUST_PROXY=true` confia em quem conectar direto no Node; é seguro porque
+  o `docker-compose.yml` não publica a porta dele. Publicá-la de volta abre
+  o furo.
 - **Não há proteção de CSRF por token.** A defesa hoje é `sameSite=lax` no
   cookie, que cobre o caso comum (formulário postado de outro site), mas não é
   equivalente a um token por requisição.

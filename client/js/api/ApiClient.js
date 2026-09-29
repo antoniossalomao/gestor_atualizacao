@@ -235,8 +235,8 @@ export class ApiClient {
    * Avisa a tela quando o servidor cai e quando ele volta -- só na TROCA de
    * estado, nunca a cada requisição.
    *
-   * Existe porque o serviço do Windows reinicia (atualização, reboot da
-   * máquina que hospeda) enquanto as pessoas estão com o app aberto. Até aqui
+   * Existe porque o servidor reinicia (atualização, reboot da máquina que
+   * hospeda) enquanto as pessoas estão com o app aberto. Até aqui
    * isso era invisível: a tela continuava mostrando os dados de antes, e o
    * primeiro clique em "Adicionar" é que virava um "não foi possível conectar"
    * solto, sem dizer se o problema era daquele registro ou de tudo.

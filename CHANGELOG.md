@@ -15,6 +15,13 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Somente HTTPS na rede — P01 (29/09/2026):** o painel deixa de atender `http://IP:3000`. A equipe passa a acessar `https://gestoratualizacao` (ou `https://IP`). Decisão em [ADR-0010](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0010).
+  - *Docker com proxy*: o `docker-compose.yml` sobe o painel e um Caddy na frente. O painel não publica porta; o Caddy atende só a 443 (sem a 80, nem para redirecionar) e emite o certificado com autoridade própria, instalada uma vez em cada PC. Endereço no `web/.env` (`GESTOR_ENDERECO`, e `GESTOR_IP` para o acesso por IP: o navegador não manda SNI para IP e, sem a dica, o Caddy não entregava certificado nenhum — pelo nome abria, pelo IP não).
+  - *Servidor*: sem HTTPS, escuta só em `127.0.0.1` (desenvolvimento). Com HTTPS, recusa com 403 o que não vier pelo proxy — inclusive o POST do login, que antes passaria a senha em texto puro por `http://IP:3000` mesmo com o cookie `Secure`. HSTS e `upgrade-insecure-requests` só com HTTPS.
+  - *Subida recusada, em vez de falha silenciosa*: `SESSION_SECURE=true` sem `TRUST_PROXY` (antes: "ninguém consegue entrar", sem erro) e valores fora de `true`/`false` (antes: `SESSION_SECURE=1` virava `false` calado).
+  - *Removido o que não se usa mais*: instruções do serviço do Windows (os scripts já tinham saído), o volume e a pasta `server/logs/` (só o NSSM escrevia nela; o log agora é `docker compose logs`), e o conselho de `SESSION_SECURE=false` na rede local.
+  - *Testes*: `server/tests/transporte.test.js`.
+
 - **Documentação consolidada (28/09/2026):** `docs/` passou a manter apenas
   Operação, Melhorias e Documentação Consolidada. O plano vigente foi integrado
   a Melhorias; o plano de revisão concluído e os ADRs 0007–0009 foram

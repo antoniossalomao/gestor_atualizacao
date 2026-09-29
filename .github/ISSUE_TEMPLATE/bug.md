@@ -25,5 +25,5 @@ labels: bug
 
 ## O que já foi olhado
 
-<!-- Console do navegador (F12), `server/logs/service-err.log`, painel de Saúde.
+<!-- Console do navegador (F12), `docker compose logs gestor`, painel de Saúde.
      Se ainda não olhou, tudo bem -- deixe em branco. -->

@@ -83,8 +83,8 @@ COPY --chown=node:node client /app/client
 # sobre uma pasta que existe na imagem, o Docker copia o conteúdo e o dono
 # dela para o volume. Sem isto, o volume nasceria pertencendo ao root e o
 # processo (que não roda como root) não conseguiria gravar o banco.
-RUN mkdir -p /app/server/data/backups /app/server/data/packages /app/server/logs \
-    && chown -R node:node /app/server/data /app/server/logs
+RUN mkdir -p /app/server/data/backups /app/server/data/packages \
+    && chown -R node:node /app/server/data
 
 # Não rodar como root. O "node" é um usuário sem privilégios que já vem na
 # imagem oficial (uid 1000).

@@ -1,0 +1,38 @@
+# Proxy HTTPS na frente do painel (P01 de docs/MELHORIAS.md), usado pelo
+# docker-compose.yml. Passo a passo na seção "HTTPS" do README.
+
+{
+	# Somente HTTPS (decisão de 29/09/2026): a porta 80 não é publicada, e
+	# o redirecionamento http:// -> https:// que o Caddy faria nela não serve
+	# para nada. Desligado para não deixar um ouvinte a mais no container.
+	auto_https disable_redirects
+
+	# Quem acessa por https://IP, o navegador não diz o endereço ao pedir o
+	# certificado (sem SNI: IP não vai no SNI, pela especificação do TLS). Sem
+	# isto, o Caddy não sabe qual certificado entregar e a conexão cai sem
+	# mensagem útil -- descoberto na primeira subida em produção, 29/09/2026:
+	# pelo nome abria, pelo IP não. GESTOR_IP vem do web/.env; sem ele,
+	# "localhost" não casa com nenhum site, e o acesso por IP fica desligado.
+	default_sni {$GESTOR_IP:localhost}
+}
+
+# GESTOR_ENDERECO é o endereço pelo qual a equipe acessa, sem "https://":
+# um nome (gestoratualizacao), o IP da máquina (192.168.0.10), ou os dois
+# separados por vírgula ("gestoratualizacao, 192.168.0.10"). Vem do .env
+# da pasta web/ (o do compose, não o server/.env). É a URL canônica: o
+# certificado só vale para eles, então acessar por outro nome ou IP dá aviso
+# de certificado no navegador -- e é assim que deve ser. O nome precisa
+# existir no DNS da empresa ou no arquivo hosts de cada máquina (README).
+{$GESTOR_ENDERECO} {
+	# Certificado emitido pela autoridade PRÓPRIA do Caddy, gerada na primeira
+	# subida e guardada no volume caddy-data. Serve para IP e nome interno,
+	# que nenhuma autoridade pública assina, mas só vira "cadeado" sem aviso
+	# depois que o certificado-raiz for instalado nas máquinas da equipe
+	# (README, "HTTPS"). A raiz vale 10 anos; o certificado do site é
+	# renovado sozinho pelo Caddy, sem ninguém precisar lembrar.
+	tls internal
+
+	# O Caddy já manda X-Forwarded-For e X-Forwarded-Proto por conta própria,
+	# que é do que o servidor precisa (TRUST_PROXY=true no docker-compose.yml).
+	reverse_proxy gestor:3000
+}
