@@ -1,7 +1,7 @@
 const { BaseRepository } = require("./BaseRepository");
 
 const CAMPOS = `c.id, c.titulo, c.descricao, c.sistema_id AS sistemaId, s.nome AS sistema,
-  c.versao_alvo AS versaoAlvo, c.prazo, c.criada_em AS criadaEm, c.criada_por AS criadaPor,
+  c.versao_alvo AS versaoAlvo, c.prazo, c.cidade, c.criada_em AS criadaEm, c.criada_por AS criadaPor,
   c.encerrada_em AS encerradaEm, c.encerrada_por AS encerradaPor,
   c.total_final AS totalFinal, c.atendidos_final AS atendidosFinal`;
 
@@ -40,19 +40,19 @@ class CampanhaRepository extends BaseRepository {
     return this.conn.prepare(`SELECT ${CAMPOS} FROM campanhas c JOIN sistemas s ON s.id = c.sistema_id WHERE c.id = ?`).get(id);
   }
 
-  insert({ titulo, descricao, sistemaId, versaoAlvo, prazo, criadaPor }) {
+  insert({ titulo, descricao, sistemaId, versaoAlvo, prazo, cidade, criadaPor }) {
     const info = this.conn
       .prepare(
-        `INSERT INTO campanhas (titulo, descricao, sistema_id, versao_alvo, prazo, criada_em, criada_por)
-         VALUES (@titulo, @descricao, @sistemaId, @versaoAlvo, @prazo, @criadaEm, @criadaPor)`
+        `INSERT INTO campanhas (titulo, descricao, sistema_id, versao_alvo, prazo, cidade, criada_em, criada_por)
+         VALUES (@titulo, @descricao, @sistemaId, @versaoAlvo, @prazo, @cidade, @criadaEm, @criadaPor)`
       )
-      .run({ titulo, descricao, sistemaId, versaoAlvo, prazo, criadaPor, criadaEm: new Date().toISOString() });
+      .run({ titulo, descricao, sistemaId, versaoAlvo, prazo, cidade, criadaPor, criadaEm: new Date().toISOString() });
     return Number(info.lastInsertRowid);
   }
 
   /** Sistema e versão-alvo NÃO entram: são a meta, e a meta não muda depois de criada. */
-  update(id, { titulo, descricao, prazo }) {
-    return this.conn.prepare("UPDATE campanhas SET titulo = @titulo, descricao = @descricao, prazo = @prazo WHERE id = @id").run({ id, titulo, descricao, prazo }).changes;
+  update(id, { titulo, descricao, prazo, cidade }) {
+    return this.conn.prepare("UPDATE campanhas SET titulo = @titulo, descricao = @descricao, prazo = @prazo, cidade = @cidade WHERE id = @id").run({ id, titulo, descricao, prazo, cidade }).changes;
   }
 
   encerrar(id, { usuarioNome, total, atendidos }) {

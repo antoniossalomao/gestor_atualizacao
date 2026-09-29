@@ -130,6 +130,7 @@ class ApiRouter {
     api.get("/clientes/names", clientes.names);
     api.get("/clientes/opcoes-por-codigo", clientes.opcoesPorCodigo);
     api.get("/clientes/grupos", clientes.grupos);
+    api.get("/clientes/cidades", clientes.cidades);
     api.get("/clientes/by-nome/:nome", clientes.getByNome);
     api.post("/clientes", requireRole("operador", "admin"), clientes.create);
     api.put("/clientes/:id", requireRole("operador", "admin"), clientes.update);

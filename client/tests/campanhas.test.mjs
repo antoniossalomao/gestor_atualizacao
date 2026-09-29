@@ -74,7 +74,7 @@ test("texto digitado não vira HTML", () => {
     cabecalhoCampanha(perigosa, { role: "admin" }),
     celulaSituacaoCampanha({ situacao: "agendado", agendamento: { data: MALICIOSO, responsavel: MALICIOSO } }),
     acoesClienteCampanha({ id: 1, nome: MALICIOSO, situacao: "pendente" }, { role: "admin", encerrada: false }),
-    formularioCampanha({ sistemas: [{ nome: MALICIOSO, data: MALICIOSO }] }),
+    formularioCampanha({ sistemas: [{ nome: MALICIOSO, data: MALICIOSO }], cidades: [MALICIOSO] }),
     formularioCampanha({ sistemas: [], campanha: perigosa }),
   ]) {
     assert.doesNotMatch(String(marcacao), /<img/);
@@ -85,7 +85,8 @@ test("formulário de edição não deixa mudar a meta", () => {
   const marcacao = String(formularioCampanha({ sistemas: [], campanha: CAMPANHA }));
   assert.match(marcacao, /id="cmp-sistema"[^>]*disabled/);
   assert.match(marcacao, /data-field="versaoAlvo"[^>]*disabled/);
-  assert.doesNotMatch(marcacao, /<select/);
+  assert.doesNotMatch(marcacao, /<select[^>]*id="cmp-sistema"/);
+  assert.match(marcacao, /<select[^>]*id="cmp-cidade"/);
 });
 
 test("filtros mostram a contagem de cada grupo; lista vazia orienta", () => {

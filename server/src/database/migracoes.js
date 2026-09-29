@@ -37,6 +37,11 @@ const MIGRACOES = [
     descricao: "campanhas de atualização (meta de versão por sistema)",
     aplicar: migracao4,
   },
+  {
+    versao: 5,
+    descricao: "cidade das campanhas e regime tributário dos clientes",
+    aplicar: migracao5,
+  },
 ];
 
 /**
@@ -211,6 +216,13 @@ function migracao4(conn) {
       atendidos_final INTEGER
     );
     CREATE INDEX idx_campanhas_sistema ON campanhas (sistema_id);
+  `);
+}
+
+function migracao5(conn) {
+  conn.exec(`
+    ALTER TABLE campanhas ADD COLUMN cidade TEXT NOT NULL DEFAULT '';
+    ALTER TABLE clientes ADD COLUMN regime_tributario TEXT NOT NULL DEFAULT '';
   `);
 }
 

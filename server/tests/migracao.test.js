@@ -260,7 +260,7 @@ test("Migração 3 - banco já existente recebe autoria sem perder dados", () =>
     const antigo = new Sqlite3(arquivo);
     // Um banco na versão 2 de verdade não tem nada das migrações seguintes:
     // nem a autoria (3) nem as campanhas (4).
-    antigo.exec("ALTER TABLE sistemas DROP COLUMN ultima_versao_autor; ALTER TABLE sistemas DROP COLUMN ultima_versao_em; DROP TABLE campanhas");
+    antigo.exec("ALTER TABLE sistemas DROP COLUMN ultima_versao_autor; ALTER TABLE sistemas DROP COLUMN ultima_versao_em; ALTER TABLE clientes DROP COLUMN regime_tributario; DROP TABLE campanhas");
     antigo.pragma("user_version = 2");
     antigo.close();
 
@@ -286,7 +286,7 @@ test("Migração 4 - banco na versão 3 ganha campanhas sem perder dados", () =>
     inicial.conn.close();
 
     const antigo = new Sqlite3(arquivo);
-    antigo.exec("DROP TABLE campanhas");
+    antigo.exec("ALTER TABLE clientes DROP COLUMN regime_tributario; DROP TABLE campanhas");
     antigo.pragma("user_version = 3");
     antigo.close();
 

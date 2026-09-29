@@ -7,10 +7,11 @@ const SORT_MAP = {
   codigo: "codigo COLLATE NOCASE",
   nome: "nome COLLATE NOCASE",
   cidade: "cidade COLLATE NOCASE",
+  regimeTributario: "regime_tributario COLLATE NOCASE",
   sistemasTexto: "sistemas COLLATE NOCASE",
 };
 
-const LEITURA = "id, codigo, nome, cidade, sistemas, grupo, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor";
+const LEITURA = "id, codigo, nome, cidade, regime_tributario AS regimeTributario, sistemas, grupo, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor";
 
 /**
  * Cadastro de clientes e os sistemas que cada um possui (aba Clientes).
@@ -24,7 +25,7 @@ class ClienteRepository extends BaseRepository {
 
   /** Uma página de clientes. Devolve `{ rows, total, page, pageSize }`. */
   list(search = "", { page = 1, pageSize = 50, sortBy, sortDir } = {}) {
-    const where = search ? "WHERE nome LIKE @like OR cidade LIKE @like OR sistemas LIKE @like OR grupo LIKE @like" : "";
+    const where = search ? "WHERE nome LIKE @like OR cidade LIKE @like OR regime_tributario LIKE @like OR sistemas LIKE @like OR grupo LIKE @like" : "";
     const params = search ? { like: `%${search}%` } : {};
 
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM clientes_v ${where}`).get(params).total;
@@ -65,6 +66,10 @@ class ClienteRepository extends BaseRepository {
       .prepare("SELECT DISTINCT grupo FROM clientes WHERE grupo IS NOT NULL AND grupo != '' ORDER BY grupo")
       .all()
       .map((r) => r.grupo);
+  }
+
+  cidades() {
+    return this.conn.prepare("SELECT DISTINCT trim(cidade) AS cidade FROM clientes WHERE trim(coalesce(cidade, '')) != '' ORDER BY cidade COLLATE NOCASE").all().map((r) => r.cidade);
   }
 
   /** (id, codigo, nome, cidade) de todos os clientes -- usado no calculo de desatualizados. */
@@ -147,10 +152,10 @@ class ClienteRepository extends BaseRepository {
   }
 
   /** @param {number[]} sistemaIds na ordem marcada @returns {number} o id criado */
-  insert(codigo, nome, cidade, sistemaIds, grupo) {
+  insert(codigo, nome, cidade, sistemaIds, grupo, regimeTributario = "") {
     return this.conn.transaction(() => {
       const id = Number(
-        this.conn.prepare("INSERT INTO clientes (codigo, nome, cidade, grupo) VALUES (?, ?, ?, ?)").run(codigo, nome, cidade, grupo).lastInsertRowid
+        this.conn.prepare("INSERT INTO clientes (codigo, nome, cidade, grupo, regime_tributario) VALUES (?, ?, ?, ?, ?)").run(codigo, nome, cidade, grupo, regimeTributario).lastInsertRowid
       );
       this._gravarSistemas(id, sistemaIds);
       this._adotarAtendimentosSemVinculo(id, nome);
@@ -164,11 +169,11 @@ class ClienteRepository extends BaseRepository {
    * isso um rename acompanha nos registros ligados a ele -- senão, depois
    * de uma exclusão, o histórico mostraria um nome que ele não usa há anos.
    */
-  update(id, codigo, nome, cidade, sistemaIds, grupo, revisaoEsperada = null, usuarioNome = "") {
+  update(id, codigo, nome, cidade, sistemaIds, grupo, revisaoEsperada = null, usuarioNome = "", regimeTributario = "") {
     return this.conn.transaction(() => {
       const resultado = this.conn
-        .prepare("UPDATE clientes SET codigo = @codigo, nome = @nome, cidade = @cidade, grupo = @grupo, revisao = revisao + 1, atualizado_em = @atualizadoEm, atualizado_por = @atualizadoPor WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)")
-        .run({ codigo, nome, cidade, grupo, id, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome });
+        .prepare("UPDATE clientes SET codigo = @codigo, nome = @nome, cidade = @cidade, grupo = @grupo, regime_tributario = @regimeTributario, revisao = revisao + 1, atualizado_em = @atualizadoEm, atualizado_por = @atualizadoPor WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)")
+        .run({ codigo, nome, cidade, grupo, regimeTributario, id, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome });
       if (resultado.changes) {
         this._gravarSistemas(id, sistemaIds);
         this.conn.prepare("UPDATE atualizacoes SET cliente = ? WHERE cliente_id = ?").run(nome, id);

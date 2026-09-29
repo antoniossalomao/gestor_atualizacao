@@ -45,6 +45,28 @@ function ambiente() {
   return { db, atualizacoes, agenda, campanhas, cliente, atender, situacao, cleanup };
 }
 
+test("Campanhas - cidade limita público, placar e exportação", async () => {
+  const env = ambiente();
+  try {
+    env.cliente("Loja Marília", ["B_NFe"]);
+    env.db.clientes.insert("", "Loja Bauru", "Bauru", [env.db.sistemas.resolver("B_NFe").id], "");
+    const campanha = env.campanhas.create({ titulo: "Local", sistema: "B_NFe", versaoAlvo: "25/09/2026", cidade: "marília" }, USUARIO);
+    assert.equal(campanha.cidade, "Marília");
+    assert.deepEqual(campanha.clientes.map((c) => c.nome), ["Loja Marília"]);
+    assert.equal(env.campanhas.list()[0].totalClientes, 1);
+    const exportado = await env.campanhas.exportarPendentesXlsx(campanha.id);
+    const ExcelJS = require("exceljs");
+    const planilha = new ExcelJS.Workbook();
+    await planilha.xlsx.load(exportado.buffer);
+    assert.equal(planilha.getWorksheet("Pendentes").rowCount, 2);
+    const editada = env.campanhas.update(campanha.id, { titulo: "Local", cidade: "Bauru" }, USUARIO);
+    assert.deepEqual(editada.clientes.map((c) => c.nome), ["Loja Bauru"]);
+    assert.throws(() => env.campanhas.create({ titulo: "Inválida", sistema: "B_NFe", versaoAlvo: "25/09/2026", cidade: "Inexistente" }, USUARIO), /cidade cadastrada/);
+  } finally {
+    env.cleanup();
+  }
+});
+
 test("Campanhas - meta, baixa automática e placar", async (t) => {
   const env = ambiente();
   try {

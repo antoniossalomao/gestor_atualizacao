@@ -290,6 +290,12 @@ export class CampanhasView extends View {
 
   async _abrirFormulario(campanha) {
     let sistemas = [];
+    let cidades = [];
+    try {
+      cidades = await this.api.get("/clientes/cidades", null, { key: "clientes:cidades" });
+    } catch (err) {
+      return Modal.alert("Erro", mensagem(err), "error");
+    }
     if (!campanha) {
       try {
         sistemas = await this.api.get("/sistemas/versoes", null, { key: "sistemas:versoes" });
@@ -300,7 +306,7 @@ export class CampanhasView extends View {
     }
     const { box, close } = Modal.abrirCaixa({ largura: 600 });
     box.setAttribute("aria-labelledby", "campanha-form-titulo");
-    box.innerHTML = String(formularioCampanha({ sistemas, campanha }));
+    box.innerHTML = String(formularioCampanha({ sistemas, cidades, campanha }));
     const form = /** @type {HTMLFormElement} */ (box.querySelector('[data-role="form"]'));
     const campo = (nome) => /** @type {HTMLInputElement} */ (form.querySelector(`[data-field="${nome}"]`));
     const erro = form.querySelector('[data-role="erro"]');
@@ -327,6 +333,7 @@ export class CampanhasView extends View {
       const dados = {
         titulo: campo("titulo").value.trim(),
         prazo: campo("prazo").value.trim(),
+        cidade: campo("cidade").value,
         descricao: /** @type {HTMLTextAreaElement} */ (form.querySelector('[data-field="descricao"]')).value.trim(),
         ...(campanha ? {} : { sistema: campo("sistema").value, versaoAlvo: campo("versaoAlvo").value.trim() }),
       };
