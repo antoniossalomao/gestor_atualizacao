@@ -66,6 +66,35 @@ test("Tarefas, campanhas e importação no navegador", { skip: pular }, async (t
     assert.equal(tarefa.status, "Concluído");
   });
 
+  await passo(t, p, "filtros rápidos Hoje e Atrasadas mostram as tarefas certas (antes, sempre vazios)", async () => {
+    const dataBR = (dias) => {
+      const d = new Date();
+      d.setDate(d.getDate() + dias);
+      return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+    };
+    await api.post(admin, "/agendamentos", { tarefa: "Tarefa de hoje", cliente: "Mercado Central", data: dataBR(0) });
+    await api.post(admin, "/agendamentos", { tarefa: "Tarefa esquecida", cliente: "Mercado Central", data: dataBR(-3) });
+    const cartoes = () => p.avaliar(() => [...document.querySelectorAll(".kanban-card")].map((c) => c.querySelector(".kanban-card__title")?.textContent.trim()).sort());
+
+    await p.clicar('[data-filtro-rapido="atrasadas"]');
+    await p.esperar(() => {
+      const t = [...document.querySelectorAll(".kanban-card .kanban-card__title")].map((e) => e.textContent.trim());
+      return t.length === 1 && t[0] === "Tarefa esquecida";
+    }, { descricao: "só a tarefa atrasada" });
+    assert.equal(await p.avaliar(() => /** @type {HTMLInputElement} */ (document.querySelector("#age-busca")).value), "", "a busca não é sequestrada pelo filtro");
+
+    await p.clicar('[data-filtro-rapido="hoje"]');
+    await p.esperar(() => {
+      const t = [...document.querySelectorAll(".kanban-card .kanban-card__title")].map((e) => e.textContent.trim());
+      return t.length === 1 && t[0] === "Tarefa de hoje";
+    }, { descricao: "só a tarefa de hoje" });
+
+    // Clicar de novo no filtro ativo tira o filtro.
+    await p.clicar('[data-filtro-rapido="hoje"]');
+    await p.esperar(() => document.querySelectorAll(".kanban-card").length === 3, { descricao: "as três tarefas de volta" });
+    assert.deepEqual(await cartoes(), ["Ligar para o cliente", "Tarefa de hoje", "Tarefa esquecida"]);
+  });
+
   await passo(t, p, "campanha: título vazio é recusado com o erro no campo certo", async () => {
     await p.clicar('.tab-button[data-tab="campanhas"]');
     await p.clicar('[data-action="nova"]', { texto: "Nova campanha" });

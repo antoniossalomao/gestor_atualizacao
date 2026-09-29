@@ -37,6 +37,20 @@ export class AgendamentosView extends View {
     this._lastDragEnd = 0; // timestamp do último dragend -- distingue clique de drag
     const salvo = prefs.get("agendamentos:filtros", {});
     this.busca = salvo.busca || "";
+    // "hoje" | "atrasadas" | "": os botões de filtro rápido, que o servidor
+    // entende (AgendamentoRepository.list). Antes eles escreviam na BUSCA a
+    // data de hoje ou "__atrasadas__", que o servidor procurava como texto --
+    // e os dois voltavam sempre vazios. O que ficou guardado desse jeito no
+    // navegador é convertido aqui, para ninguém abrir a aba com uma busca
+    // por "__atrasadas__" (ou pela data de um dia que já passou).
+    this.quando = salvo.quando || "";
+    if (this.busca === "__atrasadas__") {
+      this.busca = "";
+      this.quando = "atrasadas";
+    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(this.busca)) {
+      this.busca = "";
+      this.quando = "hoje";
+    }
     this.status = salvo.status || "Todos";
     this.prioridade = salvo.prioridade || "Todas";
     this.sortBy = salvo.sortBy;
@@ -210,19 +224,10 @@ export class AgendamentosView extends View {
           this.busca = nome;
           if (this.searchInput) this.searchInput.value = nome;
         }
-      } else if (tipo === "hoje") {
-        this.busca = todayBR();
-        if (this.searchInput) this.searchInput.value = this.busca;
-      } else if (tipo === "atrasadas") {
-        // "Atrasadas" = tarefas cujo campo data é anterior a hoje e status ≠ Concluído.
-        // O filtro de busca não cobre isso diretamente; usamos a busca pelo
-        // termo para o backend reconhecer (se houver suporte) OU aplicamos o
-        // status ativo "A Fazer"+"Em Andamento" e deixamos a indicação visual.
-        // Por ora filtramos pela busca especial "atrasadas" se o backend
-        // suportar; caso contrário apenas marca o botão como ativo para
-        // indicação visual de que o filtro está aplicado.
-        this.busca = "__atrasadas__";
-        if (this.searchInput) this.searchInput.value = this.busca;
+      } else if (tipo === "hoje" || tipo === "atrasadas") {
+        // Filtro do servidor, não texto na busca (ver `quando` no construtor).
+        // "Atrasadas" usa a mesma regra do selo "Vencida" do cartão.
+        this.quando = tipo;
       } else if (tipo === "arquivadas") {
         this.status = FILTRO_ARQUIVADAS;
         if (this.statusFilter) this.statusFilter.value = FILTRO_ARQUIVADAS;
@@ -295,9 +300,8 @@ export class AgendamentosView extends View {
     const btns = this.filtrosRapidosEl.querySelectorAll("[data-filtro-rapido]");
     let ativoTipo = null;
     if (this.status === FILTRO_ARQUIVADAS) ativoTipo = "arquivadas";
-    else if (this.busca === "__atrasadas__") ativoTipo = "atrasadas";
+    else if (this.quando) ativoTipo = this.quando;
     else if (this.busca && this.user?.nome && this.busca === this.user.nome) ativoTipo = "minhas";
-    else if (this.busca && this.busca === todayBR()) ativoTipo = "hoje";
     for (const btn of btns) {
       btn.classList.toggle("is-active", btn.dataset.filtroRapido === ativoTipo);
     }
@@ -490,11 +494,20 @@ export class AgendamentosView extends View {
     this.kanban.classList.add("is-refreshing");
     try {
       await this.swr(
-        `agendamentos:lista:${this.busca}|${this.status}|${this.prioridade}|200|${this.sortBy}|${this.sortDir}`,
+        `agendamentos:lista:${this.busca}|${this.status}|${this.prioridade}|${this.quando}|200|${this.sortBy}|${this.sortDir}`,
         () =>
           this.api.get(
             "/agendamentos",
-            { search: this.busca, status: this.status, prioridade: this.prioridade, page: 1, pageSize: 200, sortBy: this.sortBy, sortDir: this.sortDir },
+            {
+              search: this.busca,
+              status: this.status,
+              prioridade: this.prioridade,
+              quando: this.quando,
+              page: 1,
+              pageSize: 200,
+              sortBy: this.sortBy,
+              sortDir: this.sortDir,
+            },
             { key: "agendamentos:lista" }
           ),
         (resposta) => {
@@ -671,7 +684,7 @@ export class AgendamentosView extends View {
   }
 
   _temFiltro() {
-    return Boolean(this.busca) || this.status !== "Todos" || this.prioridade !== "Todas";
+    return Boolean(this.busca) || this.status !== "Todos" || this.prioridade !== "Todas" || Boolean(this.quando);
   }
 
   _pintarLimparFiltros() {
@@ -682,6 +695,7 @@ export class AgendamentosView extends View {
     this.busca = "";
     this.status = "Todos";
     this.prioridade = "Todas";
+    this.quando = "";
     if (this.searchInput) this.searchInput.value = "";
     if (this.statusFilter) this.statusFilter.value = "Todos";
     if (this.prioridadeFilter) this.prioridadeFilter.value = "Todas";
@@ -696,6 +710,7 @@ export class AgendamentosView extends View {
       busca: this.busca,
       status: this.status,
       prioridade: this.prioridade,
+      quando: this.quando,
       sortBy: this.sortBy,
       sortDir: this.sortDir,
     });

@@ -60,6 +60,32 @@ function criar(service, db, campos = {}) {
   return db.agendamentos.find(id);
 }
 
+test("AgendamentoService - filtros Hoje e Atrasadas (os botões da tela)", () => {
+  const { db, service, cleanup } = ambiente();
+  try {
+    const dataBR = (deslocamentoDias) => {
+      const d = new Date();
+      d.setDate(d.getDate() + deslocamentoDias);
+      return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+    };
+    criar(service, db, { tarefa: "de hoje", data: dataBR(0) });
+    criar(service, db, { tarefa: "de ontem", data: dataBR(-1) });
+    criar(service, db, { tarefa: "de ontem, feita", data: dataBR(-1), status: "Concluído" });
+    criar(service, db, { tarefa: "do mês passado, sem resposta", data: dataBR(-30), status: "Sem resposta" });
+    criar(service, db, { tarefa: "de amanhã", data: dataBR(1) });
+    const tarefas = (quando) => service.list("", "Todos", { quando, pageSize: 50 }).rows.map((r) => r.tarefa).sort();
+
+    assert.deepEqual(tarefas("hoje"), ["de hoje"]);
+    // Mesma regra do selo "Vencida": data passada e não concluída ("Sem
+    // resposta" também está atrasada -- ainda não foi feita).
+    assert.deepEqual(tarefas("atrasadas"), ["de ontem", "do mês passado, sem resposta"]);
+    assert.equal(tarefas(undefined).length, 5, "sem filtro, todas");
+    assert.equal(tarefas("qualquer-coisa").length, 5, "valor desconhecido é ignorado, não esvazia a lista");
+  } finally {
+    cleanup();
+  }
+});
+
 test("AgendamentoService - validação de entrada", async (t) => {
   const env = ambiente();
   try {

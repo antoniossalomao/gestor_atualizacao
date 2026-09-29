@@ -15,6 +15,9 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Manutenção das views de Atualizações e Agendamentos — P06 (29/09/2026):**
+  - *Filtros rápidos "Hoje" e "Atrasadas" de Agendamentos funcionam*: escreviam na busca a data de hoje ou `__atrasadas__`, que o servidor procurava como texto em tarefa/cliente/responsável — os dois mostravam sempre "Nenhuma tarefa com esse filtro". Agora são um filtro do servidor (`quando`), e "Atrasadas" segue a mesma regra do selo "Vencida" do cartão. Filtros salvos no navegador do jeito antigo são convertidos.
+
 - **Limites e medição da importação/exportação — P05 (29/09/2026):** medido com `server/ferramentas/medir-planilhas.js` na máquina de produção: importar 20 mil linhas custava 21 s e 1 GB de memória, 50 mil custavam 1,75 GB — o bastante para derrubar o painel de todo mundo, e o limite de 15 MB do upload não impedia (15 MB são ~400 mil linhas). Números completos em [MELHORIAS](docs/MELHORIAS.md), P05.
   - *Limites*: 5.000 linhas por importação e 10.000 por exportação (`server/src/config/limitesPlanilha.js`), anos de folga sobre o volume real (~1.000 atualizações por ano). Acima disso, a mensagem diz o limite e o que fazer (dividir o arquivo; filtrar por período), e nada é gravado.
   - *Recusa antes de carregar*: a importação conta as linhas direto no zip do .xlsx, sem montar a planilha, e recusa um arquivo grande em ~0,1 s. O leitor em fluxo do ExcelJS, que seria o caminho natural, falha de forma intermitente na versão 4.4.0 e foi descartado.
