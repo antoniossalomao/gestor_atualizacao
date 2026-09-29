@@ -4,13 +4,13 @@
  *
  * A regra de quem está em dia é do servidor (tem teste lá). Aqui o que erra
  * em silêncio é a apresentação: porcentagem sobre o denominador errado, "100%
- * em dia" de ninguém, "pela data" sumindo do texto, nome de sistema virando
+ * em dia" de ninguém, nome de sistema virando
  * HTML.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { totaisSituacao, percentual, rotuloSituacao, sistemasQueExplicam } from "../js/domain/situacao.js";
+import { totaisSituacao, percentual, sistemasQueExplicam } from "../js/domain/situacao.js";
 import { corpoSituacao } from "../js/templates/resumo.js";
 
 const cli = (nome) => ({ nome, cidade: "—", sistemas: [] });
@@ -39,18 +39,13 @@ test("totaisSituacao", async (t) => {
 });
 
 test("rótulos da situação", async (t) => {
-  await t.test("'pela data' não some do texto", () => {
-    assert.equal(rotuloSituacao("Em dia", true), "Em dia (pela data)");
-    assert.equal(rotuloSituacao("Em dia", false), "Em dia");
-  });
-
   await t.test("a lista de um grupo mostra os sistemas que o puseram ali", () => {
     const sistemas = [
-      { sistema: "B_NFe", situacao: "Desatualizado", pelaData: true },
+      { sistema: "B_NFe", situacao: "Desatualizado" },
       { sistema: "B_Vendas", situacao: "Em dia" },
       { sistema: "B_Ordem", situacao: "Sem referência" },
     ];
-    assert.equal(sistemasQueExplicam("desatualizado", sistemas), "B_NFe (pela data)");
+    assert.equal(sistemasQueExplicam("desatualizado", sistemas), "B_NFe");
     assert.equal(sistemasQueExplicam("pendente", sistemas), "B_Ordem: sem referência");
   });
 

@@ -6,7 +6,7 @@ import { LineChart } from "../components/charts/LineChart.js";
 import { html, plural } from "../utils/html.js";
 import { todayBR } from "../utils/date.js";
 import { formatarMes, primeiroDiaDoMes, tendenciaMensal } from "../domain/resumo.js";
-import { GRUPOS_SITUACAO, AJUDA_PELA_DATA, totaisSituacao, sistemasQueExplicam } from "../domain/situacao.js";
+import { GRUPOS_SITUACAO, totaisSituacao, sistemasQueExplicam } from "../domain/situacao.js";
 import { statTile, deltaTendencia, corpoSituacao } from "../templates/resumo.js";
 
 /**
@@ -191,10 +191,9 @@ export class ResumoView extends View {
   _listarGrupo(chave) {
     const grupo = GRUPOS_SITUACAO.find((g) => g.chave === chave);
     const clientes = this.resumo?.situacaoClientes?.[chave] || [];
-    const algumPelaData = clientes.some((c) => c.sistemas.some((s) => s.pelaData));
     this._abrirGaveta({
       titulo: `${grupo.rotulo} — ${plural(clientes.length, "cliente")}`,
-      ajuda: `${grupo.descricao}${algumPelaData ? ` "Pela data": ${AJUDA_PELA_DATA}` : ""}`,
+      ajuda: grupo.descricao,
       colunas: [
         { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
         { key: "cidade", label: "Cidade" },

@@ -14,32 +14,30 @@ const { parseData } = require("../shared/validation");
  *     oficial (teste, ou oficial rebaixada) aparecia como atrasado.
  *     Desatualizado é só a recebida ANTERIOR à oficial.
  *  2. **A fonte é o atendimento.** O que o agente reporta não entra aqui.
- *  3. **Atendimento sem versão usa a data do atendimento.** Os atendimentos
- *     de antes da versão oficial existir não gravaram versão (eram mais de
- *     mil em produção). Pela regra estrita, todo cliente ficaria "pendente"
- *     e o indicador não serviria para nada. Então: atendido na data da
- *     oficial ou depois conta como em dia, antes dela como desatualizado --
- *     e a situação sai marcada `pelaData`, para a tela não apresentar como
- *     versão comprovada o que é dedução pela data.
+ *  3. **Vale a DATA do atendimento, não a versão recebida.** Atendido na
+ *     data da oficial ou depois conta como em dia; antes dela, como
+ *     desatualizado. Até 29/09/2026 a versão recebida mandava e a data só
+ *     entrava quando o atendimento não tinha versão (marcado "pela data").
+ *     A equipe trocou: a versão recebida vinha preenchida de forma
+ *     irregular (mais de mil atendimentos antigos sem ela, texto livre em
+ *     outros), e duas regras na mesma tela confundiam mais do que
+ *     ajudavam. A versão recebida continua gravada no atendimento e
+ *     aparece na ficha e no relatório -- só não decide mais a situação.
  */
 
 /**
  * Situação de UM sistema de um cliente.
- * @param {{data?: string, versao?: string|null}|null|undefined} registro último atendimento do cliente naquele sistema
+ * @param {{data?: string}|null|undefined} registro último atendimento do cliente naquele sistema
  * @param {string|null|undefined} oficial versão oficial do sistema (dd/mm/aaaa)
- * @returns {{situacao: "Em dia"|"Desatualizado"|"Nunca atualizado"|"Sem referência"|"Sem informação", pelaData: boolean}}
+ * @returns {{situacao: "Em dia"|"Desatualizado"|"Nunca atualizado"|"Sem referência"|"Sem informação"}}
  */
 function situacaoDoSistema(registro, oficial) {
-  if (!registro) return { situacao: "Nunca atualizado", pelaData: false };
+  if (!registro) return { situacao: "Nunca atualizado" };
   const dataOficial = parseData(oficial || "");
-  if (!dataOficial) return { situacao: "Sem referência", pelaData: false };
-  // Uma versão que não é data (texto livre antigo, "1.0") não é comparável:
-  // cai na data do atendimento, do mesmo jeito que a versão ausente.
-  const recebida = parseData(registro.versao || "");
-  if (recebida) return { situacao: recebida < dataOficial ? "Desatualizado" : "Em dia", pelaData: false };
+  if (!dataOficial) return { situacao: "Sem referência" };
   const atendimento = parseData(registro.data || "");
-  if (!atendimento) return { situacao: "Sem informação", pelaData: false };
-  return { situacao: atendimento < dataOficial ? "Desatualizado" : "Em dia", pelaData: true };
+  if (!atendimento) return { situacao: "Sem informação" };
+  return { situacao: atendimento < dataOficial ? "Desatualizado" : "Em dia" };
 }
 
 /** O sistema que, quando o cliente tem, decide sozinho a situação dele. */

@@ -208,9 +208,8 @@ class AtualizacaoService {
     for (const { id, nome, cidade } of this.db.clientes.clientesDoSistema(alvo.id)) {
       const registro = ultimas.get(id);
       if (limiteAtendimento && (!registro?.data || !parseData(registro.data) || parseData(registro.data) >= limiteAtendimento)) continue;
-      const instalada = registro?.versao || "";
-      const { situacao, pelaData } = situacaoDoSistema(registro, oficial);
-      resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", instalada: instalada || "Não informada", oficial: oficial || "Não informada", situacao, pelaData });
+      const { situacao } = situacaoDoSistema(registro, oficial);
+      resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", oficial: oficial || "Não informada", situacao });
     }
     resultado.sort((a, b) => a.cliente.localeCompare(b.cliente, "pt-BR"));
     return resultado;
@@ -344,13 +343,13 @@ class AtualizacaoService {
         const instalada = registro?.versao || "";
         const contaNaSituacao = contaParaVersao(sistema);
         const oficial = contaNaSituacao ? sistema.ultima_versao || "" : "";
-        const { situacao, pelaData } = contaNaSituacao
+        const { situacao } = contaNaSituacao
           ? situacaoDoSistema(registro, oficial)
-          : { situacao: sistema.controla_versao ? "Sistema inativo" : "Componente fixo", pelaData: false };
+          : { situacao: sistema.controla_versao ? "Sistema inativo" : "Componente fixo" };
         // `contaNaSituacao` falso = sistema fixo (B_Atualizador, Suporte
         // Bredas) ou fora do catálogo: a ficha mostra, mas ele não entra na
         // situação consolidada do cliente (a do Resumo).
-        return { sistema: sistema.nome, instalada, oficial, situacao, pelaData, contaNaSituacao, fixo: !sistema.controla_versao, data: registro?.data || "" };
+        return { sistema: sistema.nome, instalada, oficial, situacao, contaNaSituacao, fixo: !sistema.controla_versao, data: registro?.data || "" };
       })
       .sort((a, b) => (a.sistema < b.sistema ? -1 : a.sistema > b.sistema ? 1 : 0));
   }
@@ -493,8 +492,8 @@ class AtualizacaoService {
       for (const sistemaId of ids) {
         const sistema = catalogo.get(sistemaId);
         if (!contaParaVersao(sistema)) continue;
-        const { situacao, pelaData } = situacaoDoSistema(doCliente.get(sistemaId), sistema.ultima_versao);
-        sistemas.push({ sistema: sistema.nome, situacao, pelaData });
+        const { situacao } = situacaoDoSistema(doCliente.get(sistemaId), sistema.ultima_versao);
+        sistemas.push({ sistema: sistema.nome, situacao });
         clientesPorSistema.set(sistema.nome, (clientesPorSistema.get(sistema.nome) || 0) + 1);
         if (situacao === "Desatualizado") atrasosPorSistema.set(sistema.nome, (atrasosPorSistema.get(sistema.nome) || 0) + 1);
       }

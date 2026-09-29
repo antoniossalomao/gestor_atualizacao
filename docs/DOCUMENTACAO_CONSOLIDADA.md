@@ -1691,6 +1691,34 @@ atualização há mais de N dias"), e não altera a situação de versão.
 - O que ficou para depois: tela para marcar ou desmarcar sistema fixo e
   bloqueio na API de oficial para sistema fixo (resto do I04).
 
+#### Revisão de 29/09/2026: só a data do atendimento
+
+A equipe decidiu que a situação **não usa mais a versão recebida**: vale só
+a data do último atendimento contra a data da versão oficial (ou da
+versão-alvo, em Campanhas). A tabela "Por sistema" acima fica assim:
+
+| Caso | Situação |
+|---|---|
+| Nenhum atendimento naquele sistema | Nunca atualizado |
+| Sistema sem versão oficial cadastrada | Sem referência |
+| Atendimento **anterior** à data da oficial | Desatualizado |
+| Atendimento na data da oficial ou depois | Em dia |
+| Data do atendimento inválida | Sem informação |
+
+- **Por quê:** a versão recebida vinha preenchida de forma irregular, e
+  duas regras na mesma tela (versão numa linha, "pela data" na outra)
+  confundiam mais do que ajudavam.
+- **O que muda na prática:** quem foi atendido depois da oficial conta como
+  em dia mesmo que o atendimento tenha gravado uma versão anterior; e uma
+  versão recebida mais nova não tira do atraso um atendimento anterior à
+  oficial.
+- A marca "(pela data)" saiu das telas, porque agora tudo é pela data. A
+  coluna "Versão recebida" saiu da aba Sistemas.
+- A versão recebida **continua gravada** no atendimento e aparece na ficha do
+  cliente, no relatório copiado e na exportação de pendentes da campanha.
+  Para voltar a usá-la, basta restaurar o ramo da versão em
+  `situacaoDoSistema` (`git log -- server/src/services/situacaoVersao.js`).
+
 <a id="adr-0009"></a>
 ### 4.10 ADR-0009 — Campanhas de atualização: meta guardada, andamento calculado
 
@@ -1726,8 +1754,8 @@ mais é gravado por campanha:
   entra; cliente que perdeu o sistema sai.
 - **Quem está atualizado:** o último atendimento do cliente no sistema passa
   por `situacaoDoSistema` (a mesma função da ADR-0008) contra a
-  **versão-alvo**. Versão recebida igual ou mais nova conta; sem versão
-  registrada, vale a data do atendimento, marcado "pela data". **Não existe
+  **versão-alvo**: atendido na data da versão-alvo ou depois conta (desde
+  29/09/2026 a versão recebida não decide; ver a revisão da ADR-0008). **Não existe
   baixa manual**: a baixa é registrar a atualização em Atualizações, como
   sempre.
 - **Quem já está agendado:** tem uma tarefa em aberto (não concluída, não
@@ -2772,7 +2800,7 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 | Duplicidade na importação | Avisada na prévia e pulada por padrão; importar mesmo assim é escolha explícita (28/09/2026) |
 | Campanha: quem entra e quem está atendido | Clientes ao vivo do cadastro; atendido pela regra da ADR-0008 contra a versão-alvo; sem baixa manual (ADR-0009) |
 | Nome/símbolo | Gestor de Atualizações, assinatura Bredas Sistemas; símbolo vetorial (seção 4) |
-| Atendimento sem versão registrada | Julgado pela data do atendimento contra a da oficial, marcado "(pela data)" (ADR-0008) |
+| Atendimento sem versão registrada | Julgado pela data do atendimento contra a da oficial (ADR-0008) — desde 29/09/2026, todo atendimento é julgado assim |
 | Quem decide a situação do cliente | O B_Vendas, quando o cliente tem (fixo no código); sem ele, todos os sistemas |
 | Nome do indicador de tempo | "Sem atualização há mais de N dias" (não "atendimento") |
 | Sistemas fixos agora | Classificação, exclusões, tela administrativa e API concluídas em E2 |

@@ -76,7 +76,7 @@ test("Campanhas - meta, baixa automática e placar", async (t) => {
     env.cliente("Loja Agendada", ["B_NFe"]);
     env.cliente("Loja Outro Sistema Agendado", ["B_NFe", "B_Vendas"]);
     env.cliente("Sem NFe", ["B_Vendas"]);
-    env.atender("Loja Antiga", "B_NFe", "21/09/2026"); // recebe 20/09: abaixo da meta
+    env.atender("Loja Antiga", "B_NFe", "21/09/2026"); // antes da data da meta
 
     const campanha = env.campanhas.create({ titulo: "NT 2026.001", sistema: "nfe", versaoAlvo: "25/09/2026", prazo: "30/09/2026" }, USUARIO);
 
@@ -88,17 +88,16 @@ test("Campanhas - meta, baixa automática e placar", async (t) => {
       assert.equal(campanha.percentual, 0);
     });
 
-    await t.test("atendimento abaixo da versão-alvo não conclui", () => {
+    await t.test("atendimento anterior à versão-alvo não conclui", () => {
       assert.equal(env.situacao(campanha.id, "Loja Antiga"), "pendente");
     });
 
-    await t.test("registrar o atendimento com a versão da meta dá baixa sozinho", () => {
+    await t.test("registrar o atendimento na data da meta ou depois dá baixa sozinho", () => {
       env.db.sistemas.salvarVersao("B_NFe", "25/09/2026");
       env.atender("Loja Atendida", "B_NFe", "26/09/2026");
       assert.equal(env.situacao(campanha.id, "Loja Atendida"), "concluido");
       const linha = env.campanhas.detalhe(campanha.id).clientes.find((c) => c.nome === "Loja Atendida");
       assert.equal(linha.versaoRecebida, "25/09/2026");
-      assert.equal(linha.pelaData, false);
     });
 
     await t.test("tarefa em aberto do MESMO sistema vira 'já agendado'; de outro sistema, não", () => {
@@ -172,7 +171,7 @@ test("Campanhas - meta, baixa automática e placar", async (t) => {
   }
 });
 
-test("Campanhas - atendimento sem versão é julgado pela data (ADR-0008)", () => {
+test("Campanhas - vale a data do atendimento, com ou sem versão recebida (ADR-0008)", () => {
   const env = ambiente();
   try {
     env.cliente("Loja Legada", ["B_Vendas"]);
@@ -183,8 +182,15 @@ test("Campanhas - atendimento sem versão é julgado pela data (ADR-0008)", () =
     const c = env.campanhas.create({ titulo: "Vendas", sistema: "B_Vendas", versaoAlvo: "25/09/2026" }, USUARIO);
     const loja = c.clientes.find((x) => x.nome === "Loja Legada");
     assert.equal(loja.situacao, "concluido");
-    assert.equal(loja.pelaData, true);
     assert.equal(c.clientes.find((x) => x.nome === "Loja Legada Velha").situacao, "pendente");
+    // Com versão recebida ANTERIOR à meta, mas atendido depois dela: conclui.
+    // Até 29/09/2026 a versão recebida mandava e isto ficava pendente.
+    env.db.sistemas.salvarVersao("B_Vendas", "20/09/2026");
+    env.cliente("Loja Versão Velha", ["B_Vendas"]);
+    env.atender("Loja Versão Velha", "B_Vendas", "27/09/2026");
+    const depois = env.campanhas.detalhe(c.id).clientes.find((x) => x.nome === "Loja Versão Velha");
+    assert.equal(depois.versaoRecebida, "20/09/2026");
+    assert.equal(depois.situacao, "concluido");
   } finally {
     env.cleanup();
   }

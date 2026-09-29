@@ -23,9 +23,8 @@ const SITUACOES = { concluido: "Concluído", agendado: "Já agendado", pendente:
  *
  *  1. **Atendido é quem cumpre a meta pela regra de sempre.** O último
  *     atendimento do cliente no sistema passa por `situacaoDoSistema`
- *     contra a VERSÃO-ALVO (não contra a oficial de hoje): versão recebida
- *     igual ou mais nova conta; sem versão registrada, vale a data do
- *     atendimento (ADR-0008), marcado `pelaData`. Não existe "dar baixa"
+ *     contra a VERSÃO-ALVO (não contra a oficial de hoje): atendido na data
+ *     da versão-alvo ou depois conta (ADR-0008). Não existe "dar baixa"
  *     manual -- a baixa é registrar o atendimento em Atualizações, como
  *     sempre. Uma segunda forma de marcar concluído seria um segundo
  *     lugar para a verdade discordar do histórico.
@@ -189,7 +188,7 @@ class CampanhaService {
     const { ultimas, cadastro } = porSistema.get(campanha.sistemaId);
     const lista = cadastro.filter((cliente) => !campanha.cidade || (cliente.cidade || "").trim().toLocaleLowerCase("pt-BR") === campanha.cidade.toLocaleLowerCase("pt-BR")).map(({ id, nome, codigo, cidade }) => {
       const registro = ultimas.get(id);
-      const { situacao: frente, pelaData } = situacaoDoSistema(registro, campanha.versaoAlvo);
+      const { situacao: frente } = situacaoDoSistema(registro, campanha.versaoAlvo);
       const agendamento = (agendas.get(id) || []).find((t) => t.sistemas.has(campanha.sistemaId));
       const situacao = frente === "Em dia" ? "concluido" : agendamento ? "agendado" : "pendente";
       return {
@@ -198,7 +197,6 @@ class CampanhaService {
         codigo: codigo || "",
         cidade: cidade || "",
         situacao,
-        pelaData: situacao === "concluido" && pelaData,
         ultima: registro?.data || "",
         versaoRecebida: registro?.versao || "",
         agendamento: situacao === "agendado" ? { id: agendamento.id, tarefa: agendamento.tarefa, data: agendamento.data, responsavel: agendamento.responsavel } : null,

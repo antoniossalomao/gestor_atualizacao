@@ -12,23 +12,10 @@
  * só como uma nota embaixo do card.
  */
 export const GRUPOS_SITUACAO = [
-  { chave: "em_dia", rotulo: "Em dia", severidade: "boa", descricao: "B_Vendas na versão oficial (sem B_Vendas: todos os sistemas)." },
-  { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "B_Vendas com versão anterior à oficial (sem B_Vendas: algum sistema)." },
+  { chave: "em_dia", rotulo: "Em dia", severidade: "boa", descricao: "B_Vendas atualizado na data da versão oficial ou depois (sem B_Vendas: todos os sistemas)." },
+  { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "Última atualização do B_Vendas antes da versão oficial (sem B_Vendas: de algum sistema)." },
   { chave: "pendente", rotulo: "Verificação pendente", severidade: "media", descricao: "Sem atraso confirmado, mas falta informação para decidir." },
 ];
-
-/** A explicação de "pela data", repetida onde o rótulo aparece. */
-export const AJUDA_PELA_DATA =
-  "Sem versão registrada na atualização: a situação foi deduzida comparando a data da atualização com a data da versão oficial.";
-
-/**
- * "Em dia (pela data)" quando a situação não veio de uma versão registrada.
- * @param {string} situacao
- * @param {boolean} [pelaData]
- */
-export function rotuloSituacao(situacao, pelaData) {
-  return pelaData ? `${situacao} (pela data)` : situacao;
-}
 
 /**
  * Porcentagem inteira de `parte` em `total`. Sem total, 0 -- e não NaN, nem
@@ -64,7 +51,7 @@ export function totaisSituacao(situacao) {
  * ele aparece. Sem B_Vendas, um desatualizado lista os atrasados (não os em
  * dia), e um pendente lista os que estão sem informação.
  * @param {string} grupo
- * @param {Array<{sistema: string, situacao: string, pelaData?: boolean}>} sistemas
+ * @param {Array<{sistema: string, situacao: string}>} sistemas
  * @param {string|null} [decididoPor]
  */
 export function sistemasQueExplicam(grupo, sistemas, decididoPor = null) {
@@ -76,6 +63,6 @@ export function sistemasQueExplicam(grupo, sistemas, decididoPor = null) {
         ? sistemas.filter((s) => s.situacao !== "Em dia" && s.situacao !== "Desatualizado")
         : sistemas;
   return relevantes
-    .map((s) => (grupo === "pendente" ? `${s.sistema}: ${s.situacao.toLowerCase()}` : `${s.sistema}${s.pelaData ? " (pela data)" : ""}`))
+    .map((s) => (grupo === "pendente" ? `${s.sistema}: ${s.situacao.toLowerCase()}` : s.sistema))
     .join(", ");
 }

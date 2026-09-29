@@ -8,7 +8,6 @@ import { Modal } from "../components/Modal.js";
 import { emptyState } from "../components/EmptyState.js";
 import { escapeHtml, plural } from "../utils/html.js";
 import { prefs } from "../app/prefs.js";
-import { rotuloSituacao, AJUDA_PELA_DATA } from "../domain/situacao.js";
 import { filtrarClientesDoSistema } from "../domain/filtrosSistemas.js";
 
 /** Consulta por sistema; a referência oficial só pode ser editada no painel próprio. */
@@ -71,8 +70,7 @@ export class SistemasView extends View {
       columns: [
         { key: "cliente", label: "Cliente" },
         { key: "ultima", label: "Última atualização", type: "date" },
-        { key: "instalada", label: "Versão recebida" },
-        { key: "situacao", label: "Situação", render: celulaSituacao },
+        { key: "situacao", label: "Situação" },
         { key: "cidade", label: "Cidade" },
       ],
       rowKey: (row) => row.cliente,
@@ -270,13 +268,6 @@ export class SistemasView extends View {
   _salvarFiltros() {
     prefs.set("sistemas:filtros", { sistema: this.sistema, situacao: this.situacao, busca: this.busca, atendimentoAntesDe: this.atendimentoAntesDe });
   }
-}
-
-function celulaSituacao(row) {
-  const span = document.createElement("span");
-  span.textContent = rotuloSituacao(row.situacao, row.pelaData);
-  if (row.pelaData) span.title = AJUDA_PELA_DATA;
-  return span;
 }
 
 function severidadeCor(situacao, index) {

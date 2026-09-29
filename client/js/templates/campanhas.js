@@ -130,7 +130,7 @@ export function celulaSituacaoCampanha(row) {
   const s = SITUACAO_CAMPANHA[row.situacao] || { rotulo: row.situacao, severidade: "media" };
   const detalhe = row.situacao === "agendado" && row.agendamento
     ? ` — ${row.agendamento.data || "sem data"}${row.agendamento.responsavel ? `, ${row.agendamento.responsavel}` : ""}`
-    : row.pelaData ? " (pela data)" : "";
+    : "";
   return html`<span class="campanha__situacao is-${s.severidade}"><span class="situacao__marca" aria-hidden="true"></span>${s.rotulo}${detalhe}</span>`;
 }
 
@@ -172,7 +172,7 @@ export function formularioCampanha({ sistemas, cidades = [], campanha }) {
         <div class="field">
           <label class="field__label" for="cmp-versao">Versão-alvo</label>
           <input class="input" id="cmp-versao" data-field="versaoAlvo" placeholder="dd/mm/aaaa" inputmode="numeric" value="${campanha?.versaoAlvo || ""}" ${edicao ? html`disabled` : html`required`} aria-describedby="cmp-versao-ajuda" />
-          <div class="field__help" id="cmp-versao-ajuda">${edicao ? "A meta não muda depois de criada." : "Quem receber esta versão ou mais nova conta como atualizado."}</div>
+          <div class="field__help" id="cmp-versao-ajuda">${edicao ? "A meta não muda depois de criada." : "Quem for atualizado nesta data ou depois conta como atualizado."}</div>
         </div>
         <div class="field">
           <label class="field__label" for="cmp-titulo">Título</label>

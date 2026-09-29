@@ -4,9 +4,8 @@
  *
  * Erra em silêncio: um cliente contado no grupo errado não quebra tela
  * nenhuma, só faz o Resumo mentir. Os casos abaixo são os que a regra
- * anterior errava (recebida mais nova que a oficial, atendimento recente
- * com versão velha) e os que a equipe decidiu (fixos fora, atendimento sem
- * versão julgado pela data).
+ * anterior errava e os que a equipe decidiu (fixos fora; desde 29/09/2026,
+ * tudo julgado pela data do atendimento, não pela versão recebida).
  */
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -20,29 +19,22 @@ const { AtualizacaoService } = require("../src/services/AtualizacaoService");
 const { situacaoDoSistema, situacaoDoCliente, contaParaVersao } = require("../src/services/situacaoVersao");
 
 test("situacaoDoSistema", async (t) => {
-  await t.test("recebida anterior à oficial é desatualizado", () => {
-    assert.deepEqual(situacaoDoSistema({ data: "25/09/2026", versao: "22/09/2026" }, "24/09/2026"), { situacao: "Desatualizado", pelaData: false });
+  await t.test("atendido antes da oficial é desatualizado; na data dela ou depois, em dia", () => {
+    assert.deepEqual(situacaoDoSistema({ data: "01/09/2026" }, "09/09/2026"), { situacao: "Desatualizado" });
+    assert.deepEqual(situacaoDoSistema({ data: "09/09/2026" }, "09/09/2026"), { situacao: "Em dia" }, "no próprio dia conta");
+    assert.deepEqual(situacaoDoSistema({ data: "10/09/2026" }, "09/09/2026"), { situacao: "Em dia" });
   });
 
-  await t.test("recebida igual ou MAIS NOVA que a oficial é em dia", () => {
-    assert.equal(situacaoDoSistema({ data: "25/09/2026", versao: "24/09/2026" }, "24/09/2026").situacao, "Em dia");
-    // Com `===` isto era "Desatualizado": versão de teste, ou oficial rebaixada.
-    assert.equal(situacaoDoSistema({ data: "25/09/2026", versao: "25/09/2026" }, "24/09/2026").situacao, "Em dia");
+  await t.test("a versão recebida não decide mais: vale só a data do atendimento", () => {
+    // Até 29/09/2026 a recebida mandava, e isto era "Desatualizado".
+    assert.equal(situacaoDoSistema({ data: "25/09/2026", versao: "22/09/2026" }, "24/09/2026").situacao, "Em dia");
+    // E uma recebida mais nova não salva um atendimento anterior à oficial.
+    assert.equal(situacaoDoSistema({ data: "20/09/2026", versao: "25/09/2026" }, "24/09/2026").situacao, "Desatualizado");
   });
 
   await t.test("compara como data, não como texto", () => {
     // Como texto, "09/10/2026" < "24/09/2026"; como data, é depois.
-    assert.equal(situacaoDoSistema({ data: "10/10/2026", versao: "09/10/2026" }, "24/09/2026").situacao, "Em dia");
-  });
-
-  await t.test("sem versão registrada, julga pela data do atendimento -- e avisa", () => {
-    assert.deepEqual(situacaoDoSistema({ data: "10/09/2026", versao: null }, "09/09/2026"), { situacao: "Em dia", pelaData: true });
-    assert.deepEqual(situacaoDoSistema({ data: "09/09/2026", versao: "" }, "09/09/2026"), { situacao: "Em dia", pelaData: true }, "no próprio dia conta");
-    assert.deepEqual(situacaoDoSistema({ data: "01/09/2026", versao: null }, "09/09/2026"), { situacao: "Desatualizado", pelaData: true });
-  });
-
-  await t.test("versão que não é data (texto antigo) também cai na data do atendimento", () => {
-    assert.deepEqual(situacaoDoSistema({ data: "10/09/2026", versao: "1.0" }, "09/09/2026"), { situacao: "Em dia", pelaData: true });
+    assert.equal(situacaoDoSistema({ data: "09/10/2026" }, "24/09/2026").situacao, "Em dia");
   });
 
   await t.test("o que falta nunca vira em dia", () => {

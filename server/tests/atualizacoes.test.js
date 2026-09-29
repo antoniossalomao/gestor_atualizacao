@@ -291,13 +291,13 @@ test("Referência oficial não atribui versões retroativamente", () => {
     const linha = (cliente) => rows.find((r) => r.cliente === cliente);
     // O que não pode acontecer: a oficial salva hoje virar a versão que
     // esses atendimentos antigos "receberam".
-    for (const cliente of ["Anterior", "Igual", "Posterior"]) assert.equal(linha(cliente).instalada, "Não informada");
-    // A situação, sem versão registrada, sai pela data do atendimento -- e
-    // marcada `pelaData`, para a tela não apresentar como comprovada
-    // (decisão da equipe, ver services/situacaoVersao.js).
-    assert.deepEqual([linha("Anterior").situacao, linha("Anterior").pelaData], ["Desatualizado", true]);
-    assert.deepEqual([linha("Igual").situacao, linha("Igual").pelaData], ["Em dia", true]);
-    assert.deepEqual([linha("Posterior").situacao, linha("Posterior").pelaData], ["Em dia", true]);
+    for (const cliente of ["Anterior", "Igual", "Posterior"]) {
+      assert.equal(service.situacaoCliente(cliente).find((s) => s.sistema === "B_Vendas").instalada, "");
+    }
+    // A situação sai pela data do atendimento (ver services/situacaoVersao.js).
+    assert.equal(linha("Anterior").situacao, "Desatualizado");
+    assert.equal(linha("Igual").situacao, "Em dia");
+    assert.equal(linha("Posterior").situacao, "Em dia");
     assert.equal(linha("Sem registro").situacao, "Nunca atualizado");
     assert.equal(db.sistemas.versoes().find((s) => s.nome === "B_NFe").data, "22/09/2026");
     assert.throws(() => salvarOficial(clientes, "B_Vendas", "31/02/2026"));
@@ -316,9 +316,8 @@ test("Relatório por sistema - data filtra atendimentos sem substituir a oficial
     salvarOficial(clientes, "B_Vendas", "09/09/2026");
     service.create({ cliente: "Sem Versão Capturada", sistema: "B_Vendas", data: "15/09/2026" }, USUARIO);
 
-    // Sem data explícita: usa a referência oficial e compara por versão --
-    // como o registro mais recente já carrega "versoes_sistemas", entra
-    // "Em dia" (a versão capturada bate com a oficial).
+    // Sem data explícita: usa a referência oficial -- o atendimento de 15/09
+    // é depois da oficial de 09/09, então entra "Em dia".
     assert.equal(service.relatorioPorSistema("B_Vendas").find((r) => r.cliente === "Sem Versão Capturada").situacao, "Em dia");
 
     // O último atendimento de 15/09 não entra no filtro "antes de 09/09".
@@ -343,16 +342,16 @@ test("Versões recebidas permanecem após nova oficial, edição e desfazer", ()
     assert.deepEqual(JSON.parse(criado.versoes_sistemas), { B_NFe: "22/09/2026", B_Vendas: "09/09/2026" });
     const id = ultimoId(db);
     assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").situacao, "Em dia");
-    salvarOficial(clientes, "B_NFe", "24/09/2026");
+    salvarOficial(clientes, "B_NFe", "25/09/2026");
     assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").situacao, "Desatualizado");
-    assert.equal(service.relatorioPorSistema("B_NFe")[0].instalada, "22/09/2026");
+    assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").instalada, "22/09/2026");
     service.update(id, { ...criado, obs: "Corrigida" }, USUARIO);
     assert.equal(db.atualizacoes.find(id).versoes_sistemas, criado.versoes_sistemas);
     const { registros } = service.deleteMany([id], USUARIO);
     service.create({ ...registros[0], restaurarVersoes: true }, USUARIO);
     assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").instalada, "22/09/2026");
-    service.create({ cliente: "Loja", sistema: "B_NFe", data: "24/09/2026" }, USUARIO);
-    assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").instalada, "24/09/2026");
+    service.create({ cliente: "Loja", sistema: "B_NFe", data: "25/09/2026" }, USUARIO);
+    assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").instalada, "25/09/2026");
     assert.equal(service.relatorioPorSistema("B_NFe")[0].situacao, "Em dia");
     assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_Vendas").instalada, "09/09/2026");
     const antigo = service.create({ cliente: "Antigo", sistema: "B_NFe", data: "01/09/2026" }, USUARIO);

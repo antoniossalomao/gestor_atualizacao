@@ -15,6 +15,9 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Situação dos clientes pela data do atendimento (29/09/2026):** a versão recebida não decide mais se o cliente está em dia — vale só a data do último atendimento contra a data da versão oficial (ou da versão-alvo, em Campanhas). Quem foi atendido depois da oficial conta como em dia mesmo com uma versão anterior gravada. A coluna "Versão recebida" saiu da aba Sistemas e a marca "(pela data)" saiu das telas. A versão recebida continua gravada e aparece na ficha, no relatório e na exportação da campanha. Revisão registrada na [ADR-0008](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0008).
+- **Formulário de campanha:** o campo Descrição não fica mais colado no Cidade.
+
 - **Limites e medição da importação/exportação — P05 (29/09/2026):** medido com `server/ferramentas/medir-planilhas.js` na máquina de produção: importar 20 mil linhas custava 21 s e 1 GB de memória, 50 mil custavam 1,75 GB — o bastante para derrubar o painel de todo mundo, e o limite de 15 MB do upload não impedia (15 MB são ~400 mil linhas). Números completos em [MELHORIAS](docs/MELHORIAS.md), P05.
   - *Limites*: 5.000 linhas por importação e 10.000 por exportação (`server/src/config/limitesPlanilha.js`), anos de folga sobre o volume real (~1.000 atualizações por ano). Acima disso, a mensagem diz o limite e o que fazer (dividir o arquivo; filtrar por período), e nada é gravado.
   - *Recusa antes de carregar*: a importação conta as linhas direto no zip do .xlsx, sem montar a planilha, e recusa um arquivo grande em ~0,1 s. O leitor em fluxo do ExcelJS, que seria o caminho natural, falha de forma intermitente na versão 4.4.0 e foi descartado.
