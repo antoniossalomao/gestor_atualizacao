@@ -3823,6 +3823,62 @@ body:has(.conexao-aviso) .app-sidebar {
   }
 }
 
+/* Aviso de dados desatualizados no topo de uma tela (View._mostrarAvisoDados).
+   Amarelo, não vermelho: o dado anterior continua na tela e ainda serve --
+   o aviso diz de quando ele é. Vermelho só quando não há dado nenhum. */
+.dados-aviso {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+  padding: 10px var(--sp-4);
+  border: 1px solid var(--cor-amarelo);
+  border-radius: var(--raio);
+  background: var(--cor-amarelo-fraco);
+}
+/* Com a faixa de "sem conexão" no alto, o cabeçalho grudado desce 44px e
+   cobre o topo da view -- exatamente onde este aviso fica (visto no teste
+   com o servidor derrubado: só a metade de baixo do aviso aparecia). */
+body:has(.conexao-aviso) .dados-aviso {
+  margin-top: 44px;
+}
+.dados-aviso--sem-dados {
+  border-color: var(--cor-vermelho);
+  background: var(--cor-vermelho-fraco);
+}
+.dados-aviso__icone {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--cor-amarelo);
+}
+.dados-aviso--sem-dados .dados-aviso__icone {
+  color: var(--cor-vermelho);
+}
+.dados-aviso__icone svg {
+  width: 18px;
+  height: 18px;
+}
+.dados-aviso__texto {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.dados-aviso__texto span {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+
+@media print {
+  .dados-aviso {
+    display: none !important;
+  }
+}
+
 /* ==========================================================================
    10. ESTADOS VAZIO / CARREGANDO
    ========================================================================== */

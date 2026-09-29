@@ -112,15 +112,38 @@ as recusas devolvem erro consistente; os fluxos normais continuam operando.
 cache quando uma nova consulta falha. Isso protege a tela vazia, mas não
 informa por que o dado mostrado pode estar velho.
 
-- [ ] Definir estados comuns: carregando pela primeira vez, atualizado,
+- [x] Definir estados comuns: carregando pela primeira vez, atualizado,
       revalidando, erro com dados anteriores e erro sem dados.
-- [ ] Exibir horário da última resposta válida e ação **Tentar novamente**
+      *(`client/js/utils/estadoDados.js`: esqueleto, nada, barra fina, aviso
+      amarelo com o horário, aviso vermelho sem horário.)*
+- [x] Exibir horário da última resposta válida e ação **Tentar novamente**
       apenas quando houver falha; manter a informação anterior visível.
-- [ ] Diferenciar erro de rede, sessão expirada e resposta 4xx/5xx; evitar
+- [x] Diferenciar erro de rede, sessão expirada e resposta 4xx/5xx; evitar
       notificações repetidas a cada atualização de uma mesma tela.
-- [ ] Aplicar primeiro às telas que orientam decisões diárias: Resumo,
-      Atualizações, Clientes, Sistemas e Campanhas.
-- [ ] Verificar que troca rápida de aba e busca cancelada não mostram erro falso.
+      *(Sem conexão, painel fora do ar atrás do proxy (502/503/504), demora,
+      erro do servidor e recusa com a mensagem dele; 401 continua indo para o
+      login. O aviso é fixo e substitui o toast que se repetia a cada
+      tentativa.)*
+- [x] Aplicar primeiro às telas que orientam decisões diárias: Resumo,
+      Atualizações, Clientes, Sistemas e Campanhas. *(Ficou na `View.swr`, e
+      por isso vale para todas as telas que usam o cache: também Agendamentos,
+      Consulta, Histórico, Distribuição e Versões.)*
+- [x] Verificar que troca rápida de aba e busca cancelada não mostram erro falso.
+      *(Cancelamento não avisa nem apaga uma falha real; falha num filtro some
+      quando outro filtro carrega. `client/tests/estadoDados.test.mjs`.)*
+
+**Verificado no navegador** (Chrome sem janela, servidor descartável derrubado
+e religado): Resumo e Clientes mostram "Mostrando os dados de hoje às HH:MM";
+Sistemas, Atualizações e Campanhas nunca abertas mostram "Não foi possível
+carregar"; nenhum toast; os avisos somem quando o servidor volta. O teste
+achou três telas que não passavam pelo aviso — Clientes e Sistemas buscavam a
+primeira coisa fora do `swr`, e Campanhas abria um modal de erro por cima —,
+corrigidas; e o aviso ficava meio coberto pelo cabeçalho quando a faixa de
+"sem conexão" também estava na tela.
+
+**Achado junto:** com o Caddy da P01 na frente, o painel fora do ar respondia
+502 pelo proxy, e o `ApiClient` contava isso como "conectado" — a faixa de
+"sem conexão" nunca aparecia no caso mais comum de queda. Corrigido.
 
 **Aceite:** ao interromper a API após uma leitura válida, a tela identifica
 que os dados são anteriores, mostra quando foram obtidos e permite nova

@@ -15,6 +15,14 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Aviso de dados desatualizados — P03 (29/09/2026):** quando uma tela não consegue atualizar, ela diz isso. Antes o dado anterior ficava na tela em silêncio, parecendo atual. Agora aparece no topo "Não foi possível atualizar. Mostrando os dados de hoje às 14:32.", com o motivo e o botão **Tentar novamente**. Sem dado anterior: "Não foi possível carregar os dados desta tela.". O aviso some sozinho quando a busca volta a dar certo, inclusive na volta da conexão.
+  - *Motivo em palavras de quem usa*: sem conexão, painel fora do ar, servidor demorando, erro do servidor ou recusa (com a mensagem do servidor). Sessão expirada continua indo para o login, e troca de filtro ou de aba não gera aviso falso.
+  - *Um aviso, não uma pilha de toasts*: o toast "Não foi possível carregar os dados desta tela", que voltava a cada tentativa, não aparece mais nas telas que mostram o aviso.
+  - *Vale para todas as telas que usam o cache*, porque mora na `View.swr` (`client/js/utils/estadoDados.js`).
+  - *Telas que escapavam do aviso*: Clientes e Sistemas buscavam a primeira coisa fora do cache e, com o servidor fora, nem desenhavam o dado guardado; Campanhas e Sistemas abriam um modal de erro por cima. Achado no teste de navegador com o servidor derrubado.
+  - *Faixa de "sem conexão" com o proxy*: com o Caddy da P01, o painel fora do ar respondia 502 pelo proxy e a faixa nunca aparecia. O `ApiClient` passa a contar 502/503/504 como queda.
+  - *Testes*: `client/tests/estadoDados.test.mjs` e o caso do 502 em `client/tests/apiclient.test.mjs`.
+
 - **Proteção CSRF — P02 (29/09/2026):** toda escrita da API feita com sessão (POST, PUT, PATCH, DELETE, inclusive upload de planilha e de pacote) passa a exigir o token da sessão no cabeçalho `X-CSRF-Token`. Outra página aberta no navegador de quem está logado não consegue mais alterar nada em nome dessa pessoa. Antes, `SameSite=Lax` e "só JSON" barravam o caso comum, mas não um formulário multipart nem os POST sem corpo (publicar versão, sair). Decisão em [ADR-0011](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0011).
   - *Invisível para quem usa*: o servidor entrega o token em toda resposta com sessão, e o `ApiClient` o devolve sozinho. Se a pessoa entrou de novo em outra aba (sessão nova, token novo), o pedido recusado é repetido uma vez com o token atual. Sessões abertas antes da atualização ganham o token na primeira chamada, sem precisar entrar de novo.
   - *Fora da regra*: login e configuração inicial (não há sessão antes deles) e pedidos sem sessão, que continuam recebendo o 401 que leva ao login. Os agentes C# não são afetados.

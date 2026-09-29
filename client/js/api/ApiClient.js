@@ -42,6 +42,12 @@ const TIMEOUT_UPLOAD_MS = 10 * 60 * 1000;
 const CABECALHO_CSRF = "X-CSRF-Token";
 const METODOS_SEGUROS = new Set(["GET", "HEAD"]);
 
+// Com o Caddy na frente (docker-compose.yml), o painel fora do ar não
+// aparece como "não conectou": o proxy está de pé e responde 502/503/504.
+// Contando isso como resposta, a faixa de "sem conexão" nunca aparecia
+// justamente no caso mais comum de queda -- o container reiniciando.
+const PAINEL_INDISPONIVEL = new Set([502, 503, 504]);
+
 /**
  * Encapsula todas as chamadas HTTP para o backend (`/api/...`). Nenhuma
  * outra parte do front-end usa `fetch` diretamente -- assim, se um dia a
@@ -263,8 +269,9 @@ export class ApiClient {
       });
       this._guardarTokenCsrf(res.headers.get(CABECALHO_CSRF));
       // Respondeu -- inclusive com 4xx/5xx. Um 400 é o servidor conversando:
-      // quem está fora do ar não recusa nada, não responde.
-      this._marcarConexao(true);
+      // quem está fora do ar não recusa nada, não responde. Menos quando quem
+      // respondeu foi o proxy, no lugar do painel (PAINEL_INDISPONIVEL).
+      this._marcarConexao(!PAINEL_INDISPONIVEL.has(res.status));
       return await this._parse(res);
     } catch (error) {
       if (error.name === "AbortError") {

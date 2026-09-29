@@ -318,9 +318,24 @@ export class ClientesView extends View {
     }
   }
 
+  /**
+   * Pelo swr, e não com `api.get` direto: é a primeira busca do refresh(), e
+   * direto ela derrubava a tela inteira quando o servidor caía -- a lista,
+   * mesmo guardada, nem chegava a ser desenhada, e em vez do aviso de dados
+   * desatualizados aparecia um toast genérico (P03).
+   */
   async _reloadSistemas() {
+    await this.swr(
+      "clientes:sistemas",
+      () => this.api.get("/sistemas", null, { key: "clientes:sistemas" }),
+      (lista) => this._desenharSistemas(lista)
+    );
+  }
+
+  /** @param {string[]} lista */
+  _desenharSistemas(lista) {
     const marcados = new Set([...this.sistemasGrid.querySelectorAll("input:checked")].map((el) => el.value));
-    this.sistemasDisponiveis = await this.api.get("/sistemas", null, { key: "clientes:sistemas" });
+    this.sistemasDisponiveis = lista;
     this.sistemasGrid.innerHTML = "";
     for (const sistema of this.sistemasDisponiveis) {
       // <label> e o botão de excluir ficam IRMÃOS, não um dentro do outro:

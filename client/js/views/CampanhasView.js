@@ -150,7 +150,9 @@ export class CampanhasView extends View {
         this._pintarLista();
       });
     } catch (err) {
-      if (!err?.cancelled) Modal.alert("Erro", mensagem(err), "error");
+      // Falha de carga já aparece no aviso fixo da tela (View.swr); um modal
+      // em cima dele era o mesmo recado duas vezes.
+      if (!err?.cancelled && !err?.avisadoNaTela) Modal.alert("Erro", mensagem(err), "error");
       return;
     }
     await this._carregarDetalhe();
@@ -193,7 +195,7 @@ export class CampanhasView extends View {
         this.cache?.invalidar();
         return this.refresh();
       }
-      if (!err?.cancelled) Modal.alert("Erro", mensagem(err), "error");
+      if (!err?.cancelled && !err?.avisadoNaTela) Modal.alert("Erro", mensagem(err), "error");
     } finally {
       this.table.setRefreshing(false);
     }

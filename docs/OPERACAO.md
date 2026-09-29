@@ -18,6 +18,7 @@ Os comandos assumem que você está no servidor onde o painel roda, na pasta
 | O que a pessoa diz | Vá para |
 |---|---|
 | "O painel não abre" / "deu erro de conexão" | [Servidor fora do ar](#servidor-fora-do-ar) |
+| Faixa vermelha "Sem conexão com o servidor" no alto, ou aviso amarelo "Não foi possível atualizar" numa tela | [Servidor fora do ar](#servidor-fora-do-ar) (se o aviso diz "erro ao buscar os dados", veja o log do `gestor`) |
 | "Ninguém consegue entrar" | [Ninguém consegue entrar](#ninguém-consegue-entrar) |
 | "Esqueci minha senha" | [Recuperar acesso](#recuperar-acesso-de-uma-conta) |
 | "O cliente X não está atualizando" | [Agente parado](#um-agente-parou-de-atualizar) |
@@ -30,7 +31,12 @@ Os comandos assumem que você está no servidor onde o painel roda, na pasta
 
 ## Servidor fora do ar
 
-**Sintoma:** o navegador diz "não foi possível acessar esse site".
+**Sintoma:** o navegador diz "não foi possível acessar esse site". Com o
+painel já aberto: a faixa vermelha "Sem conexão com o servidor" no alto e,
+nas telas, o aviso "Não foi possível atualizar. Mostrando os dados de …" —
+os números na tela são daquele horário, não de agora. Com o `proxy` de pé e
+o `gestor` caído, o aviso diz "O servidor do painel não está respondendo".
+Os dois somem sozinhos quando o servidor volta.
 
 1. **Os containers estão de pé?** Na pasta `web/` do servidor:
    ```powershell

@@ -213,3 +213,44 @@ test("ApiClient - token CSRF no envio de arquivo (XHR)", async (t) => {
     }
   });
 });
+
+test("ApiClient - painel fora do ar atrás do proxy conta como sem conexão (P03)", async (t) => {
+  // O ApiClient avisa a troca de estado por evento no `document`, que o Node
+  // não tem: um de mentira guarda o que foi avisado.
+  const avisos = [];
+  const documentOriginal = globalThis.document;
+  globalThis.document = { dispatchEvent: (e) => avisos.push(e.detail.online) };
+  t.after(() => (globalThis.document = documentOriginal));
+
+  await t.test("502/503/504 do Caddy derrubam a conexão; a primeira resposta do painel a devolve", async () => {
+    const { restaurar } = simularFetch([
+      () => new Response("", { status: 502 }),
+      () => new Response("", { status: 503 }),
+      () => resposta(200, {}),
+    ]);
+    try {
+      const api = new ApiClient();
+      await assert.rejects(api.get("/resumo"), (erro) => erro.status === 502);
+      assert.equal(api.online, false, "com o proxy respondendo no lugar do painel, a faixa de 'sem conexão' tem que aparecer");
+      await assert.rejects(api.get("/resumo"));
+      await api.get("/resumo");
+      assert.equal(api.online, true);
+      assert.deepEqual(avisos, [false, true], "um aviso por troca de estado, não por pedido");
+    } finally {
+      restaurar();
+    }
+  });
+
+  await t.test("um 500 do próprio painel não é queda de conexão", async () => {
+    avisos.length = 0;
+    const { restaurar } = simularFetch([() => resposta(500, { error: "Erro interno do servidor." })]);
+    try {
+      const api = new ApiClient();
+      await assert.rejects(api.get("/resumo"), (erro) => erro.status === 500);
+      assert.equal(api.online, true);
+      assert.deepEqual(avisos, []);
+    } finally {
+      restaurar();
+    }
+  });
+});
