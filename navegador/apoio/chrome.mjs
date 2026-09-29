@@ -119,9 +119,12 @@ export async function abrirChrome() {
   const arquivoPorta = path.join(perfil, "DevToolsActivePort");
   let wsUrl = null;
   for (let i = 0; i < 150 && !wsUrl; i++) {
-    if (fs.existsSync(arquivoPorta)) {
+    try {
       const [porta, caminho] = fs.readFileSync(arquivoPorta, "utf8").split("\n");
       if (porta && caminho) wsUrl = `ws://127.0.0.1:${porta.trim()}${caminho.trim()}`;
+    } catch {
+      // Ainda não existe -- ou, no Windows, o Chrome está no meio de
+      // escrevê-lo (EBUSY). Nos dois casos, é só tentar de novo.
     }
     if (!wsUrl) await espera(100);
   }

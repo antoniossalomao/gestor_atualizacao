@@ -203,17 +203,51 @@ até 15 MB; `AtualizacaoRepository.exportAll()` materializa todas as linhas
 filtradas; `AtualizacaoService.exportXlsxBuffer()` monta o arquivo completo em
 memória. Isso é um risco de crescimento, não uma falha medida na instalação.
 
-- [ ] Medir tempo, pico de memória e tamanho de resposta para arquivos e
+- [x] Medir tempo, pico de memória e tamanho de resposta para arquivos e
       bases pequenos, médios e no maior volume esperado; registrar os números.
-- [ ] Definir limite funcional de linhas por importação/exportação e resposta
+      *(`server/ferramentas/medir-planilhas.js`; números abaixo.)*
+- [x] Definir limite funcional de linhas por importação/exportação e resposta
       legível ao excedê-lo. Alinhar o limite ao volume real da equipe.
-- [ ] Se a medição justificar, trocar importação por leitura em fluxo ou por
+      *(5.000 por importação, 10.000 por exportação —
+      `server/src/config/limitesPlanilha.js`.)*
+- [x] Se a medição justificar, trocar importação por leitura em fluxo ou por
       arquivo temporário com limpeza garantida; manter prévia e aplicação
-      transacional.
-- [ ] Se a medição justificar, paginar a leitura da exportação e usar escrita
-      XLSX em fluxo, preservando filtros, colunas e aba Resumo.
-- [ ] Repetir testes com datas inválidas, duplicatas e falha no meio do lote;
-      nenhuma importação parcial pode ficar gravada.
+      transacional. *(Justificou, mas o leitor em fluxo do ExcelJS 4.4.0 falha
+      de forma intermitente e grava arquivo temporário — descartado. No lugar:
+      contagem de linhas direto no zip antes de carregar, que recusa arquivo
+      grande em ~0,1 s sem montar nada.)*
+- [x] Se a medição justificar, paginar a leitura da exportação e usar escrita
+      XLSX em fluxo, preservando filtros, colunas e aba Resumo. *(Não
+      justificou: no limite de 10.000 linhas, 1,8 s e 181 MB. A exportação
+      conta antes de ler e recusa acima do limite; a leitura dobrada do
+      histórico saiu. Escrita em fluxo fica para quando o histórico se
+      aproximar do limite.)*
+- [x] Repetir testes com datas inválidas, duplicatas e falha no meio do lote;
+      nenhuma importação parcial pode ficar gravada. *(Já cobertos em
+      `importacao.test.js`; os limites em `limitesPlanilha.test.js`.)*
+
+**Volume real (29/09/2026):** 945 atualizações no histórico, ~1.000 por ano
+(pico de 162 num mês), 368 clientes.
+
+**Medição** (i5-2410M, 8 GB — a máquina do Docker de produção; tempo e pico de
+memória acima do processo parado):
+
+| Cenário | Antes | Depois |
+|---|---|---|
+| Importar 5.000 linhas | 6,0 s / 290 MB | 2,9 s / 95 MB |
+| Importar 20.000 linhas | 21 s / 1 GB | recusada em 0,07 s / 17 MB |
+| Importar 50.000 linhas | 62 s / 1,75 GB | recusada em 0,14 s / 31 MB |
+| Exportar 10.000 linhas | ~2 s / ~180 MB | 1,8 s / 181 MB |
+| Exportar 50.000 linhas | 7,6 s / 755 MB | recusada em 0,05 s / 8 MB |
+
+O ganho da importação veio de parar de compilar SQL e reler o catálogo de
+sistemas **a cada linha** (`BaseRepository._preparado`). Limites definidos
+para o maior arquivo aceito: até 5 s e 200 MB nessa máquina.
+
+**Achados junto:** arquivo acima de 15 MB ou de formato errado respondia
+"Erro interno do servidor" (500); exportação recusada não mostrava nada na
+tela; célula com texto formatado era importada como `[object Object]`.
+Corrigidos.
 
 **Aceite:** o maior arquivo suportado conclui dentro dos limites definidos de
 tempo e memória; falha ou cancelamento não deixam dados parciais nem arquivo

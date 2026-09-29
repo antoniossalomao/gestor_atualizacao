@@ -15,6 +15,13 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Limites e medição da importação/exportação — P05 (29/09/2026):** medido com `server/ferramentas/medir-planilhas.js` na máquina de produção: importar 20 mil linhas custava 21 s e 1 GB de memória, 50 mil custavam 1,75 GB — o bastante para derrubar o painel de todo mundo, e o limite de 15 MB do upload não impedia (15 MB são ~400 mil linhas). Números completos em [MELHORIAS](docs/MELHORIAS.md), P05.
+  - *Limites*: 5.000 linhas por importação e 10.000 por exportação (`server/src/config/limitesPlanilha.js`), anos de folga sobre o volume real (~1.000 atualizações por ano). Acima disso, a mensagem diz o limite e o que fazer (dividir o arquivo; filtrar por período), e nada é gravado.
+  - *Recusa antes de carregar*: a importação conta as linhas direto no zip do .xlsx, sem montar a planilha, e recusa um arquivo grande em ~0,1 s. O leitor em fluxo do ExcelJS, que seria o caminho natural, falha de forma intermitente na versão 4.4.0 e foi descartado.
+  - *Importação 2 a 3 vezes mais rápida e com um terço da memória*: o SQL era compilado de novo e o catálogo de sistemas relido a cada linha.
+  - *Mensagens*: arquivo grande demais (413) ou de formato errado (400) deixam de responder "Erro interno do servidor"; a exportação recusada passa a aparecer na tela (antes, não acontecia nada); célula com texto formatado deixa de entrar como `[object Object]`.
+  - *Testes*: `server/tests/limitesPlanilha.test.js` e um passo em `navegador/atualizacoes.test.mjs`.
+
 - **Testes de navegador — P04 (29/09/2026):** `npm run test:navegador` roda os fluxos completos num Chrome sem janela: login e sessão expirada, atendimentos (criar, editar, conflito de revisão, falha da API no envio, filtro, relatório copiado, excluir e desfazer, exclusão em lote com confirmação), tarefas, campanhas, importação, teclado e foco, nome acessível e rolagem horizontal em 390/768/1280/1440 px, nos dois temas e com zoom de 200%. Sem dependência nova: o Chrome instalado é controlado pelo protocolo de depuração ([ADR-0012](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0012)). Roda no CI.
   - *Modal atrás da gaveta*: "Descartar alterações?", o erro ao salvar e o aviso de conflito abriam **escondidos** atrás do formulário (camada 1100 contra 1200). Esc e Salvar pareciam não fazer nada. Agora o modal fica acima da gaveta, e os avisos acima de tudo.
   - *Gaveta e teclado*: ao fechar, o foco volta para quem a abriu (antes caía no começo da página); o Tab circula dentro dela em vez de escapar para a tela de trás; o fundo deixa de engolir o clique seguinte enquanto some.

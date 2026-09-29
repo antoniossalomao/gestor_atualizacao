@@ -105,8 +105,10 @@ class ClienteRepository extends BaseRepository {
     const limpo = String(nome || "").trim();
     if (!limpo) return null;
     return (
-      this.conn.prepare("SELECT id, nome FROM clientes WHERE nome = ?").get(limpo) ||
-      this.conn.prepare("SELECT id, nome FROM clientes WHERE lower(trim(nome)) = lower(?) ORDER BY id LIMIT 1").get(limpo) ||
+      // _preparado: roda duas vezes por linha de planilha importada (ver
+      // BaseRepository._preparado).
+      this._preparado("SELECT id, nome FROM clientes WHERE nome = ?").get(limpo) ||
+      this._preparado("SELECT id, nome FROM clientes WHERE lower(trim(nome)) = lower(?) ORDER BY id LIMIT 1").get(limpo) ||
       null
     );
   }

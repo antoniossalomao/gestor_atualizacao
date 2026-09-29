@@ -177,36 +177,53 @@ export class Pagina {
    * seletor (e o texto, se dado). Falha se outro elemento estiver por cima.
    */
   async clicar(seletor, { texto } = {}) {
-    const alvo = await this.esperar(
-      async (sel, txt) => {
-        const el = [...document.querySelectorAll(sel)].find(
-          (e) => e instanceof HTMLElement && e.offsetParent !== null && (!txt || e.innerText.includes(txt))
-        );
-        if (!el) return null;
-        el.scrollIntoView({ block: "center", inline: "center" });
-        // Parado? A troca de aba e a gaveta entram com animação: medido no
-        // meio dela, o clique cai onde o botão ESTAVA, não onde ele fica.
-        const antes = el.getBoundingClientRect();
-        await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
-        const r = el.getBoundingClientRect();
-        if (Math.abs(r.left - antes.left) > 0.5 || Math.abs(r.top - antes.top) > 0.5) return null;
-        const x = r.left + r.width / 2;
-        const y = r.top + r.height / 2;
-        const noPonto = document.elementFromPoint(x, y);
-        if (!noPonto || !(el === noPonto || el.contains(noPonto))) {
-          return { coberto: noPonto ? noPonto.outerHTML.slice(0, 120) : "nada" };
-        }
-        if (/** @type {HTMLButtonElement} */ (el).disabled) return { desabilitado: true };
-        return { x, y };
-      },
-      { args: [seletor, texto ?? null], descricao: `clicável: ${seletor}${texto ? ` "${texto}"` : ""}` }
-    );
-    if (alvo.coberto) throw new Error(`${seletor}: coberto por ${alvo.coberto}`);
-    if (alvo.desabilitado) throw new Error(`${seletor}: desabilitado`);
-    const base = { x: alvo.x, y: alvo.y, button: "left", clickCount: 1 };
-    await this.enviar("Input.dispatchMouseEvent", { type: "mouseMoved", x: alvo.x, y: alvo.y });
-    await this.enviar("Input.dispatchMouseEvent", { ...base, type: "mousePressed" });
-    await this.enviar("Input.dispatchMouseEvent", { ...base, type: "mouseReleased" });
+    // Até 3 tentativas, e só quando o clique caiu FORA do alvo: a tela ainda
+    // estava se arrumando (ver abaixo). Coberto e desabilitado falham na hora.
+    for (let tentativa = 1; ; tentativa++) {
+      const alvo = await this.esperar(
+        async (sel, txt) => {
+          const el = [...document.querySelectorAll(sel)].find(
+            (e) => e instanceof HTMLElement && e.offsetParent !== null && (!txt || e.innerText.includes(txt))
+          );
+          if (!el) return null;
+          el.scrollIntoView({ block: "center", inline: "center" });
+          // Parado? A troca de aba e a gaveta entram com animação, e a barra
+          // de ferramentas se rearruma quando os dados chegam (o contador
+          // "0 tarefas" empurra o "+ Novo Agendamento" para a linha de
+          // baixo). Medido no meio disso, o clique cai onde o botão ESTAVA.
+          const antes = el.getBoundingClientRect();
+          await new Promise((ok) => setTimeout(ok, 120));
+          await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)));
+          const r = el.getBoundingClientRect();
+          if (Math.abs(r.left - antes.left) > 0.5 || Math.abs(r.top - antes.top) > 0.5) return null;
+          const x = r.left + r.width / 2;
+          const y = r.top + r.height / 2;
+          const noPonto = document.elementFromPoint(x, y);
+          if (!noPonto || !(el === noPonto || el.contains(noPonto))) {
+            return { coberto: noPonto ? noPonto.outerHTML.slice(0, 120) : "nada" };
+          }
+          if (/** @type {HTMLButtonElement} */ (el).disabled) return { desabilitado: true };
+          // Anota se o clique que vem a seguir acerta este elemento.
+          window.__cliqueAcertou = null;
+          document.addEventListener("click", (e) => (window.__cliqueAcertou = el.contains(/** @type {Node} */ (e.target))), {
+            capture: true,
+            once: true,
+          });
+          return { x, y };
+        },
+        { args: [seletor, texto ?? null], descricao: `clicável: ${seletor}${texto ? ` "${texto}"` : ""}` }
+      );
+      if (alvo.coberto) throw new Error(`${seletor}: coberto por ${alvo.coberto}`);
+      if (alvo.desabilitado) throw new Error(`${seletor}: desabilitado`);
+      const base = { x: alvo.x, y: alvo.y, button: "left", clickCount: 1 };
+      await this.enviar("Input.dispatchMouseEvent", { type: "mouseMoved", x: alvo.x, y: alvo.y });
+      await this.enviar("Input.dispatchMouseEvent", { ...base, type: "mousePressed" });
+      await this.enviar("Input.dispatchMouseEvent", { ...base, type: "mouseReleased" });
+      // null: nenhum "click" (o alvo sumiu no meio, ex.: um menu que fechou
+      // ao receber o mousedown) -- não há o que repetir.
+      if ((await this.avaliar(() => window.__cliqueAcertou)) !== false) return;
+      if (tentativa >= 3) throw new Error(`${seletor}: o clique caiu fora do elemento 3 vezes (a tela não parou de se mexer)`);
+    }
   }
 
   /** Clica no campo, apaga o que houver e digita o texto. */

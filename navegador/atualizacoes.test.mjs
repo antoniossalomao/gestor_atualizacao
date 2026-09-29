@@ -193,6 +193,21 @@ test("Atualizações no navegador", { skip: pular }, async (t) => {
     assert.equal((await api.get(admin, "/atualizacoes")).total, total - 2);
   });
 
+  await passo(t, p, "exportação recusada pelo servidor aparece na tela (antes, não aparecia nada)", async () => {
+    await p.interceptar(({ url }) =>
+      url.includes("/api/atualizacoes/export") ? { status: 400, corpo: { error: "A exportação teria 12.000 linhas; o limite é 10.000. Filtre por período." } } : null
+    );
+    try {
+      await p.clicar('[data-action="toggle-mais-acoes"]');
+      await p.clicar('[data-action="export"]');
+      await p.esperarVisivel(".modal-box", { texto: "Filtre por período" });
+      await p.tecla("Escape");
+      await p.esperarSumir(".modal-box");
+    } finally {
+      await p.interceptar(null);
+    }
+  });
+
   await passo(t, p, "nenhum erro no console durante tudo isso", async () => {
     assert.deepEqual(p.erros, []);
   });

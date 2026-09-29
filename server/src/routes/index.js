@@ -8,17 +8,21 @@ const { requireRole } = require("../middlewares/requireRole");
 const { requireAgent } = require("../middlewares/requireAgent");
 const { requireAtualizadorHabilitado } = require("../middlewares/requireAtualizadorHabilitado");
 const { protecaoCsrf } = require("../middlewares/protecaoCsrf");
+const { LIMITE_UPLOAD_MB } = require("../config/constants");
+const { ValidationError } = require("../shared/errors");
 
 // Planilhas de import: limite de 15 MB e validação rigorosa de extensão (.xlsx / .xls)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 15 * 1024 * 1024 },
+  limits: { fileSize: LIMITE_UPLOAD_MB.arquivo * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname || "").toLowerCase();
     if (ext === ".xlsx" || ext === ".xls") {
       cb(null, true);
     } else {
-      cb(new Error("Formato inválido. Envie uma planilha Excel (.xlsx ou .xls)."));
+      // ValidationError, e não Error: sem o statusCode, a recusa virava
+      // "Erro interno do servidor." (500) e ia para o log como falha (P05).
+      cb(new ValidationError("Formato inválido. Envie uma planilha Excel (.xlsx ou .xls)."));
     }
   },
 });
@@ -35,14 +39,14 @@ const pacoteUpload = multer({
     },
     filename: (_req, file, callback) => callback(null, `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`),
   }),
-  limits: { fileSize: 500 * 1024 * 1024 },
+  limits: { fileSize: LIMITE_UPLOAD_MB.pacote * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const lower = (file.originalname || "").toLowerCase();
     const permitido = [...EXTENSOES_PACOTE].some((ext) => lower.endsWith(ext));
     if (permitido) {
       cb(null, true);
     } else {
-      cb(new Error("Formato não suportado. Envie arquivos compactados (.zip, .rar, .7z) ou executáveis (.exe, .msi)."));
+      cb(new ValidationError("Formato não suportado. Envie arquivos compactados (.zip, .rar, .7z) ou executáveis (.exe, .msi)."));
     }
   },
 });

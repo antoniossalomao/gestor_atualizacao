@@ -236,8 +236,12 @@ volume atual isso é teórico, mas se acontecer:
 
 1. **Confira o tamanho do banco** em **Administração → Saúde do servidor**.
 2. **Alguém pediu uma página gigante?** O `pageSize` tem teto de 200 no
-   servidor, então não é isso — mas exportação de `.xlsx` de milhares de linhas
-   é legitimamente pesada e bloqueia enquanto roda.
+   servidor, então não é isso. Importação e exportação de planilha travam o
+   processo enquanto rodam, mas têm limite (5.000 e 10.000 linhas — no limite,
+   ~3 s e ~2 s na máquina de produção; ver `server/src/config/limitesPlanilha.js`).
+   "A planilha tem mais de 5.000 linhas" e "A exportação teria N linhas" são
+   essa proteção funcionando: divida o arquivo, ou filtre por período. Antes
+   de subir um limite, rode `node server/ferramentas/medir-planilhas.js`.
 3. **O arquivo `-wal` cresceu muito?** Acontece quando o banco fica muito tempo
    sem fechar direito. `docker compose restart gestor` faz o *checkpoint*.
 

@@ -70,6 +70,15 @@ const OBS_SUPORTE_BREDAS = "adicionado o suporte bredas";
 // tarefa como "Arquivadas") -- e um modo de consulta.
 const FILTRO_ARQUIVADAS = "Arquivadas";
 
+// Tamanho máximo de cada upload, em MB, pelo nome do campo do formulário:
+// "arquivo" é a planilha de importação, "pacote" é o pacote de uma versão.
+// Mora aqui, e não só no multer (routes/index.js), porque a mensagem de
+// "arquivo grande demais" (middlewares/errorHandler.js) precisa dizer o
+// número -- e os dois lugares não podem discordar. O que protege a memória
+// na importação é o limite de LINHAS (config/limitesPlanilha.js); estes 15 MB
+// só barram o absurdo antes de o arquivo chegar ao leitor.
+const LIMITE_UPLOAD_MB = { arquivo: 15, pacote: 500 };
+
 module.exports = {
   COLUMNS,
   AGENDA_COLUMNS,
@@ -79,5 +88,6 @@ module.exports = {
   SISTEMA_SUPORTE_BREDAS,
   OBS_SUPORTE_BREDAS,
   FILTRO_ARQUIVADAS,
+  LIMITE_UPLOAD_MB,
 };
 
