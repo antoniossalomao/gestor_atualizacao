@@ -13,8 +13,8 @@
  *   em HTTP quando a resposta volta;
  * - montar o https:// a partir do cabeçalho Host deixaria quem manda o
  *   pedido escolher para onde o navegador vai (redirecionamento aberto);
- * - quem acessa pelo endereço oficial nem chega aqui: o proxy já manda do
- *   http:// para o https:// antes (o Caddy faz isso sozinho).
+ * - quem acessa pelo endereço oficial nem chega aqui: o proxy só atende
+ *   https:// (sem a porta 80, nem para redirecionar -- ver proxy/Caddyfile).
  */
 
 /**
