@@ -460,8 +460,10 @@ cada máquina da equipe precisa confiar nessa raiz uma vez:
 # No servidor, com os containers de pé:
 docker compose cp proxy:/data/caddy/pki/authorities/local/root.crt caddy-raiz.crt
 
-# Em cada PC da equipe, num PowerShell como administrador:
-certutil -addstore -f Root caddy-raiz.crt
+# Em cada PC da equipe, num PowerShell como administrador. Caminho
+# COMPLETO: o PowerShell de administrador abre em C:\Windows\system32, e
+# só o nome do arquivo dá "O sistema não pode encontrar o arquivo".
+certutil -addstore -f Root "C:\caminho\para\caddy-raiz.crt"
 ```
 
 Chrome e Edge usam o repositório do Windows e param de avisar depois disso
