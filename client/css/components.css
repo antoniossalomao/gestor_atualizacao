@@ -7026,6 +7026,9 @@ h1, h2, h3, strong {
 .campanhas__toolbar .filtros-rapidos { margin: 0; }
 .filtro-rapido__n { opacity: 0.8; font-variant-numeric: tabular-nums; }
 .campanha-form textarea.input { resize: vertical; min-height: 72px; }
+/* A Descrição fica fora da grade (ocupa a largura toda), e a grade não tem
+   margem própria: sem isto, ela colava no campo Cidade logo acima. */
+.campanha-form > .form-grid { margin-bottom: var(--sp-4); }
 .campanha__cliente { display: flex; flex-direction: column; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .campanha__cliente small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
 
