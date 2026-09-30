@@ -1065,6 +1065,10 @@ export class App {
     this._atualizarTitulo();
 
     const { instance } = entrada;
+    // Só na ENTRADA na aba, não a cada recarga: `refresh` também roda ao
+    // clicar na aba já aberta e depois de gravar, e aí desfazer o que a pessoa
+    // escolheu na tela seria arrancar a ordenação debaixo dela.
+    if (!mesmaAba && typeof instance.aoEntrar === "function") instance.aoEntrar();
     if (params && typeof instance.aplicarParams === "function") instance.aplicarParams(params);
     if (typeof instance.refresh !== "function") return;
 

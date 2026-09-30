@@ -137,12 +137,12 @@ gaveta, e dá para respondê-lo com o mouse e com o teclado.
 **Onde:** `ClientesView.js`, linha 32: hoje a tela restaura a última
 ordenação salva (`prefs "clientes:filtros"`).
 
-- [ ] Ao abrir a aba, ordenar por ID crescente, sempre.
-- [ ] A ordenação escolhida pelo usuário vale enquanto ele estiver na tela;
+- [x] Ao abrir a aba, ordenar por ID crescente, sempre.
+- [x] A ordenação escolhida pelo usuário vale enquanto ele estiver na tela;
       não é mais restaurada na próxima abertura. A busca pode continuar
       sendo lembrada.
-- [ ] Confirmar que o ID está liberado em `shared/sortHelper.js`.
-- [ ] Teste: a primeira página vem como 1, 2, 3…
+- [x] Confirmar que o ID está liberado em `shared/sortHelper.js`.
+- [x] Teste: a primeira página vem como 1, 2, 3…
 
 ### A05 — "Nova campanha" na Ação rápida
 

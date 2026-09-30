@@ -15,6 +15,8 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Clientes abre sempre por ID crescente — A04 (30/09/2026):** ao entrar na tela, a lista volta à ordem de cadastro (ID 1, 2, 3…). A ordenação escolhida vale enquanto se está na tela e deixou de ser lembrada na próxima abertura; a busca continua sendo.
+
 - **Regime tributário na Ficha 360° — A03 (30/09/2026):** o regime gravado no cadastro do cliente passa a aparecer na ficha, em Resumo & Cadastro ("—" quando vazio) e no cabeçalho, junto de cidade e grupo.
 
 - **Avisos sobre formulários — A02 (30/09/2026):** nos avisos de campo obrigatório e data inválida (Clientes, Atualizações, Agendamentos e Acessos), o foco ia para o campo *atrás* do aviso ainda aberto: o Enter seguinte reenviava o formulário e empilhava outro aviso, e pelo teclado a tela parecia travada. Agora o foco fica no aviso e volta ao campo quando ele fecha. As camadas da tela (faixa de conexão, gaveta, modal, notificação) passaram a sair de uma escala única de variáveis `--camada-*` em `theme.css`, com teste que recusa número solto e confere a ordem.

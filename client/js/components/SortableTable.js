@@ -277,6 +277,16 @@ export class SortableTable {
     this.thead.replaceChildren(tr);
   }
 
+  /**
+   * Marca a ordenação vigente sem disparar `onSortChange` -- para a tela que
+   * decide a ordem por conta própria (Clientes volta ao ID ao ser aberta) e
+   * precisa que a seta do cabeçalho diga a verdade.
+   */
+  definirOrdem(key, reverse = false) {
+    this.sortState = { key, reverse };
+    this._renderHead();
+  }
+
   _sortBy(col) {
     const reverse = this.sortState.key === col.key ? !this.sortState.reverse : false;
     this.sortState = { key: col.key, reverse };

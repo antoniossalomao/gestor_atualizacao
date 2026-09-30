@@ -20,6 +20,8 @@ import { Drawer } from "../components/Drawer.js";
  * O formulário fica escondido por padrão (botão "+ Novo Cliente") -- mesma
  * ideia de gestor/views/clientes.py.
  */
+const ORDEM_INICIAL = { sortBy: "id", sortDir: "asc" };
+
 export class ClientesView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
@@ -29,9 +31,22 @@ export class ClientesView extends View {
     const salvo = prefs.get("clientes:filtros", {});
     this.page = 1;
     this.busca = salvo.busca || "";
-    this.sortBy = salvo.sortBy;
-    this.sortDir = salvo.sortDir || "asc";
+    this.sortBy = ORDEM_INICIAL.sortBy;
+    this.sortDir = ORDEM_INICIAL.sortDir;
     this._buildDom();
+  }
+
+  /**
+   * A equipe pediu (A04) que Clientes abra SEMPRE por ID crescente: o ID é
+   * a ordem de cadastro, e é por ele que se confere "o último que entrou". A
+   * ordenação escolhida na tela vale enquanto se está nela e não é mais
+   * lembrada; a busca continua sendo.
+   */
+  aoEntrar() {
+    this.sortBy = ORDEM_INICIAL.sortBy;
+    this.sortDir = ORDEM_INICIAL.sortDir;
+    this.page = 1;
+    this.table?.definirOrdem(this.sortBy, this.sortDir === "desc");
   }
 
   aplicarParams({ novo } = {}) {
@@ -457,7 +472,7 @@ export class ClientesView extends View {
   }
 
   _salvarFiltros() {
-    prefs.set("clientes:filtros", { busca: this.busca, sortBy: this.sortBy, sortDir: this.sortDir });
+    prefs.set("clientes:filtros", { busca: this.busca });
   }
 
   _loadIntoForm(row) {

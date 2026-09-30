@@ -87,6 +87,14 @@ test("ClienteService - cadastro", async (t) => {
       assert.equal(env.service.getByNome("Ficha Sem Regime").regimeTributario, "", "vazio, e não undefined: a tela mostra \"—\"");
     });
 
+    await t.test("ordenado por ID crescente, a primeira página vem 1, 2, 3… (A04)", () => {
+      // Nomes em ordem alfabética INVERSA à de cadastro: se o ID não estivesse
+      // liberado no SORT_MAP, o fallback (por nome) devolveria outra ordem.
+      const ids = ["Zeta Ordem", "Meio Ordem", "Alfa Ordem"].map((nome) => env.service.create({ nome }, USUARIO).id);
+      const { rows } = env.service.list("Ordem", { sortBy: "id", sortDir: "asc", page: 1, pageSize: 50 });
+      assert.deepEqual(rows.map((r) => r.id), ids);
+    });
+
     await t.test("bordas do nome são aparadas", () => {
       const c = env.service.create({ nome: "  Com Espaço  " }, USUARIO);
       assert.equal(c.nome, "Com Espaço");
