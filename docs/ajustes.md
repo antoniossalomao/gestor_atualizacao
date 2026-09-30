@@ -317,10 +317,10 @@ mesmo peso. Exemplos: "Dados e importação" › "Histórico de atualizações";
 
 **Onde:** `SistemasView.js`, perto da linha 50.
 
-- [ ] Alinhar o botão "Limpar data" ao campo de data.
-- [ ] Remover a dica abaixo do campo ("Filtra a data da atualização; a
+- [x] Alinhar o botão "Limpar data" ao campo de data.
+- [x] Remover a dica abaixo do campo ("Filtra a data da atualização; a
       situação continua usando a versão oficial.").
-- [ ] Deixar o painel de filtros no mesmo padrão das outras telas.
+- [x] Deixar o painel de filtros no mesmo padrão das outras telas.
 
 ### A11 — Sobre e Ajuda
 

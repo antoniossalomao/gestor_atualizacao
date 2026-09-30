@@ -53,20 +53,26 @@ export class SistemasView extends View {
             <label class="field__label" for="sis-busca">Buscar cliente ou cidade</label>
             <input class="input" id="sis-busca" data-role="busca" type="search" autocomplete="off" />
           </div>
-          <button type="button" class="btn" data-action="filtros" aria-expanded="false" aria-controls="sis-filtros">Filtros</button>
-          <button type="button" class="btn" data-action="oficiais" aria-expanded="false" aria-controls="sis-oficiais">Versões oficiais</button>
+          <div class="toolbar__clear">
+            <button type="button" class="btn btn--small btn--ghost" data-action="limpar-filtros" hidden>Limpar filtros</button>
+          </div>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
+          <button type="button" class="btn btn--ghost btn--small" data-action="filtros" aria-expanded="false" aria-controls="sis-filtros">Filtros</button>
+          <button type="button" class="btn btn--ghost btn--small" data-action="oficiais" aria-expanded="false" aria-controls="sis-oficiais">Versões oficiais</button>
+        </div>
+        <!-- Mesmo painel recolhível de Atualizações (A10). A dica que ficava
+             embaixo do campo empurrava o "Limpar data" para fora da linha e
+             repetia o que o rótulo já diz; data inválida fica marcada no
+             próprio campo, como nos filtros de período de Atualizações. -->
+        <div id="sis-filtros" class="filtros-painel" hidden>
+          <div class="field field--data">
+            <label class="field__label" for="sis-antes">Última atualização antes de</label>
+            <input class="input" id="sis-antes" data-role="atualizacao-antes" placeholder="dd/mm/aaaa" inputmode="numeric" />
+          </div>
+          <button type="button" class="btn btn--small btn--ghost" data-action="limpar-data">Limpar data</button>
         </div>
         <p class="sistemas-referencia" data-role="referencia"></p>
-        <div id="sis-filtros" class="sistemas-filtros" hidden>
-          <div class="field">
-            <label class="field__label" for="sis-antes">Última atualização antes de</label>
-            <input class="input" id="sis-antes" data-role="atualizacao-antes" placeholder="dd/mm/aaaa" inputmode="numeric" aria-describedby="sis-antes-ajuda" />
-            <div class="field__hint" id="sis-antes-ajuda" data-role="data-hint">Filtra a data da atualização; a situação continua usando a versão oficial.</div>
-          </div>
-          <button type="button" class="btn" data-action="limpar-data">Limpar data</button>
-        </div>
         <section id="sis-oficiais" class="sistemas-oficiais" aria-label="Versões oficiais" hidden>
           <div class="sistemas-oficiais__cabecalho">
             <div><h2>Versões oficiais</h2><p>Novas atualizações recebem a referência vigente. As versões recebidas nas atualizações anteriores permanecem. Deixe o campo vazio para limpar a referência.</p></div>
@@ -117,10 +123,12 @@ export class SistemasView extends View {
     this.situacaoFilter = this.container.querySelector('[data-role="situacao-filter"]');
     this.buscaInput = this.container.querySelector('[data-role="busca"]');
     this.dataInput = this.container.querySelector('[data-role="atualizacao-antes"]');
-    this.dataHint = this.container.querySelector('[data-role="data-hint"]');
+    this.botaoFiltros = this.container.querySelector('[data-action="filtros"]');
+    this.botaoLimparFiltros = this.container.querySelector('[data-action="limpar-filtros"]');
     this.situacaoFilter.value = this.situacao;
     this.buscaInput.value = this.busca;
     this.dataInput.value = this.atualizacaoAntesDe;
+    this._mostrarFiltrosAtivos();
 
     this.sistemaFilter.addEventListener("change", () => {
       this.sistema = this.sistemaFilter.value;
@@ -148,16 +156,15 @@ export class SistemasView extends View {
       this.dataInput.value = mascaraDataBR(this.dataInput.value);
       const invalida = Boolean(this.dataInput.value) && !isValidDateBR(this.dataInput.value);
       this.dataInput.setAttribute("aria-invalid", String(invalida));
-      this.dataHint.textContent = invalida ? "Informe uma data válida em dd/mm/aaaa." : "Filtra a data da atualização; a situação continua usando a versão oficial.";
       if (!invalida) consultar();
     });
     this.container.querySelector('[data-action="limpar-data"]').addEventListener("click", () => {
-      this.dataInput.value = "";
-      this.atualizacaoAntesDe = "";
-      this.dataInput.setAttribute("aria-invalid", "false");
+      this._limparData();
       this._salvarFiltros();
       this._reloadList();
+      this.dataInput.focus();
     });
+    this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
     this.container.querySelector('[data-action="filtros"]').addEventListener("click", () => this._alternar("filtros"));
     this.container.querySelector('[data-action="oficiais"]').addEventListener("click", () => this._alternar("oficiais"));
     this.container.querySelector('[data-action="fechar-oficiais"]').addEventListener("click", () => this._fecharOficiais());
@@ -296,6 +303,37 @@ export class SistemasView extends View {
 
   _salvarFiltros() {
     prefs.set("sistemas:filtros", { sistema: this.sistema, situacao: this.situacao, busca: this.busca, atualizacaoAntesDe: this.atualizacaoAntesDe });
+    this._mostrarFiltrosAtivos();
+  }
+
+  /**
+   * Como em Atualizações: "Filtros (1)" quando há data escolhida -- com o
+   * painel fechado, era a única pista de que a lista estava recortada -- e
+   * "Limpar filtros" só quando há o que limpar. O sistema não conta: sempre
+   * há um escolhido.
+   */
+  _mostrarFiltrosAtivos() {
+    this.botaoFiltros.textContent = this.atualizacaoAntesDe ? "Filtros (1)" : "Filtros";
+    this.botaoLimparFiltros.hidden = !(this.atualizacaoAntesDe || this.busca || this.situacao !== "Todos");
+  }
+
+  _limparData() {
+    this.dataInput.value = "";
+    this.atualizacaoAntesDe = "";
+    this.dataInput.setAttribute("aria-invalid", "false");
+  }
+
+  _limparFiltros() {
+    const recarregar = Boolean(this.atualizacaoAntesDe);
+    this._limparData();
+    this.situacao = "Todos";
+    this.situacaoFilter.value = "Todos";
+    this.busca = "";
+    this.buscaInput.value = "";
+    this._salvarFiltros();
+    if (recarregar) this._reloadList();
+    else this._filtrarRows();
+    this.buscaInput.focus();
   }
 }
 

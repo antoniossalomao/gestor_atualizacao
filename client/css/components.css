@@ -1668,11 +1668,17 @@ select {
   flex: 1;
 }
 
-.sistemas-toolbar > button { align-self: flex-end; }
+.sistemas-toolbar > .btn { align-self: flex-end; margin-bottom: 5px; }
+/* Três campos, a contagem e três botões numa linha só a 1366px: com os 200px
+   genéricos, "Versões oficiais" caía sozinho para a linha de baixo. */
+.sistemas-toolbar .field { min-width: 160px; }
+.sistemas-toolbar .field:has(input[type="search"]) { min-width: 200px; flex: 1 1 200px; }
 .sistemas-referencia { margin: 0 0 var(--sp-4); color: var(--cor-texto-sub); font-size: var(--txt-sm); }
-.sistemas-filtros { display: flex; align-items: flex-end; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-4); }
-.sistemas-filtros[hidden], .sistemas-oficiais[hidden] { display: none; }
-.sistemas-filtros .field { max-width: 310px; }
+.sistemas-oficiais[hidden] { display: none; }
+.filtros-painel .field--data { min-width: 0; width: 200px; }
+/* O botão pequeno é mais baixo que o campo; sem a margem, alinhado pela
+   base, ele ficava rente à borda de baixo e parecia solto (A10). */
+.filtros-painel > .btn--small { margin-bottom: 5px; }
 .sistemas-oficiais { margin-bottom: var(--sp-5); padding: var(--sp-4); border: 1px solid var(--cor-borda); border-radius: var(--raio-md); }
 .sistemas-oficiais__cabecalho, .sistemas-oficiais__row { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); }
 .sistemas-oficiais__cabecalho { margin-bottom: var(--sp-3); }
