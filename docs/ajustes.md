@@ -308,10 +308,10 @@ mesmo peso. Exemplos: "Dados e importação" › "Histórico de atualizações";
 
 **Onde:** `client/js/views/administracao/` e `client/js/views/configuracoes/`.
 
-- [ ] Três níveis no CSS: título da seção (grande, com linha divisória), nome
+- [x] Três níveis no CSS: título da seção (grande, com linha divisória), nome
       da configuração (médio, em negrito) e descrição (pequena, cor
       secundária).
-- [ ] Aplicar em todas as seções das duas telas, não só nos exemplos.
+- [x] Aplicar em todas as seções das duas telas, não só nos exemplos.
 
 ### A10 — Filtro da tela Sistemas
 

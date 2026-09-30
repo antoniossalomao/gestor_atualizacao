@@ -7,7 +7,7 @@ import { html } from "../../utils/html.js";
 import { iconHtml } from "../../utils/icons.js";
 import { marcarOcupado } from "../../utils/guard.js";
 import { rotuloPapel } from "../../domain/pessoa.js";
-import { cabecalhoSecao } from "../../templates/secao.js";
+import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { legendaPapeis, linhaUsuario } from "../../templates/administracao.js";
 
 /**
@@ -47,7 +47,7 @@ export class UsuariosAdmin extends View {
           </table>
         </div>
         <aside class="card secao-card secao-card--lateral">
-          <h3 class="card__title">O que cada papel pode</h3>
+          ${tituloCartao({ titulo: "O que cada papel pode" })}
           ${legendaPapeis()}
         </aside>
       </div>
