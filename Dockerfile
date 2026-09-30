@@ -9,14 +9,10 @@
 #    teria que compilar o SQLite do zero. A imagem fica maior, a build fica
 #    muito mais rápida e previsível.
 #
-# 2. O contexto de build é "web/" inteiro, não "web/server/". O
-#    server/package.json declara `"gestor-de-atualizacoes": "file:.."` --
-#    o pacote da raiz --, então sem o package.json de cima o `npm ci` falha
-#    antes de começar. É também por isso que os caminhos são /app e
-#    /app/server nos DOIS estágios: o npm grava esse vínculo como um link
-#    simbólico relativo dentro de server/node_modules, e um link relativo só
-#    continua apontando para o lugar certo se a estrutura de pastas for
-#    idêntica na imagem final.
+# 2. O contexto de build é "web/" inteiro, não "web/server/": a imagem leva o
+#    servidor E o front-end, e o servidor procura o front-end dois níveis
+#    acima de src/ (CLIENT_DIR em Server.js). Por isso o código fica em
+#    /app/server e o front-end em /app/client, como em desenvolvimento.
 
 # ---------------------------------------------------------------- build ---
 FROM node:22-bookworm-slim AS build
@@ -35,7 +31,6 @@ WORKDIR /app
 # Só os manifestos primeiro: enquanto as dependências não mudarem, o Docker
 # reaproveita a camada do `npm ci` e a build de uma alteração de código leva
 # segundos em vez de reinstalar tudo.
-COPY package.json ./
 COPY server/package.json server/package-lock.json ./server/
 
 # "--omit=dev" deixa de fora o nodemon e o typescript: dentro do container
@@ -73,7 +68,6 @@ RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack 
 # node_modules vem pronto do estágio de build (incluindo o binário nativo do
 # better-sqlite3 já compatível com esta imagem).
 COPY --from=build /app/server/node_modules ./node_modules
-COPY --chown=node:node package.json /app/package.json
 COPY --chown=node:node server/package.json server/server.js server/resetar-senha.js ./
 COPY --chown=node:node server/src ./src
 COPY --chown=node:node client /app/client
