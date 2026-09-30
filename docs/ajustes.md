@@ -364,14 +364,14 @@ Levantamento feito agora (arquivos locais, fora do git):
 
 - [x] Conferir também a pasta de backups dentro do volume do Docker no
       servidor (192.168.0.85), com a mesma regra de data.
-- [ ] Varrer o repositório inteiro atrás de arquivo sem uso: módulo que
+- [x] Varrer o repositório inteiro atrás de arquivo sem uso: módulo que
       ninguém importa, CSS sem seletor usado, ícone não referenciado, script
       antigo, documento que ninguém mais cita, teste de algo que não existe.
-- [ ] Varrer código morto dentro dos arquivos: função exportada e nunca
+- [x] Varrer código morto dentro dos arquivos: função exportada e nunca
       chamada, regra de configuração não lida, rota sem tela.
 - [x] **Antes de apagar, entregar a lista com o motivo de cada item para
       aprovação.** Bancos e backups não estão no git; apagar é definitivo.
-- [ ] Fora do escopo: a pasta `../atualizador` (o Atualizador Automático
+- [x] Fora do escopo: a pasta `../atualizador` (o Atualizador Automático
       está pausado).
 
 **Aceite:** tudo o que sobrou tem uso conhecido; `npm run check`, `npm test`

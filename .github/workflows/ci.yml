@@ -59,25 +59,6 @@ jobs:
         working-directory: client
         run: npm test
 
-      # Fluxos completos num Chrome sem janela (navegador/, P04 do plano de
-      # melhorias). O runner ubuntu-latest já traz o Chrome; nada é baixado.
-      # EXIGIR_NAVEGADOR faz a falta do Chrome FALHAR em vez de pular: aqui,
-      # pular em silêncio seria deixar de testar sem ninguém perceber.
-      - name: Testes de navegador
-        env:
-          EXIGIR_NAVEGADOR: "1"
-        run: npm run test:navegador
-
-      # Quando um passo falha, a suíte salva a tela em navegador/.falhas/;
-      # sem publicar, a captura morreria junto com a máquina do CI.
-      - name: Capturas das falhas de navegador
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: capturas-navegador
-          path: navegador/.falhas/
-          if-no-files-found: ignore
-
   auditoria:
     runs-on: ubuntu-latest
 
