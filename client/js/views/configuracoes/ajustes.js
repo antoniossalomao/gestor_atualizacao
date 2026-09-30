@@ -21,6 +21,7 @@ import {
 import { settings, prefs } from "../../app/prefs.js";
 import { notificacoes } from "../../app/notify.js";
 import { ATALHOS } from "../../app/Shortcuts.js";
+import { COMO_USAR_TELAS, NOVIDADES, explicacaoSituacoes } from "../../domain/ajuda.js";
 import { toast } from "../../components/Toast.js";
 
 /**
@@ -32,15 +33,17 @@ import { toast } from "../../components/Toast.js";
  *  3. Notificações: Avisos em tela, contador na aba do navegador e alertas no Windows.
  *  4. Interface e acessibilidade: Tema, cores, densidade de tabelas, texto, foco e movimento.
  *  5. Regras da equipe: Orientação clara pessoal vs. global e atalho para Administração.
- *  6. Sobre e ajuda: Versão do painel, situações dos sistemas e lista de atalhos de teclado.
+ *  6. Sobre e ajuda: Versão e novidades, como usar cada tela, atalhos, como a situação é calculada e suporte.
  *
  * @param {{
  *   abasDoMenu: Array<{key: string, label: string}>,
+ *   regras?: {prazoVersaoDias?: number},
+ *   versao?: () => string | null,
  *   atualizadorHabilitado: boolean,
  *   definirSidebar: (recolhida: boolean) => void,
  * }} opcoes
  */
-export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar }) {
+export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar, regras = {}, versao = () => null }) {
   const abas = [
     {
       key: "conta",
@@ -619,64 +622,112 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar 
       rotulo: "Sobre e ajuda",
       icone: "info",
       titulo: "Sobre e ajuda",
-      descricao: "Versão do painel, situações dos sistemas e atalhos de teclado.",
+      descricao: "Versão e novidades, como usar cada tela, atalhos de teclado, como a situação é calculada e a quem pedir ajuda.",
+      // Os textos que dependem do servidor (versão, prazo) são getters: as
+      // definições nascem com o app, antes de o /auth/status de depois do
+      // login voltar (ver App._onAuthenticated), e o getter só é lido quando
+      // a aba é desenhada ou a busca roda.
       cartoes: [
         {
-          titulo: "Sobre o Gestor",
+          titulo: "Versão e novidades",
+          descricao: "O que mudou de visível nas últimas entregas.",
           itens: [
             {
               id: "versao-painel",
               tipo: "info",
               titulo: "Gestor de Atualizações",
-              ajuda: "Painel de controle de versões, clientes e agendamentos. Versão 2.0.",
-              busca: "versão sistema painel gestor sobre ajuda release",
+              get ajuda() {
+                const v = versao();
+                return v ? `Versão ${v}.` : "Versão não informada pelo servidor.";
+              },
+              busca: "versão sistema painel gestor sobre release",
             },
+            ...NOVIDADES.map((novidade, i) => ({
+              id: `novidade-${i}`,
+              tipo: "info",
+              titulo: novidade.titulo,
+              ajuda: `${novidade.data} · ${novidade.texto}`,
+              busca: "novidades mudanças novo",
+            })),
           ],
         },
         {
-          titulo: "Situações dos sistemas",
-          descricao: "Como o Gestor avalia a situação de versão dos clientes e sistemas.",
-          itens: [
-            {
-              id: "situacoes-sistemas",
+          titulo: "Como usar cada tela",
+          descricao: "Para que serve cada item do menu e onde ficam as ações principais.",
+          itens: [...abasDoMenu, { key: "configuracoes", label: "Configurações" }]
+            .filter((tela) => COMO_USAR_TELAS[tela.key])
+            .map((tela) => ({
+              id: `como-usar-${tela.key}`,
               tipo: "info",
-              titulo: "Significado das situações de versão",
-              ajuda: "Em dia: última atualização na data da versão oficial ou depois. Aguardando atualização: última atualização pouco antes da oficial, e a oficial ainda está dentro do prazo da equipe (Administração). Desatualizado: última atualização anterior à oficial com o prazo vencido, ou bem antes dela, ou nunca atualizado. Sem versão oficial: o sistema não tem oficial cadastrada e não julga ninguém. Componente fixo: sistema não atualizável.",
-              busca: "situacao situacoes em dia aguardando desatualizado atrasado nunca atualizado prazo fixo significado legenda",
-            },
-          ],
+              titulo: tela.label,
+              ajuda: COMO_USAR_TELAS[tela.key],
+              busca: "como usar tela ajuda",
+            })),
         },
         {
           titulo: "Atalhos de teclado",
-          descricao: "Tudo o que dá para fazer sem tirar a mão do teclado. Digite ? em qualquer tela para abrir.",
+          descricao: "Tudo o que dá para fazer sem tirar a mão do teclado. Digite ? em qualquer tela para ver esta lista.",
           itens: [
             {
               id: "dicas-atalho",
               tipo: "alternar",
               titulo: "Mostrar as dicas de atalho",
-              ajuda: 'Etiquetas indicadoras no menu, na busca e nas ações rápidas.',
+              ajuda: "Etiquetas indicadoras no menu, na busca e nas ações rápidas.",
               chaves: ["dicasAtalho"],
               busca: "dicas etiquetas atalho kbd esconder mostrar teclado",
               atual: () => aparencia.dicasAtalho(),
               aoEscolher: (valor) => aparencia.aplicar({ dicasAtalho: valor }),
             },
-          ],
-        },
-        ...[...new Set(ATALHOS.map(([, , grupo]) => grupo))].map((grupo) => {
-          const doGrupo = ATALHOS.filter(([, , g]) => g === grupo);
-          return {
-            titulo: grupo === "Global" ? "Em qualquer tela" : `Em ${grupo.toLowerCase()}`,
-            itens: [
-              {
+            // Um cartão só, com um título por grupo: antes cada grupo era um
+            // cartão solto depois do "Atalhos de teclado", e a aba parecia
+            // terminar nele.
+            ...[...new Set(ATALHOS.map(([, , grupo]) => grupo))].map((grupo) => {
+              const doGrupo = ATALHOS.filter(([, , g]) => g === grupo);
+              return {
                 id: `atalhos-${grupo.toLowerCase()}`,
                 tipo: "atalhos",
-                titulo: `Atalhos: ${grupo}`,
+                titulo: grupo === "Global" ? "Em qualquer tela" : `Em ${grupo.toLowerCase()}`,
                 atalhos: doGrupo,
                 busca: `atalhos teclado teclas ${doGrupo.map(([teclas, descricao]) => `${teclas} ${descricao}`).join(" ")}`,
+              };
+            }),
+          ],
+        },
+        {
+          titulo: "Como a situação é calculada",
+          descricao: "Vale igual no Resumo, na aba Sistemas e na ficha do cliente.",
+          itens: explicacaoSituacoes(null).map(({ titulo }, i) => ({
+            id: `situacao-${i}`,
+            tipo: "info",
+            titulo,
+            get ajuda() {
+              return explicacaoSituacoes(regras.prazoVersaoDias)[i].texto;
+            },
+            busca: "situacao situacoes em dia aguardando desatualizado atrasado nunca atualizado prazo fixo significado legenda regra calculo",
+          })),
+        },
+        {
+          titulo: "Contato e suporte",
+          itens: [
+            {
+              id: "suporte-duvidas",
+              tipo: "info",
+              titulo: "Dúvidas, acesso e regras da equipe",
+              ajuda: "Fale com um administrador da equipe. É quem cria contas, troca papéis e muda prazos, arquivamento e a classificação dos sistemas.",
+              busca: "contato suporte ajuda administrador acesso senha conta",
+            },
+            {
+              id: "suporte-problema",
+              tipo: "info",
+              titulo: "Encontrou um problema no painel",
+              get ajuda() {
+                const v = versao();
+                return `Anote a tela, o que você fez e a hora, e passe para um administrador${v ? ` (versão ${v})` : ""}. Em Administração, Auditoria mostra quem mudou o quê, e Diagnóstico mostra a saúde do servidor.`;
               },
-            ],
-          };
-        }),
+              busca: "problema erro bug falha suporte diagnostico auditoria",
+            },
+          ],
+        },
       ],
     },
   ];

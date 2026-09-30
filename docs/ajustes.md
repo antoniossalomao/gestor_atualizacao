@@ -326,10 +326,10 @@ mesmo peso. Exemplos: "Dados e importação" › "Histórico de atualizações";
 
 **Sintoma:** falta informação, e há textos soltos pela tela.
 
-- [ ] Organizar em blocos: versão e novidades; como usar cada tela; atalhos
+- [x] Organizar em blocos: versão e novidades; como usar cada tela; atalhos
       de teclado; como a situação do cliente é calculada (depende de A07);
       contato e suporte.
-- [ ] Mover ou remover os textos que hoje estão fora desses blocos.
+- [x] Mover ou remover os textos que hoje estão fora desses blocos.
 
 ### A12 — Tela de login
 

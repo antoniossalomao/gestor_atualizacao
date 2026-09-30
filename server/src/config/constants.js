@@ -79,6 +79,12 @@ const FILTRO_ARQUIVADAS = "Arquivadas";
 // só barram o absurdo antes de o arquivo chegar ao leitor.
 const LIMITE_UPLOAD_MB = { arquivo: 15, pacote: 500 };
 
+// Versão do painel, lida do package.json do servidor (que o Dockerfile copia
+// para a imagem). Até 30/09/2026 havia três números diferentes: "2.1.0" fixo
+// no Diagnóstico, "Versão 2.0" escrito na aba Sobre e "1.0.0" no
+// package.json. Agora é um só -- para mudar, mude o package.json.
+const VERSAO_PAINEL = require("../../package.json").version;
+
 module.exports = {
   COLUMNS,
   AGENDA_COLUMNS,
@@ -89,5 +95,6 @@ module.exports = {
   OBS_SUPORTE_BREDAS,
   FILTRO_ARQUIVADAS,
   LIMITE_UPLOAD_MB,
+  VERSAO_PAINEL,
 };
 

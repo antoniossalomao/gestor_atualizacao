@@ -10,6 +10,7 @@
  * a rota.
  */
 const { garantirTokenCsrf, CABECALHO_CSRF } = require("../middlewares/protecaoCsrf");
+const { VERSAO_PAINEL } = require("../config/constants");
 
 class AuthController {
   /**
@@ -35,6 +36,9 @@ class AuthController {
       // pelo mesmo motivo -- mas só com sessão: esta rota é aberta, e quem
       // não entrou não tem por que saber as regras internas da equipe.
       regras: logado ? this.configuracaoSistemaService.ler() : null,
+      // Para a aba Sobre e ajuda. Não é segredo, mas também só com sessão:
+      // quem não entrou não precisa saber que versão está rodando aqui.
+      versao: logado ? VERSAO_PAINEL : null,
     });
   };
 

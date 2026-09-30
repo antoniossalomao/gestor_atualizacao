@@ -143,6 +143,7 @@ export class App {
     // Regras públicas da equipe (ex.: quantos dias até "desatualizado"), para
     // as telas explicarem o que mostram. Só vêm com sessão.
     this.regras = status.regras || {};
+    this.versao = status.versao || null;
     if (status.needsSetup) {
       new LoginView(this.root, this.api, "setup", (user) => this._onAuthenticated(user));
       return;
@@ -176,6 +177,16 @@ export class App {
   _onAuthenticated(user) {
     this.user = user;
     this.api.resetUnauthorized();
+    // Quem entrou pela tela de login chegou com o /auth/status de ANTES da
+    // sessão, que não traz regras nem versão (ver AuthController.status) --
+    // e a aba Sobre e ajuda explicaria a situação sem o prazo da equipe.
+    // Preenche o MESMO objeto `this.regras` que as views já receberam.
+    if (!this.versao) {
+      this.api.get("/auth/status").then((s) => {
+        Object.assign(this.regras, s.regras || {});
+        this.versao = s.versao || null;
+      }).catch(() => {});
+    }
     // Calculado uma vez por sessão (não a cada troca de aba): as abas do
     // Atualizador só desaparecem/reaparecem de fato num boot novo do app
     // (login, F5) ou já vêm corretas se o admin tiver acabado de mudar --
@@ -574,6 +585,7 @@ export class App {
         navigate: (destino, opcoes) => this.switchTab(destino, opcoes),
         atualizadorHabilitado: this.atualizadorHabilitado,
         regras: this.regras,
+        versao: () => this.versao,
         recarregarApp: () => this.recarregarApp(),
         // Só as Configurações usam estes -- são as partes do shell que ela
         // mexe (o menu lateral, o cabeçalho com o nome) sem sair procurando

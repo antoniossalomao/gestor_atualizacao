@@ -71,6 +71,8 @@ export class ConfiguracoesView extends View {
       abasDoMenu: ctx.abasDoMenu || [],
       atualizadorHabilitado: this.atualizadorHabilitado,
       definirSidebar: (recolhida) => ctx.definirSidebar?.(recolhida),
+      regras: ctx.regras || {},
+      versao: ctx.versao || (() => null),
     });
 
     // Migra preferências salvas de chaves antigas para as novas seções

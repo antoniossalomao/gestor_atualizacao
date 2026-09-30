@@ -177,9 +177,9 @@ function acao(item) {
 
 /** Os atalhos de um grupo, só leitura. */
 function atalhos(item) {
-  const el = document.createElement("div");
-  el.className = "cfg-group cfg-group--largo";
-  el.innerHTML = listaAtalhos(item.atalhos).toString();
+  const el = linha(item);
+  el.classList.add("cfg-group--largo");
+  el.insertAdjacentHTML("beforeend", listaAtalhos(item.atalhos).toString());
   return { el, sincronizar: () => {} };
 }
 

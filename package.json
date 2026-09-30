@@ -1,6 +1,6 @@
 {
   "name": "gestor-de-atualizacoes",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Gestor de Atualizacoes -- painel web (servidor Express + SQLite e cliente sem build)",
   "scripts": {

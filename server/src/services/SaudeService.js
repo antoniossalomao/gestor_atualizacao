@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { VERSAO_PAINEL } = require("../config/constants");
 
 /**
  * Serviço de diagnóstico operacional e saúde do sistema.
@@ -94,7 +95,7 @@ class SaudeService {
         journalMode,
       },
       servidor: {
-        versao: "2.1.0",
+        versao: VERSAO_PAINEL,
         node: process.version,
         plataforma: `${process.platform} (${process.arch})`,
         uptimeSegundos: Math.round(process.uptime()),

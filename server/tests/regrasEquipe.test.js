@@ -397,6 +397,15 @@ test("Regras - rotas HTTP", async (t) => {
     assert.equal(comSessao.regras.discordWebhookUrl, undefined);
   });
 
+  await t.test("/auth/status traz a versão do package.json só para quem entrou", async () => {
+    const semSessao = await (await pedir("/auth/status")).json();
+    assert.equal(semSessao.versao, null);
+    const comSessao = await (await pedir("/auth/status", { cookie: operador })).json();
+    assert.equal(comSessao.versao, require("../package.json").version);
+    const saude = await (await pedir("/saude", { cookie: admin })).json();
+    assert.equal(saude.servidor.versao, comSessao.versao, "Diagnóstico e Sobre mostram o mesmo número");
+  });
+
   await t.test("operador lê as públicas, mas não a completa nem grava", async () => {
     assert.equal((await pedir("/configuracao-sistema", { cookie: operador })).status, 200);
     assert.equal((await pedir("/configuracao-sistema/completa", { cookie: operador })).status, 403);
