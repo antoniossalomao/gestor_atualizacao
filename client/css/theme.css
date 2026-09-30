@@ -172,6 +172,21 @@
   --largura-sidebar: 238px;
   --largura-sidebar-recolhida: 64px;
 
+  /* Camadas da tela inteira, de baixo para cima. Um lugar só para a ordem:
+     com os números soltos em cada regra, o modal chegou a ficar em 1100,
+     ABAIXO da gaveta (1200) de onde ele nasce, e "Descartar alterações?"
+     abria escondido atrás do formulário. Quem precisa de uma camada nova
+     entra nesta escala, não num número novo. O z-index pequeno DENTRO de um
+     componente (1, 2, 20) é local e não entra aqui. */
+  --camada-barra: 90;          /* barra de ações em lote, grudada na tabela */
+  --camada-menu: 200;          /* menus suspensos da página */
+  --camada-cabecalho: 1000;    /* menu do app e dicas da barra lateral */
+  --camada-faixa: 1050;        /* faixa "sem conexão com o servidor" */
+  --camada-gaveta: 1200;       /* gaveta do formulário e paleta de comandos */
+  --camada-modal: 1300;        /* aviso, confirmação e painéis em modal */
+  --camada-notificacao: 1400;  /* toasts, acima até de um modal aberto */
+  --camada-atalho: 2000;       /* "pular para o conteúdo", quando focado */
+
   /* ==========================================================================
      DENSIDADE DAS TABELAS
      Escolha do usuário no painel de Configurações (ver js/app/appearance.js),
@@ -708,7 +723,7 @@ a {
   position: absolute;
   top: -100px;
   left: var(--sp-4);
-  z-index: 2000;
+  z-index: var(--camada-atalho);
   padding: 10px 16px;
   border-radius: var(--raio-pequeno);
   background: var(--cor-accent);

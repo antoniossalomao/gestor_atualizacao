@@ -200,8 +200,7 @@ export class AcessosModal {
   async _submit() {
     const maquina = this.fields.maquina.value.trim();
     if (!maquina) {
-      Modal.alert("Validação", "Campo 'Máquina' é obrigatório.", "warning");
-      this.fields.maquina.focus();
+      Modal.alert("Validação", "Campo 'Máquina' é obrigatório.", "warning").then(() => this.fields.maquina.focus());
       return;
     }
     const data = {

@@ -101,12 +101,19 @@ tela.
 1300, outros elementos em 1200, gaveta em 1050, e um elemento em 2000 no
 `theme.css`.
 
-- [ ] Identificar qual aviso é e de onde ele sai.
-- [ ] Definir uma ordem única de camadas em variáveis do CSS (página →
+- [x] Identificar qual aviso é e de onde ele sai.
+- [x] Definir uma ordem única de camadas em variáveis do CSS (página →
       gaveta → formulário → aviso/modal → notificação) e trocar os números
       soltos por essas variáveis.
-- [ ] Ao fechar o aviso, devolver o foco ao campo do formulário.
-- [ ] Caso coberto no teste de navegador.
+- [x] Ao fechar o aviso, devolver o foco ao campo do formulário.
+- [x] Caso coberto no teste de navegador.
+
+**Resultado (30/09/2026):** o aviso atrás do formulário não se reproduziu na
+versão atual — os seis avisos que o formulário do cliente abre ficam por cima
+(camadas corrigidas no P04). O que travava pelo teclado era o foco indo para o
+campo atrás do aviso aberto. Sem a pasta `navegador/` (decisão do usuário), o
+caso foi conferido num Chrome sem janela localmente e travado em
+`client/tests/css.test.mjs`.
 
 **Aceite:** o aviso sempre aparece por cima de qualquer formulário ou
 gaveta, e dá para respondê-lo com o mouse e com o teclado.

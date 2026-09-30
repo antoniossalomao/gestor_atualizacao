@@ -505,8 +505,7 @@ export class ClientesView extends View {
   _readForm() {
     const nome = this.fields.nome.value.trim();
     if (!nome) {
-      Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning");
-      this.fields.nome.focus();
+      Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning").then(() => this.fields.nome.focus());
       return null;
     }
     const sistemas = [...this.sistemasGrid.querySelectorAll("input:checked")].map((el) => el.value);

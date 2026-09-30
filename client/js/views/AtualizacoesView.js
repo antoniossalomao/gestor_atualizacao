@@ -741,13 +741,11 @@ export class AtualizacoesView extends View {
     const data = {};
     for (const col of COLUMNS) data[col.key] = this.fields[col.key].value.trim();
     if (!data.cliente) {
-      Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning");
-      this.fields.cliente.focus();
+      Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning").then(() => this.fields.cliente.focus());
       return null;
     }
     if (!isValidDateBR(data.data)) {
-      Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning");
-      this.fields.data.focus();
+      Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning").then(() => this.fields.data.focus());
       return null;
     }
     return data;

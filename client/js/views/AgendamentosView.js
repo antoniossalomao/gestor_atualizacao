@@ -813,13 +813,11 @@ export class AgendamentosView extends View {
     const data = {};
     for (const col of AGENDA_COLUMNS) data[col.key] = this.fields[col.key].value.trim();
     if (!data.tarefa) {
-      Modal.alert("Validação", "Campo 'Tarefa' é obrigatório.", "warning");
-      this.fields.tarefa.focus();
+      Modal.alert("Validação", "Campo 'Tarefa' é obrigatório.", "warning").then(() => this.fields.tarefa.focus());
       return null;
     }
     if (!isValidDateBR(data.data)) {
-      Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning");
-      this.fields.data.focus();
+      Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning").then(() => this.fields.data.focus());
       return null;
     }
     return data;

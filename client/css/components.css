@@ -133,7 +133,7 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity var(--dur-rapida) var(--curva-padrao), transform var(--dur-rapida) var(--curva-padrao);
-  z-index: 1000;
+  z-index: var(--camada-cabecalho);
 }
 #app.is-sidebar-collapsed .tab-button[data-tooltip]:hover::after,
 #app.is-sidebar-collapsed .btn--sidebar[data-tooltip]:hover::after {
@@ -437,7 +437,7 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  z-index: 1000;
+  z-index: var(--camada-cabecalho);
   width: 272px;
   padding: var(--sp-2);
   border: 1px solid var(--cor-borda);
@@ -1719,7 +1719,7 @@ select {
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 90;
+  z-index: var(--camada-barra);
   display: flex;
   align-items: center;
   gap: var(--sp-3);
@@ -1821,7 +1821,7 @@ select {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  z-index: 200;
+  z-index: var(--camada-menu);
   min-width: 210px;
   padding: var(--sp-1) 0;
   background: var(--cor-superficie);
@@ -2225,7 +2225,7 @@ table.data-table {
   bottom: var(--sp-5);
   /* Acima da gaveta e do modal (ver as camadas em .modal-overlay): em 1000,
      o aviso que sai com a gaveta aberta ficava atrás do fundo desfocado. */
-  z-index: 1400;
+  z-index: var(--camada-notificacao);
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
@@ -2332,8 +2332,8 @@ table.data-table {
    9. MODAIS, PALETA DE COMANDOS, ATALHOS
    ========================================================================== */
 
-/* Camadas, de baixo para cima: faixa de conexão (1050), gaveta e paleta
-   (1200), modal (1300), avisos (1400). O modal tem que ficar ACIMA da gaveta:
+/* Camadas: a escala `--camada-*` fica em theme.css (faixa de conexão,
+   gaveta e paleta, modal, avisos). O modal tem que ficar ACIMA da gaveta:
    ele nasce dela -- "Descartar alterações?", o erro ao salvar, o conflito de
    revisão. Com o modal em 1100, abaixo da gaveta, tudo isso abria ESCONDIDO
    atrás do formulário: Esc e Salvar pareciam não fazer nada, e a pessoa
@@ -2342,7 +2342,7 @@ table.data-table {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1300;
+  z-index: var(--camada-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3572,7 +3572,7 @@ textarea.relatorio__texto {
 .cmdk-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: var(--camada-gaveta);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -3767,7 +3767,7 @@ textarea.relatorio__texto {
  * vista contaria só metade da história -- a pessoa continuaria trabalhando
  * numa tela cujos dados pararam no tempo.
  *
- * Fica ABAIXO do z-index dos modais (1100) de propósito: uma confirmação
+ * Fica ABAIXO da camada dos modais (`--camada-modal`) de propósito: uma confirmação
  * aberta é a coisa mais urgente da tela, e o servidor ter caído não muda isso.
  */
 .conexao-aviso {
@@ -3775,7 +3775,7 @@ textarea.relatorio__texto {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1050;
+  z-index: var(--camada-faixa);
   display: flex;
   align-items: center;
   gap: var(--sp-3);
@@ -3969,7 +3969,7 @@ body:has(.conexao-aviso) .dados-aviso {
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  z-index: 50;
+  z-index: var(--camada-menu);
   display: none;
   max-height: 220px;
   overflow-y: auto;
@@ -6153,7 +6153,7 @@ h1, h2, h3, strong {
 .drawer-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: var(--camada-gaveta);
   display: flex;
   justify-content: center;
   align-items: center;
