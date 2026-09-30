@@ -6,7 +6,7 @@ const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, parseData } = require("../shared/validation");
 const { normalizarSistemas, normalizarResponsavel } = require("../shared/normalizacao");
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
-const { situacaoDoSistema, situacaoDoCliente, contaParaVersao } = require("./situacaoVersao");
+const { situacaoDoSistema, situacaoDoCliente, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL } = require("./situacaoVersao");
 const { acharSistema } = require("../database/SistemaRepository");
 const { LIMITE_LINHAS_IMPORTACAO, LIMITE_LINHAS_EXPORTACAO } = require("../config/limitesPlanilha");
 const { contarLinhasXlsx } = require("./contarLinhasXlsx");
@@ -205,13 +205,14 @@ class AtualizacaoService {
     if (!alvo) return [];
 
     const ultimas = new Map(this.db.atualizacoes.ultimaPorClienteNoSistema(alvo.id).map((r) => [r.cliente_id, r]));
+    const principal = this._principalPorCliente(alvo);
     const resultado = [];
     const prazo = this._prazoVersao(hoje);
     for (const { id, nome, cidade } of this.db.clientes.clientesDoSistema(alvo.id)) {
-      const registro = ultimas.get(id);
+      const { registro, pelaDataDe } = registroQueDecide(alvo, ultimas.get(id), principal(id));
       if (limiteAtualizacao && (!registro?.data || !parseData(registro.data) || parseData(registro.data) >= limiteAtualizacao)) continue;
       const { situacao } = situacaoDoSistema(registro, oficial, prazo);
-      resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", oficial: oficial || "Não informada", situacao });
+      resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", oficial: oficial || "Não informada", situacao, pelaDataDe });
     }
     resultado.sort((a, b) => a.cliente.localeCompare(b.cliente, "pt-BR"));
     return resultado;
@@ -339,20 +340,25 @@ class AtualizacaoService {
     const ultimas = new Map(this.db.atualizacoes.ultimaPorSistemaDoCliente(nome).map((u) => [u.sistema_id, u]));
     const catalogo = new Map(this.db.sistemas.todos().map((s) => [s.id, s]));
     const ids = new Set([...(cliente ? this.db.clientes.sistemasDoCliente(cliente.id) : []), ...ultimas.keys()]);
+    const idPrincipal = this.db.sistemas.resolver(SISTEMA_PRINCIPAL)?.id;
+    const principal = { tem: ids.has(idPrincipal), registro: ultimas.get(idPrincipal) };
     return [...ids]
       .map((id) => {
         const sistema = catalogo.get(id);
+        const { registro: quemDecide, pelaDataDe } = registroQueDecide(sistema, ultimas.get(id), principal);
+        // A versão instalada é sempre a do PRÓPRIO sistema; só a data que
+        // decide a situação pode vir do B_Vendas.
         const registro = ultimas.get(id);
         const instalada = registro?.versao || "";
         const contaNaSituacao = contaParaVersao(sistema);
         const oficial = contaNaSituacao ? sistema.ultima_versao || "" : "";
         const { situacao } = contaNaSituacao
-          ? situacaoDoSistema(registro, oficial, prazo)
+          ? situacaoDoSistema(quemDecide, oficial, prazo)
           : { situacao: sistema.controla_versao ? "Sistema inativo" : "Componente fixo" };
         // `contaNaSituacao` falso = sistema fixo (B_Atualizador, Suporte
         // Bredas) ou fora do catálogo: a ficha mostra, mas ele não entra na
         // situação consolidada do cliente (a do Resumo).
-        return { sistema: sistema.nome, instalada, oficial, situacao, contaNaSituacao, fixo: !sistema.controla_versao, data: registro?.data || "" };
+        return { sistema: sistema.nome, instalada, oficial, situacao, contaNaSituacao, fixo: !sistema.controla_versao, data: registro?.data || "", pelaDataDe: contaNaSituacao ? pelaDataDe : null };
       })
       .sort((a, b) => (a.sistema < b.sistema ? -1 : a.sistema > b.sistema ? 1 : 0));
   }
@@ -488,6 +494,7 @@ class AtualizacaoService {
       cadastro.get(c).add(s);
     }
 
+    const idPrincipal = this.db.sistemas.resolver(SISTEMA_PRINCIPAL)?.id;
     const grupos = { desatualizado: [], aguardando: [], pendente: [], em_dia: [], sem_atualizaveis: [] };
     /** Quantos clientes estão atrasados em cada sistema -- os "mais atrasados" do card. */
     const atrasosPorSistema = new Map();
@@ -496,11 +503,13 @@ class AtualizacaoService {
     for (const { id, nome, cidade } of this.db.clientes.allBasic()) {
       const doCliente = ultimas.get(id) || new Map();
       const ids = new Set([...(cadastro.get(id) || []), ...doCliente.keys()]);
+      const principal = { tem: ids.has(idPrincipal), registro: doCliente.get(idPrincipal) };
       const sistemas = [];
       for (const sistemaId of ids) {
         const sistema = catalogo.get(sistemaId);
         if (!contaParaVersao(sistema)) continue;
-        const { situacao } = situacaoDoSistema(doCliente.get(sistemaId), sistema.ultima_versao, prazo);
+        const { registro } = registroQueDecide(sistema, doCliente.get(sistemaId), principal);
+        const { situacao } = situacaoDoSistema(registro, sistema.ultima_versao, prazo);
         sistemas.push({ sistema: sistema.nome, situacao });
         clientesPorSistema.set(sistema.nome, (clientesPorSistema.get(sistema.nome) || 0) + 1);
         if (situacao === "Desatualizado") atrasosPorSistema.set(sistema.nome, (atrasosPorSistema.get(sistema.nome) || 0) + 1);
@@ -519,6 +528,21 @@ class AtualizacaoService {
         .map(([sistema, total]) => ({ sistema, total, clientes: clientesPorSistema.get(sistema) || total }))
         .sort((a, b) => b.total - a.total || a.sistema.localeCompare(b.sistema, "pt-BR")),
     };
+  }
+
+  /**
+   * Para a aba Sistemas: `(clienteId) => {tem, registro}` do B_Vendas de cada
+   * cliente, lido de uma vez só -- e só quando o sistema pedido depende dele.
+   * "Tem" é o mesmo critério da ficha e do Resumo: no cadastro ou no histórico.
+   */
+  _principalPorCliente(alvo) {
+    const nenhum = () => ({ tem: false, registro: null });
+    if (!alvo.atualiza_com_principal) return nenhum;
+    const principal = this.db.sistemas.resolver(SISTEMA_PRINCIPAL);
+    if (!principal) return nenhum;
+    const ultimas = new Map(this.db.atualizacoes.ultimaPorClienteNoSistema(principal.id).map((r) => [r.cliente_id, r]));
+    const cadastrados = new Set(this.db.clientes.clientesDoSistema(principal.id).map((c) => c.id));
+    return (clienteId) => ({ tem: cadastrados.has(clienteId) || ultimas.has(clienteId), registro: ultimas.get(clienteId) });
   }
 
   /** O prazo depois da versão oficial (ver situacaoVersao.js, decisão 4), lido na hora. */

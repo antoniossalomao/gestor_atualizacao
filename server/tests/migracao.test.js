@@ -260,7 +260,7 @@ test("Migração 3 - banco já existente recebe autoria sem perder dados", () =>
     const antigo = new Sqlite3(arquivo);
     // Um banco na versão 2 de verdade não tem nada das migrações seguintes:
     // nem a autoria (3) nem as campanhas (4).
-    antigo.exec("ALTER TABLE sistemas DROP COLUMN ultima_versao_autor; ALTER TABLE sistemas DROP COLUMN ultima_versao_em; ALTER TABLE clientes DROP COLUMN regime_tributario; DROP TABLE campanhas");
+    antigo.exec("ALTER TABLE sistemas DROP COLUMN ultima_versao_autor; ALTER TABLE sistemas DROP COLUMN ultima_versao_em; ALTER TABLE sistemas DROP COLUMN atualiza_com_principal; ALTER TABLE clientes DROP COLUMN regime_tributario; DROP TABLE campanhas");
     antigo.pragma("user_version = 2");
     antigo.close();
 
@@ -286,7 +286,7 @@ test("Migração 4 - banco na versão 3 ganha campanhas sem perder dados", () =>
     inicial.conn.close();
 
     const antigo = new Sqlite3(arquivo);
-    antigo.exec("ALTER TABLE clientes DROP COLUMN regime_tributario; DROP TABLE campanhas");
+    antigo.exec("ALTER TABLE sistemas DROP COLUMN atualiza_com_principal; ALTER TABLE clientes DROP COLUMN regime_tributario; DROP TABLE campanhas");
     antigo.pragma("user_version = 3");
     antigo.close();
 
@@ -302,5 +302,30 @@ test("Migração 4 - banco na versão 3 ganha campanhas sem perder dados", () =>
     // Reabrir não roda a migração de novo (senão o CREATE TABLE falharia).
     const reaberto = new Database(arquivo);
     reaberto.conn.close();
+  } finally { fs.rmSync(tmpDir, { recursive: true, force: true }); }
+});
+
+test("Migração 6 - NFCe e Consignado M2 passam a atualizar junto com o B_Vendas (A13)", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-migr6-"));
+  const arquivo = path.join(tmpDir, "gestao.db");
+  try {
+    const inicial = new Database(arquivo);
+    // Os nomes gravados em produção (29/09/2026). O catálogo inicial traz
+    // "NFCe" sem o "B_"; o de produção, "B_NFCe" -- a migração acha os dois.
+    inicial.conn.prepare("INSERT INTO sistemas (nome, ativo) VALUES ('Consignado M2', 1)").run();
+    inicial.conn.close();
+
+    const antigo = new Sqlite3(arquivo);
+    antigo.exec("ALTER TABLE sistemas DROP COLUMN atualiza_com_principal");
+    antigo.pragma("user_version = 5");
+    antigo.close();
+
+    const migrado = new Database(arquivo);
+    try {
+      assert.equal(migrado.conn.pragma("user_version", { simple: true }), VERSAO_ATUAL);
+      const marcados = migrado.conn.prepare("SELECT nome FROM sistemas WHERE atualiza_com_principal = 1 ORDER BY nome").all().map((r) => r.nome);
+      assert.deepEqual(marcados, ["Consignado M2", "NFCe"]);
+      assert.equal(migrado.sistemas.resolver("B_Vendas").atualiza_com_principal, 0);
+    } finally { migrado.conn.close(); }
   } finally { fs.rmSync(tmpDir, { recursive: true, force: true }); }
 });

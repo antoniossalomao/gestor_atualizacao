@@ -7357,6 +7357,21 @@ h1, h2, h3, strong {
 .admin-sistema__nome strong { overflow-wrap: anywhere; }
 .admin-sistema__nome small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
 .admin-sistema .segmented { flex: 0 0 auto; }
+.admin-sistema__dependente {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  cursor: pointer;
+}
+.admin-sistema__dependente[hidden] { display: none; }
+.pela-data {
+  display: block;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
 
 /* Diagnóstico: título e selo quebram de linha em vez de espremer o título. */
 .admin-saude__bloco header { flex-wrap: wrap; }

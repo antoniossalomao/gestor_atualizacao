@@ -78,7 +78,24 @@ export class SistemasView extends View {
       ocuparAltura: true,
       columns: [
         { key: "cliente", label: "Cliente" },
-        { key: "ultima", label: "Última atualização", type: "date" },
+        {
+          key: "ultima",
+          label: "Última atualização",
+          type: "date",
+          // NFCe e Consignado M2 são julgados pela data do B_Vendas (A13):
+          // sem a nota, a data parecia de uma atualização que não existe.
+          render: (row) => {
+            const celula = document.createElement("span");
+            celula.textContent = row.ultima;
+            if (row.pelaDataDe) {
+              const nota = document.createElement("small");
+              nota.className = "pela-data";
+              nota.textContent = `pela data do ${row.pelaDataDe}`;
+              celula.appendChild(nota);
+            }
+            return celula;
+          },
+        },
         { key: "situacao", label: "Situação" },
         { key: "cidade", label: "Cidade" },
       ],

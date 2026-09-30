@@ -48,15 +48,20 @@ class SistemaRepository extends BaseRepository {
 
   /** Classificação e referência preservada, inclusive dos inativos do histórico. */
   catalogo() {
-    return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, ultima_versao AS ultimaVersao FROM sistemas ORDER BY nome").all();
+    return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, atualiza_com_principal AS atualizaComPrincipal, ultima_versao AS ultimaVersao FROM sistemas ORDER BY nome").all();
   }
 
   getById(id) {
-    return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, ultima_versao AS ultimaVersao FROM sistemas WHERE id = ?").get(id);
+    return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, atualiza_com_principal AS atualizaComPrincipal, ultima_versao AS ultimaVersao FROM sistemas WHERE id = ?").get(id);
   }
 
   classificar(id, controlaVersao) {
     return this.conn.prepare("UPDATE sistemas SET controla_versao = ? WHERE id = ? AND ativo = 1").run(controlaVersao ? 1 : 0, id).changes;
+  }
+
+  /** Marca o sistema como dependente do B_Vendas (ver migracoes.js, migração 6). */
+  marcarDependente(id, atualizaComPrincipal) {
+    return this.conn.prepare("UPDATE sistemas SET atualiza_com_principal = ? WHERE id = ? AND ativo = 1").run(atualizaComPrincipal ? 1 : 0, id).changes;
   }
 
   /**

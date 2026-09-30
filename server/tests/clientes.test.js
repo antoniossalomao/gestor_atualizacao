@@ -299,3 +299,20 @@ test("ClienteService - acessos remotos", async (t) => {
     env.cleanup();
   }
 });
+
+test("Classificação do sistema: marcar como dependente do B_Vendas (A13)", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-dependente-"));
+  const db = new Database(path.join(tmpDir, "gestao.db"));
+  try {
+    const service = new ClienteService(db, new HistoricoService(db));
+    const nfce = db.sistemas.resolver("NFCe");
+    assert.equal(service.classificarSistema(nfce.id, true, USUARIO, false).atualizaComPrincipal, 0);
+    assert.equal(service.classificarSistema(nfce.id, true, USUARIO, true).atualizaComPrincipal, 1);
+    assert.equal(service.classificarSistema(nfce.id, true, USUARIO).atualizaComPrincipal, 1, "sem o campo, a marcação não muda");
+    assert.throws(() => service.classificarSistema(db.sistemas.resolver("B_Vendas").id, true, USUARIO, true), /não pode depender dele mesmo/);
+    assert.throws(() => service.classificarSistema(nfce.id, true, USUARIO, "sim"), (e) => e.statusCode === 400);
+  } finally {
+    db.conn.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

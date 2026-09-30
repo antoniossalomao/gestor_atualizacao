@@ -264,22 +264,22 @@ atualização não foi lançada para cada dependente.
 Esses nomes não aparecem no código; eles vêm do catálogo de sistemas. Por
 isso a dependência é uma marcação por sistema, e não uma lista fixa:
 
-- [ ] Confirmar no catálogo de produção os nomes exatos (por exemplo `B_NFCe`
+- [x] Confirmar no catálogo de produção os nomes exatos (por exemplo `B_NFCe`
       e o nome gravado de Consignado M2).
-- [ ] Nova coluna no catálogo (migração): "atualiza junto com o B_Vendas".
+- [x] Nova coluna no catálogo (migração): "atualiza junto com o B_Vendas".
       Marcação editável em Administração, ao lado de "controla versão"
       (`OperacaoAdmin.js`). A migração já marca NFCe e Consignado M2.
-- [ ] Na situação por sistema, um sistema marcado usa a data da última
+- [x] Na situação por sistema, um sistema marcado usa a data da última
       atualização de B_Vendas do cliente. A data é comparada com a versão
       oficial **do próprio sistema** e com o prazo de A07.
-- [ ] Cliente sem B_Vendas: o dependente volta a usar a própria última
+- [x] Cliente sem B_Vendas: o dependente volta a usar a própria última
       atualização.
-- [ ] Vale igual no Resumo, em Sistemas e na Ficha. Na Ficha, indicar que a
+- [x] Vale igual no Resumo, em Sistemas e na Ficha. Na Ficha, indicar que a
       data veio do B_Vendas (por exemplo "pela data do B_Vendas").
-- [ ] Testes: dependente sem atualização própria e B_Vendas em dia (fica em
+- [x] Testes: dependente sem atualização própria e B_Vendas em dia (fica em
       dia); B_Vendas atrasado (dependente atrasado); cliente sem B_Vendas;
       marcação desligada na Administração.
-- [ ] Registrar no mesmo ADR de A07 e no comentário de `situacaoVersao.js`.
+- [x] Registrar no mesmo ADR de A07 e no comentário de `situacaoVersao.js`.
 
 **Observação:** na situação **do cliente** isso quase não muda nada, porque
 quem tem B_Vendas já é julgado só por ele. A mudança aparece na visão **por

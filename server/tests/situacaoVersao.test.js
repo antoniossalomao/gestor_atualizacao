@@ -212,3 +212,59 @@ test("Resumo - parado há muito tempo pode estar em dia", () => {
     env.cleanup();
   }
 });
+
+test("Dependentes do B_Vendas usam a data do B_Vendas (A13)", async (t) => {
+  const env = ambiente();
+  // Bem depois do prazo de 60 dias (A07): aqui a pergunta é de onde vem a data.
+  const hoje = new Date(2026, 11, 1);
+  try {
+    env.db.sistemas.salvarVersao("B_Vendas", "01/08/2026");
+    env.db.sistemas.salvarVersao("NFCe", "01/08/2026");
+    env.cliente("Vendas Em Dia", ["B_Vendas", "NFCe"]);
+    env.atender("Vendas Em Dia", "B_Vendas", "10/08/2026");
+    env.cliente("Vendas Atrasado", ["B_Vendas", "NFCe"]);
+    env.atender("Vendas Atrasado", "B_Vendas", "10/07/2026");
+    env.cliente("Sem Vendas", ["NFCe"]);
+    env.atender("Sem Vendas", "NFCe", "10/07/2026");
+    const porSistema = () => Object.fromEntries(env.servico.relatorioPorSistema("NFCe", "", hoje).map((r) => [r.cliente, r]));
+    const naFicha = (cliente) => env.servico.situacaoCliente(cliente, hoje).find((s) => s.sistema === "NFCe");
+
+    await t.test("sem atualização própria e B_Vendas em dia: o dependente fica em dia", () => {
+      const linha = porSistema()["Vendas Em Dia"];
+      assert.equal(linha.situacao, "Em dia");
+      assert.equal(linha.pelaDataDe, "B_Vendas", "a aba Sistemas diz de onde veio a data");
+      assert.equal(linha.ultima, "10/08/2026");
+      assert.equal(naFicha("Vendas Em Dia").situacao, "Em dia");
+      assert.equal(naFicha("Vendas Em Dia").pelaDataDe, "B_Vendas");
+      assert.equal(naFicha("Vendas Em Dia").instalada, "", "a versão instalada continua sendo a do próprio sistema");
+    });
+
+    await t.test("B_Vendas atrasado: o dependente também", () => {
+      assert.equal(porSistema()["Vendas Atrasado"].situacao, "Desatualizado");
+    });
+
+    await t.test("cliente sem B_Vendas: o dependente usa a própria data", () => {
+      assert.equal(porSistema()["Sem Vendas"].situacao, "Desatualizado");
+      assert.equal(porSistema()["Sem Vendas"].pelaDataDe, null);
+    });
+
+    await t.test("o Resumo conta os atrasos do dependente pela mesma regra", () => {
+      const nfce = env.servico.resumo(hoje).situacaoClientes.sistemasMaisAtrasados.find((s) => s.sistema === "NFCe");
+      assert.equal(nfce.total, 2, "Vendas Atrasado e Sem Vendas; não o Vendas Em Dia");
+    });
+
+    await t.test("a data do B_Vendas é comparada com a oficial do PRÓPRIO sistema", () => {
+      env.db.sistemas.salvarVersao("NFCe", "15/08/2026");
+      assert.equal(porSistema()["Vendas Em Dia"].situacao, "Desatualizado", "B_Vendas de 10/08 não alcança a NFCe de 15/08");
+      env.db.sistemas.salvarVersao("NFCe", "01/08/2026");
+    });
+
+    await t.test("marcação desligada na Administração: volta a usar a própria data", () => {
+      env.db.sistemas.marcarDependente(env.db.sistemas.resolver("NFCe").id, false);
+      assert.equal(porSistema()["Vendas Em Dia"].situacao, "Nunca atualizado");
+      assert.equal(porSistema()["Vendas Em Dia"].pelaDataDe, null);
+    });
+  } finally {
+    env.cleanup();
+  }
+});

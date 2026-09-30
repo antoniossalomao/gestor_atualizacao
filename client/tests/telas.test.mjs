@@ -271,6 +271,14 @@ test("Consultar Cliente - matriz de versões", async (t) => {
     assert.equal(por.B_Ordem.estadoLabel, "Sem versão oficial");
   });
 
+  await t.test("dependente do B_Vendas diz que a situação veio da data dele (A13)", () => {
+    const [linha] = montarMatrizVersoes({ nome: "Z", sistemas: ["NFCe"] }, [], painel, [
+      { sistema: "NFCe", situacao: "Em dia", contaNaSituacao: true, pelaDataDe: "B_Vendas" },
+    ]);
+    assert.equal(linha.origemData, "pela data do B_Vendas");
+    assert.match(texto(linhaMatrizVersoes(linha)), /pela data do B_Vendas/);
+  });
+
   await t.test("publicada mas nunca registrada: 'Não instalado'", () => {
     const [linha] = montarMatrizVersoes({ nome: "Y", sistemas: ["B_Vendas"] }, [], painel);
     assert.equal(linha.estadoLabel, "Não instalado");

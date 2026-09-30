@@ -106,6 +106,11 @@ export class OperacaoAdmin extends FormularioRegras {
         <div class="admin-sistema__nome">
           <strong id="classificacao-${s.id}">${s.nome}</strong>
           <small>${s.ultimaVersao ? `Referência oficial: ${s.ultimaVersao}` : "Sem referência oficial"}</small>
+          ${s.nome.toLowerCase() === "b_vendas"
+            ? ""
+            : html`<label class="admin-sistema__dependente" title="Vai para o cliente junto com o B_Vendas: a situação deste sistema usa a data da última atualização do B_Vendas do cliente.">
+                <input type="checkbox" data-dependente="${s.id}" /> Atualiza junto com o B_Vendas
+              </label>`}
         </div>
         <div class="segmented" role="radiogroup" aria-labelledby="classificacao-${s.id}">
           <label class="cfg-group__option"><input type="radio" name="classificacao-${s.id}" value="1" data-id="${s.id}" /><span>Atualizável</span></label>
@@ -118,10 +123,14 @@ export class OperacaoAdmin extends FormularioRegras {
       const valor = String(sistema.controlaVersao ? 1 : 0);
       const campo = /** @type {HTMLInputElement|null} */ (lista.querySelector(`input[data-id="${sistema.id}"][value="${valor}"]`));
       if (campo) campo.checked = true;
+      const dependente = this._caixaDependente(sistema.id);
+      if (dependente) dependente.checked = Boolean(sistema.atualizaComPrincipal);
+      this._pintarDependente(sistema.id);
     }
 
-    lista.querySelectorAll("input[data-id]").forEach((campo) => {
-      campo.addEventListener("change", () => this._atualizarBotaoSistema(/** @type {HTMLInputElement} */ (campo).dataset.id));
+    lista.querySelectorAll("input[data-id], input[data-dependente]").forEach((campo) => {
+      const id = /** @type {HTMLInputElement} */ (campo).dataset.id || /** @type {HTMLInputElement} */ (campo).dataset.dependente;
+      campo.addEventListener("change", () => this._atualizarBotaoSistema(id));
     });
 
     lista.querySelectorAll('[data-action="salvar-classificacao"]').forEach((botao) => {
@@ -129,12 +138,27 @@ export class OperacaoAdmin extends FormularioRegras {
     });
   }
 
+  /** @returns {HTMLInputElement|null} */
+  _caixaDependente(id) {
+    return this.container.querySelector(`input[data-dependente="${id}"]`);
+  }
+
+  /** Fixo não tem versão, então não tem de quem depender: a caixa some. */
+  _pintarDependente(id) {
+    const caixa = this._caixaDependente(id);
+    const atualizavel = /** @type {HTMLInputElement|null} */ (this.container.querySelector(`input[data-id="${id}"]:checked`))?.value === "1";
+    if (caixa) /** @type {HTMLElement} */ (caixa.closest("label")).hidden = !atualizavel;
+  }
+
   _atualizarBotaoSistema(id) {
+    this._pintarDependente(id);
     const sistema = this.sistemas.find((s) => String(s.id) === String(id));
     const campo = /** @type {HTMLInputElement|null} */ (this.container.querySelector(`input[data-id="${id}"]:checked`));
     const botao = /** @type {HTMLButtonElement|null} */ (this.container.querySelector(`[data-action="salvar-classificacao"][data-id="${id}"]`));
     if (campo && botao && sistema) {
-      const mudou = Number(campo.value) !== (sistema.controlaVersao ? 1 : 0);
+      const caixa = this._caixaDependente(id);
+      const mudou = Number(campo.value) !== (sistema.controlaVersao ? 1 : 0) ||
+        (caixa !== null && caixa.checked !== Boolean(sistema.atualizaComPrincipal));
       botao.hidden = !mudou;
       botao.closest(".admin-sistema")?.classList.toggle("is-alterado", mudou);
     }
@@ -145,7 +169,11 @@ export class OperacaoAdmin extends FormularioRegras {
     if (!campo) return;
     const liberar = marcarOcupado(botao);
     try {
-      await this.api.patch(`/sistemas/${id}/classificacao`, { controlaVersao: campo.value === "1" });
+      const caixa = this._caixaDependente(id);
+      await this.api.patch(`/sistemas/${id}/classificacao`, {
+        controlaVersao: campo.value === "1",
+        ...(caixa ? { atualizaComPrincipal: caixa.checked } : {}),
+      });
       for (const chave of ["resumo", "sistemas:", "consulta:", "atualizacoes:"]) this.cache?.invalidar(chave);
       await this._carregarSistemas();
       toast.success("Classificação salva para a equipe.");

@@ -1,4 +1,5 @@
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
+const { SISTEMA_PRINCIPAL } = require("./situacaoVersao");
 
 /**
  * Regras de negocio da aba Clientes, em cima do ClienteRepository /
@@ -167,14 +168,30 @@ class ClienteService {
     return { nome: sistema.nome, data };
   }
 
-  classificarSistema(id, controlaVersao, usuario) {
+  /**
+   * @param {boolean} controlaVersao
+   * @param {boolean} [atualizaComPrincipal] sem ele, a marcação de dependente do B_Vendas não muda
+   */
+  classificarSistema(id, controlaVersao, usuario, atualizaComPrincipal) {
     if (typeof controlaVersao !== "boolean") throw new ValidationError("Informe se o sistema controla versão.");
+    if (atualizaComPrincipal !== undefined && typeof atualizaComPrincipal !== "boolean") {
+      throw new ValidationError(`Informe se o sistema atualiza junto com o ${SISTEMA_PRINCIPAL}.`);
+    }
     const sistema = this.db.sistemas.getById(Number(id));
     if (!sistema?.ativo) throw new NotFoundError("Sistema não encontrado no catálogo ativo.");
-    if (Boolean(sistema.controlaVersao) === controlaVersao) return sistema;
-    this.db.sistemas.classificar(sistema.id, controlaVersao);
+    if (atualizaComPrincipal && sistema.nome.toLowerCase() === SISTEMA_PRINCIPAL.toLowerCase()) {
+      throw new ValidationError(`O ${SISTEMA_PRINCIPAL} não pode depender dele mesmo.`);
+    }
+    const mudaClasse = Boolean(sistema.controlaVersao) !== controlaVersao;
+    const mudaDependencia = atualizaComPrincipal !== undefined && Boolean(sistema.atualizaComPrincipal) !== atualizaComPrincipal;
+    if (!mudaClasse && !mudaDependencia) return sistema;
+    if (mudaClasse) this.db.sistemas.classificar(sistema.id, controlaVersao);
+    if (mudaDependencia) this.db.sistemas.marcarDependente(sistema.id, atualizaComPrincipal);
     const depois = this.db.sistemas.getById(sistema.id);
-    this.historico.registrar(usuario, "atualizar", "sistema", `Sistema "${sistema.nome}" classificado como ${controlaVersao ? "atualizável" : "componente fixo"}`, { antes: sistema, depois });
+    const partes = [];
+    if (mudaClasse) partes.push(`classificado como ${controlaVersao ? "atualizável" : "componente fixo"}`);
+    if (mudaDependencia) partes.push(atualizaComPrincipal ? `marcado como atualizado junto com o ${SISTEMA_PRINCIPAL}` : `desmarcado de atualizar junto com o ${SISTEMA_PRINCIPAL}`);
+    this.historico.registrar(usuario, "atualizar", "sistema", `Sistema "${sistema.nome}" ${partes.join(" e ")}`, { antes: sistema, depois });
     return depois;
   }
 

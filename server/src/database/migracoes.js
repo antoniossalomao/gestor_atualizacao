@@ -42,6 +42,11 @@ const MIGRACOES = [
     descricao: "cidade das campanhas e regime tributário dos clientes",
     aplicar: migracao5,
   },
+  {
+    versao: 6,
+    descricao: "sistemas que atualizam junto com o B_Vendas",
+    aplicar: migracao6,
+  },
 ];
 
 /**
@@ -224,6 +229,29 @@ function migracao5(conn) {
     ALTER TABLE campanhas ADD COLUMN cidade TEXT NOT NULL DEFAULT '';
     ALTER TABLE clientes ADD COLUMN regime_tributario TEXT NOT NULL DEFAULT '';
   `);
+}
+
+/**
+ * NFCe e Consignado M2 são dependências do B_Vendas (decisão de 30/09/2026,
+ * A13): vão para o cliente junto com ele, e a equipe não lança uma
+ * atualização para cada dependente. Sem esta marcação, um cliente com o
+ * B_Vendas em dia aparecia atrasado nesses sistemas.
+ *
+ * É uma coluna, e não uma lista fixa no código, porque os nomes vêm do
+ * catálogo e a equipe pode marcar outros na Administração. A migração já
+ * marca os dois pelos nomes gravados em produção (conferidos numa cópia do
+ * banco de 29/09/2026: "B_NFCe" e "Consignado M2"). Pelo `resolver`, e não
+ * por nome exato: o catálogo inicial de uma instalação nova grava "NFCe",
+ * sem o "B_" (config/constants.js), e o resolver trata os dois como o mesmo.
+ */
+function migracao6(conn) {
+  conn.exec("ALTER TABLE sistemas ADD COLUMN atualiza_com_principal INTEGER NOT NULL DEFAULT 0");
+  const sistemas = new SistemaRepository(conn);
+  const marcar = conn.prepare("UPDATE sistemas SET atualiza_com_principal = 1 WHERE id = ?");
+  for (const nome of ["B_NFCe", "Consignado M2"]) {
+    const sistema = sistemas.resolver(nome);
+    if (sistema) marcar.run(sistema.id);
+  }
 }
 
 function lerMapa(texto) {

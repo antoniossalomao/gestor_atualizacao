@@ -1221,7 +1221,7 @@ escolha deliberada — e reintroduz o problema que ela evitava.
 | [4.11](#adr-0010) | Somente HTTPS na rede, com Caddy na frente | Aceita |
 | [4.12](#adr-0011) | Proteção CSRF por token de sessão | Aceita |
 | [4.13](#adr-0012) | Testes de navegador pelo protocolo do Chrome | Aceita |
-| [4.14](#adr-0013) | Prazo depois da versão oficial antes de "desatualizado" | Aceita |
+| [4.14](#adr-0013) | Prazo depois da versão oficial; dependentes do B_Vendas | Aceita |
 
 **Como escrever um novo:** copie a estrutura de qualquer um — Contexto → Decisão → Consequências →
 Alternativas consideradas — como uma nova subseção `4.N` no fim desta lista. Um ADR não se edita
@@ -2034,6 +2034,37 @@ publicação, e não o atraso da equipe.
   (`situacaoDoSistema`).
 - **Reaproveitar `desatualizadoDias`:** tem o mesmo número (60), mas mede
   outra coisa; juntar as duas faria mudar uma mexer na outra sem aviso.
+
+#### Complemento: sistemas que atualizam junto com o B_Vendas (A13, 30/09/2026)
+
+**Contexto.** NFCe e Consignado M2 são dependências do B_Vendas: vão para o
+cliente junto com ele, e a equipe não lança uma atualização para cada
+dependente. Julgados pela própria data, apareciam atrasados na aba Sistemas,
+na ficha e em "Onde estão os atrasos" num cliente com o B_Vendas em dia.
+
+**Decisão.**
+
+- **Marcação por sistema, não lista fixa:** coluna
+  `sistemas.atualiza_com_principal` (migração 6), editável em Administração
+  › Operação da equipe, ao lado da classificação. A migração marca
+  `B_NFCe` e `Consignado M2`, os nomes gravados em produção (conferidos numa
+  cópia do banco de 29/09/2026), pela mesma resolução de nomes do catálogo
+  (que também acha o "NFCe" do catálogo inicial).
+- **Num cliente que tem B_Vendas** (no cadastro ou no histórico), o
+  dependente usa a data da última atualização do B_Vendas, comparada com a
+  versão oficial **do próprio dependente** e com o prazo acima. Sem B_Vendas
+  no cliente, volta a usar a própria data.
+- **A versão instalada continua sendo a do próprio sistema**; só a data que
+  decide a situação vem do B_Vendas. Sistemas e ficha mostram "pela data do
+  B_Vendas".
+- Na situação **do cliente** quase nada muda (quem tem B_Vendas já é julgado
+  só por ele); a mudança aparece na visão por sistema.
+- **Campanhas não usam a marcação:** a meta é por sistema, e a campanha
+  pergunta pelo sistema da meta.
+
+**Alternativa descartada.** Valer a data mais recente entre a do B_Vendas e
+a própria. A decisão da equipe foi usar a do B_Vendas; a troca, se mudar, é
+em `registroQueDecide` (`services/situacaoVersao.js`).
 
 ---
 

@@ -46,6 +46,7 @@ const ESTADO_POR_SITUACAO = {
  *   estadoBadge: string,
  *   contatoTexto: string,
  *   contatoTitle: string,
+ *   origemData?: string,
  * }} LinhaMatriz
  */
 
@@ -54,7 +55,7 @@ const ESTADO_POR_SITUACAO = {
  * @param {Array<{sistema?: string, versao?: string, data?: string}>|null|undefined} historico
  *   do mais recente para o mais antigo (como vem de /atualizacoes/recent-by-client)
  * @param {{agentes?: any[], ativas?: Array<{sistema: string, versao: string}>}|null|undefined} painelVersoes
- * @param {Array<{sistema: string, situacao: string, contaNaSituacao?: boolean}>} [situacaoSistemas]
+ * @param {Array<{sistema: string, situacao: string, contaNaSituacao?: boolean, pelaDataDe?: string|null}>} [situacaoSistemas]
  *   a situação de cada sistema pela regra do servidor (/atualizacoes/situacao-cliente)
  * @returns {LinhaMatriz[]} em ordem alfabética de sistema; vazio se o cliente não tem sistema nenhum
  */
@@ -103,6 +104,8 @@ export function montarMatrizVersoes(cliente, historico, painelVersoes, situacaoS
         publicada: versaoAtiva,
         ...(!agente && doServidor ? estadoPelaRegra(doServidor.situacao) : estado(agente, instalada, versaoAtiva)),
         ...contato(agente, histReg),
+        // A13: dependente do B_Vendas julgado pela data dele.
+        ...(!agente && doServidor?.pelaDataDe ? { origemData: `pela data do ${doServidor.pelaDataDe}` } : {}),
       };
     });
 }

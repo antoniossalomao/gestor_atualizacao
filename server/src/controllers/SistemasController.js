@@ -15,7 +15,7 @@ class SistemasController {
 
   classificar = (req, res, next) => {
     try {
-      res.json(this.clienteService.classificarSistema(req.params.id, req.body?.controlaVersao, req.session.user));
+      res.json(this.clienteService.classificarSistema(req.params.id, req.body?.controlaVersao, req.session.user, req.body?.atualizaComPrincipal));
     } catch (err) { next(err); }
   };
 

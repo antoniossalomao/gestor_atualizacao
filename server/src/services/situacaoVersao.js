@@ -62,6 +62,28 @@ function situacaoDoSistema(registro, oficial, { prazoDias = null, hoje = new Dat
 const SISTEMA_PRINCIPAL = "B_Vendas";
 
 /**
+ * Qual última atualização julga um sistema do cliente (A13, 30/09/2026).
+ *
+ * Um sistema marcado como "atualiza junto com o B_Vendas" (NFCe, Consignado
+ * M2 -- coluna `atualiza_com_principal`, editável na Administração) vai para
+ * o cliente junto com o B_Vendas, e ninguém lança uma atualização separada
+ * para ele. Julgado pela própria data, aparecia atrasado num cliente com o
+ * B_Vendas em dia. Então, num cliente que TEM B_Vendas, vale a última
+ * atualização do B_Vendas -- comparada com a versão oficial do PRÓPRIO
+ * sistema e com o prazo, como qualquer outro. Sem B_Vendas no cliente, o
+ * dependente volta a usar a própria data.
+ *
+ * @param {{atualiza_com_principal?: number}|null|undefined} sistema linha do catálogo
+ * @param {any} proprio última atualização do cliente neste sistema
+ * @param {{tem: boolean, registro: any}} principal o B_Vendas deste cliente
+ * @returns {{registro: any, pelaDataDe: string|null}} `pelaDataDe` para a tela dizer de onde veio a data
+ */
+function registroQueDecide(sistema, proprio, principal) {
+  if (sistema?.atualiza_com_principal && principal.tem) return { registro: principal.registro || null, pelaDataDe: SISTEMA_PRINCIPAL };
+  return { registro: proprio || null, pelaDataDe: null };
+}
+
+/**
  * Situação do cliente como um todo, a partir da situação de cada sistema
  * que CONTROLA versão (sem os fixos e sem os inativos -- quem chama filtra).
  *
@@ -100,4 +122,4 @@ function contaParaVersao(sistema) {
   return Boolean(sistema && sistema.ativo && sistema.controla_versao);
 }
 
-module.exports = { situacaoDoSistema, situacaoDoCliente, contaParaVersao, SISTEMA_PRINCIPAL };
+module.exports = { situacaoDoSistema, situacaoDoCliente, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL };
