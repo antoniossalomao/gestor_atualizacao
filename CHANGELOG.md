@@ -15,6 +15,8 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Tabelas na altura da tela — A06 (30/09/2026):** em Clientes, Atualizações, Sistemas e Agendamentos a altura da tabela deixou de ser um percentual fixo da janela, que não descontava cabeçalho, filtros e paginação. Agora ela é medida pelo espaço que sobra: em "Cheia" vai até o fim da página, sem faixa vazia; em "Alta" e "Média" o percentual vira teto. Em nenhum modo a página e a tabela rolam ao mesmo tempo. No celular só a página rola. No quadro de Agendamentos, cada coluna rola por dentro em vez de esticar a página.
+
 - **"Nova Campanha" na Ação rápida — A05 (30/09/2026):** o atalho Alt+N passa a oferecer Nova Campanha, que abre direto o formulário da campanha. Para quem só consulta, o botão aparece desativado, como os demais.
 
 - **Clientes abre sempre por ID crescente — A04 (30/09/2026):** ao entrar na tela, a lista volta à ordem de cadastro (ID 1, 2, 3…). A ordenação escolhida vale enquanto se está na tela e deixou de ser lembrada na próxima abertura; a busca continua sendo.

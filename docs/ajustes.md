@@ -156,9 +156,9 @@ ordenação salva (`prefs "clientes:filtros"`).
 **Sintoma:** mesmo com a altura das tabelas no máximo, a tabela termina
 antes do fim da página.
 
-- [ ] Fazer a área da tabela ocupar a altura que sobra abaixo da barra de
+- [x] Fazer a área da tabela ocupar a altura que sobra abaixo da barra de
       filtros, em vez de uma altura fixa.
-- [ ] Conferir em Clientes, Atualizações, Sistemas e Agendamentos, nas
+- [x] Conferir em Clientes, Atualizações, Sistemas e Agendamentos, nas
       resoluções 1366×768 e 1920×1080 e em tela de celular.
 
 **Aceite:** não sobra faixa vazia no fim da página e não aparece rolagem

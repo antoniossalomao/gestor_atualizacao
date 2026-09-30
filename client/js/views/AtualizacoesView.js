@@ -189,6 +189,7 @@ export class AtualizacoesView extends View {
     };
 
     this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
+      ocuparAltura: true,
       columns: [
         { key: "id", label: "ID", type: "numeric", largura: LARGURAS_ATUALIZACAO.id },
         ...COLUMNS.map((c) => ({

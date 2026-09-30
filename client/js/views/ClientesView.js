@@ -156,6 +156,7 @@ export class ClientesView extends View {
     });
 
     this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
+      ocuparAltura: true,
       columns: [
         { key: "id", label: "ID", type: "numeric", largura: "56px" },
         { key: "codigo", label: "Código", largura: "80px" },

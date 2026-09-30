@@ -67,6 +67,7 @@ export class SistemasView extends View {
       </div>`;
 
     this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
+      ocuparAltura: true,
       columns: [
         { key: "cliente", label: "Cliente" },
         { key: "ultima", label: "Última atualização", type: "date" },

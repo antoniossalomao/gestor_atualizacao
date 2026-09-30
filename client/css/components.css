@@ -1929,6 +1929,27 @@ select {
   overflow-x: hidden;
 }
 
+/* Tabela principal de uma tela (ver components/alturaDisponivel.js): o vh da
+   preferência vira TETO, nunca passando do que sobra na janela -- é isso que
+   acaba com a rolagem dupla (página e tabela juntas). Em "Cheia", ocupa
+   exatamente o que sobra, sem faixa vazia embaixo. */
+.table-scroll[data-ocupa-altura] {
+  max-height: min(var(--altura-tabela), var(--altura-disponivel, var(--altura-tabela)));
+}
+:root[data-altura="cheia"] .table-scroll[data-ocupa-altura] {
+  max-height: none;
+  height: var(--altura-disponivel, var(--altura-tabela));
+}
+/* No celular os filtros sozinhos já passam da janela: uma tabela que rolasse
+   por dentro seria uma rolagem dentro da outra. Quem rola é a página. */
+@media (max-width: 760px) {
+  :root .table-scroll[data-ocupa-altura],
+  :root[data-altura="cheia"] .table-scroll[data-ocupa-altura] {
+    max-height: none;
+    height: auto;
+  }
+}
+
 table.data-table {
   width: 100%;
   table-layout: fixed;
@@ -6323,6 +6344,35 @@ h1, h2, h3, strong {
   margin-top: var(--sp-2);
   flex: 1;
   min-height: 120px;
+}
+
+/* O quadro ocupa o que sobra da janela e cada coluna rola por dentro (A06).
+   Antes o quadro tinha 640px mínimos e crescia com a maior coluna: em
+   1366×768 ele passava da janela, e numa coluna cheia a página inteira
+   descia só para alcançar o último cartão. */
+.kanban-board[data-ocupa-altura] {
+  min-height: 0;
+  height: var(--altura-disponivel, auto);
+  align-items: stretch;
+}
+.kanban-board[data-ocupa-altura] .kanban-column {
+  min-height: 0;
+  overflow: hidden;
+}
+.kanban-board[data-ocupa-altura] .kanban-column__cards {
+  min-height: 0;
+  overflow-y: auto;
+  /* O anel de foco e a sombra do cartão não são cortados pela rolagem. */
+  padding: 2px;
+  margin-inline: -2px;
+}
+@media (max-width: 760px) {
+  .kanban-board[data-ocupa-altura] {
+    height: auto;
+    align-items: start;
+  }
+  .kanban-board[data-ocupa-altura] .kanban-column { overflow: visible; }
+  .kanban-board[data-ocupa-altura] .kanban-column__cards { overflow-y: visible; }
 }
 .kanban-empty-placeholder {
   border: 1px dashed var(--cor-borda);

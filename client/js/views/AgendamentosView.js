@@ -1,3 +1,4 @@
+import { ocuparAlturaDisponivel } from "../components/alturaDisponivel.js";
 import { AGENDA_COLUMNS, STATUS_OPTIONS, FILTRO_ARQUIVADAS, PRIORIDADE_OPTIONS } from "../config.js";
 import { ApiError } from "../api/ApiClient.js";
 import { View } from "../app/View.js";
@@ -160,6 +161,7 @@ export class AgendamentosView extends View {
     });
 
     this.kanban = this.container.querySelector('[data-role="kanban"]');
+    ocuparAlturaDisponivel(this.kanban);
     this.container.querySelector('[data-action="novo-agendamento"]').addEventListener("click", () => {
       this.clearForm();
       this.drawer.abrir({ foco: this.fields.tarefa });
