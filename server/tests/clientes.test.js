@@ -80,6 +80,13 @@ test("ClienteService - cadastro", async (t) => {
       assert.equal(env.service.update(criado.id, { nome: criado.nome, regimeTributario: "", revisao: alterado.revisao }, USUARIO).regimeTributario, "");
     });
 
+    await t.test("a ficha do cliente (getByNome) traz o regime tributário (A03)", () => {
+      env.service.create({ nome: "Cliente da Ficha", regimeTributario: "Lucro Real" }, USUARIO);
+      assert.equal(env.service.getByNome("Cliente da Ficha").regimeTributario, "Lucro Real");
+      env.service.create({ nome: "Ficha Sem Regime" }, USUARIO);
+      assert.equal(env.service.getByNome("Ficha Sem Regime").regimeTributario, "", "vazio, e não undefined: a tela mostra \"—\"");
+    });
+
     await t.test("bordas do nome são aparadas", () => {
       const c = env.service.create({ nome: "  Com Espaço  " }, USUARIO);
       assert.equal(c.nome, "Com Espaço");

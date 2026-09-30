@@ -204,6 +204,7 @@ export class ConsultaView extends View {
     if (cliente.codigo) subtitulos.push(`Código: ${cliente.codigo}`);
     if (cliente.cidade) subtitulos.push(`Cidade: ${cliente.cidade}`);
     if (cliente.grupo) subtitulos.push(`Grupo/Rede: ${cliente.grupo}`);
+    if (cliente.regimeTributario) subtitulos.push(`Regime: ${cliente.regimeTributario}`);
     this.detailBox.querySelector(".consulta-detail__subtitle").textContent =
       subtitulos.length > 0 ? subtitulos.join(" · ") : "Sem informações cadastrais adicionais";
 
@@ -233,6 +234,9 @@ export class ConsultaView extends View {
       infoItem("Código", cliente.codigo),
       infoItem("Grupo / Rede", cliente.grupo),
       infoItem("Cidade", cliente.cidade),
+      // O regime é gravado pelo cadastro desde a migração 5, mas a ficha não o
+      // mostrava: quem precisava dele tinha que abrir o formulário do cliente.
+      infoItem("Regime tributário", cliente.regimeTributario),
       infoItem("Sistemas contratados", (cliente.sistemas || []).join(", "), true)
     );
     resumoPanel.appendChild(cadastro);

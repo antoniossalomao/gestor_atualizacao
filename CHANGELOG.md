@@ -15,6 +15,8 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Regime tributário na Ficha 360° — A03 (30/09/2026):** o regime gravado no cadastro do cliente passa a aparecer na ficha, em Resumo & Cadastro ("—" quando vazio) e no cabeçalho, junto de cidade e grupo.
+
 - **Avisos sobre formulários — A02 (30/09/2026):** nos avisos de campo obrigatório e data inválida (Clientes, Atualizações, Agendamentos e Acessos), o foco ia para o campo *atrás* do aviso ainda aberto: o Enter seguinte reenviava o formulário e empilhava outro aviso, e pelo teclado a tela parecia travada. Agora o foco fica no aviso e volta ao campo quando ele fecha. As camadas da tela (faixa de conexão, gaveta, modal, notificação) passaram a sair de uma escala única de variáveis `--camada-*` em `theme.css`, com teste que recusa número solto e confere a ordem.
 
 - **Quadro de Agendamentos não trava mais na segunda mudança de status — A01 (30/09/2026):** depois de mover uma tarefa (arrastando ou pelo formulário), a mudança seguinte da mesma tarefa — tirá-la de "Em Andamento", por exemplo — era recusada com "Este agendamento foi atualizado por…" com o nome da própria pessoa, e o quadro só voltava a aceitar mudanças com F5. O servidor devolvia a tarefa salva sem a revisão nova, e a tela seguia mandando a antiga. Agora a resposta traz a revisão atual; num conflito de verdade (outra pessoa mexeu), o quadro recarrega sozinho. O arrasto de coluna também deixou de ser confundido com o último cartão arrastado.

@@ -124,9 +124,9 @@ gaveta, e dá para respondê-lo com o mouse e com o teclado.
 "cidade das campanhas e regime tributário dos clientes"), mas a ficha
 (`ConsultaView.js`, `templates/consulta.js`) não o exibe.
 
-- [ ] Conferir se a resposta da ficha já traz o campo; incluir se não trouxer.
-- [ ] Mostrar na ficha, junto de cidade e grupo. Quando vazio, mostrar "—".
-- [ ] Teste do servidor garantindo o campo na resposta.
+- [x] Conferir se a resposta da ficha já traz o campo; incluir se não trouxer.
+- [x] Mostrar na ficha, junto de cidade e grupo. Quando vazio, mostrar "—".
+- [x] Teste do servidor garantindo o campo na resposta.
 
 **Aceite:** o regime cadastrado aparece na ficha do cliente.
 
