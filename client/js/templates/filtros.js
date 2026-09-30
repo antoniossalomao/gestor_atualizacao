@@ -11,15 +11,16 @@ import { html } from "../utils/html.js";
  * A ação de limpar cada um fica na view (ela mexe nos campos da tela); aqui
  * sai só o `id` que a view usa para achar a ação.
  *
- * @param {{busca?: string, responsavel?: string, desde?: string, ate?: string}} filtros
- * @returns {Array<{id: "busca"|"responsavel"|"periodo", label: string}>}
+ * @param {{busca?: string, responsavel?: string, sistema?: string, desde?: string, ate?: string}} filtros
+ * @returns {Array<{id: "busca"|"responsavel"|"sistema"|"periodo", label: string}>}
  */
-export function chipsFiltroAtualizacoes({ busca, responsavel, desde, ate }) {
-  /** @type {Array<{id: "busca"|"responsavel"|"periodo", label: string}>} */
+export function chipsFiltroAtualizacoes({ busca, responsavel, sistema = "", desde, ate }) {
+  /** @type {Array<{id: "busca"|"responsavel"|"sistema"|"periodo", label: string}>} */
   const chips = [];
   if (busca) chips.push({ id: "busca", label: `Busca: "${busca}"` });
   // "Todos" é o valor do <select> quando não há filtro -- não vira chip.
   if (responsavel && responsavel !== "Todos") chips.push({ id: "responsavel", label: `Responsável: ${responsavel}` });
+  if (sistema) chips.push({ id: "sistema", label: `Sistema: ${sistema}` });
   if (desde || ate) {
     const periodo = desde && ate ? `${desde} a ${ate}` : desde ? `A partir de ${desde}` : `Até ${ate}`;
     chips.push({ id: "periodo", label: `Período: ${periodo}` });

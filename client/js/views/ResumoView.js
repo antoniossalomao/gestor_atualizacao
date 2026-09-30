@@ -5,7 +5,7 @@ import { BarChart } from "../components/charts/BarChart.js";
 import { LineChart } from "../components/charts/LineChart.js";
 import { html, plural } from "../utils/html.js";
 import { todayBR } from "../utils/date.js";
-import { formatarMes, primeiroDiaDoMes, tendenciaMensal } from "../domain/resumo.js";
+import { formatarMes, primeiroDiaDoMes, tendenciaMensal, barrasPorSistema, variacaoMesAnterior } from "../domain/resumo.js";
 import { GRUPOS_SITUACAO, totaisSituacao, sistemasQueExplicam } from "../domain/situacao.js";
 import { statTile, deltaTendencia, corpoSituacao } from "../templates/resumo.js";
 
@@ -74,6 +74,7 @@ export class ResumoView extends View {
         </div>
         <div class="card">
           <h2 class="card__title">Atualizações Por Sistema Este Mês</h2>
+          <p class="card__subtitle">Clientes atualizados em cada sistema. ▲▼ contra o mesmo período do mês anterior; clique para ver a lista.</p>
           <div data-role="sistemas"></div>
         </div>
       </div>
@@ -136,7 +137,14 @@ export class ResumoView extends View {
       selectable: false,
     });
 
-    this.sistemaChart = new BarChart(this.container.querySelector('[data-role="sistemas"]'));
+    this.sistemaChart = new BarChart(this.container.querySelector('[data-role="sistemas"]'), {
+      vazio: "Nenhuma atualização registrada neste mês ainda.",
+      // A lista abre com o MESMO recorte do número: o sistema da barra e o
+      // mês até hoje. "Outros" junta vários sistemas, que a lista não filtra
+      // de uma vez -- abre o mês inteiro.
+      aoClicar: (barra) =>
+        this.navigate("atualizacoes", { desde: primeiroDiaDoMes(), ate: todayBR(), sistema: barra.outros ? "" : barra.label }),
+    });
     this.tendenciaChart = new LineChart(this.container.querySelector('[data-role="tendencia"]'));
 
   }
@@ -180,7 +188,19 @@ export class ResumoView extends View {
     this.situacaoEl.innerHTML = corpoSituacao(totaisSituacao(resumo.situacaoClientes), resumo.situacaoClientes.sistemasMaisAtrasados, resumo.prazoVersaoDias ?? null);
 
     this.respTable.setRows(resumo.porResponsavel);
-    this.sistemaChart.render(resumo.atualizadosMesPorSistema);
+    const barras = barrasPorSistema(resumo.atualizadosMesPorSistema);
+    this.sistemaChart.render(
+      // Zerado este mês, com atualização só no mês anterior: não vale uma
+      // barra, mas conta para o estado vazio não mentir que "nada aconteceu".
+      barras.some((b) => b.total > 0)
+        ? barras.map((b) => ({
+            label: b.label,
+            total: b.total,
+            dica: b.outros ? `Outros (${b.sistemas.join(", ")}): ${b.total}` : `${b.label}: ${plural(b.total, "cliente")} este mês, ${b.anterior} no mesmo período do mês anterior`,
+            variacao: { ...variacaoMesAnterior(b.diferenca), dica: `${b.anterior} no mesmo período do mês anterior` },
+          }))
+        : []
+    );
     this.container.querySelector('[data-role="tendencia-atual"]').textContent = `${plural(resumo.mesCount, "atualização")} neste mês (parcial)`;
     this.tendenciaChart.render(
       (resumo.atualizacoesPorMes || []).map((item) => ({ label: formatarMes(item.mes), total: item.total, parcial: item.mes === (resumo.atualizacoesPorMes || []).at(-1)?.mes }))

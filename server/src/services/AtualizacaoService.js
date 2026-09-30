@@ -434,7 +434,7 @@ class AtualizacaoService {
     const situacaoClientes = this._situacaoDosClientes(hoje);
     const prazoVersaoDias = this.regras.valor("prazoVersaoDias");
     const porResponsavel = this.db.atualizacoes.countsByResponsavel();
-    const atualizadosMesPorSistema = this._atualizadosMesPorSistema(mesStr);
+    const atualizadosMesPorSistema = this._atualizadosMesPorSistema(mesStr, mesAnteriorStr, diaComparavel);
     // Tendencia mensal (grafico do Resumo) e tempo medio de resolucao das
     // tarefas de Agendamentos vivem em tabelas diferentes desta classe,
     // mas moram aqui porque o Resumo ja busca tudo numa chamada so -- mesmo
@@ -556,12 +556,26 @@ class AtualizacaoService {
    * "sistema" (que na prática guarda a lista inteira separada por vírgula,
    * então contar por string dava uma "sopa" de combinações em vez de um
    * total por sistema de verdade). Cruza os sistemas que cada cliente tem
-   * cadastrado (clientes.sistemas) com a última atualização daquele
-   * cliente NAQUELE sistema (mesma lógica de relatorioPorSistema).
+   * cadastrado com as atualizações do mês naquele sistema.
+   *
+   * Cada sistema vem com o `anterior` (o mesmo número no mês anterior, até
+   * o mesmo dia -- o recorte do indicador "este mês") para o gráfico mostrar
+   * ▲/▼. Contra o mês anterior inteiro, todo sistema apareceria em queda nos
+   * primeiros dias do mês. Sistemas zerados nos dois meses
+   * ficam de fora: o gráfico listava o catálogo inteiro, a maioria em zero,
+   * e o que importava se perdia entre eles.
    * @param {string} mesStr formato "mm/aaaa"
+   * @param {string} mesAnteriorStr formato "mm/aaaa"
+   * @param {number} diaComparavel
+   * @returns {Array<{label: string, total: number, anterior: number}>}
    */
-  _atualizadosMesPorSistema(mesStr) {
-    return this.db.atualizacoes.atualizadosNoMesPorSistema(mesStr);
+  _atualizadosMesPorSistema(mesStr, mesAnteriorStr, diaComparavel) {
+    const anterior = new Map(this.db.atualizacoes.atualizadosNoMesPorSistema(mesAnteriorStr, diaComparavel).map((r) => [r.label, r.total]));
+    return this.db.atualizacoes
+      .atualizadosNoMesPorSistema(mesStr)
+      .map((r) => ({ label: r.label, total: r.total, anterior: anterior.get(r.label) || 0 }))
+      .filter((r) => r.total > 0 || r.anterior > 0)
+      .sort((a, b) => b.total - a.total || b.anterior - a.anterior || a.label.localeCompare(b.label, "pt-BR"));
   }
 
   /**

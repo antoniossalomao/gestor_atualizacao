@@ -31,7 +31,6 @@ const TETO = {
   "views/AgenteDetalheModal.js": 2,
   "views/SistemasView.js": 1,
   "main.js": 1,
-  "components/charts/BarChart.js": 1,
   "components/Pagination.js": 1,
   "components/Modal.js": 1,
   "components/MenuConta.js": 1,

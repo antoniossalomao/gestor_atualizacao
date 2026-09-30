@@ -58,6 +58,10 @@ export class AtualizacoesView extends View {
     this.responsavel = salvo.responsavel || "Todos";
     this.desde = salvo.desde || periodoInicial?.desde || "";
     this.ate = salvo.ate || periodoInicial?.ate || "";
+    // Só chega pelo gráfico "por sistema" do Resumo (A08) e não é salvo: sem
+    // um campo na tela para escolhê-lo, um filtro lembrado de outra visita
+    // esconderia registros sem motivo aparente (o chip seria a única pista).
+    this.sistema = "";
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "desc";
     this._buildDom();
@@ -536,7 +540,7 @@ export class AtualizacoesView extends View {
   }
 
   _chaveLista() {
-    return `atualizacoes:lista:${this.busca}|${this.responsavel}|${this.desde}|${this.ate}|${this.page}|${this.sortBy}|${this.sortDir}`;
+    return `atualizacoes:lista:${this.busca}|${this.responsavel}|${this.sistema}|${this.desde}|${this.ate}|${this.page}|${this.sortBy}|${this.sortDir}`;
   }
 
   async _reloadList() {
@@ -550,6 +554,7 @@ export class AtualizacoesView extends View {
             {
               search: this.busca,
               responsavel: this.responsavel,
+              sistema: this.sistema,
               desde: this.desde,
               ate: this.ate,
               page: this.page,
@@ -619,7 +624,7 @@ export class AtualizacoesView extends View {
   }
 
   _temFiltro() {
-    return Boolean(this.busca) || this.responsavel !== "Todos" || Boolean(this.desde) || Boolean(this.ate);
+    return Boolean(this.busca) || this.responsavel !== "Todos" || Boolean(this.sistema) || Boolean(this.desde) || Boolean(this.ate);
   }
 
   _pintarLimparFiltros() {
@@ -655,6 +660,12 @@ export class AtualizacoesView extends View {
         this.page = 1;
         this._reloadList();
       },
+      sistema: () => {
+        this.sistema = "";
+        this._trocouDeFiltro();
+        this.page = 1;
+        this._reloadList();
+      },
       periodo: () => this._aplicarPeriodo("", ""),
     };
 
@@ -668,6 +679,7 @@ export class AtualizacoesView extends View {
   _limparFiltros() {
     this.busca = "";
     this.responsavel = "Todos";
+    this.sistema = "";
     this.searchInput.value = "";
     this.responsavelFilter.value = "Todos";
     this._aplicarPeriodo("", "");
@@ -697,10 +709,14 @@ export class AtualizacoesView extends View {
   }
 
   /** Aplica o período vindo do Resumo ou abre uma nova atualização. */
-  aplicarParams({ desde, ate, novo } = {}) {
+  aplicarParams({ desde, ate, novo, sistema } = {}) {
     // Vindo de um indicador do Resumo: não é para preencher formulário
     // nenhum, é para FILTRAR a lista pelo período que aquele número contava.
+    // O sistema vem junto só do gráfico por sistema; os outros indicadores
+    // não o mandam, e aí ele sai -- senão o total da lista não bateria com
+    // o número clicado.
     if (desde || ate) {
+      this.sistema = sistema || "";
       this._aplicarPeriodo(desde, ate);
       return;
     }
@@ -977,6 +993,7 @@ export class AtualizacoesView extends View {
       blob = await this.api.getFile("/atualizacoes/export", {
         search: this.busca,
         responsavel: this.responsavel,
+        sistema: this.sistema,
         desde: this.desde,
         ate: this.ate,
       });
@@ -1039,7 +1056,7 @@ export class AtualizacoesView extends View {
 
   async abrirRelatorioPeriodo() {
     try {
-      const resumo = await this.api.get("/atualizacoes/relatorio", { search: this.busca, responsavel: this.responsavel, desde: this.desde, ate: this.ate });
+      const resumo = await this.api.get("/atualizacoes/relatorio", { search: this.busca, responsavel: this.responsavel, sistema: this.sistema, desde: this.desde, ate: this.ate });
       abrirRelatorio({ tipos: [{ valor: "periodo", nome: "Resumo do período filtrado" }], gerar: () => relatorioDoPeriodo(resumo) });
     } catch (err) { Modal.alert("Erro", errorMessage(err), "error"); }
   }

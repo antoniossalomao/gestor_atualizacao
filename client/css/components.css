@@ -5479,6 +5479,12 @@ hr.separator {
   font-size: var(--txt-sm);
 }
 
+.card__subtitle {
+  margin: calc(-1 * var(--sp-2)) 0 var(--sp-3);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
+
 .bar-chart {
   display: flex;
   flex-direction: column;
@@ -5487,10 +5493,33 @@ hr.separator {
 
 .bar-chart__row {
   display: grid;
-  grid-template-columns: 132px 1fr 32px;
+  grid-template-columns: 132px 1fr 44px;
   align-items: center;
   gap: var(--sp-3);
   font-size: var(--txt-sm);
+}
+/* Barra clicável (Resumo abre Atualizações filtrada): <button> de verdade,
+   com o visual nativo zerado, para Tab e Enter funcionarem. */
+.bar-chart__row--acao {
+  width: 100%;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  box-sizing: content-box;
+  border: 0;
+  border-radius: var(--raio-pequeno);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--txt-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.bar-chart__row--acao:hover { background: var(--cor-superficie-hover); }
+.bar-chart__vazio {
+  margin: 0;
+  padding: var(--sp-5) 0;
+  color: var(--cor-texto-fraco);
+  text-align: center;
 }
 
 .bar-chart__label {
@@ -5500,24 +5529,39 @@ hr.separator {
   color: var(--cor-texto-sub);
 }
 
+/* O número vem logo depois do fim da barra, e não numa coluna à parte: o
+   olho segue a barra até o fim e encontra o valor ali (A08). */
 .bar-chart__track {
-  height: 10px;
-  overflow: hidden;
-  border-radius: var(--raio-pilula);
-  background: var(--cor-borda);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
 }
 
 .bar-chart__fill {
   display: block;
-  height: 100%;
+  flex: 0 1 auto;
+  height: 10px;
+  min-width: 3px;
+  max-width: calc(100% - 40px);
   border-radius: var(--raio-pilula);
   transition: width var(--dur-lenta) var(--curva-padrao);
 }
 
 .bar-chart__value {
-  text-align: right;
+  flex: 0 0 auto;
   font-weight: var(--peso-extra);
+  font-variant-numeric: tabular-nums;
 }
+
+.bar-chart__variacao {
+  font-size: var(--txt-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--cor-texto-fraco);
+}
+.bar-chart__variacao.is-alta { color: var(--severidade-boa); }
+.bar-chart__variacao.is-baixa { color: var(--severidade-alta); }
 
 /*
  * Linha de tendência (ex.: atualizações por mês). `position: relative` porque

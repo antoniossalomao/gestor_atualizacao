@@ -292,11 +292,11 @@ Consignado M2 só porque a atualização não foi lançada nesses sistemas.
 
 **Onde:** `BarChart` criado em `ResumoView.js`, linha 139.
 
-- [ ] Barras horizontais em ordem decrescente, com o número no fim da barra.
-- [ ] Comparação com o mês anterior (▲/▼ e diferença).
-- [ ] No máximo 8 sistemas; os demais somados em "Outros".
-- [ ] Clicar numa barra abre Atualizações filtrada pelo sistema e pelo mês.
-- [ ] Estado vazio claro quando não houver atualização no mês.
+- [x] Barras horizontais em ordem decrescente, com o número no fim da barra.
+- [x] Comparação com o mês anterior (▲/▼ e diferença).
+- [x] No máximo 8 sistemas; os demais somados em "Outros".
+- [x] Clicar numa barra abre Atualizações filtrada pelo sistema e pelo mês.
+- [x] Estado vazio claro quando não houver atualização no mês.
 
 ## Fase 4 — Organização visual
 

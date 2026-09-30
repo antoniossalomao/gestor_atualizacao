@@ -19,7 +19,7 @@ import { cartaoKanban, colunasKanban, slugStatus } from "../js/templates/agendam
 import { chipsFiltroAtualizacoes, htmlChips } from "../js/templates/filtros.js";
 import { splitSistemas, montarMatrizVersoes } from "../js/domain/matrizVersoes.js";
 import { cartaoAcesso, linhaMatrizVersoes } from "../js/templates/consulta.js";
-import { formatarMes, primeiroDiaDoMes, tendenciaMensal } from "../js/domain/resumo.js";
+import { formatarMes, primeiroDiaDoMes, tendenciaMensal, barrasPorSistema, variacaoMesAnterior } from "../js/domain/resumo.js";
 import { statTile, deltaTendencia, corpoSituacao } from "../js/templates/resumo.js";
 import { listaNotificacoes, itemNotificacao } from "../js/templates/notificacoes.js";
 import { alteracoesRegras, descreverChaveAgentes, formatarTempoAtivo, papelNormalizado } from "../js/domain/administracao.js";
@@ -196,6 +196,12 @@ test("Atualizações - chips de filtro ativo", async (t) => {
       { id: "responsavel", label: "Responsável: Ana" },
       { id: "periodo", label: "Período: 01/09/2026 a 23/09/2026" },
     ]);
+  });
+
+  await t.test("o sistema vindo do gráfico do Resumo vira chip, para o filtro não ficar invisível (A08)", () => {
+    const chips = chipsFiltroAtualizacoes({ busca: "", responsavel: "Todos", sistema: "B_Vendas", desde: "01/09/2026", ate: "30/09/2026" });
+    assert.deepEqual(chips.map((c) => c.id), ["sistema", "periodo"]);
+    assert.equal(chips[0].label, "Sistema: B_Vendas");
   });
 
   await t.test("período com uma ponta só é dito por extenso", () => {
@@ -771,5 +777,35 @@ test("Configurações - prévia, atalhos e busca", async (t) => {
     const html = texto(resultadosBusca([], MALICIOSO));
     assert.match(html, /Nenhum ajuste/);
     semInjecao(html);
+  });
+});
+
+test("Resumo - gráfico por sistema: no máximo 8 barras, resto em Outros, variação do mês anterior (A08)", async (t) => {
+  const lista = Array.from({ length: 11 }, (_, i) => ({ label: `S${i + 1}`, total: 20 - i, anterior: i }));
+
+  await t.test("8 sistemas pelo nome e os outros três somados", () => {
+    const barras = barrasPorSistema(lista);
+    assert.equal(barras.length, 9);
+    assert.deepEqual(barras.slice(0, 8).map((b) => b.label), ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"]);
+    const outros = barras[8];
+    assert.equal(outros.label, "Outros");
+    assert.equal(outros.outros, true);
+    assert.deepEqual(outros.sistemas, ["S9", "S10", "S11"]);
+    assert.equal(outros.total, 12 + 11 + 10);
+    assert.equal(outros.anterior, 8 + 9 + 10);
+  });
+
+  await t.test("com 8 ou menos, não inventa um Outros", () => {
+    assert.ok(!barrasPorSistema(lista.slice(0, 8)).some((b) => b.outros));
+    assert.deepEqual(barrasPorSistema([]), []);
+  });
+
+  await t.test("diferença e seta contra o mês anterior", () => {
+    const [b] = barrasPorSistema([{ label: "B_Vendas", total: 7, anterior: 10 }]);
+    assert.equal(b.diferenca, -3);
+    assert.deepEqual(variacaoMesAnterior(b.diferenca), { texto: "▼ 3", tendencia: "baixa" });
+    assert.deepEqual(variacaoMesAnterior(4), { texto: "▲ 4", tendencia: "alta" });
+    assert.deepEqual(variacaoMesAnterior(0), { texto: "=", tendencia: "neutra" });
+    assert.equal(barrasPorSistema([{ label: "X", total: 2 }])[0].anterior, 0, "servidor antigo, sem `anterior`: conta como zero");
   });
 });

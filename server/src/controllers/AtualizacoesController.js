@@ -8,8 +8,13 @@ const { parsePaginacao } = require("../shared/pagination");
  * coisa que ele nao reconhecer vira "sem filtro" (ver `paraOrdenavel`). Assim
  * a regra mora num lugar so, em vez de duas checagens que podem discordar.
  */
+/**
+ * Período e sistema (nome do catálogo) -- os filtros que a listagem, a
+ * exportação e o relatório recebem juntos. O sistema chega do gráfico
+ * "Atualizações por sistema" do Resumo (A08).
+ */
 function periodo(query) {
-  return { desde: String(query.desde || ""), ate: String(query.ate || "") };
+  return { desde: String(query.desde || ""), ate: String(query.ate || ""), sistema: String(query.sistema || "").trim() };
 }
 
 /**

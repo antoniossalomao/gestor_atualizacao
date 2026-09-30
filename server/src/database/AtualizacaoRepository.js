@@ -77,13 +77,13 @@ class AtualizacaoRepository extends BaseRepository {
    * @param {string} responsavel "Todos" ou um nome exato
    * @param {{page?: number, pageSize?: number, sortBy?: string, sortDir?: "asc"|"desc"}} paginacao
    */
-  list(search = "", responsavel = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, desde, ate } = {}) {
+  list(search = "", responsavel = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, desde, ate, sistema } = {}) {
     // As clausulas vivem em `_filtros` porque a exportacao precisa exatamente
     // das mesmas -- ver o comentario em `exportAll`. A comparacao de
     // responsavel ignora maiusculas/minusculas e espacos nas pontas: o filtro
     // mostra nomes ja normalizados (ver distinctResponsaveis), entao "Camila"
     // escolhido ali precisa achar tambem os salvos como "CAMILA" ou " camila ".
-    const { where, params } = this._filtros(search, responsavel, { desde, ate });
+    const { where, params } = this._filtros(search, responsavel, { desde, ate, sistema });
 
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM atualizacoes_v ${where}`).get(params).total;
 
@@ -206,7 +206,7 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /** Clausula WHERE + parametros compartilhados por `list` e `exportAll`. */
-  _filtros(search, responsavel, { desde = "", ate = "" } = {}) {
+  _filtros(search, responsavel, { desde = "", ate = "", sistema = "" } = {}) {
     const clauses = [];
     const params = {};
     if (search) {
@@ -231,6 +231,15 @@ class AtualizacaoRepository extends BaseRepository {
     if (fim) {
       clauses.push(`${DATE_SORT_EXPR} <= @ate`);
       params.ate = fim;
+    }
+
+    // Pelo catálogo, e não por `sistema LIKE`: o texto "B_Vendas" também
+    // casaria com "B_Vendas Simples", e a lista mostraria o que o gráfico do
+    // Resumo não contou.
+    if (sistema) {
+      clauses.push(`EXISTS (SELECT 1 FROM atualizacao_sistemas xs JOIN sistemas ss ON ss.id = xs.sistema_id
+        WHERE xs.atualizacao_id = atualizacoes_v.id AND lower(ss.nome) = lower(@sistemaFiltro))`);
+      params.sistemaFiltro = sistema;
     }
 
     return { where: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "", params };
@@ -419,31 +428,35 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
-   * Quantos clientes (de cada sistema do catálogo ativo) tiveram a ÚLTIMA
-   * atualização daquele sistema neste mês -- só contando quem tem o sistema
-   * marcado no cadastro. Contar linhas pelo texto de "sistema" dava uma sopa
-   * de combinações ("B_Vendas, B_NFe") em vez de um total por sistema.
+   * Quantos clientes (de cada sistema do catálogo ativo) foram atualizados
+   * naquele sistema no mês -- só contando quem tem o sistema marcado no
+   * cadastro. Contar linhas pelo texto de "sistema" dava uma sopa de
+   * combinações ("B_Vendas, B_NFe") em vez de um total por sistema.
+   *
+   * Até 30/09/2026 contava quem teve a ÚLTIMA atualização no mês. Para o mês
+   * corrente dá o mesmo número; para o anterior, não: quem foi atualizado de
+   * novo este mês sumia de lá, e a comparação com o mês anterior (A08)
+   * sairia sempre a favor do mês atual.
    * @param {string} mesStr formato "mm/aaaa"
+   * @param {number} [ateDia] só até este dia do mês (o "mesmo período" do mês anterior)
    */
-  atualizadosNoMesPorSistema(mesStr) {
+  atualizadosNoMesPorSistema(mesStr, ateDia = 31) {
     return this.conn
       .prepare(
-        `SELECT s.nome AS label, COUNT(u.cliente_id) AS total
+        `SELECT s.nome AS label, COUNT(DISTINCT u.cliente_id) AS total
            FROM sistemas s
            LEFT JOIN (
-             SELECT cliente_id, sistema_id, data FROM (
-               SELECT a.cliente_id, x.sistema_id, a.data,
-                      ROW_NUMBER() OVER (PARTITION BY a.cliente_id, x.sistema_id ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC) AS n
-                 FROM ${this.table} a JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
-                WHERE a.cliente_id IS NOT NULL AND a.data != ''
-             ) WHERE n = 1 AND substr(data, 4, 7) = @mes
+             SELECT a.cliente_id, x.sistema_id
+               FROM ${this.table} a JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
+              WHERE a.cliente_id IS NOT NULL AND substr(a.data, 4, 7) = @mes
+                AND CAST(substr(a.data, 1, 2) AS INTEGER) <= @ateDia
            ) u ON u.sistema_id = s.id
               AND EXISTS (SELECT 1 FROM cliente_sistemas cs WHERE cs.cliente_id = u.cliente_id AND cs.sistema_id = s.id)
            WHERE s.ativo = 1 AND s.controla_versao = 1
            GROUP BY s.id
           ORDER BY total DESC, s.nome`
       )
-      .all({ mes: mesStr });
+      .all({ mes: mesStr, ateDia });
   }
 
   /**

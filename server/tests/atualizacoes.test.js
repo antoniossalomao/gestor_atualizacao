@@ -376,6 +376,35 @@ test("Gráfico mensal e referências recentes ignoram componentes fixos sem apag
   } finally { cleanup(); }
 });
 
+test("Gráfico por sistema compara com o mês anterior, e a lista filtra pelo sistema do catálogo (A08)", () => {
+  const { service, clientes, cleanup } = ambiente();
+  try {
+    clientes.create({ nome: "Loja Duas Vezes", sistemas: ["B_Vendas"] }, USUARIO);
+    clientes.create({ nome: "Loja Agosto", sistemas: ["B_Vendas", "B_NFe"] }, USUARIO);
+    clientes.create({ nome: "Loja Simples", sistemas: ["B_Vendas Simples"] }, USUARIO);
+    service.create({ cliente: "Loja Duas Vezes", sistema: "B_Vendas", data: "20/08/2026" }, USUARIO);
+    service.create({ cliente: "Loja Duas Vezes", sistema: "B_Vendas", data: "10/09/2026" }, USUARIO);
+    service.create({ cliente: "Loja Agosto", sistema: "B_Vendas, B_NFe", data: "05/08/2026" }, USUARIO);
+    service.create({ cliente: "Loja Simples", sistema: "B_Vendas Simples", data: "11/09/2026" }, USUARIO);
+
+    const grafico = service.resumo(new Date(2026, 8, 30)).atualizadosMesPorSistema;
+    const por = Object.fromEntries(grafico.map((g) => [g.label, g]));
+    // Quem foi atualizado de novo em setembro continua contando em agosto.
+    assert.deepEqual(por.B_Vendas, { label: "B_Vendas", total: 1, anterior: 2 });
+    assert.deepEqual(por.B_NFe, { label: "B_NFe", total: 0, anterior: 1 }, "zerado este mês, mas com atualização no anterior: aparece (▼)");
+    assert.ok(!por.B_Importa, "zerado nos dois meses fica de fora");
+    assert.equal(grafico[0].total >= grafico[grafico.length - 1].total, true, "em ordem decrescente");
+
+    // Mesmo período: no dia 10, agosto conta só até o dia 10 (a Loja Duas
+    // Vezes, de 20/08, ainda não entra).
+    const dia10 = Object.fromEntries(service.resumo(new Date(2026, 8, 10)).atualizadosMesPorSistema.map((g) => [g.label, g]));
+    assert.equal(dia10.B_Vendas.anterior, 1);
+
+    const lista = service.list("", "Todos", { sistema: "B_Vendas", desde: "01/09/2026", ate: "30/09/2026" });
+    assert.deepEqual(lista.rows.map((r) => r.cliente), ["Loja Duas Vezes"], "B_Vendas Simples não entra pelo texto parecido");
+  } finally { cleanup(); }
+});
+
 test("Tendência mensal retorna 12 meses consecutivos, zeros e nenhuma atualização futura", () => {
   const { db, service, cleanup } = ambiente();
   try {
