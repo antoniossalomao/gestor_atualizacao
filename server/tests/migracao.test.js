@@ -3,10 +3,10 @@
  * nome para tabelas de ligação e ids (ver src/database/migracoes.js).
  *
  * É a mudança que mexe no dado de produção, e erra em silêncio: um sistema
- * que cai no lugar errado ou um atendimento que perde o cliente não quebra
+ * que cai no lugar errado ou uma atualização que perde o cliente não quebra
  * tela nenhuma -- só faz o relatório da aba Sistemas mentir. Por isso o banco
  * de partida aqui imita o de produção de verdade: grafias sujas, sistemas que
- * saíram do catálogo, versão legada em texto e atendimento de cliente excluído.
+ * saíram do catálogo, versão legada em texto e atualização de cliente excluído.
  */
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -189,7 +189,7 @@ test("Migração 1 - vínculo com o cliente", async (t) => {
       assert.equal(clienteDe("agendamentos", 1).cliente, "Mercado Central Novo");
     });
 
-    await t.test("cadastrar um cliente com o nome de atendimentos sem vínculo adota esses atendimentos", () => {
+    await t.test("cadastrar um cliente com o nome de atualizações sem vínculo adota essas atualizações", () => {
       const id = env.db.clientes.insert("C9", "cliente excluído", "", [], "");
       assert.deepEqual(clienteDe("atualizacoes", 4), { cliente: "cliente excluído", cliente_id: id });
     });
@@ -197,7 +197,7 @@ test("Migração 1 - vínculo com o cliente", async (t) => {
     await t.test("excluir o cliente não apaga o histórico: o vínculo cai e o nome fica", () => {
       env.db.clientes.delete(2);
       assert.deepEqual(clienteDe("atualizacoes", 3), { cliente: "Padaria Sol", cliente_id: null });
-      assert.equal(sistemasDo(env.db, 3).length, 2, "os sistemas do atendimento continuam");
+      assert.equal(sistemasDo(env.db, 3).length, 2, "os sistemas da atualização continuam");
     });
   } finally {
     env.cleanup();

@@ -7,7 +7,7 @@ import { plural } from "../utils/html.js";
  * Três decisões valem para os dois formatos:
  *
  *  - **Só o que já está gravado.** Versões recebidas vêm da cópia salva no
- *    atendimento. Registros legados preservam o texto original; a versão
+ *    atualização. Registros legados preservam o texto original; a versão
  *    oficial atual não reescreve o histórico.
  *  - **Campo vazio não vira linha.** Quase metade do histórico não tem
  *    responsável preenchido; um relatório com "Por: —" em toda linha é pior
@@ -155,7 +155,7 @@ export function haQuantoTempo(dataBR) {
   return `há ${anos} ${anos === 1 ? "ano" : "anos"}`;
 }
 
-/** Versão registrada no atendimento, nunca a referência oficial atual. */
+/** Versão registrada na atualização, nunca a referência oficial atual. */
 export function versaoRegistrada(registro, sistema) {
   if (!registro) return "";
   if (registro.versoes_sistemas != null) {

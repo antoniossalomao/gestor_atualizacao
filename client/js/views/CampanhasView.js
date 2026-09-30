@@ -30,7 +30,7 @@ import { AcessosModal } from "./AcessosModal.js";
  * na 25/09/2026 até o dia 30" -- e o andamento delas.
  *
  * A tela não decide quem está atendido: o servidor calcula a partir dos
- * atendimentos (ver server/src/services/CampanhaService.js). Por isso não
+ * atualizações (ver server/src/services/CampanhaService.js). Por isso não
  * existe botão de "dar baixa": a baixa é registrar a atualização, como
  * sempre, e a campanha só enxerga isso.
  *

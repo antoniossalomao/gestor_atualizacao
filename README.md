@@ -18,21 +18,21 @@ escolha deliberada, não uma limitação.
 
 ## O que ele faz
 
-**Atualizações** — o registro central. Cada linha é um atendimento: cliente,
+**Atualizações** — o registro central. Cada linha é uma atualização: cliente,
 sistemas atualizados, versão, responsável, data, motivo, quantas máquinas e
 observações. Toolbar unificada com busca instantânea, filtro por responsável,
 filtros de data recolhíveis com chips visíveis, menu **Mais ações** (com exportar
 `.xlsx` e importar planilha com prévia antes de gravar), seleção em lote (`Shift` + clique em duas linhas marca tudo
-entre elas) e relatórios estruturados (atendimento, situação e histórico do
+entre elas) e relatórios estruturados (atualização, situação e histórico do
 cliente) com abas ágeis, cópia de texto limpo e impressão/salvar PDF.
 
-Ao criar um atendimento, cada sistema informado recebe uma cópia da versão
+Ao criar uma atualização, cada sistema informado recebe uma cópia da versão
 oficial cadastrada em Sistemas. Alterar a versão oficial depois não muda essa
-cópia: o cliente só recebe a nova versão ao registrar outro atendimento.
+cópia: o cliente só recebe a nova versão ao registrar outra atualização.
 Editar ou desfazer a exclusão preserva as versões recebidas. Sistemas acrescentados
-na edição ficam sem versão; use um novo atendimento para registrar uma atualização.
+na edição ficam sem versão; use uma nova atualização para registrar uma atualização.
 Histórico e importações antigos não recebem a versão oficial retroativamente.
-Uma referência posterior à data do atendimento também não é atribuída.
+Uma referência posterior à data da atualização também não é atribuída.
 
 A **importação de planilha** mostra antes uma prévia: linhas válidas, erros
 (cliente em branco, data fora de dd/mm/aaaa — essas ficam de fora), avisos
@@ -64,7 +64,7 @@ e o tempo médio que uma tarefa leva entre ser criada e ser concluída, por pess
 Desatualizado, Nunca atualizado, Sem referência ou Sem informação) e por sistema,
 com cartões de métricas sincronizados. O gerenciador de versões oficiais registra a data
 de referência com autoria (quem alterou por último) e detecção de edição concorrente,
-garantindo que referências não retroajam sobre atendimentos antigos (ADR-0008).
+garantindo que referências não retroajam sobre atualizações antigas (ADR-0008).
 
 **Consulta** — a ficha completa de um cliente: cabeçalho com código, cidade e
 grupo/rede, data da última atualização, componentes fixos (sem
@@ -100,7 +100,7 @@ a situação de cada agente em campo. O agente vive em
 
 - **Controle de acesso baseado em papéis (RBAC)** com três perfis:
   **Administrador** (gestão de usuários, publicação de versões e restauração de backups),
-  **Operador** (rotina operacional de atendimentos, clientes e agendamentos) e
+  **Operador** (rotina operacional de atualizações, clientes e agendamentos) e
   **Consulta** (leitura, relatórios e exportação).
 - **Backup automático e restauração blindada** a cada início do servidor, com
   verificação de integridade (`PRAGMA integrity_check`). A restauração exige
@@ -259,7 +259,7 @@ instalação antiga já tinha configurado.
 O sistema conta com três perfis de acesso bem definidos:
 
 - **Administrador (`admin`):** Acesso completo ao sistema. Pode convidar e remover usuários, alterar papéis, restaurar e baixar backups, publicar e excluir versões, e configurar tokens de integração.
-- **Operador (`operador`):** Voltado para a equipe de suporte e implantação no dia a dia. Pode cadastrar e editar atendimentos, clientes, agendamentos e cadastrar rascunhos de versão.
+- **Operador (`operador`):** Voltado para a equipe de suporte e implantação no dia a dia. Pode cadastrar e editar atualizações, clientes, agendamentos e cadastrar rascunhos de versão.
 - **Consulta (`consulta`):** Apenas leitura. Pode navegar em relatórios, resumos e tabelas, além de exportar dados para Excel. Não possui permissão para criar, editar ou excluir registros.
 
 A primeira conta criada na inicialização inicial é automaticamente **administradora**. Posteriormente, apenas administradores podem cadastrar novas contas ou alterar permissões. Usuários, backups e as regras da equipe ficam na tela **Administração**, que só administrador vê.

@@ -73,9 +73,9 @@ class AtualizacaoService {
     let sistemas;
     if (antes?.versoes_por_sistema) {
       // Editar observações ou datas não reaplica versões oficiais novas: cada
-      // sistema que continua no atendimento guarda a versão que já tinha, e
-      // um sistema acrescentado na edição fica sem versão -- só um novo
-      // atendimento registra de fato uma atualização.
+      // sistema que continua na atualização guarda a versão que já tinha, e
+      // um sistema acrescentado na edição fica sem versão -- só uma
+      // atualização nova grava de fato a versão do dia.
       const anteriores = new Map(this.db.atualizacoes.sistemasDe(id).map((s) => [s.id, s.versao]));
       sistemas = lista.map((s) => ({ ...s, versao: anteriores.get(s.id) ?? null }));
       this._resumirVersoes(data, sistemas);
@@ -186,28 +186,28 @@ class AtualizacaoService {
   /**
    * Clientes que usam um sistema especifico, com a data da ultima
    * atualizacao NAQUELE sistema e uma situacao calculada a partir de uma
-   * Data opcional filtra a última data de atendimento. A classificação de
+   * Data opcional filtra a última data de atualização. A classificação de
    * versão continua usando exclusivamente a referência oficial cadastrada.
    * @param {string} sistema
-   * @param {string} [atendimentoAntesDe] dd/mm/aaaa
+   * @param {string} [atualizacaoAntesDe] dd/mm/aaaa
    */
-  relatorioPorSistema(sistema, atendimentoAntesDe) {
+  relatorioPorSistema(sistema, atualizacaoAntesDe) {
     const sistemaLimpo = (sistema || "").trim();
     if (!sistemaLimpo) throw new ValidationError("Informe o sistema.");
     const alvo = this.db.sistemas.resolver(sistemaLimpo);
     if (alvo && (!alvo.ativo || !contaParaVersao(alvo))) return [];
     const oficial = alvo?.ultima_versao || "";
-    if (atendimentoAntesDe && !dataValida(atendimentoAntesDe)) {
+    if (atualizacaoAntesDe && !dataValida(atualizacaoAntesDe)) {
       throw new ValidationError("Campo 'Última atualização antes de' precisa estar no formato dd/mm/aaaa.");
     }
-    const limiteAtendimento = atendimentoAntesDe ? parseData(atendimentoAntesDe) : null;
+    const limiteAtualizacao = atualizacaoAntesDe ? parseData(atualizacaoAntesDe) : null;
     if (!alvo) return [];
 
     const ultimas = new Map(this.db.atualizacoes.ultimaPorClienteNoSistema(alvo.id).map((r) => [r.cliente_id, r]));
     const resultado = [];
     for (const { id, nome, cidade } of this.db.clientes.clientesDoSistema(alvo.id)) {
       const registro = ultimas.get(id);
-      if (limiteAtendimento && (!registro?.data || !parseData(registro.data) || parseData(registro.data) >= limiteAtendimento)) continue;
+      if (limiteAtualizacao && (!registro?.data || !parseData(registro.data) || parseData(registro.data) >= limiteAtualizacao)) continue;
       const { situacao } = situacaoDoSistema(registro, oficial);
       resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", oficial: oficial || "Não informada", situacao });
     }
@@ -215,7 +215,7 @@ class AtualizacaoService {
     return resultado;
   }
 
-  /** Os sistemas do atendimento, resolvidos no catálogo (ver SistemaRepository.resolverOuCriar). */
+  /** Os sistemas da atualização, resolvidos no catálogo (ver SistemaRepository.resolverOuCriar). */
   /** @param {Array<any>} [catalogo] ver SistemaRepository.resolverOuCriar */
   _resolverSistemas(data, catalogo) {
     const lista = this.db.sistemas.resolverOuCriar(splitSystems(data.sistema), catalogo);
@@ -225,9 +225,9 @@ class AtualizacaoService {
   }
 
   /**
-   * Versão de cada sistema de um atendimento NOVO: a oficial cadastrada em
-   * Sistemas, desde que já existisse na data do atendimento. Grava o
-   * atendimento como "versões por sistema" (ver migracoes.js).
+   * Versão de cada sistema de uma atualização NOVA: a oficial cadastrada em
+   * Sistemas, desde que já existisse na data da atualização. Grava a
+   * atualização como "versões por sistema" (ver migracoes.js).
    */
   _versoesNovas(data, input) {
     const lista = this._resolverSistemas(data);
@@ -248,11 +248,11 @@ class AtualizacaoService {
       return sistemas;
     }
     const oficiais = new Map(this.db.sistemas.todos().map((s) => [s.id, contaParaVersao(s) ? s.ultima_versao : ""]));
-    const atendimento = parseData(data.data);
+    const dataAtualizacao = parseData(data.data);
     const sistemas = lista.map((s) => {
       const oficial = oficiais.get(s.id);
-      // Não atribuir uma versão publicada depois da data do atendimento.
-      const disponivel = oficial && atendimento && parseData(oficial) <= atendimento;
+      // Não atribuir uma versão publicada depois da data da atualização.
+      const disponivel = oficial && dataAtualizacao && parseData(oficial) <= dataAtualizacao;
       return { ...s, versao: disponivel ? oficial : !oficial && lista.length === 1 ? data.versao || null : null };
     });
     this._resumirVersoes(data, sistemas);
@@ -262,7 +262,7 @@ class AtualizacaoService {
   /**
    * Registro legado (importado de planilha, ou de antes da versão oficial):
    * o texto de "versao" é a verdade, e só vale por sistema quando o
-   * atendimento tem um sistema só.
+   * atualização tem um sistema só.
    */
   _versoesLegadas(data, lista) {
     data.versoes_sistemas = null;
@@ -421,7 +421,7 @@ class AtualizacaoService {
     const mesAtualComparavel = this.db.atualizacoes.countForMonth(mesStr, ateAtualComparavel);
     const mesAnteriorComparavel = this.db.atualizacoes.countForMonth(mesAnteriorStr, ateAnterior);
     const desatualizadoDias = this.regras.valor("desatualizadoDias");
-    const semAtendimento = this._clientesSemAtendimento(hoje, desatualizadoDias);
+    const semAtualizacao = this._clientesSemAtualizacao(hoje, desatualizadoDias);
     const situacaoClientes = this._situacaoDosClientes();
     const porResponsavel = this.db.atualizacoes.countsByResponsavel();
     const atualizadosMesPorSistema = this._atualizadosMesPorSistema(mesStr);
@@ -438,13 +438,13 @@ class AtualizacaoService {
       mesCount,
       mesAtualComparavel,
       mesAnteriorComparavel,
-      // Tempo sem atendimento e situação de versão são perguntas DIFERENTES,
+      // Tempo sem atualização e situação de versão são perguntas DIFERENTES,
       // e por isso duas chaves. Antes o Resumo chamava de "em dia" o
       // complemento da lista abaixo: cliente atendido ontem com a NFe velha
       // aparecia em dia, e cliente sem visita há 3 meses mas sem nenhuma
       // versão nova para receber aparecia desatualizado.
-      semAtendimento,
-      // A tela escreve "Sem atendimento há mais de N dias" com este N, e não
+      semAtualizacao,
+      // A tela escreve "Sem atualização há mais de N dias" com este N, e não
       // com um número próprio: é regra da equipe, editável, e o rótulo tem
       // que contar a mesma regra que a lista acima usou.
       desatualizadoDias,
@@ -528,10 +528,10 @@ class AtualizacaoService {
   }
 
   /**
-   * Clientes cujo último atendimento passou de `limiteDias` (ou nunca
+   * Clientes cuja última atualização passou de `limiteDias` (ou nunca
    * aconteceu). Não diz nada sobre versão -- ver _situacaoDosClientes.
    */
-  _clientesSemAtendimento(hoje, limiteDias) {
+  _clientesSemAtualizacao(hoje, limiteDias) {
     const ultimas = this.db.atualizacoes.ultimaDataPorCliente();
     const resultado = [];
     for (const { id, nome, cidade } of this.db.clientes.allBasic()) {
@@ -580,7 +580,7 @@ class AtualizacaoService {
    *  - tudo numa transação só: ou o lote inteiro entra, ou nada entra.
    *
    * Continua valendo: planilha é histórico, grava como registro legado, sem
-   * atribuir a versão oficial de hoje a um atendimento de meses atrás
+   * atribuir a versão oficial de hoje a uma atualização de meses atrás
    * (`_versoesLegadas`).
    * @param {Buffer} buffer conteudo do arquivo enviado
    * @param {{id:number, nome:string}|null} usuario
@@ -646,7 +646,7 @@ class AtualizacaoService {
     }
     // Sem cabeçalho, a linha 1 já é DADO: começa nela, e o que havia nela não
     // é "coluna ignorada". (Começar sempre na 2 descartava o primeiro
-    // atendimento em silêncio -- e uma planilha de uma linha só dava "vazia".)
+    // atualização em silêncio -- e uma planilha de uma linha só dava "vazia".)
     const primeira = semCabecalho ? 1 : 2;
     if (semCabecalho) colunasIgnoradas.length = 0;
 

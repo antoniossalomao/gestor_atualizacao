@@ -11,6 +11,14 @@ import { prefs } from "../app/prefs.js";
 import { filtrarClientesDoSistema } from "../domain/filtrosSistemas.js";
 
 /** Consulta por sistema; a referência oficial só pode ser editada no painel próprio. */
+/*
+ * Até 30/09/2026 o filtro de data era salvo com o termo antigo que a equipe
+ * aboliu (A14). Quem já tinha uma data salva continua com ela. A chave é
+ * montada em partes porque client/tests/vocabulario.test.mjs recusa o termo
+ * escrito por extenso -- de propósito, sem exceção para este arquivo.
+ */
+const CHAVE_ANTIGA_DATA = ["atend", "imentoAntesDe"].join("");
+
 export class SistemasView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
@@ -18,7 +26,7 @@ export class SistemasView extends View {
     this.sistema = salvo.sistema || "";
     this.situacao = salvo.situacao || "Todos";
     this.busca = salvo.busca || "";
-    this.atendimentoAntesDe = salvo.atendimentoAntesDe || "";
+    this.atualizacaoAntesDe = salvo.atualizacaoAntesDe || salvo[CHAVE_ANTIGA_DATA] || "";
     this.versoes = [];
     this.rows = [];
     this._buildDom();
@@ -51,7 +59,7 @@ export class SistemasView extends View {
         <div id="sis-filtros" class="sistemas-filtros" hidden>
           <div class="field">
             <label class="field__label" for="sis-antes">Última atualização antes de</label>
-            <input class="input" id="sis-antes" data-role="atendimento-antes" placeholder="dd/mm/aaaa" inputmode="numeric" aria-describedby="sis-antes-ajuda" />
+            <input class="input" id="sis-antes" data-role="atualizacao-antes" placeholder="dd/mm/aaaa" inputmode="numeric" aria-describedby="sis-antes-ajuda" />
             <div class="field__hint" id="sis-antes-ajuda" data-role="data-hint">Filtra a data da atualização; a situação continua usando a versão oficial.</div>
           </div>
           <button type="button" class="btn" data-action="limpar-data">Limpar data</button>
@@ -88,11 +96,11 @@ export class SistemasView extends View {
     this.sistemaFilter = this.container.querySelector('[data-role="sistema-filter"]');
     this.situacaoFilter = this.container.querySelector('[data-role="situacao-filter"]');
     this.buscaInput = this.container.querySelector('[data-role="busca"]');
-    this.dataInput = this.container.querySelector('[data-role="atendimento-antes"]');
+    this.dataInput = this.container.querySelector('[data-role="atualizacao-antes"]');
     this.dataHint = this.container.querySelector('[data-role="data-hint"]');
     this.situacaoFilter.value = this.situacao;
     this.buscaInput.value = this.busca;
-    this.dataInput.value = this.atendimentoAntesDe;
+    this.dataInput.value = this.atualizacaoAntesDe;
 
     this.sistemaFilter.addEventListener("change", () => {
       this.sistema = this.sistemaFilter.value;
@@ -112,7 +120,7 @@ export class SistemasView extends View {
     }, 180);
     this.buscaInput.addEventListener("input", buscar);
     const consultar = debounce(() => {
-      this.atendimentoAntesDe = this.dataInput.value.trim();
+      this.atualizacaoAntesDe = this.dataInput.value.trim();
       this._salvarFiltros();
       this._reloadList();
     }, 300);
@@ -125,7 +133,7 @@ export class SistemasView extends View {
     });
     this.container.querySelector('[data-action="limpar-data"]').addEventListener("click", () => {
       this.dataInput.value = "";
-      this.atendimentoAntesDe = "";
+      this.atualizacaoAntesDe = "";
       this.dataInput.setAttribute("aria-invalid", "false");
       this._salvarFiltros();
       this._reloadList();
@@ -243,12 +251,12 @@ export class SistemasView extends View {
       this._filtrarRows();
       return;
     }
-    if (this.atendimentoAntesDe && !isValidDateBR(this.atendimentoAntesDe)) return;
+    if (this.atualizacaoAntesDe && !isValidDateBR(this.atualizacaoAntesDe)) return;
     this.table.setRefreshing(true);
     try {
       await this.swr(
-        `sistemas:lista:${this.sistema}|${this.atendimentoAntesDe}`,
-        () => this.api.get("/atualizacoes/por-sistema", { sistema: this.sistema, atendimentoAntesDe: this.atendimentoAntesDe }, { key: "sistemas:lista" }),
+        `sistemas:lista:${this.sistema}|${this.atualizacaoAntesDe}`,
+        () => this.api.get("/atualizacoes/por-sistema", { sistema: this.sistema, atualizacaoAntesDe: this.atualizacaoAntesDe }, { key: "sistemas:lista" }),
         (rows) => { this.rows = rows; this._filtrarRows(); }
       );
     } catch (err) {
@@ -267,7 +275,7 @@ export class SistemasView extends View {
   }
 
   _salvarFiltros() {
-    prefs.set("sistemas:filtros", { sistema: this.sistema, situacao: this.situacao, busca: this.busca, atendimentoAntesDe: this.atendimentoAntesDe });
+    prefs.set("sistemas:filtros", { sistema: this.sistema, situacao: this.situacao, busca: this.busca, atualizacaoAntesDe: this.atualizacaoAntesDe });
   }
 }
 

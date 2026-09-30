@@ -66,7 +66,7 @@ function migracao1(conn) {
 
     -- "ordem" guarda a sequência em que os sistemas foram informados: a grade
     -- de Atualizações mostra a versão do PRIMEIRO. "versao" é a que o cliente
-    -- recebeu naquele sistema, naquele atendimento; nula quando não se sabe.
+    -- recebeu naquele sistema, naquela atualização; nula quando não se sabe.
     CREATE TABLE atualizacao_sistemas (
       atualizacao_id INTEGER NOT NULL REFERENCES atualizacoes(id) ON DELETE CASCADE,
       sistema_id INTEGER NOT NULL REFERENCES sistemas(id),
@@ -77,7 +77,7 @@ function migracao1(conn) {
     CREATE INDEX idx_atualizacao_sistemas_sistema ON atualizacao_sistemas (sistema_id);
 
     -- "cliente" (o nome) continua na tabela: é o que se mostra quando o
-    -- cliente foi excluído, ou quando o atendimento foi lançado para um nome
+    -- cliente foi excluído, ou quando a atualização foi lançada para um nome
     -- sem cadastro. Enquanto há vínculo, ele acompanha o cadastro (ver
     -- ClienteRepository.update).
     ALTER TABLE atualizacoes ADD COLUMN cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL;
@@ -86,9 +86,9 @@ function migracao1(conn) {
     CREATE INDEX idx_agendamentos_cliente ON agendamentos (cliente_id);
 
     -- 1 = as versões de atualizacao_sistemas foram capturadas sistema a
-    -- sistema (atendimentos criados depois da versão oficial existir).
+    -- sistema (atualizações criadas depois da versão oficial existir).
     -- 0 = registro legado: a verdade é o texto livre de "versao", e ela só
-    -- vale por sistema quando o atendimento tinha um sistema só.
+    -- vale por sistema quando a atualização tinha um sistema só.
     ALTER TABLE atualizacoes ADD COLUMN versoes_por_sistema INTEGER NOT NULL DEFAULT 0;
   `);
 
@@ -128,7 +128,7 @@ function migracao1(conn) {
         const chaveDoMapa = Object.keys(mapa).find((nome) => sistemas.resolver(nome)?.id === s.id);
         versao = chaveDoMapa ? mapa[chaveDoMapa] || null : null;
       } else if (lista.length === 1) {
-        // Legado: a versão só é inequívoca quando o atendimento tinha um
+        // Legado: a versão só é inequívoca quando a atualização tinha um
         // sistema só. Com vários, "22/09/2026" não diz de qual deles era.
         versao = a.versao || null;
       }
@@ -139,7 +139,7 @@ function migracao1(conn) {
 
   // Vínculo pelo nome exato; se não houver, ignorando caixa e espaços nas
   // pontas. O que não casar fica sem cliente_id, com o nome como estava --
-  // são atendimentos de clientes que já foram excluídos.
+  // são atualizações de clientes que já foram excluídos.
   for (const tabela of ["atualizacoes", "agendamentos"]) {
     conn.exec(`
       UPDATE ${tabela} SET cliente_id = COALESCE(
@@ -189,7 +189,7 @@ function migracao3(conn) {
  * Campanha: "todo cliente de B_NFe precisa estar na 25/09/2026 até o dia
  * 30". Guarda só a META -- sistema, versão-alvo e prazo. Os clientes NÃO são
  * copiados: saem ao vivo de `cliente_sistemas`, e quem está atendido sai dos
- * atendimentos. Uma lista copiada na criação envelheceria no primeiro
+ * atualizações. Uma lista copiada na criação envelheceria no primeiro
  * cliente cadastrado depois, e teria de ser mantida em dois lugares.
  *
  * `versao_alvo` é uma cópia de propósito, e não uma referência à oficial do

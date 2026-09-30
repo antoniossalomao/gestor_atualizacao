@@ -2,11 +2,11 @@ const { BaseRepository } = require("./BaseRepository");
 const { chave } = require("../shared/normalizacao");
 
 /**
- * Catálogo de sistemas. Cada atendimento e cada cliente aponta para uma
+ * Catálogo de sistemas. Cada atualização e cada cliente aponta para uma
  * linha daqui pelo id (tabelas `atualizacao_sistemas` e `cliente_sistemas`).
  *
  * `ativo = 0` é o sistema que saiu do catálogo mas continua no histórico
- * (CTe, B_Rat...): some das telas de cadastro, e os atendimentos antigos
+ * (CTe, B_Rat...): some das telas de cadastro, e as atualizações antigas
  * continuam apontando para ele. Por isso "excluir" um sistema desativa em
  * vez de apagar -- apagar a linha deixaria órfão tudo o que já foi feito
  * nele, e a chave estrangeira nem deixaria.
@@ -77,7 +77,7 @@ class SistemaRepository extends BaseRepository {
 
   /**
    * Tira um sistema do catálogo: desativa e desmarca de todo cliente. Os
-   * atendimentos antigos continuam apontando para ele. Devolve o id e
+   * atualizações antigas continuam apontando para ele. Devolve o id e
    * quantos clientes perderam a marcação, ou null se não havia um sistema
    * ATIVO com esse nome.
    * @returns {{id: number, clientesAfetados: number} | null}

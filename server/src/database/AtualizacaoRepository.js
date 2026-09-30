@@ -19,7 +19,7 @@ function paraOrdenavel(texto) {
 }
 
 /**
- * Campos de um atendimento como a API os entrega. "sistema" não é mais
+ * Campos de uma atualização como a API os entrega. "sistema" não é mais
  * coluna da tabela: vem montado pela visão `atualizacoes_v` a partir de
  * `atualizacao_sistemas` (ver migracoes.js).
  */
@@ -30,7 +30,7 @@ const COLUNAS_DA_TABELA = ["cliente", "cliente_id", "versao", "responsavel", "da
 
 // Sem cliente_id informado, o vínculo sai do nome -- nome exato, senão
 // ignorando caixa e espaço nas pontas (a regra de ClienteRepository.
-// resolverNome). Assim nenhum caminho de gravação deixa um atendimento de um
+// resolverNome). Assim nenhum caminho de gravação deixa uma atualização de um
 // cliente cadastrado sem vínculo só por não ter resolvido o id antes.
 const VALOR = {
   cliente_id:
@@ -53,9 +53,9 @@ const SORT_MAP = {
   obs: "obs COLLATE NOCASE",
 };
 
-// Um atendimento pertence a um cliente pelo id; o nome só decide quando não
-// há vínculo (cliente excluído, ou atendimento lançado para um nome sem
-// cadastro) -- sem esse segundo caso, o relatório de um desses atendimentos
+// Uma atualização pertence a um cliente pelo id; o nome só decide quando não
+// há vínculo (cliente excluído, ou atualização lançada para um nome sem
+// cadastro) -- sem esse segundo caso, o relatório de uma dessas atualizações
 // na tela de Atualizações voltaria vazio.
 const DO_CLIENTE = "(a.cliente_id = (SELECT id FROM clientes WHERE nome = @nome) OR (a.cliente_id IS NULL AND a.cliente = @nome))";
 
@@ -134,7 +134,7 @@ class AtualizacaoRepository extends BaseRepository {
     return this.conn.prepare(`SELECT ${LEITURA}, versoes_por_sistema FROM atualizacoes_v WHERE id = ?`).get(id);
   }
 
-  /** Versão recebida em cada sistema de um atendimento: [{ id, versao }] na ordem gravada. */
+  /** Versão recebida em cada sistema de uma atualização: [{ id, versao }] na ordem gravada. */
   sistemasDe(id) {
     return this.conn
       .prepare("SELECT sistema_id AS id, versao FROM atualizacao_sistemas WHERE atualizacao_id = ? ORDER BY ordem")
@@ -245,7 +245,7 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
-   * Doze meses consecutivos de atendimentos, inclusive os vazios. A data
+   * Doze meses consecutivos de atualizações, inclusive os vazios. A data
    * futura não entra em realizados; cada registro conta uma vez, mesmo que
    * mencione vários sistemas ou só componentes fixos.
    */
@@ -339,7 +339,7 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
-   * Último atendimento de cada cliente EM UM sistema, com a versão que ele
+   * Última atualização de cada cliente EM UM sistema, com a versão que ele
    * recebeu ali: [{ cliente_id, data, versao }]. É o que decide a situação
    * na tela Sistemas.
    */
@@ -357,7 +357,7 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
-   * Último atendimento de TODOS os clientes em cada sistema, de uma vez só:
+   * Última atualização de TODOS os clientes em cada sistema, de uma vez só:
    * [{ cliente_id, sistema_id, data, versao }]. É a mesma escolha de
    * ultimaPorClienteNoSistema, para o Resumo classificar os clientes sem
    * uma consulta por sistema.
@@ -376,7 +376,7 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
-   * Último atendimento de um cliente em cada sistema que já passou por ele:
+   * Última atualização de um cliente em cada sistema que já passou por ele:
    * [{ sistema_id, sistema, data, versao }]. Usado na situação do cliente.
    */
   ultimaPorSistemaDoCliente(nome) {

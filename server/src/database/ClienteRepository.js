@@ -136,7 +136,7 @@ class ClienteRepository extends BaseRepository {
    * True se ja existe outro cliente com esse nome (sem diferenciar
    * maiusculas/minusculas). Dois clientes com o mesmo nome seriam
    * indistinguiveis em toda tela que lista por nome -- e o vinculo de um
-   * atendimento lancado pelo nome (ver resolverNome) escolheria um deles
+   * atualização lançada pelo nome (ver resolverNome) escolheria um deles
    * sem ninguem saber qual.
    * @param {number|null} excludeId ignora este id (usado ao validar uma edicao)
    */
@@ -158,13 +158,13 @@ class ClienteRepository extends BaseRepository {
         this.conn.prepare("INSERT INTO clientes (codigo, nome, cidade, grupo, regime_tributario) VALUES (?, ?, ?, ?, ?)").run(codigo, nome, cidade, grupo, regimeTributario).lastInsertRowid
       );
       this._gravarSistemas(id, sistemaIds);
-      this._adotarAtendimentosSemVinculo(id, nome);
+      this._adotarAtualizacoesSemVinculo(id, nome);
       return id;
     })();
   }
 
   /**
-   * O nome também fica copiado em cada atendimento/agendamento (ver
+   * O nome também fica copiado em cada atualização/agendamento (ver
    * migracoes.js): é o que aparece se o cliente for excluído um dia. Por
    * isso um rename acompanha nos registros ligados a ele -- senão, depois
    * de uma exclusão, o histórico mostraria um nome que ele não usa há anos.
@@ -178,20 +178,20 @@ class ClienteRepository extends BaseRepository {
         this._gravarSistemas(id, sistemaIds);
         this.conn.prepare("UPDATE atualizacoes SET cliente = ? WHERE cliente_id = ?").run(nome, id);
         this.conn.prepare("UPDATE agendamentos SET cliente = ? WHERE cliente_id = ?").run(nome, id);
-        this._adotarAtendimentosSemVinculo(id, nome);
+        this._adotarAtualizacoesSemVinculo(id, nome);
       }
       return resultado.changes;
     })();
   }
 
   /**
-   * Atendimentos e tarefas lançados para um nome que ainda não tinha
+   * Atualizações e tarefas lançadas para um nome que ainda não tinha
    * cadastro passam a pertencer ao cliente quando ele é criado (ou
    * renomeado) com esse nome -- era o que acontecia de graça quando a
    * ligação era só pelo texto, e sem isto a importação de uma planilha
    * antes do cadastro deixaria o histórico dele solto para sempre.
    */
-  _adotarAtendimentosSemVinculo(id, nome) {
+  _adotarAtualizacoesSemVinculo(id, nome) {
     for (const tabela of ["atualizacoes", "agendamentos"]) {
       this.conn
         .prepare(`UPDATE ${tabela} SET cliente_id = ?, cliente = ? WHERE cliente_id IS NULL AND lower(trim(cliente)) = lower(trim(?))`)

@@ -1068,7 +1068,7 @@ kbd {
 }
 
 /* `margin-top: auto` (com o tile em coluna): o número fica no pé do card.
-   "Sem Atendimento Há Mais de 60 Dias" quebra em duas linhas, e com margem
+   "Sem Atualização Há Mais de 60 Dias" quebra em duas linhas, e com margem
    fixa o número dele ficava mais baixo que o dos vizinhos. */
 .stat-tile__value-row {
   display: flex;

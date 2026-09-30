@@ -62,7 +62,7 @@ node --test navegador/login.test.mjs   # um arquivo só
 Sobem um `Server` de verdade num banco descartável e controlam o Chrome (ou
 Edge) já instalado pelo protocolo de depuração — sem Playwright, sem baixar
 navegador ([ADR-0012](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0012)). Cobrem
-login e sessão, atendimentos (criar, editar, conflito, falha da API, filtro,
+login e sessão, atualizações (criar, editar, conflito, falha da API, filtro,
 relatório, exclusão), tarefas, campanhas, importação, teclado e foco, nome
 acessível em tudo que se aciona e rolagem horizontal nas larguras de uso.
 
@@ -75,7 +75,7 @@ acessível em tudo que se aciona e rolagem horizontal nas larguras de uso.
 - Cliques e teclas são eventos de entrada de verdade: um botão coberto por
   outro elemento **falha o teste**, como falharia para a pessoa. Não troque
   `pagina.clicar` por `elemento.click()` para "fazer passar".
-- Dados de apoio (clientes, atendimentos de exemplo) entram pela API
+- Dados de apoio (clientes, atualizações de exemplo) entram pela API
   (`amb.api`), não pela tela: o que se testa pela tela é o fluxo.
 
 ### Verificação de tipos

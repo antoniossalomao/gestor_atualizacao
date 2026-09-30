@@ -200,7 +200,7 @@ export class AtualizacoesView extends View {
           // A célula é estreita demais para o resumo de vários sistemas
           // ("B_Vendas: 09/09/2026; B_NFe: 02/09/2026"), que cortava no meio.
           // Mostra só a versão do primeiro sistema listado -- geralmente uma
-          // data só, do mesmo jeito que um atendimento de um sistema só
+          // data só, do mesmo jeito que uma atualização de um sistema só
           // sempre apareceu aqui. O resumo inteiro continua no title (hover)
           // e no relatório/edição, que têm espaço para ele.
           ...(c.key === "versao" ? { render: (row) => versaoResumida(row) } : {}),
@@ -696,7 +696,7 @@ export class AtualizacoesView extends View {
     this._pintarModo();
   }
 
-  /** Aplica o período vindo do Resumo ou abre um novo atendimento. */
+  /** Aplica o período vindo do Resumo ou abre uma nova atualização. */
   aplicarParams({ desde, ate, novo } = {}) {
     // Vindo de um indicador do Resumo: não é para preencher formulário
     // nenhum, é para FILTRAR a lista pelo período que aquele número contava.

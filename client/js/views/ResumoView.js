@@ -21,7 +21,7 @@ import { statTile, deltaTendencia, corpoSituacao } from "../templates/resumo.js"
  * atualização registrada.
  * @param {number|undefined} dias
  */
-function rotuloSemAtendimento(dias) {
+function rotuloSemAtualizacao(dias) {
   return dias ? `Sem Atualização Há Mais de ${dias} Dias` : "Sem Atualização Recente";
 }
 
@@ -39,7 +39,7 @@ export class ResumoView extends View {
         ${statTile("clientes", "clientes", "Clientes", "Ver clientes")}
         ${statTile("atualizacoes", "atualizacoes", "Atualizações", "Ver histórico")}
         ${statTile("mes", "calendario", "Atualizações Este Mês", "Ver o mês")}
-        ${statTile("semAtendimento", "alerta", rotuloSemAtendimento(this.desatualizadoDias), "Ver a lista")}
+        ${statTile("semAtualizacao", "alerta", rotuloSemAtualizacao(this.desatualizadoDias), "Ver a lista")}
       </div>
 
       <!--
@@ -96,8 +96,8 @@ export class ResumoView extends View {
         // contou, senão a lista abre com um total diferente do que se clicou.
         mes: () => this.navigate("atualizacoes", { desde: primeiroDiaDoMes(), ate: todayBR() }),
         // Levava para a aba Sistemas, que não tem como mostrar "quem está sem
-        // atendimento" -- o clique abria uma lista que não era a contada.
-        semAtendimento: () => this._listarSemAtendimento(),
+        // atualização" -- o clique abria uma lista que não era a contada.
+        semAtualizacao: () => this._listarSemAtualizacao(),
       };
       rotas[tile.dataset.stat]?.();
     });
@@ -163,18 +163,18 @@ export class ResumoView extends View {
     this._setStat("clientes", resumo.totalClientes);
     this._setStat("atualizacoes", resumo.totalAtualizacoes);
     this._setStat("mes", resumo.mesCount);
-    this._setStat("semAtendimento", resumo.semAtendimento.length);
+    this._setStat("semAtualizacao", resumo.semAtualizacao.length);
     // O limite é regra da equipe e pode ter mudado desde que a tela abriu: o
     // rótulo usa o número com que o servidor MONTOU esta lista, não o que a
     // tela tinha guardado -- os dois não podem se contradizer.
     if (resumo.desatualizadoDias) {
-      this.container.querySelector('[data-stat="semAtendimento"] [data-role="rotulo"]').textContent =
-        rotuloSemAtendimento(resumo.desatualizadoDias);
+      this.container.querySelector('[data-stat="semAtualizacao"] [data-role="rotulo"]').textContent =
+        rotuloSemAtualizacao(resumo.desatualizadoDias);
     }
     this._setDelta("mes", tendenciaMensal(resumo.mesAtualComparavel, resumo.mesAnteriorComparavel));
 
-    const semAtendimentoTile = this.container.querySelector('[data-stat="semAtendimento"]');
-    semAtendimentoTile.classList.toggle("is-alert", resumo.semAtendimento.length > 0);
+    const semAtualizacaoTile = this.container.querySelector('[data-stat="semAtualizacao"]');
+    semAtualizacaoTile.classList.toggle("is-alert", resumo.semAtualizacao.length > 0);
 
     this.resumo = resumo;
     this.situacaoEl.innerHTML = corpoSituacao(totaisSituacao(resumo.situacaoClientes), resumo.situacaoClientes.sistemasMaisAtrasados);
@@ -205,10 +205,10 @@ export class ResumoView extends View {
     });
   }
 
-  _listarSemAtendimento() {
-    const clientes = this.resumo?.semAtendimento || [];
+  _listarSemAtualizacao() {
+    const clientes = this.resumo?.semAtualizacao || [];
     this._abrirGaveta({
-      titulo: `${rotuloSemAtendimento(this.resumo?.desatualizadoDias)} — ${plural(clientes.length, "cliente")}`,
+      titulo: `${rotuloSemAtualizacao(this.resumo?.desatualizadoDias)} — ${plural(clientes.length, "cliente")}`,
       ajuda: "Tempo desde a última atualização registrada. Não diz se as versões estão em dia: isso está no card Atualização dos Clientes.",
       colunas: [
         { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },

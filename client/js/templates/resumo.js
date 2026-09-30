@@ -47,7 +47,7 @@ export function deltaTendencia(tendencia) {
  * (cada sistema com a proporção dos seus clientes que está atrasada).
  *
  * Substituiu uma rosca de duas fatias ("Em dia" x "Desatualizados") em que
- * "em dia" era só quem teve algum atendimento nos últimos 60 dias -- não
+ * "em dia" era só quem teve alguma atualização nos últimos 60 dias -- não
  * dizia nada sobre versão. A barra é auxiliar: os números e os botões
  * funcionam sem ela, e ela some quando não há ninguém para dividir.
  *

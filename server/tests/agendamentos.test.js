@@ -170,7 +170,7 @@ test("AgendamentoService - concluido_em", async (t) => {
       assert.equal(depois.status, CONCLUIDO);
       assert.ok(depois.concluidoEm, "deveria ter gravado a hora da conclusão");
       assert.equal(env.db.conn.prepare("SELECT COUNT(*) AS total FROM atualizacoes").get().total, atualizacoesAntes,
-        "concluir tarefa não cria um atendimento nem aplica versões ao cliente");
+        "concluir tarefa não cria uma atualização nem aplica versões ao cliente");
     });
 
     await t.test("editar tarefa JÁ concluída preserva a data original", () => {

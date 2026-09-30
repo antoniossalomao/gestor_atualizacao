@@ -150,7 +150,7 @@ function normalizarSistemas(texto, catalogo = []) {
 /**
  * Duas pessoas num campo só. "Marcos/Lennon" (10 registros) não é uma grafia
  * diferente de nada -- é uma dupla, e o filtro "Responsável" não sabe lidar
- * com isso. Fica com o Marcos, por decisão de quem conhece os atendimentos.
+ * com isso. Fica com o Marcos, por decisão de quem conhece as atualizações.
  */
 const APELIDOS_RESPONSAVEL = new Map([["MARCOSLENNON", "Marcos"]]);
 
@@ -205,7 +205,7 @@ module.exports = {
   // Sistemas.
   //
   // "CTe", "DFE", "B_Rat", "B_Vet" e "B_SYNC" também aparecem no histórico e
-  // ficaram DE FORA por decisão de quem conhece os atendimentos: não são
+  // ficaram DE FORA por decisão de quem conhece as atualizações: não são
   // sistemas. Não entram no catálogo e também não são reescritos -- a regra
   // geral de `normalizarSistemas` vale para eles, que é manter intacto o
   // pedaço que não casa com nada.

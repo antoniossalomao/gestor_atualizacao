@@ -3,7 +3,7 @@
  *
  * Tudo aqui erra em silêncio: uma campanha que conta errado não quebra tela
  * nenhuma, só diz à equipe que terminou quando não terminou. Os casos são
- * os que a regra precisa segurar -- baixa automática pelo atendimento, meta
+ * os que a regra precisa segurar -- baixa automática pela atualização, meta
  * que não anda quando a oficial muda, "já agendado" só com tarefa do mesmo
  * sistema, sistemas fixos recusados, placar congelado no encerramento -- e
  * as permissões das rotas.
@@ -88,11 +88,11 @@ test("Campanhas - meta, baixa automática e placar", async (t) => {
       assert.equal(campanha.percentual, 0);
     });
 
-    await t.test("atendimento anterior à versão-alvo não conclui", () => {
+    await t.test("atualização anterior à versão-alvo não conclui", () => {
       assert.equal(env.situacao(campanha.id, "Loja Antiga"), "pendente");
     });
 
-    await t.test("registrar o atendimento na data da meta ou depois dá baixa sozinho", () => {
+    await t.test("registrar a atualização na data da meta ou depois dá baixa sozinho", () => {
       env.db.sistemas.salvarVersao("B_NFe", "25/09/2026");
       env.atender("Loja Atendida", "B_NFe", "26/09/2026");
       assert.equal(env.situacao(campanha.id, "Loja Atendida"), "concluido");
@@ -148,7 +148,7 @@ test("Campanhas - meta, baixa automática e placar", async (t) => {
       assert.deepEqual([encerrada.totalClientes, encerrada.atendidos], [4, 1]);
       env.atender("Loja Antiga", "B_NFe", "28/09/2026");
       const depois = env.campanhas.detalhe(campanha.id);
-      assert.equal(depois.atendidos, 1, "atendimento depois do encerramento não muda o resultado");
+      assert.equal(depois.atendidos, 1, "atualização depois do encerramento não muda o resultado");
       assert.equal(env.campanhas.list("ativas").length, 0);
       assert.equal(env.campanhas.list("encerradas").length, 1);
       assert.throws(() => env.campanhas.encerrar(campanha.id, USUARIO), /já está encerrada/);
@@ -160,7 +160,7 @@ test("Campanhas - meta, baixa automática e placar", async (t) => {
       assert.equal(reaberta.atendidos, 2);
     });
 
-    await t.test("excluir a campanha não mexe em atendimentos nem tarefas", () => {
+    await t.test("excluir a campanha não mexe em atualizações nem tarefas", () => {
       const antes = [env.db.atualizacoes.count(), env.db.agendamentos.count()];
       env.campanhas.remove(campanha.id, USUARIO);
       assert.deepEqual([env.db.atualizacoes.count(), env.db.agendamentos.count()], antes);
@@ -171,12 +171,12 @@ test("Campanhas - meta, baixa automática e placar", async (t) => {
   }
 });
 
-test("Campanhas - vale a data do atendimento, com ou sem versão recebida (ADR-0008)", () => {
+test("Campanhas - vale a data da atualização, com ou sem versão recebida (ADR-0008)", () => {
   const env = ambiente();
   try {
     env.cliente("Loja Legada", ["B_Vendas"]);
     env.cliente("Loja Legada Velha", ["B_Vendas"]);
-    // Sem oficial cadastrada: o atendimento não grava versão nenhuma.
+    // Sem oficial cadastrada: a atualização não grava versão nenhuma.
     env.atender("Loja Legada", "B_Vendas", "26/09/2026");
     env.atender("Loja Legada Velha", "B_Vendas", "01/09/2026");
     const c = env.campanhas.create({ titulo: "Vendas", sistema: "B_Vendas", versaoAlvo: "25/09/2026" }, USUARIO);

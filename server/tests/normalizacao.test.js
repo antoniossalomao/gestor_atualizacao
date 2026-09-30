@@ -96,7 +96,7 @@ test("normalizacao - normalizarSistemas()", async (t) => {
 
   await t.test("texto que não é sistema nenhum vira B_Vendas", () => {
     // Decisão consciente: chutar o sistema que quase todo cliente tem, em vez
-    // de esvaziar o campo e perder o registro do atendimento.
+    // de esvaziar o campo e perder o registro da atualização.
     assert.equal(norm("ATUALIZADO"), "B_Vendas");
     assert.equal(norm("feito acesso regina"), "B_Vendas");
     assert.equal(norm("apenas verificar as versões"), "B_Vendas");

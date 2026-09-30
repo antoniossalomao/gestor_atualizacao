@@ -3,7 +3,7 @@ const { parseData } = require("../shared/validation");
 /**
  * A regra de "este cliente está em dia?" -- uma só, usada pelo Resumo, pela
  * aba Sistemas e pela ficha do cliente. Antes cada uma tinha a sua: o
- * Resumo chamava de "em dia" quem teve QUALQUER atendimento nos últimos 60
+ * Resumo chamava de "em dia" quem teve QUALQUER atualização nos últimos 60
  * dias (o que não diz nada sobre versão), e as outras duas comparavam o
  * texto da versão com `===`.
  *
@@ -13,21 +13,21 @@ const { parseData } = require("../shared/validation");
  *     (dd/mm/aaaa). Com `===`, quem recebeu uma versão MAIS NOVA que a
  *     oficial (teste, ou oficial rebaixada) aparecia como atrasado.
  *     Desatualizado é só a recebida ANTERIOR à oficial.
- *  2. **A fonte é o atendimento.** O que o agente reporta não entra aqui.
- *  3. **Vale a DATA do atendimento, não a versão recebida.** Atendido na
+ *  2. **A fonte é a atualização.** O que o agente reporta não entra aqui.
+ *  3. **Vale a DATA da atualização, não a versão recebida.** Atualizado na
  *     data da oficial ou depois conta como em dia; antes dela, como
  *     desatualizado. Até 29/09/2026 a versão recebida mandava e a data só
- *     entrava quando o atendimento não tinha versão (marcado "pela data").
+ *     entrava quando a atualização não tinha versão (marcada "pela data").
  *     A equipe trocou: a versão recebida vinha preenchida de forma
- *     irregular (mais de mil atendimentos antigos sem ela, texto livre em
+ *     irregular (mais de mil atualizações antigas sem ela, texto livre em
  *     outros), e duas regras na mesma tela confundiam mais do que
- *     ajudavam. A versão recebida continua gravada no atendimento e
+ *     ajudavam. A versão recebida continua gravada na atualização e
  *     aparece na ficha e no relatório -- só não decide mais a situação.
  */
 
 /**
  * Situação de UM sistema de um cliente.
- * @param {{data?: string}|null|undefined} registro último atendimento do cliente naquele sistema
+ * @param {{data?: string}|null|undefined} registro última atualização do cliente naquele sistema
  * @param {string|null|undefined} oficial versão oficial do sistema (dd/mm/aaaa)
  * @returns {{situacao: "Em dia"|"Desatualizado"|"Nunca atualizado"|"Sem referência"|"Sem informação"}}
  */
@@ -35,9 +35,9 @@ function situacaoDoSistema(registro, oficial) {
   if (!registro) return { situacao: "Nunca atualizado" };
   const dataOficial = parseData(oficial || "");
   if (!dataOficial) return { situacao: "Sem referência" };
-  const atendimento = parseData(registro.data || "");
-  if (!atendimento) return { situacao: "Sem informação" };
-  return { situacao: atendimento < dataOficial ? "Desatualizado" : "Em dia" };
+  const dataAtualizacao = parseData(registro.data || "");
+  if (!dataAtualizacao) return { situacao: "Sem informação" };
+  return { situacao: dataAtualizacao < dataOficial ? "Desatualizado" : "Em dia" };
 }
 
 /** O sistema que, quando o cliente tem, decide sozinho a situação dele. */

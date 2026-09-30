@@ -8,7 +8,7 @@ const CAMPOS = `c.id, c.titulo, c.descricao, c.sistema_id AS sistemaId, s.nome A
 /**
  * Campanhas de atualização (aba Campanhas). Só a meta mora aqui; os
  * clientes e quem já foi atendido são calculados por CampanhaService a
- * partir de `cliente_sistemas` e dos atendimentos -- ver migracoes.js
+ * partir de `cliente_sistemas` e das atualizações -- ver migracoes.js
  * (migração 4) e docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0009.
  */
 class CampanhaRepository extends BaseRepository {

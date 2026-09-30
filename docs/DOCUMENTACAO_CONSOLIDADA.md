@@ -167,7 +167,7 @@ resumo aqui:
 - Canais de distribuição e versões piloto, com promoção para geral e rollback transacional.
 - Controle de concorrência otimista (OCC) — revisões atômicas, impedindo que edições simultâneas
   entre técnicos sobrescrevam dados sem aviso.
-- Ficha 360° do cliente — histórico completo de atendimentos, cópia rápida de acessos remotos,
+- Ficha 360° do cliente — histórico completo de atualizações, cópia rápida de acessos remotos,
   linha do tempo de eventos e matriz comparativa de versões (instalada vs. publicada).
 - Trilha de auditoria visual — log completo (quem criou, editou ou excluiu) com diff visual
   antes/depois campo a campo.
@@ -324,7 +324,7 @@ como um servidor web acessível por várias pessoas ao mesmo tempo, cada uma com
 - **Tendência mensal de atualizações** (Resumo) — gráfico dos últimos 12 meses.
 - **Grupo/Rede de clientes** — campo opcional para agrupar unidades sob a mesma bandeira.
 - **Conversão de Agendamento em Atualização (removida na E1)** — o botão que pré-preenchia
-  um atendimento a partir da tarefa existiu nesta fase, mas saiu da interface. Os dois registros
+  uma atualização a partir da tarefa existiu nesta fase, mas saiu da interface. Os dois registros
   agora são criados separadamente.
 - **Tempo médio de resolução por responsável** (Resumo) — só conta tarefas criadas depois desta
   métrica existir, pra não inventar uma data que não existe.
@@ -1518,8 +1518,8 @@ a revisão recebida.
 
 Três campos do banco guardavam listas ou vínculos como texto:
 
-- `atualizacoes.sistema` — a lista de sistemas de um atendimento, separada por
-  vírgula (`"B_Vendas, B_NFe"`). Em produção, 866 dos 945 atendimentos tinham
+- `atualizacoes.sistema` — a lista de sistemas de uma atualização, separada por
+  vírgula (`"B_Vendas, B_NFe"`). Em produção, 866 dos 945 atualizações tinham
   mais de um sistema.
 - `clientes.sistemas` — a mesma coisa para os sistemas de cada cliente.
 - `atualizacoes.cliente` e `agendamentos.cliente` — o **nome** do cliente,
@@ -1540,7 +1540,7 @@ O custo aparecia de três formas:
    A comparação aproximada escondia isso na maior parte das telas, mas não em
    todas: a situação do cliente listava `NFCe` e `B_NFCe` como dois sistemas.
 3. **O vínculo com o cliente era frágil.** Renomear um cliente exigia reescrever
-   o nome em duas outras tabelas, e 57 atendimentos já não batiam com cliente
+   o nome em duas outras tabelas, e 57 atualizações já não batiam com cliente
    nenhum.
 
 E o jeito de mudar o esquema — `ALTER TABLE ADD COLUMN` em try/catch, repetido a
@@ -1570,14 +1570,14 @@ a subida é interrompida. O bloco antigo de `ALTER TABLE` virou
   mesmo nome reativa a mesma linha, com o histórico junto. As grafias de um
   mesmo sistema viram uma linha só, com o nome mais usado.
 - **O nome do cliente continua em `atualizacoes.cliente`**, como cópia: é o que
-  se mostra quando o cliente é excluído ou quando o atendimento foi lançado para
+  se mostra quando o cliente é excluído ou quando a atualização foi lançada para
   um nome sem cadastro. Enquanto existe vínculo, a cópia acompanha o rename.
-  Cadastrar um cliente com o nome de atendimentos sem vínculo passa a ligá-los
+  Cadastrar um cliente com o nome de atualizações sem vínculo passa a ligá-los
   a ele.
-- **`versoes_por_sistema`** distingue o atendimento cuja versão foi capturada
+- **`versoes_por_sistema`** distingue a atualização cuja versão foi capturada
   sistema a sistema do registro legado, em que a verdade é o texto livre de
   `versao`. No legado, a versão só vira a versão de um sistema quando o
-  atendimento tinha um sistema só; com vários, fica nula, porque é ambígua.
+  atualização tinha um sistema só; com vários, fica nula, porque é ambígua.
 - **Visões `atualizacoes_v` e `clientes_v`** montam de volta as listas em texto,
   no formato que a API sempre entregou. Por isso o front-end não mudou: `sistema`
   continua `"B_Vendas, B_NFe"` e `versoes_sistemas` continua um JSON (nulo para
@@ -1586,11 +1586,11 @@ a subida é interrompida. O bloco antigo de `ALTER TABLE` virou
 #### Consequências
 
 - Relatórios por sistema, o Resumo e a situação do cliente viraram consultas
-  SQL por id, com `ROW_NUMBER()` para "o último atendimento". O ensaio numa cópia
+  SQL por id, com `ROW_NUMBER()` para "a última atualização". O ensaio numa cópia
   do banco de produção comparou o código antigo com o novo: relatório por
   sistema (com e sem data de corte), Resumo e última versão por sistema saíram
   idênticos. As únicas diferenças foram as grafias corrigidas e o desempate de
-  dois atendimentos no mesmo dia, que agora é sempre pelo último registrado.
+  duas atualizações no mesmo dia, que agora é sempre pelo último registrado.
 - A regra "qual sistema um nome quer dizer" existe num lugar só:
   `SistemaRepository.resolver`/`resolverOuCriar`. Ela roda na gravação; a
   leitura só compara ids.
@@ -1613,7 +1613,7 @@ a subida é interrompida. O bloco antigo de `ALTER TABLE` virou
 
 Três telas respondiam a mesma pergunta de três jeitos:
 
-- **Resumo:** "em dia" era quem teve **qualquer** atendimento nos últimos 60
+- **Resumo:** "em dia" era quem teve **qualquer** atualização nos últimos 60
   dias; o resto era "desatualizado". Não olhava versão nenhuma. Cliente
   atendido ontem com a NFe velha aparecia em dia; cliente sem visita há três
   meses, mas sem nenhuma versão nova para receber, aparecia desatualizado.
@@ -1625,7 +1625,7 @@ Três telas respondiam a mesma pergunta de três jeitos:
 
 Medido numa cópia do banco de produção (24/09/2026), com a regra estrita
 ("sem versão registrada = não dá para saber"): de 369 clientes, 21
-desatualizados, **348 pendentes** e 0 em dia. Os atendimentos de antes da
+desatualizados, **348 pendentes** e 0 em dia. As atualizações de antes da
 versão oficial existir não gravaram versão (1.275 sistemas nessa condição), e
 o indicador novo não serviria para nada.
 
@@ -1638,19 +1638,19 @@ Resumo, pela aba Sistemas e pela situação do cliente.
 
 | Caso | Situação |
 |---|---|
-| Nenhum atendimento naquele sistema | Nunca atualizado |
+| Nenhum atualização naquele sistema | Nunca atualizado |
 | Sistema sem versão oficial cadastrada | Sem referência |
 | Versão recebida (data) **anterior** à oficial | Desatualizado |
 | Versão recebida igual ou **posterior** à oficial | Em dia |
-| Sem versão (ou versão que não é data) → data do atendimento anterior à oficial | Desatualizado, **pela data** |
-| Sem versão → atendimento na data da oficial ou depois | Em dia, **pela data** |
-| Sem versão e data do atendimento inválida | Sem informação |
+| Sem versão (ou versão que não é data) → data da atualização anterior à oficial | Desatualizado, **pela data** |
+| Sem versão → atualização na data da oficial ou depois | Em dia, **pela data** |
+| Sem versão e data da atualização inválida | Sem informação |
 
 - **Compara datas, não texto.**
-- **A fonte é o atendimento.** O que o agente reporta não entra na conta.
+- **A fonte é a atualização.** O que o agente reporta não entra na conta.
 - **"Pela data" é marcado**, e as telas escrevem "Em dia (pela data)". A versão
   recebida continua "Não informada": nada é gravado retroativamente, e editar
-  o atendimento não muda isso.
+  a atualização não muda isso.
 
 **Por cliente** (grupos que não se sobrepõem, para os totais somarem):
 
@@ -1681,40 +1681,40 @@ atualização há mais de N dias"), e não altera a situação de versão.
   inteiras na resposta do `/resumo`, e o clique abre exatamente os clientes
   contados.
 - A regra "pela data" é uma **dedução**, aceita pela equipe para o indicador
-  ser útil já. Com o tempo, atendimentos novos gravam a versão oficial e a
+  ser útil já. Com o tempo, atualizações novas gravam a versão oficial e a
   dedução deixa de ser usada naturalmente. Se ela passar a atrapalhar, basta
   remover o ramo "pela data" de `situacaoDoSistema`: o resto não muda.
 - Datas continuam `dd/mm/aaaa`. Uma versão que não é data não é comparável e
-  cai na regra da data do atendimento.
+  cai na regra da data da atualização.
 - A chave da regra da equipe continua `desatualizado_dias` (já gravada nas
   instalações); só o texto na Administração mudou para "Sem atualização".
 - O que ficou para depois: tela para marcar ou desmarcar sistema fixo e
   bloqueio na API de oficial para sistema fixo (resto do I04).
 
-#### Revisão de 29/09/2026: só a data do atendimento
+#### Revisão de 29/09/2026: só a data da atualização
 
 A equipe decidiu que a situação **não usa mais a versão recebida**: vale só
-a data do último atendimento contra a data da versão oficial (ou da
+a data da última atualização contra a data da versão oficial (ou da
 versão-alvo, em Campanhas). A tabela "Por sistema" acima fica assim:
 
 | Caso | Situação |
 |---|---|
-| Nenhum atendimento naquele sistema | Nunca atualizado |
+| Nenhum atualização naquele sistema | Nunca atualizado |
 | Sistema sem versão oficial cadastrada | Sem referência |
-| Atendimento **anterior** à data da oficial | Desatualizado |
-| Atendimento na data da oficial ou depois | Em dia |
-| Data do atendimento inválida | Sem informação |
+| Atualização **anterior** à data da oficial | Desatualizado |
+| Atualização na data da oficial ou depois | Em dia |
+| Data da atualização inválida | Sem informação |
 
 - **Por quê:** a versão recebida vinha preenchida de forma irregular, e
   duas regras na mesma tela (versão numa linha, "pela data" na outra)
   confundiam mais do que ajudavam.
 - **O que muda na prática:** quem foi atendido depois da oficial conta como
-  em dia mesmo que o atendimento tenha gravado uma versão anterior; e uma
-  versão recebida mais nova não tira do atraso um atendimento anterior à
+  em dia mesmo que a atualização tenha gravado uma versão anterior; e uma
+  versão recebida mais nova não tira do atraso uma atualização anterior à
   oficial.
 - A marca "(pela data)" saiu das telas, porque agora tudo é pela data. A
   coluna "Versão recebida" saiu da aba Sistemas.
-- A versão recebida **continua gravada** no atendimento e aparece na ficha do
+- A versão recebida **continua gravada** na atualização e aparece na ficha do
   cliente, no relatório copiado e na exportação de pendentes da campanha.
   Para voltar a usá-la, basta restaurar o ramo da versão em
   `situacaoDoSistema` (`git log -- server/src/services/situacaoVersao.js`).
@@ -1752,7 +1752,7 @@ mais é gravado por campanha:
 - **Quem entra:** os clientes que têm o sistema no cadastro
   (`cliente_sistemas`), lidos ao vivo. Cliente cadastrado depois da criação
   entra; cliente que perdeu o sistema sai.
-- **Quem está atualizado:** o último atendimento do cliente no sistema passa
+- **Quem está atualizado:** a última atualização do cliente no sistema passa
   por `situacaoDoSistema` (a mesma função da ADR-0008) contra a
   **versão-alvo**: atendido na data da versão-alvo ou depois conta (desde
   29/09/2026 a versão recebida não decide; ver a revisão da ADR-0008). **Não existe
@@ -2163,7 +2163,7 @@ Escopo: identidade, indicadores, tabelas, relatórios, agendamentos, clientes, s
 
 ### 1. Objetivo e limites da análise
 
-Tornar o painel mais coerente com a operação: saber quem precisa de atualização, organizar atendimentos e produzir relatórios úteis, com menos controles disputando atenção.
+Tornar o painel mais coerente com a operação: saber quem precisa de atualização, organizar atualizações e produzir relatórios úteis, com menos controles disputando atenção.
 
 A análise foi feita sobre o código atual das telas, componentes, serviços e repositórios. As observações visuais do usuário são requisitos deste plano. O desalinhamento dos meses, o número 121 e a aparência do ícone precisam ser reproduzidos no navegador durante a execução: nesta etapa não houve nova inspeção visual de todas as telas nem consulta ao banco de produção para confirmar esse valor.
 
@@ -2173,9 +2173,9 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 
 #### Regras já acordadas que precisam permanecer
 
-- Uma nova atualização guarda as versões oficiais dos sistemas informados naquele atendimento.
+- Uma nova atualização guarda as versões oficiais dos sistemas informados naquela atualização.
 - Alterar a oficial não muda a versão recebida anteriormente por um cliente.
-- Editar observações não deve reaplicar versões atuais ao atendimento antigo.
+- Editar observações não deve reaplicar versões atuais à atualização antiga.
 - Histórico sem versão comprovada não recebe a referência de hoje retroativamente.
 - B_Atualizador e Suporte Bredas são sistemas fixos, conforme definição do usuário, sem controle de defasagem de versões.
 - O relatório do chamado segue o formato aprovado, sem ID, código, cidade ou motivo.
@@ -2215,11 +2215,11 @@ P0: corrigir significado ou função importante. P1: revisão principal. P2: mel
 
 | Conceito | Pergunta respondida | Fonte |
 |---|---|---|
-| Versão recebida | Qual versão foi aplicada ao sistema do cliente? | Cópia registrada no atendimento |
-| Versão oficial | Qual versão deve ser aplicada em um atendimento novo? | Catálogo de versões oficiais |
-| Tempo sem atendimento | Há quanto tempo não há atendimento registrado? | Data do último atendimento válido |
+| Versão recebida | Qual versão foi aplicada ao sistema do cliente? | Cópia registrada na atualização |
+| Versão oficial | Qual versão deve ser aplicada em uma atualização nova? | Catálogo de versões oficiais |
+| Tempo sem atualização | Há quanto tempo não há atualização registrada? | Data da última atualização válida |
 
-Exemplo: cliente atendido ontem com NFe 22/09 fica desatualizado quando a oficial passa para 24/09, mas não está há 60 dias sem atendimento. Cliente sem atendimento recente pode continuar em dia se nenhuma versão dos seus sistemas mudou.
+Exemplo: cliente atendido ontem com NFe 22/09 fica desatualizado quando a oficial passa para 24/09, mas não está há 60 dias sem atualização. Cliente sem atualização recente pode continuar em dia se nenhuma versão dos seus sistemas mudou.
 
 #### 3.2 Sistemas fixos — I04
 
@@ -2233,41 +2233,41 @@ Recomendação: atributo persistido no catálogo, por exemplo `controla_versao`,
 - [x] Excluir de listas e contagens de clientes desatualizados por versão.
 - [x] Excluir da seleção da aba Sistemas e da lista de referências oficiais (`/sistemas/versoes`).
 - [x] Na ficha, apresentar em Serviços/componentes fixos, sem estado de atraso; a revisão geral da matriz continua em E7.
-- [x] Não apagar atendimentos, anotações ou referências antigas já registradas.
+- [x] Não apagar atualizações, anotações ou referências antigas já registradas.
 - [x] Impedir na API que sistema fixo receba nova referência oficial por engano.
 - [x] Desconsiderar referência antiga eventualmente cadastrada nesses sistemas; ao reclassificar como atualizável, a referência preservada volta a aparecer.
 - [x] Não gerar lote de agendamentos de atualização por atraso desses sistemas; tarefa manual de instalação/acesso continua possível.
 - [x] Reservar alteração da classificação de sistema à administração (aba Classificação, rota com papel `admin`).
 
-Para volume de trabalho: um atendimento misto continua contando uma vez. Registro exclusivamente de instalação/acesso a componente fixo pode continuar no histórico de atendimentos, mas não deve inflar uma série chamada Atualizações de sistemas. Explicitar essa distinção no indicador.
+Para volume de trabalho: uma atualização mista continua contando uma vez. Registro exclusivamente de instalação/acesso a componente fixo pode continuar no histórico de atualizações, mas não deve inflar uma série chamada Atualizações de sistemas. Explicitar essa distinção no indicador.
 
-**Feito em E2 (25/09/2026):** os totais e a tendência atuais do Resumo foram rotulados como **Atendimentos**, pois contam cada registro uma vez, inclusive os exclusivamente de componentes fixos. O gráfico **Atualizações Por Sistema Este Mês** lista somente sistemas atualizáveis. A definição e o tratamento dos meses vazios da tendência permanecem em E4 (5.3).
+**Feito em E2 (25/09/2026):** os totais e a tendência atuais do Resumo foram rotulados como **Atualizações**, pois contam cada registro uma vez, inclusive os exclusivamente de componentes fixos. O gráfico **Atualizações Por Sistema Este Mês** lista somente sistemas atualizáveis. A definição e o tratamento dos meses vazios da tendência permanecem em E4 (5.3).
 
 #### 3.3 Situação consolidada do cliente
 
 Grupos mutuamente exclusivos (decididos). **Cliente com B_Vendas é julgado só pelo B_Vendas** (decidido em 24/09/2026, depois de ver o card com dados reais: com todos os sistemas eram 21 em dia, 245 desatualizados e 103 pendentes, de 369). Sem B_Vendas, valem as regras abaixo sobre todos os sistemas:
 
 1. **Desatualizado:** existe sistema atualizável com versão recebida **anterior** à oficial (ou, sem versão registrada, atendido antes da data da oficial).
-2. **Verificação pendente:** não há atraso confirmado, mas algum sistema atualizável nunca teve atendimento, não tem oficial cadastrada ou tem data de atendimento inválida.
-3. **Em dia:** possui ao menos um sistema atualizável e todos têm versão recebida **igual ou posterior** à oficial (ou, sem versão registrada, atendimento na data da oficial ou depois).
+2. **Verificação pendente:** não há atraso confirmado, mas algum sistema atualizável nunca teve atualização, não tem oficial cadastrada ou tem data de atualização inválida.
+3. **Em dia:** possui ao menos um sistema atualizável e todos têm versão recebida **igual ou posterior** à oficial (ou, sem versão registrada, atualização na data da oficial ou depois).
 4. **Sem sistemas atualizáveis:** possui apenas fixos ou nenhum sistema; fica fora do denominador de cobertura.
 
 Comparação por data, não por igualdade de texto. Hoje `matrizVersoes.js` usa `instalada === versaoAtiva`, o que marca como atrasado um cliente à frente da oficial (versão de teste, oficial rebaixada). Recebida posterior à oficial conta como Em dia. Versão em formato que não se converte em data é tratada como versão ausente (regra "pela data" abaixo).
 
-**Fonte da versão recebida (decidido):** somente a versão registrada em atendimento. O que o agente reporta não entra na classificação; aparece separado, com origem identificada (ver 9.3). Hoje a ficha deixa o agente sobrepor o atendimento (`matrizVersoes.js`, `agente?.ultimaVersao || versaoRegistrada(...)`) e casa agente com cliente por CNPJ/nome; isso deixa de afetar a situação.
+**Fonte da versão recebida (decidido):** somente a versão registrada em atualização. O que o agente reporta não entra na classificação; aparece separado, com origem identificada (ver 9.3). Hoje a ficha deixa o agente sobrepor a atualização (`matrizVersoes.js`, `agente?.ultimaVersao || versaoRegistrada(...)`) e casa agente com cliente por CNPJ/nome; isso deixa de afetar a situação.
 
 Nunca atualizado continua como detalhe por sistema. No consolidado, falta de evidência entra em Verificação pendente. Cliente com atraso confirmado e outro sistema sem informação conta uma vez em Desatualizado; a falta de informação aparece como detalhe secundário.
 
-**Medido em 24/09/2026 (E0), numa cópia do banco de produção:** com a regra estrita, 21 desatualizados, 348 pendentes e 0 em dia, de 369 clientes. Havia 1.275 sistemas com atendimento sem versão, registrados antes de existir a versão oficial. **Decidido: atendimento sem versão é julgado pela data** do atendimento contra a data da oficial, marcado "(pela data)" na tela. A versão recebida continua "Não informada": nada é gravado retroativamente. A ação "confirmar versão atual" deixou de ser pré-requisito. Detalhes na [decisão ADR-0008](#adr-0008).
+**Medido em 24/09/2026 (E0), numa cópia do banco de produção:** com a regra estrita, 21 desatualizados, 348 pendentes e 0 em dia, de 369 clientes. Havia 1.275 sistemas com atualização sem versão, registrados antes de existir a versão oficial. **Decidido: atualização sem versão é julgado pela data** da atualização contra a data da oficial, marcado "(pela data)" na tela. A versão recebida continua "Não informada": nada é gravado retroativamente. A ação "confirmar versão atual" deixou de ser pré-requisito. Detalhes na [decisão ADR-0008](#adr-0008).
 
 - [x] Compartilhar regra no servidor entre Resumo, Sistemas, situação do cliente e relatório do cliente (`services/situacaoVersao.js`).
-- [x] Matriz da ficha revisada em E7: telemetria de agentes em bloco próprio sem sobrepor atendimento, e classificação de sistemas atualizáveis obtida da regra oficial do servidor/ADR-0008 (25/09/2026).
+- [x] Matriz da ficha revisada em E7: telemetria de agentes em bloco próprio sem sobrepor atualização, e classificação de sistemas atualizáveis obtida da regra oficial do servidor/ADR-0008 (25/09/2026).
 - [x] Retornar totais de clientes, elegíveis e fora da avaliação.
 - [x] Garantir soma correta, sem duplicar cliente com vários sistemas.
 - [x] Usar IDs e relacionamentos normalizados atuais, sem novas junções por nome livre.
 - [x] Aproveitar cópias de versões já existentes, sem mecanismo concorrente.
 - [x] Comparar versões como datas; recebida posterior à oficial conta Em dia.
-- [x] Classificar só pela versão do atendimento; agente fica fora da regra.
+- [x] Classificar só pela versão da atualização; agente fica fora da regra.
 - [x] Testar oficial alterada, recebida à frente, formato não comparável, versões ausentes, vários sistemas, fixos e legados (`server/tests/situacaoVersao.test.js`).
 
 ### 4. Identidade visual e nome principal — I01
@@ -2295,7 +2295,7 @@ O cabeçalho anterior misturava ATUALIZADOR e Gestor de clientes, deixando incer
 | Quadrado do símbolo | Fundo `--cor-accent` e desenho `--cor-sobre-accent`, no CSS. Nunca fundo embutido no desenho. |
 | Barra lateral aberta | Símbolo 34 px (desenho 24 px) + "Gestor de / Atualizações" em duas linhas, Sora extra 16 px. Sem descritor. |
 | Barra recolhida | Só o símbolo. |
-| Login (tela larga) | Símbolo 48 px, nome numa linha em `--txt-xl`, e a linha "Bredas Sistemas · Atualizações e atendimento dos clientes, num só lugar." |
+| Login (tela larga) | Símbolo 48 px, nome numa linha em `--txt-xl`, e a linha "Bredas Sistemas · Atualizações e atualização dos clientes, num só lugar." |
 | Login (celular) | Símbolo 44 px no cartão; subtítulo "Gestor de Atualizações". |
 | Aba do navegador | "‹Tela› · Gestor de Atualizações"; `favicon.svg`, com `favicon.png` (64 px) como reserva e para as notificações. |
 | O que não usar | "ATUALIZADOR" como nome do painel: é o nome do agente. |
@@ -2316,15 +2316,15 @@ Substituir a rosca genérica por um card **Atualização dos clientes**, com bar
 - [x] Mostrar até três sistemas com mais clientes desatualizados e Ver todos.
 - [x] Estado vazio orienta cadastro quando não há clientes e vínculo/classificação quando só há clientes fora da avaliação; todos pendentes recebem orientação própria.
 - [x] Não mostrar 100% em dia quando não houver clientes elegíveis.
-- [x] Não misturar falha/offline de agente com versão registrada em atendimento.
+- [x] Não misturar falha/offline de agente com versão registrada em atualização.
 - [x] Conferir que a população aberta pelo clique corresponde à contagem (verificado no navegador com dados sintéticos).
 
-#### 5.2 Sem atendimento há mais de 60 dias
+#### 5.2 Sem atualização há mais de 60 dias
 
-- [x] Renomear indicador para **Sem atualização há mais de 60 dias** (a equipe preferiu "atualização" a "atendimento"), usando o prazo configurado, e o texto da regra na Administração.
-- [x] Separar Nunca atendidos de clientes com atendimento antigo (vêm primeiro na lista, com "Nunca").
+- [x] Renomear indicador para **Sem atualização há mais de 60 dias** (a equipe preferiu "atualização" a "atualização"), usando o prazo configurado, e o texto da regra na Administração.
+- [x] Separar Nunca atendidos de clientes com atualização antiga (vêm primeiro na lista, com "Nunca").
 - [x] Corrigir destino do clique: hoje abre Sistemas sem reproduzir o conjunto contado.
-- [x] Abrir lista com cliente, último atendimento e dias; responsável somente se houver fonte definida.
+- [x] Abrir lista com cliente, última atualização e dias; responsável somente se houver fonte definida.
 - [x] Remover fundo escuro arredondado do ícone de alerta.
 - [x] Usar ícone simples e cor discreta, coerente com os demais indicadores.
 - [x] Não tratar acompanhamento preventivo como falha crítica do sistema. Verificado: nenhuma palavra "falha"/"crítico" ligada ao indicador; o sino de notificações (`domain/notificacoes.js`) nem inclui "sem atualização" entre os avisos, só agendamentos atrasados e agentes.
@@ -2353,7 +2353,7 @@ Aceite: 0, 1, 2, 6 e 12 meses; série zerada; máximo 121; máximo no primeiro/�
 
 Validação E4: testes de banco cobrem virada de ano, meses sem registro, data futura e comparação de mês de 31 dias com anterior de 30. No navegador, cenários de 0/1/2/6/12 pontos, série zerada, máximo 121 nas pontas, zero alternado com picos, foco e setas do teclado, larguras 390/768/1280/1440 px e sidebar aberta/recolhida.
 
-**Ajuste após E4 (25/09/2026):** por decisão do usuário, a seção expansível “Ver valores dos 12 meses” foi removida; o gráfico ocupa a altura disponível no card, mantendo tooltip por mouse, toque e teclado. Os textos visíveis do painel, relatórios e exportação passaram a usar “atualização” em vez de “atendimento”. Os nomes internos e registros históricos permanecem intactos.
+**Ajuste após E4 (25/09/2026):** por decisão do usuário, a seção expansível “Ver valores dos 12 meses” foi removida; o gráfico ocupa a altura disponível no card, mantendo tooltip por mouse, toque e teclado. Os textos visíveis do painel, relatórios e exportação passaram a usar “atualização” em vez de “atualização”. Os nomes internos e registros históricos permanecem intactos.
 
 Na consulta por sistema, a coluna “Oficial” foi retirada da tabela porque a versão oficial do sistema selecionado já aparece acima dela. A coluna da data passou a se chamar “Última atualização”.
 
@@ -2413,9 +2413,9 @@ A prévia da importação pode ser entrega posterior: reposicionar botões não 
 
 Relatório por período, cópia, impressão/PDF e Excel formatado já existem. Melhorar acesso e apresentação, sem reconstruir recursos equivalentes.
 
-- [x] Trocar select por abas curtas: Atendimento e Cliente (25/09/2026).
+- [x] Trocar select por abas curtas: Atualização e Cliente (25/09/2026).
 - [x] Período permanece entrada própria, utilizável sem selecionar um cliente (25/09/2026).
-- [x] Não oferecer Atendimento sem registro selecionado (25/09/2026).
+- [x] Não oferecer Atualização sem registro selecionado (25/09/2026).
 - [x] Cabeçalho informa contexto e oferece fechar de forma discreta (25/09/2026).
 - [x] Prévia rolável com rodapé estável: Copiar e Imprimir/Salvar PDF (25/09/2026).
 - [x] Filtro de histórico somente na aba Cliente, recolhido inicialmente (25/09/2026).
@@ -2513,12 +2513,12 @@ Cadastro, Sistemas e Acessos já existem como subabas. O foco deve ser hierarqui
 - [x] Cabeçalho com nome, código e cidade; grupo apenas quando preenchido (25/09/2026).
 - [x] Remover CNPJ do subtítulo e dos campos da ficha (25/09/2026).
 - [x] Não remover identificação por CNPJ dos agentes em Distribuição: é outro uso (25/09/2026).
-- [x] Resumo compacto: último atendimento, sistemas desatualizados e informação pendente (25/09/2026).
+- [x] Resumo compacto: última atualização, sistemas desatualizados e informação pendente (25/09/2026).
 - [x] Compartilhar comparação de versões com Sistemas e relatório do cliente (25/09/2026).
 - [x] Separar componentes fixos dos sistemas atualizáveis (25/09/2026).
 - [x] Não confundir versão publicada do agente com oficial do histórico operacional (25/09/2026).
-- [x] Quando houver dados do agente, mostrar em bloco próprio (versão reportada, último contato, falha), sem alterar a situação do sistema, que vem só do atendimento (25/09/2026).
-- [x] Histórico cronológico com observações expansíveis e relatório do atendimento (25/09/2026).
+- [x] Quando houver dados do agente, mostrar em bloco próprio (versão reportada, último contato, falha), sem alterar a situação do sistema, que vem só da atualização (25/09/2026).
+- [x] Histórico cronológico com observações expansíveis e relatório da atualização (25/09/2026).
 - [x] Acrescentar próximos agendamentos se puder reutilizar consulta existente; caso contrário, entregar depois (25/09/2026).
 - [x] Acessos por máquina em lista compacta com cópia individual (25/09/2026).
 - [x] Estados vazios curtos, sem vários campos preenchidos com travessões (25/09/2026).
@@ -2526,7 +2526,7 @@ Cadastro, Sistemas e Acessos já existem como subabas. O foco deve ser hierarqui
 
 Aceite: nome longo, sem grupo, sem sistemas, apenas fixos, sem histórico, vários acessos e histórico extenso.
 
-**Revisto em 28/09/2026 (decisão do usuário):** o resumo compacto ficou só com **Última atualização** (o rótulo dizia "Último atendimento"); o cartão Situação dos sistemas saiu, porque repetia a Matriz de Versões.
+**Revisto em 28/09/2026 (decisão do usuário):** o resumo compacto ficou só com **Última atualização** (o rótulo dizia "Última atualização"); o cartão Situação dos sistemas saiu, porque repetia a Matriz de Versões.
 
 ### 10. Sistemas e versões oficiais — I16
 
@@ -2540,10 +2540,10 @@ Abaixo, referência de leitura: `Versão oficial de B_NFe: 22/09/2026`. Edição
 
 - [x] Situação: Todos, Em dia, Desatualizados, Sem informação.
 - [x] Busca por cliente/cidade sem alterar versão.
-- [x] Oferecer Último atendimento antes de em Filtros, com data opcional. Sem atendimento fica fora desse recorte de data; aparece em Sem informação quando não há data aplicada.
-- [x] A data filtra o atendimento; não substitui a oficial usada na classificação de versão.
+- [x] Oferecer Última atualização antes de em Filtros, com data opcional. Sem atualização fica fora desse recorte de data; aparece em Sem informação quando não há data aplicada.
+- [x] A data filtra a atualização; não substitui a oficial usada na classificação de versão.
 - [x] Retirar ambiguidade atual: a consulta não tem ação de salvar referência.
-- [x] Colunas: Cliente, Último atendimento, Versão recebida, Oficial e Situação; cidade secundária.
+- [x] Colunas: Cliente, Última atualização, Versão recebida, Oficial e Situação; cidade secundária.
 - [x] Abrir ficha na linha para investigar pendência.
 - [x] Excluir fixos da seleção principal de controle.
 - [x] Preservar filtros ao voltar, buscando a referência oficial atual a cada entrada.
@@ -2553,16 +2553,16 @@ Abaixo, referência de leitura: `Versão oficial de B_NFe: 22/09/2026`. Edição
 - [x] Uma linha por sistema atualizável, com versão salva.
 - [x] Mostrar autor/data da alteração quando disponíveis; a migração versionada 3 acrescenta as duas colunas também aos bancos existentes. Referências antigas mostram autor/data não registrados.
 - [x] Edição explícita por linha com Salvar/Cancelar e validação de data.
-- [x] Explicar: novos atendimentos usam a oficial; os existentes preservam versões recebidas.
+- [x] Explicar: novos atualizações usam a oficial; os existentes preservam versões recebidas.
 - [x] Referência ausente não implica Em dia (`Sem referência` no servidor).
 - [x] Preservar papéis atuais de gravação; consulta apenas visualiza.
 - [x] Invalidar os dados locais de Resumo, Sistemas, Consulta e relatórios após mudança.
 - [x] Detectar edição concorrente antes de sobrescrever uma oficial alterada por outra pessoa (comparação atômica com a referência anterior; HTTP 409).
 - [x] Fechar painel ou trocar seleção não grava alterações.
 
-Aceite: filtro nunca grava; salvar não reescreve atendimento; sistemas aceitam oficiais diferentes; limpar oficial não torna todos os clientes atualizados.
+Aceite: filtro nunca grava; salvar não reescreve atualização; sistemas aceitam oficiais diferentes; limpar oficial não torna todos os clientes atualizados.
 
-**Validado em E3 (25/09/2026):** testes de API cobrem autoria, referência anterior obrigatória e conflito HTTP 409; os testes de serviço cobrem filtro de atendimento sem substituir a oficial e preservação da versão recebida. No navegador, em 1280 e 390 px, o filtro não enviou PUT, a edição atualizou a referência mostrada, não houve erro de JavaScript nem rolagem horizontal.
+**Validado em E3 (25/09/2026):** testes de API cobrem autoria, referência anterior obrigatória e conflito HTTP 409; os testes de serviço cobrem filtro de atualização sem substituir a oficial e preservação da versão recebida. No navegador, em 1280 e 390 px, o filtro não enviou PUT, a edição atualizou a referência mostrada, não houve erro de JavaScript nem rolagem horizontal.
 
 ### 11. Usuários e Administração — I17, I18
 
@@ -2637,7 +2637,7 @@ Substitui a proposta anterior da Central de pendências. Permite criar metas tem
 
 - [x] Nova aba no menu lateral: **Campanhas** (ícone de bandeira), no grupo Distribuição, depois de Sistemas, para não mudar o Alt+N das abas existentes. A partir da 10ª aba não há atalho numérico, e a aba deixou de anunciar um "Alt+10" que não existia.
 - [x] Criação de campanha: sistema, versão-alvo (dd/mm/aaaa), prazo limite opcional e título/descrição. A versão-alvo vem sugerida com a oficial atual do sistema. Sistemas fixos e fora do catálogo são recusados.
-- [x] Reconhecimento automático via atendimentos: o último atendimento do cliente no sistema passa por `situacaoDoSistema` contra a versão-alvo (ADR-0008, inclusive "pela data" quando o atendimento não tem versão). Não existe baixa manual.
+- [x] Reconhecimento automático via atualizações: a última atualização do cliente no sistema passa por `situacaoDoSistema` contra a versão-alvo (ADR-0008, inclusive "pela data" quando a atualização não tem versão). Não existe baixa manual.
 - [x] Imutabilidade da meta: a versão-alvo é copiada na criação; editar a campanha muda só título, descrição e prazo, e uma oficial nova em Sistemas não altera a meta.
 - [x] Painel visual executivo: barra de progresso com atendidos, já agendados e pendentes (mesmas cores do card de situação do Resumo), contagens e percentual. Sem clientes, mostra "—" em vez de 0% ou 100%.
 - [x] Tabela de clientes com filtros rápidos (Pendentes, Já agendados, Concluídos, Todos), cada um com a contagem, e busca por nome, código ou cidade.
@@ -2656,7 +2656,7 @@ Uma aba dedicada pode reunir período, cliente, sistema e responsável, com filt
 
 #### 13.3 Qualidade dos cadastros
 
-Recomendação: seção em Dados, não nova aba principal. Listar clientes sem sistemas, atendimentos sem versão, sistemas sem oficial e possíveis duplicidades. Correção deve mostrar os registros envolvidos; não consolidar ou excluir automaticamente por semelhança de nomes.
+Recomendação: seção em Dados, não nova aba principal. Listar clientes sem sistemas, atualizações sem versão, sistemas sem oficial e possíveis duplicidades. Correção deve mostrar os registros envolvidos; não consolidar ou excluir automaticamente por semelhança de nomes.
 
 #### 13.4 Preferências e notificações — adiadas da seção 12
 
@@ -2665,7 +2665,7 @@ Recomendação: seção em Dados, não nova aba principal. Listar clientes sem s
 - [x] Tipos de evento, minhas tarefas/equipe, som opcional. O sino tem um interruptor por tipo (agendamentos atrasados, de hoje, situação dos agentes) e o escopo "Da equipe / Só as minhas"; o que fica desligado some do sino **e** do contador no título da aba, que somam a mesma lista (`montarNotificacoes` com filtro). "Minha" tarefa é decidida por `ehResponsavel` (domain/pessoa.js): sem caixa nem acento, e o primeiro nome da tarefa casa com o nome completo da conta ("Antonio" × "Antonio Salomão"), mas "Ana" não casa com "Anabela". Som opcional (desligado por padrão): toque curto gerado no navegador, sem arquivo, quando o número de pendências não vistas **cresce** ou chega falha de agente — não a cada ciclo.
 - [x] Horário silencioso. Intervalo de meia em meia hora que pode virar a noite (19:00–07:00); início igual ao fim não silencia nada; o fim é exclusivo. Fuso: o relógio deste computador, mostrado na tela ("America/Sao_Paulo"), sem conversão. Evento crítico: falha de agente, que por padrão aparece mesmo no silêncio (sem som); desligando isso, as falhas do período viram **um** aviso-resumo quando o silêncio acaba (mensagens acumuladas). O sino continua contando no silêncio.
 - [x] Estado real da permissão de notificação: linha própria em Notificações do sistema, relida do navegador (e do evento de mudança, quando o navegador oferece), com os quatro casos — permitidas, bloqueadas (com o caminho para liberar pelo cadeado), ainda não pedidas e indisponível (HTTP sem HTTPS).
-- [x] Preferências de relatório: aba com que o relatório abre (Atualização ou Cliente, quando a tela oferece as duas) e "Fechar o relatório depois de copiar". Nenhuma mexe no conteúdo: o formato do chamado (7.3) não virou editor. A aba "Atendimento" do relatório passou a se chamar "Atualização".
+- [x] Preferências de relatório: aba com que o relatório abre (Atualização ou Cliente, quando a tela oferece as duas) e "Fechar o relatório depois de copiar". Nenhuma mexe no conteúdo: o formato do chamado (7.3) não virou editor. A aba "Atualização" do relatório passou a se chamar "Atualização".
 - [x] Persistência por usuário no servidor, validação de chaves e migração das preferências locais. Persistência e migração já existiam. Nova: o servidor recusa nome de chave fora do formato (inclusive `__proto__`) e confere o valor das chaves que mudam comportamento (horários na grade de meia hora, listas fechadas, sim/não). O cliente deixa de enviar chave antiga fora do formato, para uma chave estranha não travar a sincronização das outras.
 - [x] Não acrescentar idioma/fuso decorativos: nenhum seletor de idioma ou fuso foi criado; o horário silencioso usa o relógio local e só informa qual é.
 
@@ -2690,15 +2690,15 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E10 | ✅ Validação visual completa, README/ajuda, CHANGELOG (25/09/2026) | — | Todas | Pequeno |
 | E11 | ✅ Campanhas de atualização (aba no menu lateral, metas de versão e progresso) e fechamento das pendências das seções 6 e 7.2 (28/09/2026) | I20, I06, I08 | E2, E4, E6 | Médio |
 
-E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída decidida foi julgar pela data o atendimento sem versão (3.3), e não criar a ação de confirmar versão.
+E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída decidida foi julgar pela data a atualização sem versão (3.3), e não criar a ação de confirmar versão.
 
 #### Checklist mestre
 
 - [x] E0 — contagem por grupo com dados reais (24/09/2026).
 - [x] E1 — alerta sem fundo escuro, borda em Excluir, remover Converter, recuperar Arquivar, Último acesso capitalizado.
-- [x] E2 — `controla_versao`, exclusões dos fixos, classificação só por admin, comparação por data, fonte só atendimento e regra única no servidor; ADR-0008. Validados API, histórico e gráfico mensal.
+- [x] E2 — `controla_versao`, exclusões dos fixos, classificação só por admin, comparação por data, fonte só atualização e regra única no servidor; ADR-0008. Validados API, histórico e gráfico mensal.
 - [x] E3 — consulta com filtros próprios e gerenciador de oficiais separado, com autoria e proteção contra edição concorrente.
-- [x] E4 — Resumo com card de situação, Sem atendimento e tendência de 12 meses, unidade explícita e comparação parcial justa.
+- [x] E4 — Resumo com card de situação, Sem atualização e tendência de 12 meses, unidade explícita e comparação parcial justa.
 - [x] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados (25/09/2026).
 - [x] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto (25/09/2026).
 - [x] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado (25/09/2026).
@@ -2714,16 +2714,16 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 #### Regras e dados
 
 - [x] NFe recebido em 22/09 fica atrasado após oficial 24/09 sem reescrever histórico.
-- [x] Novo atendimento recebe a oficial; editar observação preserva a recebida.
+- [x] Nova atualização recebe a oficial; editar observação preserva a recebida.
 - [x] Cliente somente com fixos não entra na fila nem no denominador de versões.
 - [x] Cliente com vários sistemas conta uma vez na situação consolidada.
 - [x] Informação ausente não produz Em dia.
 - [x] Recebida posterior à oficial conta Em dia; formato não comparável vai para Verificação pendente.
 - [x] Versão reportada pelo agente não altera a situação do cliente.
-- [x] Tempo sem atendimento não altera situação de versão.
+- [x] Tempo sem atualização não altera situação de versão.
 - [x] Meses vazios aparecem; clique e indicador têm a mesma população.
 - [x] Exportação e relatório incluem todas as páginas do recorte.
-- [x] Alteração no catálogo invalida telas afetadas, preservando atendimentos.
+- [x] Alteração no catálogo invalida telas afetadas, preservando atualizações.
 - [x] Migrações preservam vínculos, são idempotentes e têm recuperação documentada.
 
 #### Interação
@@ -2790,7 +2790,7 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 | Decisão | Resultado |
 |---|---|
 | Recebida mais nova que a oficial | Em dia; desatualizado só quando anterior à oficial |
-| Fonte da versão para a situação | Só o atendimento; agente aparece separado |
+| Fonte da versão para a situação | Só a atualização; agente aparece separado |
 | Escopo de Configurações/Administração | Só reorganizar na seção 12; as novidades vieram depois, na 13.4 |
 | Central de pendências | Substituída por Campanhas de Atualização (E11, aba no menu lateral) |
 | Situação no Resumo | Barra e totais clicáveis, substituindo a rosca (E4) |
@@ -2800,9 +2800,9 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 | Duplicidade na importação | Avisada na prévia e pulada por padrão; importar mesmo assim é escolha explícita (28/09/2026) |
 | Campanha: quem entra e quem está atendido | Clientes ao vivo do cadastro; atendido pela regra da ADR-0008 contra a versão-alvo; sem baixa manual (ADR-0009) |
 | Nome/símbolo | Gestor de Atualizações, assinatura Bredas Sistemas; símbolo vetorial (seção 4) |
-| Atendimento sem versão registrada | Julgado pela data do atendimento contra a da oficial (ADR-0008) — desde 29/09/2026, todo atendimento é julgado assim |
+| Atualização sem versão registrada | Julgado pela data da atualização contra a da oficial (ADR-0008) — desde 29/09/2026, toda atualização é julgada assim |
 | Quem decide a situação do cliente | O B_Vendas, quando o cliente tem (fixo no código); sem ele, todos os sistemas |
-| Nome do indicador de tempo | "Sem atualização há mais de N dias" (não "atendimento") |
+| Nome do indicador de tempo | "Sem atualização há mais de N dias" (não "atualização") |
 | Sistemas fixos agora | Classificação, exclusões, tela administrativa e API concluídas em E2 |
 
 #### Em aberto

@@ -69,7 +69,7 @@ test("AtualizacaoRepository - ordenação por data", async (t) => {
 
     await t.test("registro sem data não some da lista", () => {
       // Quase metade do histórico importado de planilha não tem data. Sumir
-      // da listagem seria perder o registro do atendimento na prática.
+      // da listagem seria perder o registro da atualização na prática.
       inserir(env.db, { cliente: "SemData", data: "" });
       const { rows, total } = env.db.atualizacoes.list();
       assert.equal(total, 4);

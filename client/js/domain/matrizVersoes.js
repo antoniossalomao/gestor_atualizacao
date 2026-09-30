@@ -90,7 +90,7 @@ export function montarMatrizVersoes(cliente, historico, painelVersoes) {
 
       // O que o agente reportou ganha do que alguém digitou à mão: é o que
       // está de fato rodando na máquina. `histReg.versao` é o resumo de TODOS
-      // os sistemas daquele atendimento (ex.: "B_Vendas: 1; B_NFe: 2") -- pega
+      // os sistemas daquela atualização (ex.: "B_Vendas: 1; B_NFe: 2") -- pega
       // a versão deste sistema específico, não a string inteira.
       const instalada = agente?.ultimaVersao || versaoRegistrada(histReg, sistema) || null;
 

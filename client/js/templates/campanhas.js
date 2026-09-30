@@ -119,7 +119,7 @@ export function celulaClienteCampanha(row) {
   return html`<span class="campanha__cliente">${row.nome}${apoio ? html`<small>${apoio}</small>` : ""}</span>`;
 }
 
-/** Data do último atendimento no sistema, com a versão recebida embaixo. */
+/** Data da última atualização no sistema, com a versão recebida embaixo. */
 export function celulaUltimaCampanha(row) {
   if (!row.ultima) return html`<span class="campanha__cliente">Nunca</span>`;
   return html`<span class="campanha__cliente">${row.ultima}<small>versão ${row.versaoRecebida || "não informada"}</small></span>`;

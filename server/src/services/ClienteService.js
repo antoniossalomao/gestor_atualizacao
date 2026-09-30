@@ -64,7 +64,7 @@ class ClienteService {
     const { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validate(input);
     // Bloqueia nome duplicado ANTES de inserir: dois clientes com o mesmo
     // nome seriam indistinguiveis nas telas que listam por nome, e o vinculo
-    // de um atendimento digitado pelo nome escolheria um deles as cegas.
+    // de uma atualização digitada pelo nome escolheria um deles as cegas.
     if (this.db.clientes.nameExists(nome)) {
       throw new ValidationError(`Já existe um cliente chamado '${nome}'.`);
     }
@@ -80,7 +80,7 @@ class ClienteService {
     if (this.db.clientes.nameExists(nome, id)) {
       throw new ValidationError(`Já existe um cliente chamado '${nome}'.`);
     }
-    // O nome copiado nos atendimentos/agendamentos ligados acompanha o
+    // O nome copiado nas atualizações/agendamentos ligados acompanha o
     // rename dentro de ClienteRepository.update.
     const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
     if (this.db.clientes.update(id, codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo, revisaoEsperada, usuario?.nome || "", regimeTributario) === 0) {
@@ -197,7 +197,7 @@ class ClienteService {
    * cliente que o tivesse (ver SistemaRepository.remove).
    *
    * O que NÃO é tocado, de propósito: o sistema continua existindo, inativo,
-   * e os atendimentos já registrados (`atualizacao_sistemas`) e as versões
+   * e as atualizações já registradas (`atualizacao_sistemas`) e as versões
    * já publicadas (`versoes_atualizador.sistema`) continuam apontando para
    * ele. São
    * registros do que JÁ aconteceu -- uma atualização feita ano passado no

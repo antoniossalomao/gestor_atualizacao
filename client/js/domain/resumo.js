@@ -28,7 +28,7 @@ export function primeiroDiaDoMes(hoje = new Date()) {
 }
 
 /**
- * Compara atendimentos realizados até hoje com o mesmo período do mês
+ * Compara atualizações realizadas até hoje com o mesmo período do mês
  * anterior (o servidor já recorta os dois). Sem base anterior, não há %.
  *
  * @param {number} totalAtual

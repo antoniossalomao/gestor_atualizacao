@@ -59,7 +59,7 @@ test("ClienteService - cadastro", async (t) => {
 
     await t.test("nome duplicado é recusado", () => {
       // Se passasse, a Consulta e o Resumo enxergariam só um dos dois -- sem
-      // erro, sem aviso, e sem ninguém entender por que faltam atendimentos.
+      // erro, sem aviso, e sem ninguém entender por que faltam atualizações.
       assert.throws(() => env.service.create({ nome: "Mercado Central" }, USUARIO), /Já existe um cliente/);
     });
 
@@ -226,7 +226,7 @@ test("ClienteService - catálogo de sistemas", async (t) => {
     await t.test("cadastrar de novo um sistema removido reativa o mesmo, com o histórico junto", () => {
       const antes = env.db.sistemas.resolver("B_Extinto").id;
       env.service.addSistema("B_Extinto", USUARIO);
-      assert.equal(env.db.sistemas.resolver("B_Extinto").id, antes, "mesmo id: os atendimentos antigos voltam a aparecer");
+      assert.equal(env.db.sistemas.resolver("B_Extinto").id, antes, "mesmo id: as atualizações antigas voltam a aparecer");
       assert.ok(env.service.listSistemas().includes("B_Extinto"));
     });
 

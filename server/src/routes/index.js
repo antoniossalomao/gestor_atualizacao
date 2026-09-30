@@ -186,7 +186,7 @@ class ApiRouter {
     api.delete("/agendamentos/:id", requireRole("operador", "admin"), agendamentos.remove);
 
     // Campanhas: leitura para todos; criar, editar e encerrar para quem já
-    // registra atendimentos; excluir só Admin (apaga a meta e o placar).
+    // registra atualizações; excluir só Admin (apaga a meta e o placar).
     api.get("/campanhas", campanhas.list);
     api.get("/campanhas/:id", campanhas.get);
     api.get("/campanhas/:id/export", campanhas.exportXlsx);

@@ -22,10 +22,10 @@ const SITUACOES = { concluido: "Concluído", agendado: "Já agendado", pendente:
  * (server/tests/campanhas.test.js):
  *
  *  1. **Atendido é quem cumpre a meta pela regra de sempre.** O último
- *     atendimento do cliente no sistema passa por `situacaoDoSistema`
+ *     atualização do cliente no sistema passa por `situacaoDoSistema`
  *     contra a VERSÃO-ALVO (não contra a oficial de hoje): atendido na data
  *     da versão-alvo ou depois conta (ADR-0008). Não existe "dar baixa"
- *     manual -- a baixa é registrar o atendimento em Atualizações, como
+ *     manual -- a baixa é registrar a atualização em Atualizações, como
  *     sempre. Uma segunda forma de marcar concluído seria um segundo
  *     lugar para a verdade discordar do histórico.
  *  2. **A meta não anda sozinha.** A versão-alvo é copiada na criação, e
@@ -49,7 +49,7 @@ class CampanhaService {
   list(situacao = "ativas") {
     const filtro = ["ativas", "encerradas", "todas"].includes(situacao) ? situacao : "ativas";
     const agendas = this._agendasAbertas();
-    // Campanhas do mesmo sistema leem os mesmos clientes e atendimentos: uma
+    // Campanhas do mesmo sistema leem os mesmos clientes e atualizações: uma
     // consulta por SISTEMA, e não por campanha.
     const porSistema = new Map();
     return this.db.campanhas.list(filtro).map((c) => ({ ...c, ...this._placar(c, this._clientes(c, agendas, porSistema)) }));
@@ -95,7 +95,7 @@ class CampanhaService {
     return this.detalhe(campanha.id);
   }
 
-  /** Apaga só a campanha: atendimentos e tarefas criados por causa dela continuam. */
+  /** Apaga só a campanha: atualizações e tarefas criadas por causa dela continuam. */
   remove(id, usuario) {
     const campanha = this._achar(id);
     this.db.campanhas.delete(campanha.id);

@@ -65,7 +65,7 @@ async function medir(fn) {
 async function cenario([tipo, nStr, dir]) {
   const n = Number(nStr);
   if (tipo === "preparar") {
-    // Cadastra os clientes e deixa o banco com `n` atendimentos (para a exportação).
+    // Cadastra os clientes e deixa o banco com `n` atualizações (para a exportação).
     const { db, servico } = abrir(dir);
     const vendas = db.sistemas.resolver("B_Vendas").id;
     db.conn.transaction(() => {

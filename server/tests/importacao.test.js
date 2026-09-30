@@ -6,7 +6,7 @@
  *  - uma data fora do formato entrar e bagunçar ordenação e situação;
  *  - importar o mesmo arquivo duas vezes duplicar o histórico;
  *  - uma falha no meio deixar metade do lote dentro;
- *  - a planilha receber a versão oficial de HOJE num atendimento antigo.
+ *  - a planilha receber a versão oficial de HOJE numa atualização antiga.
  */
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -99,7 +99,7 @@ test("Importação - prévia e aplicação", async (t) => {
   }
 });
 
-test("Importação - não aplica a versão oficial de hoje a atendimento antigo", async () => {
+test("Importação - não aplica a versão oficial de hoje a atualização antiga", async () => {
   const env = ambiente();
   try {
     env.db.sistemas.salvarVersao("B_NFe", "01/08/2026");
@@ -148,7 +148,7 @@ test("Importação - erros de arquivo e de coluna", async (t) => {
       assert.equal(p.validas, 1);
     });
     await t.test("sem cabeçalho, vale a ordem fixa -- e a PRIMEIRA linha já é dado", async () => {
-      // Antes a leitura começava sempre na linha 2: o primeiro atendimento de
+      // Antes a leitura começava sempre na linha 2: a primeira atualização de
       // uma planilha sem cabeçalho sumia, e os dados dele apareciam como
       // "colunas ignoradas".
       const p = await env.servico.previaImportacao(await planilha([

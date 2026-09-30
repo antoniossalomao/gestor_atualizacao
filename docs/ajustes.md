@@ -24,8 +24,9 @@ Este plano é independente de `MELHORIAS.md`.
 7. **Marque o checklist** deste arquivo (`[x]`) no mesmo commit do item.
 8. **Dúvida de regra de negócio, pergunte** em vez de supor. Se um item não
    puder ser reproduzido ou fugir do que está descrito aqui, pare e relate.
-9. **Vocabulário:** nunca escreva "atendimento" em código, texto, comentário
-   ou mensagem de commit. O termo é "atualização" / "última atualização".
+9. **Vocabulário:** o termo é sempre "atualização" / "última atualização".
+   O termo antigo foi abolido em 30/09/2026 (A14) e não aparece em código,
+   texto, comentário ou mensagem de commit.
 10. **Relatório ao fim de cada fase:** o que foi feito por item, o resultado
     de `npm run check`, `npm test` e `npm run test:navegador`, e o que ficou
     pendente ou precisou de decisão.
@@ -50,7 +51,7 @@ Antes de dar um item como pronto:
 | A04 | 2 | Ajuste | Clientes sempre abre ordenado por ID crescente |
 | A05 | 2 | Ajuste | "Nova campanha" na Ação rápida |
 | A06 | 2 | Ajuste | Tabelas ocupam a altura disponível da página |
-| A14 | 2 | Termo | Trocar "atendimento" por "atualização" no projeto inteiro |
+| A14 | 2 | Termo | "Atualização" como termo único no projeto inteiro |
 | A07 | 3 | Regra + visual | Card "Atualização dos Clientes": prazo de 60 dias configurável |
 | A13 | 3 | Regra | NFCe e Consignado M2 usam a data da última atualização do B_Vendas |
 | A08 | 3 | Visual | Gráfico "Atualizações por sistema este mês" |
@@ -164,9 +165,9 @@ antes do fim da página.
 **Aceite:** não sobra faixa vazia no fim da página e não aparece rolagem
 dupla (página e tabela ao mesmo tempo).
 
-### A14 — Trocar "atendimento" por "atualização" no projeto inteiro
+### A14 — "Atualização" como termo único no projeto inteiro
 
-**Decisão (30/09/2026):** "atendimento" não existe no vocabulário da equipe.
+**Decisão (30/09/2026):** o termo antigo não existe no vocabulário da equipe.
 O registro é uma **atualização**, e a data que importa é a **última
 atualização**. A palavra não pode aparecer em lugar nenhum.
 
@@ -182,23 +183,24 @@ documentação.
 | `CHANGELOG.md` | 35 |
 | `README.md`, `CONTRIBUTING.md` | 11 |
 
-- [ ] Textos das telas, mensagens de erro e relatórios: conferir um por um.
-- [ ] Nomes internos: `semAtendimento`, `rotuloSemAtendimento`,
-      `atendimentoAntesDe` (parâmetro da rota `/atualizacoes/por-sistema`),
-      `data-role="atendimento-antes"`, `limiteAtendimento`, e o que mais
-      aparecer. Trocar para `semAtualizacao`, `atualizacaoAntesDe` etc. O
+- [x] Textos das telas, mensagens de erro e relatórios: conferir um por um.
+- [x] Nomes internos: o contador do Resumo e seu rótulo, o parâmetro de data
+      da rota `/atualizacoes/por-sistema`, o `data-role` do filtro de data de
+      Sistemas, o limite do relatório e o que mais aparecer. Passam a
+      `semAtualizacao`, `rotuloSemAtualizacao`, `atualizacaoAntesDe`,
+      `data-role="atualizacao-antes"` e `limiteAtualizacao`. O
       parâmetro da rota muda nos dois lados no mesmo commit, e a preferência
       salva no navegador (`sistemas:filtros`) passa a ler também o nome antigo.
-- [ ] Comentários: reescrever usando "atualização"/"última atualização", sem
+- [x] Comentários: reescrever usando "atualização"/"última atualização", sem
       perder o porquê que eles registram.
-- [ ] Documentação, README, CONTRIBUTING e CHANGELOG (inclusive as entradas
+- [x] Documentação, README, CONTRIBUTING e CHANGELOG (inclusive as entradas
       antigas).
-- [ ] Teste que falha se "atendimento" voltar a aparecer em `client/`,
+- [x] Teste que falha se o termo antigo voltar a aparecer em `client/`,
       `server/src/` ou `docs/` (mesmo estilo de `html-seguro.test.mjs`). Ao
       concluir o plano, esta seção deixa de citar a palavra, e o teste não
       precisa de exceção.
 
-**Aceite:** a busca por "atendimento" no repositório não retorna nada.
+**Aceite:** a busca pelo termo antigo no repositório não retorna nada.
 
 ## Fase 3 — Resumo
 

@@ -5,7 +5,7 @@
  * Erra em silêncio: um cliente contado no grupo errado não quebra tela
  * nenhuma, só faz o Resumo mentir. Os casos abaixo são os que a regra
  * anterior errava e os que a equipe decidiu (fixos fora; desde 29/09/2026,
- * tudo julgado pela data do atendimento, não pela versão recebida).
+ * tudo julgado pela data da atualização, não pela versão recebida).
  */
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -25,10 +25,10 @@ test("situacaoDoSistema", async (t) => {
     assert.deepEqual(situacaoDoSistema({ data: "10/09/2026" }, "09/09/2026"), { situacao: "Em dia" });
   });
 
-  await t.test("a versão recebida não decide mais: vale só a data do atendimento", () => {
+  await t.test("a versão recebida não decide mais: vale só a data da atualização", () => {
     // Até 29/09/2026 a recebida mandava, e isto era "Desatualizado".
     assert.equal(situacaoDoSistema({ data: "25/09/2026", versao: "22/09/2026" }, "24/09/2026").situacao, "Em dia");
-    // E uma recebida mais nova não salva um atendimento anterior à oficial.
+    // E uma recebida mais nova não salva uma atualização anterior à oficial.
     assert.equal(situacaoDoSistema({ data: "20/09/2026", versao: "25/09/2026" }, "24/09/2026").situacao, "Desatualizado");
   });
 
@@ -112,7 +112,7 @@ test("Resumo - situação dos clientes", async (t) => {
     env.cliente("Nunca Atendido", ["B_Vendas"]);
     env.cliente("Só Fixos", ["Suporte Bredas", "B_Atualizador"]);
 
-    // A oficial muda DEPOIS do atendimento do Mercado Atrasado.
+    // A oficial muda DEPOIS da atualização do Mercado Atrasado.
     env.db.sistemas.salvarVersao("B_NFe", "10/01/2026");
     const s = env.servico.resumo().situacaoClientes;
     const nomes = (grupo) => s[grupo].map((c) => c.nome);
@@ -146,7 +146,7 @@ test("Resumo - situação dos clientes", async (t) => {
       assert.deepEqual(s.sistemasMaisAtrasados, [{ sistema: "B_NFe", total: 2, clientes: 2 }]);
     });
 
-    await t.test("novo atendimento recebe a oficial e tira o cliente do atraso", () => {
+    await t.test("nova atualização recebe a oficial e tira o cliente do atraso", () => {
       env.atender("Mercado Atrasado", "B_NFe", "11/01/2026");
       const depois = env.servico.resumo().situacaoClientes;
       assert.ok(depois.em_dia.some((c) => c.nome === "Mercado Atrasado"));
@@ -156,17 +156,17 @@ test("Resumo - situação dos clientes", async (t) => {
   }
 });
 
-test("Resumo - tempo sem atendimento não é situação de versão", () => {
+test("Resumo - tempo sem atualização não é situação de versão", () => {
   const env = ambiente();
   try {
     env.db.sistemas.salvarVersao("B_Vendas", "01/01/2020");
     env.cliente("Recente Mas Atrasado", ["B_Vendas"]);
     env.atender("Recente Mas Atrasado", "B_Vendas", diasAtras(1));
-    // A oficial nova sai hoje: o atendimento de ontem gravou a de 2020.
+    // A oficial nova sai hoje: a atualização de ontem gravou a de 2020.
     env.db.sistemas.salvarVersao("B_Vendas", diasAtras(0));
 
     const resumo = env.servico.resumo();
-    assert.ok(!resumo.semAtendimento.some((c) => c.nome === "Recente Mas Atrasado"), "atendido ontem");
+    assert.ok(!resumo.semAtualizacao.some((c) => c.nome === "Recente Mas Atrasado"), "atualizado ontem");
     assert.ok(resumo.situacaoClientes.desatualizado.some((c) => c.nome === "Recente Mas Atrasado"), "mas com a versão velha");
   } finally {
     env.cleanup();
@@ -181,7 +181,7 @@ test("Resumo - parado há muito tempo pode estar em dia", () => {
     env.atender("Parado Em Dia", "B_Vendas", diasAtras(200));
 
     const resumo = env.servico.resumo();
-    assert.ok(resumo.semAtendimento.some((c) => c.nome === "Parado Em Dia"), "200 dias sem atendimento");
+    assert.ok(resumo.semAtualizacao.some((c) => c.nome === "Parado Em Dia"), "200 dias sem atualização");
     assert.ok(resumo.situacaoClientes.em_dia.some((c) => c.nome === "Parado Em Dia"), "mas nenhuma versão nova saiu desde então");
   } finally {
     env.cleanup();
