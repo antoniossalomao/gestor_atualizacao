@@ -190,8 +190,9 @@ class AtualizacaoService {
    * versão continua usando exclusivamente a referência oficial cadastrada.
    * @param {string} sistema
    * @param {string} [atualizacaoAntesDe] dd/mm/aaaa
+   * @param {Date} [hoje]
    */
-  relatorioPorSistema(sistema, atualizacaoAntesDe) {
+  relatorioPorSistema(sistema, atualizacaoAntesDe, hoje = new Date()) {
     const sistemaLimpo = (sistema || "").trim();
     if (!sistemaLimpo) throw new ValidationError("Informe o sistema.");
     const alvo = this.db.sistemas.resolver(sistemaLimpo);
@@ -205,10 +206,11 @@ class AtualizacaoService {
 
     const ultimas = new Map(this.db.atualizacoes.ultimaPorClienteNoSistema(alvo.id).map((r) => [r.cliente_id, r]));
     const resultado = [];
+    const prazo = this._prazoVersao(hoje);
     for (const { id, nome, cidade } of this.db.clientes.clientesDoSistema(alvo.id)) {
       const registro = ultimas.get(id);
       if (limiteAtualizacao && (!registro?.data || !parseData(registro.data) || parseData(registro.data) >= limiteAtualizacao)) continue;
-      const { situacao } = situacaoDoSistema(registro, oficial);
+      const { situacao } = situacaoDoSistema(registro, oficial, prazo);
       resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", oficial: oficial || "Não informada", situacao });
     }
     resultado.sort((a, b) => a.cliente.localeCompare(b.cliente, "pt-BR"));
@@ -331,7 +333,8 @@ class AtualizacaoService {
       porResponsavel: contar((r) => [r.responsavel || "Não informado"]), registros };
   }
 
-  situacaoCliente(nome) {
+  situacaoCliente(nome, hoje = new Date()) {
+    const prazo = this._prazoVersao(hoje);
     const cliente = this.db.clientes.getByNome(nome);
     const ultimas = new Map(this.db.atualizacoes.ultimaPorSistemaDoCliente(nome).map((u) => [u.sistema_id, u]));
     const catalogo = new Map(this.db.sistemas.todos().map((s) => [s.id, s]));
@@ -344,7 +347,7 @@ class AtualizacaoService {
         const contaNaSituacao = contaParaVersao(sistema);
         const oficial = contaNaSituacao ? sistema.ultima_versao || "" : "";
         const { situacao } = contaNaSituacao
-          ? situacaoDoSistema(registro, oficial)
+          ? situacaoDoSistema(registro, oficial, prazo)
           : { situacao: sistema.controla_versao ? "Sistema inativo" : "Componente fixo" };
         // `contaNaSituacao` falso = sistema fixo (B_Atualizador, Suporte
         // Bredas) ou fora do catálogo: a ficha mostra, mas ele não entra na
@@ -422,7 +425,8 @@ class AtualizacaoService {
     const mesAnteriorComparavel = this.db.atualizacoes.countForMonth(mesAnteriorStr, ateAnterior);
     const desatualizadoDias = this.regras.valor("desatualizadoDias");
     const semAtualizacao = this._clientesSemAtualizacao(hoje, desatualizadoDias);
-    const situacaoClientes = this._situacaoDosClientes();
+    const situacaoClientes = this._situacaoDosClientes(hoje);
+    const prazoVersaoDias = this.regras.valor("prazoVersaoDias");
     const porResponsavel = this.db.atualizacoes.countsByResponsavel();
     const atualizadosMesPorSistema = this._atualizadosMesPorSistema(mesStr);
     // Tendencia mensal (grafico do Resumo) e tempo medio de resolucao das
@@ -448,6 +452,9 @@ class AtualizacaoService {
       // com um número próprio: é regra da equipe, editável, e o rótulo tem
       // que contar a mesma regra que a lista acima usou.
       desatualizadoDias,
+      // O card diz o prazo que usou ("desatualizado depois de N dias da
+      // oficial"), pelo mesmo motivo do desatualizadoDias acima.
+      prazoVersaoDias,
       situacaoClientes,
       porResponsavel,
       atualizadosMesPorSistema,
@@ -465,7 +472,8 @@ class AtualizacaoService {
    * Os sistemas de um cliente são os do cadastro MAIS os que aparecem no
    * histórico dele (mesmo conjunto da ficha), tirando fixos e inativos.
    */
-  _situacaoDosClientes() {
+  _situacaoDosClientes(hoje = new Date()) {
+    const prazo = this._prazoVersao(hoje);
     const catalogo = new Map(this.db.sistemas.todos().map((s) => [s.id, s]));
     /** @type {Map<number, Map<number, {data: string, versao: string|null}>>} */
     const ultimas = new Map();
@@ -480,7 +488,7 @@ class AtualizacaoService {
       cadastro.get(c).add(s);
     }
 
-    const grupos = { desatualizado: [], pendente: [], em_dia: [], sem_atualizaveis: [] };
+    const grupos = { desatualizado: [], aguardando: [], pendente: [], em_dia: [], sem_atualizaveis: [] };
     /** Quantos clientes estão atrasados em cada sistema -- os "mais atrasados" do card. */
     const atrasosPorSistema = new Map();
     /** Quantos clientes avaliados usam cada sistema -- o "de quantos" do card. */
@@ -492,7 +500,7 @@ class AtualizacaoService {
       for (const sistemaId of ids) {
         const sistema = catalogo.get(sistemaId);
         if (!contaParaVersao(sistema)) continue;
-        const { situacao } = situacaoDoSistema(doCliente.get(sistemaId), sistema.ultima_versao);
+        const { situacao } = situacaoDoSistema(doCliente.get(sistemaId), sistema.ultima_versao, prazo);
         sistemas.push({ sistema: sistema.nome, situacao });
         clientesPorSistema.set(sistema.nome, (clientesPorSistema.get(sistema.nome) || 0) + 1);
         if (situacao === "Desatualizado") atrasosPorSistema.set(sistema.nome, (atrasosPorSistema.get(sistema.nome) || 0) + 1);
@@ -511,6 +519,11 @@ class AtualizacaoService {
         .map(([sistema, total]) => ({ sistema, total, clientes: clientesPorSistema.get(sistema) || total }))
         .sort((a, b) => b.total - a.total || a.sistema.localeCompare(b.sistema, "pt-BR")),
     };
+  }
+
+  /** O prazo depois da versão oficial (ver situacaoVersao.js, decisão 4), lido na hora. */
+  _prazoVersao(hoje) {
+    return { prazoDias: this.regras.valor("prazoVersaoDias"), hoje };
   }
 
   /**

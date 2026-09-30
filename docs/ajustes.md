@@ -231,19 +231,19 @@ todos os sistemas. Se o usuário preferir a outra, a troca é só nesse ponto.
 
 A regra de B_Vendas decidir sozinho a situação do cliente continua como está.
 
-- [ ] Nova regra em `server/src/config/regrasEquipe.js` (por exemplo
+- [x] Nova regra em `server/src/config/regrasEquipe.js` (por exemplo
       `prazoVersaoDias`, padrão 60), exibida em Administração › Regras da
       equipe. **Não** reaproveitar `desatualizadoDias`: essa regra já existe,
       também vale 60 e mede outra coisa (tempo sem nenhuma atualização).
-- [ ] Levar o prazo para `situacaoDoSistema`/`situacaoDoCliente` e criar o
+- [x] Levar o prazo para `situacaoDoSistema`/`situacaoDoCliente` e criar o
       grupo "Aguardando atualização", de cor neutra.
-- [ ] Usar a mesma regra no Resumo, em Sistemas e na Ficha, como já acontece
+- [x] Usar a mesma regra no Resumo, em Sistemas e na Ficha, como já acontece
       hoje.
-- [ ] Testes: dia 0, dia N−1, dia N, oficial sem data, prazo alterado na
+- [x] Testes: dia 0, dia N−1, dia N, oficial sem data, prazo alterado na
       Administração.
-- [ ] Redesenho do card: percentual em dia em destaque, uma barra, os totais
+- [x] Redesenho do card: percentual em dia em destaque, uma barra, os totais
       clicáveis e a lista de sistemas mais enxuta. Menos notas de rodapé.
-- [ ] Registrar a decisão na seção de ADRs da `DOCUMENTACAO_CONSOLIDADA.md`
+- [x] Registrar a decisão na seção de ADRs da `DOCUMENTACAO_CONSOLIDADA.md`
       e atualizar o comentário de `situacaoVersao.js`.
 
 **Aceite:** uma versão oficial recém-publicada não deixa ninguém vermelho

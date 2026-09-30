@@ -53,8 +53,9 @@ export function deltaTendencia(tendencia) {
  *
  * @param {ReturnType<typeof import("../domain/situacao.js").totaisSituacao>} totais
  * @param {Array<{sistema: string, total: number, clientes?: number}>} maisAtrasados clientes = quantos avaliados usam o sistema
+ * @param {number|null} [prazoDias] prazo da equipe depois da versão oficial (A07)
  */
-export function corpoSituacao(totais, maisAtrasados) {
+export function corpoSituacao(totais, maisAtrasados, prazoDias = null) {
   if (totais.avaliados === 0) {
     // Nunca "100% em dia" de um conjunto vazio; o próximo passo depende
     // de já haver clientes cadastrados ou não.
@@ -73,7 +74,7 @@ export function corpoSituacao(totais, maisAtrasados) {
       <strong class="situacao__hero">${emDia?.pct ?? 0}%</strong>
       <span class="situacao__hero-texto">
         <span>dos clientes em dia</span>
-        <small>${emDia?.total ?? 0} de ${plural(totais.avaliados, "cliente")} com sistema que controla versão</small>
+        <small>${emDia?.total ?? 0} de ${plural(totais.avaliados, "cliente")}${prazoDias != null ? ` · desatualizado ${prazoDias === 0 ? "logo depois da" : `${plural(prazoDias, "dia")} depois da`} versão oficial` : ""}</small>
       </span>
     </div>
     <div class="situacao__barra" role="img" aria-label="${descricaoBarra}">
@@ -91,10 +92,7 @@ export function corpoSituacao(totais, maisAtrasados) {
       )}
     </div>
     ${totais.foraDaAvaliacao
-      ? html`<p class="situacao__nota">${plural(totais.foraDaAvaliacao, "cliente")} fora da conta (só sistemas fixos ou nenhum).</p>`
-      : ""}
-    ${totais.grupos.find((g) => g.chave === "pendente")?.total === totais.avaliados
-      ? html`<p class="situacao__nota">Todos aguardam verificação. Abra a lista acima para ver o que falta; as referências oficiais ficam em Versões oficiais na aba Sistemas.</p>`
+      ? html`<p class="situacao__nota">${plural(totais.foraDaAvaliacao, "cliente")} fora da conta (sem sistema que controle versão).</p>`
       : ""}
     ${top.length
       ? html`

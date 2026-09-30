@@ -13,7 +13,7 @@ import { FormularioRegras } from "./FormularioRegras.js";
  * Todas as definições aqui afetam o comportamento e cálculos de toda a equipe.
  */
 export class OperacaoAdmin extends FormularioRegras {
-  nomes = ["desatualizadoDias", "agendamentoArquivarDias"];
+  nomes = ["prazoVersaoDias", "desatualizadoDias", "agendamentoArquivarDias"];
 
   constructor(container, api, ctx) {
     super(container, api, ctx);
@@ -37,6 +37,15 @@ export class OperacaoAdmin extends FormularioRegras {
           ${tituloCartao({
             titulo: "Prazos e arquivamento",
             descricao: "Regras de tempo que afetam o Resumo e a fila de Agendamentos.",
+          })}
+          ${linhaRegraNumero({
+            nome: "prazoVersaoDias",
+            titulo: "Desatualizado depois da versão oficial",
+            ajuda: "Conta da data da versão oficial. Antes do prazo, quem ainda não recebeu a versão fica \"Aguardando atualização\"; depois, \"Desatualizado\". Vale no Resumo, em Sistemas e na ficha do cliente. 0 = desatualizado já no dia seguinte.",
+            unidade: "dias",
+            valor: valores.prazoVersaoDias,
+            min: d.prazoVersaoDias.min,
+            max: d.prazoVersaoDias.max,
           })}
           ${linhaRegraNumero({
             nome: "desatualizadoDias",

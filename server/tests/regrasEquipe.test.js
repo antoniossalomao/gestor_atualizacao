@@ -111,7 +111,7 @@ test("Regras - leitura e gravação pelo serviço", async (t) => {
   await t.test("conta comum lê só as públicas -- nada de webhook nem URL", () => {
     env.regras.atualizar(ADMIN, { discordWebhookUrl: WEBHOOK });
     const publicas = env.regras.ler();
-    assert.deepEqual(Object.keys(publicas).sort(), ["agendamentoArquivarDias", "atualizadorHabilitado", "desatualizadoDias"]);
+    assert.deepEqual(Object.keys(publicas).sort(), ["agendamentoArquivarDias", "atualizadorHabilitado", "desatualizadoDias", "prazoVersaoDias"]);
     assert.ok(!JSON.stringify(publicas).includes("segredo-do-canal"));
   });
 
@@ -257,6 +257,30 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
       resumo = atualizacoes.resumo();
       assert.equal(resumo.desatualizadoDias, 30, "a tela escreve o rótulo com este número");
       assert.ok(resumo.semAtualizacao.some((c) => c.nome === "Mercado X"), "40 dias > 30");
+    } finally {
+      env.cleanup();
+    }
+  });
+
+  await t.test("Resumo: o prazo depois da versão oficial muda as contagens do card (A07)", () => {
+    const env = ambiente();
+    try {
+      const atualizacoes = new AtualizacaoService(env.db, env.historico, { notifyAtualizacao: async () => {} }, env.regras);
+      atualizacoes.create({ cliente: "Mercado X", sistema: "B_Vendas", data: "01/09/2026" }, null);
+      // Cadastrado com o B_Vendas: a aba Sistemas lista só quem tem o sistema no cadastro.
+      env.db.clientes.insert("C1", "Mercado X", "", [env.db.sistemas.resolver("B_Vendas").id], "");
+      env.db.sistemas.salvarVersao("B_Vendas", "10/09/2026");
+      const hoje = new Date(2026, 9, 10); // 30 dias depois da oficial
+
+      let resumo = atualizacoes.resumo(hoje);
+      assert.equal(resumo.prazoVersaoDias, 60, "o card escreve o prazo com este número");
+      assert.ok(resumo.situacaoClientes.aguardando.some((c) => c.nome === "Mercado X"), "30 dias < 60: aguardando");
+
+      env.regras.atualizar(ADMIN, { prazoVersaoDias: 20 });
+      resumo = atualizacoes.resumo(hoje);
+      assert.ok(resumo.situacaoClientes.desatualizado.some((c) => c.nome === "Mercado X"), "30 dias > 20: desatualizado");
+      assert.equal(atualizacoes.relatorioPorSistema("B_Vendas", "", hoje)[0].situacao, "Desatualizado", "a aba Sistemas usa o mesmo prazo");
+      assert.equal(atualizacoes.situacaoCliente("Mercado X", hoje)[0].situacao, "Desatualizado", "a ficha também");
     } finally {
       env.cleanup();
     }

@@ -5,6 +5,7 @@ export function filtrarClientesDoSistema(rows, situacao = "Todos", busca = "") {
   return rows.filter((row) => {
     const passaSituacao = situacao === "Todos" ||
       (situacao === "Em dia" && row.situacao === "Em dia") ||
+      (situacao === "Aguardando atualização" && row.situacao === "Aguardando atualização") ||
       (situacao === "Desatualizados" && row.situacao === "Desatualizado") ||
       (situacao === "Sem informação" && ["Nunca atualizado", "Sem referência", "Sem informação"].includes(row.situacao));
     return passaSituacao && (!termo || normalizar(`${row.cliente} ${row.cidade}`).includes(termo));

@@ -328,7 +328,7 @@ export class ConsultaView extends View {
     const container = this.detailBox.querySelector('[data-role="versao-matriz"]');
     const fixos = situacaoSistemas.filter((s) => s.fixo);
     const nomesFixos = new Set(fixos.map((s) => s.sistema.toLocaleLowerCase("pt-BR")));
-    const linhas = montarMatrizVersoes(cliente, historico, painelVersoes)
+    const linhas = montarMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas)
       .filter((linha) => !nomesFixos.has(linha.sistema.toLocaleLowerCase("pt-BR")));
 
     if (linhas.length === 0 && fixos.length === 0) {

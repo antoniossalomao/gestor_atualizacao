@@ -5355,6 +5355,8 @@ hr.separator {
 .is-boa { --situacao-cor: var(--severidade-boa); }
 .is-alta { --situacao-cor: var(--severidade-alta); }
 .is-media { --situacao-cor: var(--cor-amarelo); }
+/* Aguardando atualização (A07): cinza, não amarelo -- ainda dentro do prazo. */
+.is-neutra { --situacao-cor: var(--cor-texto-fraco); }
 .situacao__parte,
 .situacao__marca {
   background: var(--situacao-cor);

@@ -1221,6 +1221,7 @@ escolha deliberada — e reintroduz o problema que ela evitava.
 | [4.11](#adr-0010) | Somente HTTPS na rede, com Caddy na frente | Aceita |
 | [4.12](#adr-0011) | Proteção CSRF por token de sessão | Aceita |
 | [4.13](#adr-0012) | Testes de navegador pelo protocolo do Chrome | Aceita |
+| [4.14](#adr-0013) | Prazo depois da versão oficial antes de "desatualizado" | Aceita |
 
 **Como escrever um novo:** copie a estrutura de qualquer um — Contexto → Decisão → Consequências →
 Alternativas consideradas — como uma nova subseção `4.N` no fim desta lista. Um ADR não se edita
@@ -1975,6 +1976,64 @@ navegadores a cada instalação.
 - **axe-core para acessibilidade:** mais completo que a checagem de nome,
   mas seria a primeira dependência de código que roda DENTRO da página.
   Fica como próximo passo se a checagem própria não bastar.
+
+---
+
+<a id="adr-0013"></a>
+### 4.14 ADR-0013 — Prazo depois da versão oficial antes de "desatualizado"
+
+**Situação:** Aceita (30/09/2026). Complementa o [ADR-0008](#adr-0008), que
+continua valendo: quem decide é a data da última atualização contra a da
+versão oficial.
+
+#### Contexto
+
+Pelo ADR-0008, última atualização anterior à versão oficial = desatualizado.
+Na prática, isso deixava todos os clientes vermelhos no dia seguinte à
+publicação de uma versão, antes de a equipe ter tido tempo de visitar
+alguém. O card "Atualização dos Clientes" passava a medir a data da
+publicação, e não o atraso da equipe.
+
+#### Decisão
+
+- **Prazo configurável, padrão 60 dias** (`prazoVersaoDias` em
+  `server/src/config/regrasEquipe.js`, editável em Administração ›
+  Operação da equipe). É uma regra nova, e não `desatualizadoDias`: aquela
+  mede tempo sem nenhuma atualização, outra pergunta.
+- **Três situações por sistema** (`services/situacaoVersao.js`):
+  - *Em dia*: última atualização na data da oficial ou depois.
+  - *Aguardando atualização*: última atualização anterior à oficial, e a
+    oficial saiu há menos de N dias.
+  - *Desatualizado*: última atualização anterior à oficial, e a oficial
+    saiu há N dias ou mais.
+- **Os N dias contam da data da versão oficial** (o dd/mm/aaaa que as telas
+  mostram), e não do dia em que alguém a cadastrou no painel: é a data que
+  existe em todos os sistemas e que a equipe vê.
+- **No cliente**, "aguardando" é um grupo próprio, de cor neutra, entre em
+  dia e desatualizado. Um atraso vencido ganha dele; informação faltando
+  também (falta de dado não se esconde atrás do prazo). Quem tem B_Vendas
+  continua julgado só por ele.
+- **A mesma regra no Resumo, em Sistemas e na ficha.** A ficha, que sem
+  agente comparava a versão digitada com a publicada pelo Atualizador,
+  passou a mostrar a situação do servidor.
+- **Campanhas ficam de fora**: lá a pergunta é "já chegou na meta?", e o
+  prazo só adiaria a resposta.
+
+#### Consequências
+
+- Uma versão recém-publicada não pinta ninguém de vermelho antes do prazo;
+  mudar o prazo muda as contagens na hora.
+- Prazo 0 reproduz a regra estrita anterior.
+- O resultado depende do dia de hoje: os testes passam `hoje` explícito.
+
+#### Alternativas consideradas
+
+- **Contar do cadastro da oficial no painel:** a data de cadastro não é
+  mostrada em tela nenhuma e só existe para as oficiais cadastradas depois
+  da migração 3. A troca, se um dia a equipe preferir, é num ponto só
+  (`situacaoDoSistema`).
+- **Reaproveitar `desatualizadoDias`:** tem o mesmo número (60), mas mede
+  outra coisa; juntar as duas faria mudar uma mexer na outra sem aviso.
 
 ---
 

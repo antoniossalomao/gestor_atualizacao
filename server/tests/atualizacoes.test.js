@@ -287,7 +287,9 @@ test("Referência oficial não atribui versões retroativamente", () => {
     }
     salvarOficial(clientes, "B_Vendas", "09/09/2026");
     salvarOficial(clientes, "B_NFe", "22/09/2026");
-    const rows = service.relatorioPorSistema("B_Vendas");
+    // "Hoje" fixo, bem depois do prazo de 60 dias da oficial de 09/09: aqui
+    // a pergunta é a data da atualização, não o prazo (ver situacaoVersao.test.js).
+    const rows = service.relatorioPorSistema("B_Vendas", undefined, new Date(2026, 11, 1));
     const linha = (cliente) => rows.find((r) => r.cliente === cliente);
     // O que não pode acontecer: a oficial salva hoje virar a versão que
     // essas atualizações antigas "receberam".
@@ -343,7 +345,7 @@ test("Versões recebidas permanecem após nova oficial, edição e desfazer", ()
     const id = ultimoId(db);
     assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").situacao, "Em dia");
     salvarOficial(clientes, "B_NFe", "25/09/2026");
-    assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").situacao, "Desatualizado");
+    assert.equal(service.situacaoCliente("Loja", new Date(2026, 11, 1)).find((s) => s.sistema === "B_NFe").situacao, "Desatualizado");
     assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").instalada, "22/09/2026");
     service.update(id, { ...criado, obs: "Corrigida" }, USUARIO);
     assert.equal(db.atualizacoes.find(id).versoes_sistemas, criado.versoes_sistemas);

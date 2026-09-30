@@ -43,7 +43,7 @@ export class SistemasView extends View {
           <div class="field">
             <label class="field__label" for="sis-situacao">Situação</label>
             <select class="input" id="sis-situacao" data-role="situacao-filter">
-              <option>Todos</option><option>Em dia</option><option>Desatualizados</option><option>Sem informação</option>
+              <option>Todos</option><option>Em dia</option><option>Aguardando atualização</option><option>Desatualizados</option><option>Sem informação</option>
             </select>
           </div>
           <div class="field">

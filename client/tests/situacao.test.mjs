@@ -18,6 +18,7 @@ const cli = (nome) => ({ nome, cidade: "—", sistemas: [] });
 test("totaisSituacao", async (t) => {
   const situacao = {
     em_dia: [cli("A"), cli("B")],
+    aguardando: [cli("H")],
     desatualizado: [cli("C")],
     pendente: [cli("D")],
     sem_atualizaveis: [cli("E"), cli("F"), cli("G")],
@@ -25,9 +26,9 @@ test("totaisSituacao", async (t) => {
   const totais = totaisSituacao(situacao);
 
   await t.test("quem não controla versão fica fora do denominador", () => {
-    assert.equal(totais.avaliados, 4);
+    assert.equal(totais.avaliados, 5, "quem aguarda entra no denominador (A07)");
     assert.equal(totais.foraDaAvaliacao, 3);
-    assert.deepEqual(totais.grupos.map((g) => [g.chave, g.total, g.pct]), [["em_dia", 2, 50], ["desatualizado", 1, 25], ["pendente", 1, 25]]);
+    assert.deepEqual(totais.grupos.map((g) => [g.chave, g.total, g.pct]), [["em_dia", 2, 40], ["aguardando", 1, 20], ["desatualizado", 1, 20], ["pendente", 1, 20]]);
   });
 
   await t.test("sem ninguém para avaliar, zero -- não NaN nem 100%", () => {
@@ -44,9 +45,11 @@ test("rótulos da situação", async (t) => {
       { sistema: "B_NFe", situacao: "Desatualizado" },
       { sistema: "B_Vendas", situacao: "Em dia" },
       { sistema: "B_Ordem", situacao: "Sem referência" },
+      { sistema: "B_Importa", situacao: "Aguardando atualização" },
     ];
     assert.equal(sistemasQueExplicam("desatualizado", sistemas), "B_NFe");
-    assert.equal(sistemasQueExplicam("pendente", sistemas), "B_Ordem: sem referência");
+    assert.equal(sistemasQueExplicam("aguardando", sistemas), "B_Importa");
+    assert.equal(sistemasQueExplicam("pendente", sistemas), "B_Ordem: sem referência", "aguardando não é pendência");
   });
 
   await t.test("quem foi decidido pelo B_Vendas mostra só ele", () => {

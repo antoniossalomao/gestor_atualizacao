@@ -6,14 +6,17 @@
  */
 
 /**
- * Os três grupos que o card do Resumo mostra, na ordem da barra. A chave é a
+ * Os grupos que o card do Resumo mostra, na ordem da barra. A chave é a
  * mesma que o /resumo devolve em `situacaoClientes`. "sem_atualizaveis" não
  * entra: quem só tem sistema fixo (ou nenhum) fica fora da conta, e aparece
  * só como uma nota embaixo do card.
  */
 export const GRUPOS_SITUACAO = [
   { chave: "em_dia", rotulo: "Em dia", severidade: "boa", descricao: "B_Vendas atualizado na data da versão oficial ou depois (sem B_Vendas: todos os sistemas)." },
-  { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "Última atualização do B_Vendas antes da versão oficial (sem B_Vendas: de algum sistema)." },
+  // Neutro, e não amarelo: ninguém está errado ainda. É a versão oficial que
+  // acabou de sair, dentro do prazo da equipe (A07).
+  { chave: "aguardando", rotulo: "Aguardando atualização", severidade: "neutra", descricao: "Última atualização antes da versão oficial, mas a oficial saiu há menos dias que o prazo da equipe." },
+  { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "Última atualização do B_Vendas antes da versão oficial, e o prazo já passou (sem B_Vendas: de algum sistema)." },
   { chave: "pendente", rotulo: "Verificação pendente", severidade: "media", descricao: "Sem atraso confirmado, mas falta informação para decidir." },
 ];
 
@@ -59,9 +62,11 @@ export function sistemasQueExplicam(grupo, sistemas, decididoPor = null) {
     ? sistemas.filter((s) => s.sistema === decididoPor)
     : grupo === "desatualizado"
       ? sistemas.filter((s) => s.situacao === "Desatualizado")
-      : grupo === "pendente"
-        ? sistemas.filter((s) => s.situacao !== "Em dia" && s.situacao !== "Desatualizado")
-        : sistemas;
+      : grupo === "aguardando"
+        ? sistemas.filter((s) => s.situacao === "Aguardando atualização")
+        : grupo === "pendente"
+          ? sistemas.filter((s) => !["Em dia", "Desatualizado", "Aguardando atualização"].includes(s.situacao))
+          : sistemas;
   return relevantes
     .map((s) => (grupo === "pendente" ? `${s.sistema}: ${s.situacao.toLowerCase()}` : s.sistema))
     .join(", ");

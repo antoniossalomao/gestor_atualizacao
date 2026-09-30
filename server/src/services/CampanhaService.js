@@ -188,6 +188,8 @@ class CampanhaService {
     const { ultimas, cadastro } = porSistema.get(campanha.sistemaId);
     const lista = cadastro.filter((cliente) => !campanha.cidade || (cliente.cidade || "").trim().toLocaleLowerCase("pt-BR") === campanha.cidade.toLocaleLowerCase("pt-BR")).map(({ id, nome, codigo, cidade }) => {
       const registro = ultimas.get(id);
+      // Sem prazo, de propósito: a campanha pergunta "já chegou na meta?", e
+      // o prazo depois da oficial (A07) só adia o "desatualizado" do Resumo.
       const { situacao: frente } = situacaoDoSistema(registro, campanha.versaoAlvo);
       const agendamento = (agendas.get(id) || []).find((t) => t.sistemas.has(campanha.sistemaId));
       const situacao = frente === "Em dia" ? "concluido" : agendamento ? "agendado" : "pendente";

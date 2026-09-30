@@ -53,6 +53,18 @@ const REGRAS = {
     // atualização -- versão atrasada é outra conta (services/situacaoVersao.js).
     rotulo: "Dias sem atualização até o cliente entrar na lista do Resumo",
   },
+  prazoVersaoDias: {
+    chave: "prazo_versao_dias",
+    tipo: "inteiro",
+    // 0 = desatualizado já no dia seguinte à versão oficial (a regra de
+    // antes de 30/09/2026). Não reaproveita `desatualizadoDias`: aquela mede
+    // tempo sem NENHUMA atualização; esta, tempo sem receber a oficial.
+    min: 0,
+    max: 365,
+    padrao: 60,
+    publica: true,
+    rotulo: "Dias após a versão oficial até o cliente contar como desatualizado",
+  },
   agendamentoArquivarDias: {
     chave: "agendamento_arquivar_dias",
     tipo: "inteiro",

@@ -35,10 +35,12 @@ test("Sistemas: situação e busca filtram clientes sem mudar seus dados", () =>
     { cliente: "Água Azul", cidade: "Uberaba", situacao: "Em dia" },
     { cliente: "Loja B", cidade: "Araxá", situacao: "Desatualizado" },
     { cliente: "Loja C", cidade: "Uberlândia", situacao: "Sem referência" },
+    { cliente: "Loja D", cidade: "Araxá", situacao: "Aguardando atualização" },
   ];
   assert.deepEqual(filtrarClientesDoSistema(rows, "Em dia", "agua"), [rows[0]]);
   assert.deepEqual(filtrarClientesDoSistema(rows, "Desatualizados", "araxá"), [rows[1]]);
   assert.deepEqual(filtrarClientesDoSistema(rows, "Sem informação"), [rows[2]]);
+  assert.deepEqual(filtrarClientesDoSistema(rows, "Aguardando atualização"), [rows[3]], "aguardando não cai em Desatualizados nem em Sem informação");
   assert.equal(rows[0].situacao, "Em dia");
 });
 
@@ -255,6 +257,20 @@ test("Consultar Cliente - matriz de versões", async (t) => {
     assert.equal(por.B_NFe.contatoTexto, "20/09/2026");
   });
 
+  await t.test("sem agente, a situação do servidor manda -- a mesma do Resumo e de Sistemas (A07)", () => {
+    const situacao = [
+      { sistema: "B_Vendas", situacao: "Aguardando atualização", contaNaSituacao: true },
+      { sistema: "B_NFe", situacao: "Desatualizado", contaNaSituacao: true },
+      { sistema: "B_Ordem", situacao: "Sem referência", contaNaSituacao: true },
+    ];
+    const linhas = montarMatrizVersoes({ nome: "Mercado X", sistemas: ["B_Vendas", "B_Ordem", "B_NFe"] }, [], painel, situacao);
+    const por = Object.fromEntries(linhas.map((l) => [l.sistema, l]));
+    assert.equal(por.B_Vendas.estadoLabel, "Aguardando atualização");
+    assert.equal(por.B_Vendas.estadoBadge, "badge--muted", "neutro: ainda dentro do prazo");
+    assert.equal(por.B_NFe.estadoLabel, "Desatualizado");
+    assert.equal(por.B_Ordem.estadoLabel, "Sem versão oficial");
+  });
+
   await t.test("publicada mas nunca registrada: 'Não instalado'", () => {
     const [linha] = montarMatrizVersoes({ nome: "Y", sistemas: ["B_Vendas"] }, [], painel);
     assert.equal(linha.estadoLabel, "Não instalado");
@@ -417,6 +433,8 @@ test("Resumo - card de situação: número principal e proporção por sistema",
   ]));
   assert.match(m, /situacao__hero">20%</, "o percentual em dia é o número principal");
   assert.match(m, /72 de 368 clientes/);
+  assert.match(texto(corpoSituacao(totais, [], 60)), /desatualizado 60 dias depois da versão oficial/, "o card diz o prazo que a conta usou (A07)");
+  assert.doesNotMatch(m, /depois da versão oficial/, "sem prazo informado (servidor antigo), não inventa um");
   assert.match(m, /196 de 250/, "a contagem vem com o denominador");
   assert.match(m, /width: 78%/, "a mini-barra é atrasados sobre quem usa o sistema");
   assert.doesNotMatch(m, /<img/);

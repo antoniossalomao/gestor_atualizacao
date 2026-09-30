@@ -19,7 +19,7 @@ const { AtualizacaoService } = require("../src/services/AtualizacaoService");
 const { situacaoDoSistema, situacaoDoCliente, contaParaVersao } = require("../src/services/situacaoVersao");
 
 test("situacaoDoSistema", async (t) => {
-  await t.test("atendido antes da oficial é desatualizado; na data dela ou depois, em dia", () => {
+  await t.test("sem prazo (Campanhas), atualizado antes da oficial é desatualizado; na data dela ou depois, em dia", () => {
     assert.deepEqual(situacaoDoSistema({ data: "01/09/2026" }, "09/09/2026"), { situacao: "Desatualizado" });
     assert.deepEqual(situacaoDoSistema({ data: "09/09/2026" }, "09/09/2026"), { situacao: "Em dia" }, "no próprio dia conta");
     assert.deepEqual(situacaoDoSistema({ data: "10/09/2026" }, "09/09/2026"), { situacao: "Em dia" });
@@ -35,6 +35,24 @@ test("situacaoDoSistema", async (t) => {
   await t.test("compara como data, não como texto", () => {
     // Como texto, "09/10/2026" < "24/09/2026"; como data, é depois.
     assert.equal(situacaoDoSistema({ data: "09/10/2026" }, "24/09/2026").situacao, "Em dia");
+  });
+
+  await t.test("prazo depois da oficial: conta da DATA da oficial, dia 0 a N-1 aguarda, dia N atrasa (A07)", () => {
+    const antes = { data: "01/09/2026" };
+    const oficial = "10/09/2026";
+    const em = (dia, mes = 9) => ({ prazoDias: 60, hoje: new Date(2026, mes - 1, dia, 15, 30) });
+    assert.equal(situacaoDoSistema(antes, oficial, em(10)).situacao, "Aguardando atualização", "dia 0: a oficial acabou de sair");
+    // 10/09 + 59 dias = 08/11; + 60 = 09/11. A hora do dia não importa.
+    assert.equal(situacaoDoSistema(antes, oficial, em(8, 11)).situacao, "Aguardando atualização", "dia N-1");
+    assert.equal(situacaoDoSistema(antes, oficial, em(9, 11)).situacao, "Desatualizado", "dia N");
+    assert.equal(situacaoDoSistema({ data: "10/09/2026" }, oficial, em(9, 11)).situacao, "Em dia", "o prazo não mexe em quem está em dia");
+    assert.equal(situacaoDoSistema(antes, oficial, { prazoDias: 0, hoje: new Date(2026, 8, 10) }).situacao, "Desatualizado", "prazo 0 é a regra estrita");
+  });
+
+  await t.test("prazo não inventa situação: sem data oficial e sem atualização continuam como antes", () => {
+    const prazo = { prazoDias: 60, hoje: new Date(2026, 8, 10) };
+    assert.equal(situacaoDoSistema({ data: "01/09/2026" }, "", prazo).situacao, "Sem referência");
+    assert.equal(situacaoDoSistema(null, "10/09/2026", prazo).situacao, "Nunca atualizado");
   });
 
   await t.test("o que falta nunca vira em dia", () => {
@@ -56,6 +74,12 @@ test("situacaoDoCliente", async (t) => {
 
   await t.test("sem B_Vendas, um atraso confirmado ganha de informação faltando", () => {
     assert.equal(grupo(["B_Importa", "Em dia"], ["B_Ordem", "Sem referência"], ["B_NFe", "Desatualizado"]), "desatualizado");
+  });
+  await t.test("aguardando: atrasado dentro do prazo, sem atraso vencido nem informação faltando", () => {
+    assert.equal(grupo(["B_Vendas", "Aguardando atualização"], ["B_NFe", "Desatualizado"]), "aguardando", "com B_Vendas, só ele decide");
+    assert.equal(grupo(["B_NFe", "Aguardando atualização"], ["B_Importa", "Em dia"]), "aguardando");
+    assert.equal(grupo(["B_NFe", "Aguardando atualização"], ["B_Importa", "Desatualizado"]), "desatualizado");
+    assert.equal(grupo(["B_NFe", "Aguardando atualização"], ["B_Importa", "Nunca atualizado"]), "pendente", "falta de dado não se esconde atrás do prazo");
   });
   await t.test("sem B_Vendas, em dia só com TODOS em dia", () => {
     assert.equal(grupo(["B_NFe", "Em dia"], ["B_Importa", "Em dia"]), "em_dia");
@@ -167,7 +191,8 @@ test("Resumo - tempo sem atualização não é situação de versão", () => {
 
     const resumo = env.servico.resumo();
     assert.ok(!resumo.semAtualizacao.some((c) => c.nome === "Recente Mas Atrasado"), "atualizado ontem");
-    assert.ok(resumo.situacaoClientes.desatualizado.some((c) => c.nome === "Recente Mas Atrasado"), "mas com a versão velha");
+    // A oficial é de hoje: dentro do prazo, aguarda -- mas já não está em dia.
+    assert.ok(resumo.situacaoClientes.aguardando.some((c) => c.nome === "Recente Mas Atrasado"), "mas com a versão velha");
   } finally {
     env.cleanup();
   }
