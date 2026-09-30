@@ -3,7 +3,6 @@ const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, horaValida } = require("../shared/validation");
 const { normalizarResponsavel } = require("../shared/normalizacao");
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
-const { contaParaVersao } = require("./situacaoVersao");
 
 /**
  * Regras de negocio da aba Agendamentos, em cima do AgendamentoRepository.
@@ -99,34 +98,6 @@ class AgendamentoService {
     return data;
   }
 
-  gerarLote(input, usuario) {
-    const clientes = [...new Set((input.clientes || []).map((nome) => String(nome || "").trim()).filter(Boolean))];
-    const sistema = String(input.sistema || "").trim();
-    if (!sistema) throw new ValidationError("Informe o sistema do lote.");
-    const catalogado = this.db.sistemas.resolver(sistema);
-    if (catalogado && !contaParaVersao(catalogado)) {
-      throw new ValidationError(`"${catalogado.nome}" não controla versão e não gera agendamentos por atraso.`);
-    }
-    if (clientes.length === 0) throw new ValidationError("Nenhum cliente foi selecionado para o lote.");
-    if (clientes.length > 500) throw new ValidationError("O lote pode conter no máximo 500 clientes.");
-    const hoje = new Date();
-    const data = `${String(hoje.getDate()).padStart(2, "0")}/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
-    const itens = clientes.map((cliente) => this._validate({
-      tarefa: `Atualizar ${sistema}${input.dataCorte ? ` — defasado antes de ${input.dataCorte}` : ""}`,
-      cliente,
-      // O lote é sempre de UM sistema, e a tarefa agora tem campo próprio
-      // para ele (aparece no cartão do quadro).
-      sistema,
-      responsavel: input.responsavel || usuario?.nome || "",
-      data,
-      horario: "",
-      status: STATUS_OPTIONS[0],
-    }));
-    const criados = this.db.agendamentos.insertMany(itens);
-    this.historico.registrar(usuario, "criar", "agendamento", `${criados} tarefas geradas em lote para ${sistema}`);
-    return { criados };
-  }
-
   // Ver o comentario equivalente em AtualizacaoService: "zero linhas
   // afetadas" precisa virar 404, senao a tela confirma uma alteracao que
   // nao aconteceu numa tarefa que outra pessoa ja excluiu.
@@ -172,42 +143,6 @@ class AgendamentoService {
       throw new NotFoundError("Esta tarefa não existe mais.");
     }
     this.historico.registrar(usuario, "marcar_concluida", "agendamento", `Tarefa #${id} concluída`);
-  }
-
-  /**
-   * Exclui várias tarefas de uma vez. Devolve `{ excluidos, registros }` --
-   * `registros` são os dados ANTES de sumirem, com que a tela recria tudo se
-   * a pessoa apertar "Desfazer" (mesmo padrão de AtualizacaoService.deleteMany).
-   */
-  deleteMany(ids, usuario) {
-    const registros = this.db.agendamentos.findByIds(ids);
-    if (registros.length === 0) {
-      throw new NotFoundError("Nenhuma das tarefas selecionadas existe mais. A lista pode estar desatualizada.");
-    }
-    const excluidos = this.db.agendamentos.deleteMany(registros.map((r) => r.id));
-    this.historico.registrar(usuario, "excluir", "agendamento", `${excluidos} tarefas excluídas de uma vez`);
-    return { excluidos, registros };
-  }
-
-  /**
-   * Marca várias tarefas como concluídas de uma vez. Só toca as que AINDA
-   * não estavam concluídas (idempotente, e evita sujar o histórico com
-   * tarefas que já estavam assim) -- `registros` devolve o estado ANTERIOR
-   * só dessas, para o "Desfazer" da tela restaurar o status/data de
-   * conclusão exatos que cada uma tinha, não um "A Fazer" genérico.
-   */
-  markDoneMany(ids, usuario) {
-    const doneLabel = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
-    const registros = this.db.agendamentos.findByIds(ids);
-    if (registros.length === 0) {
-      throw new NotFoundError("Nenhuma das tarefas selecionadas existe mais. A lista pode estar desatualizada.");
-    }
-    const pendentes = registros.filter((r) => r.status !== doneLabel);
-    const concluidos = pendentes.length > 0 ? this.db.agendamentos.markDoneMany(pendentes.map((r) => r.id), doneLabel) : 0;
-    if (concluidos > 0) {
-      this.historico.registrar(usuario, "marcar_concluida", "agendamento", `${concluidos} tarefas concluídas de uma vez`);
-    }
-    return { concluidos, registros: pendentes };
   }
 
   _validate(input) {

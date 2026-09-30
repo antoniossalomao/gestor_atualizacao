@@ -145,14 +145,6 @@ test("AgendamentoService - concorrência otimista e geração em lote", () => {
       }
     }
     assert.equal(env.db.agendamentos.find(linha.id).status, CONCLUIDO);
-
-    const lote = env.service.gerarLote({ clientes: ["Loja 1", "Loja 2", "Loja 1"], sistema: "B_Vendas", responsavel: "Teste" }, USUARIO);
-    assert.equal(lote.criados, 2, "remove clientes duplicados antes da transação");
-    assert.equal(env.db.agendamentos.list("Atualizar B_Vendas").total, 2);
-    assert.throws(
-      () => env.service.gerarLote({ clientes: ["Loja 1"], sistema: "B_Atualizador", responsavel: "Teste" }, USUARIO),
-      (erro) => erro.statusCode === 400 && /não controla versão/.test(erro.message)
-    );
   } finally { env.cleanup(); }
 });
 
@@ -257,50 +249,6 @@ test("AgendamentoService - arquivar e reabrir", async (t) => {
       const lista = env.service.list("", "Todos", { page: 1, pageSize: 100 });
       assert.equal(typeof lista.arquivarDias, "number");
       assert.ok(lista.arquivarDias > 0);
-    });
-  } finally {
-    env.cleanup();
-  }
-});
-
-test("AgendamentoService - operações em lote", async (t) => {
-  const env = ambiente();
-  try {
-    await t.test("markDoneMany só toca as que ainda não estavam concluídas", () => {
-      const a = criar(env.service, env.db, { tarefa: "Lote A" });
-      const b = criar(env.service, env.db, { tarefa: "Lote B" });
-      env.service.update(b.id, { tarefa: "Lote B", status: CONCLUIDO }, USUARIO);
-
-      const r = env.service.markDoneMany([a.id, b.id], USUARIO);
-      assert.equal(r.concluidos, 1, "só a que estava pendente conta");
-      assert.equal(r.registros.length, 1, "e só ela entra no 'Desfazer'");
-      assert.equal(r.registros[0].id, a.id);
-    });
-
-    await t.test("markDoneMany com tudo já concluído não suja o histórico", () => {
-      const c = criar(env.service, env.db, { tarefa: "Lote C" });
-      env.service.update(c.id, { tarefa: "Lote C", status: CONCLUIDO }, USUARIO);
-      const antes = env.db.historico.list({ page: 1, pageSize: 200 }).total;
-
-      const r = env.service.markDoneMany([c.id], USUARIO);
-      assert.equal(r.concluidos, 0);
-      assert.equal(env.db.historico.list({ page: 1, pageSize: 200 }).total, antes, "nada novo no histórico");
-    });
-
-    await t.test("deleteMany devolve os registros para o 'Desfazer'", () => {
-      const d = criar(env.service, env.db, { tarefa: "Some D" });
-      const e = criar(env.service, env.db, { tarefa: "Some E" });
-
-      const r = env.service.deleteMany([d.id, e.id], USUARIO);
-      assert.equal(r.excluidos, 2);
-      assert.equal(r.registros.length, 2, "os dados de antes de sumirem");
-      assert.ok(r.registros.every((x) => x.tarefa));
-      assert.equal(env.db.agendamentos.find(d.id), undefined);
-    });
-
-    await t.test("lote com ids que não existem mais dá 404 explicativo", () => {
-      assert.throws(() => env.service.deleteMany([999998, 999999], USUARIO), /lista pode estar desatualizada/);
-      assert.throws(() => env.service.markDoneMany([999998], USUARIO), /lista pode estar desatualizada/);
     });
   } finally {
     env.cleanup();

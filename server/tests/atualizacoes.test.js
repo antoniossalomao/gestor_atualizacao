@@ -361,7 +361,7 @@ test("Versões recebidas permanecem após nova oficial, edição e desfazer", ()
   } finally { cleanup(); }
 });
 
-test("Gráfico mensal e referências recentes ignoram componentes fixos sem apagar atualizações", () => {
+test("Gráfico mensal ignora componentes fixos sem apagar atualizações", () => {
   const { db, service, clientes, cleanup } = ambiente();
   try {
     clientes.create({ nome: "Loja Mista", sistemas: ["B_Vendas", "B_Atualizador"] }, USUARIO);
@@ -371,7 +371,6 @@ test("Gráfico mensal e referências recentes ignoram componentes fixos sem apag
     const grafico = db.atualizacoes.atualizadosNoMesPorSistema("09/2026");
     assert.equal(grafico.find((s) => s.label === "B_Vendas").total, 1);
     assert.ok(!grafico.some((s) => s.label === "B_Atualizador" || s.label === "Suporte Bredas"));
-    assert.ok(!service.latestVersionBySystem().some((s) => s.nome === "B_Atualizador" || s.nome === "Suporte Bredas"));
     assert.equal(db.atualizacoes.count(), 2, "as duas atualizações continuam no histórico");
   } finally { cleanup(); }
 });

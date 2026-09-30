@@ -324,19 +324,9 @@ class AtualizacaoRepository extends BaseRepository {
     return Number.isNaN(n) ? 0 : n;
   }
 
-  /** Registro mais recente de um cliente especifico (aba Consultar Cliente). */
-  lastUpdateForClient(nome) {
-    const sql = `
-      SELECT a.data, a.versao, a.motivo, a.responsavel, a.maquinas, a.obs FROM ${this.table} a
-      WHERE ${DO_CLIENTE} ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC LIMIT 1
-    `;
-    return this.conn.prepare(sql).get({ nome }) || null;
-  }
-
   /**
    * As últimas N atualizações de um cliente específico (aba Consultar
-   * Cliente, seção "Histórico recente") -- variante de lastUpdateForClient
-   * que devolve uma lista em vez de um registro só, para dar noção de
+   * Cliente, seção "Histórico recente"), para dar noção de
    * frequência/padrão ao longo do tempo, não só o instante mais recente.
    */
   recentUpdatesForClient(nome, limit = 5) {
@@ -401,30 +391,6 @@ class AtualizacaoRepository extends BaseRepository {
          ) WHERE n = 1`
       )
       .all({ nome });
-  }
-
-  /**
-   * A atualização mais recente de cada sistema do catálogo ativo, com a
-   * versão registrada nela para aquele sistema.
-   */
-  latestVersionBySystem() {
-    return this.conn
-      .prepare(
-        `SELECT s.nome AS sistema, coalesce(u.versao, 'Não informada') AS versao, coalesce(u.data, 'Não registrada') AS data
-           FROM sistemas s
-           LEFT JOIN (
-             SELECT sistema_id, versao, data FROM (
-               SELECT x.sistema_id, x.versao, a.data,
-                      ROW_NUMBER() OVER (PARTITION BY x.sistema_id ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC) AS n
-                 FROM ${this.table} a JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
-                WHERE a.data != ''
-             ) WHERE n = 1
-           ) u ON u.sistema_id = s.id
-           WHERE s.ativo = 1 AND s.controla_versao = 1
-           ORDER BY s.nome`
-      )
-      .all()
-      .map((r) => ({ ...r, versao: r.versao || "Não informada" }));
   }
 
   /**

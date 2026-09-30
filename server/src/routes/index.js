@@ -158,9 +158,7 @@ class ApiRouter {
     api.get("/atualizacoes/relatorio", atualizacoes.relatorio);
     api.get("/atualizacoes/situacao-cliente/:nome", atualizacoes.situacaoCliente);
     api.get("/atualizacoes/responsaveis", atualizacoes.distinctResponsaveis);
-    api.get("/atualizacoes/last-by-client/:nome", atualizacoes.lastForClient);
     api.get("/atualizacoes/recent-by-client/:nome", atualizacoes.recentForClient);
-    api.get("/atualizacoes/versoes-por-sistema", atualizacoes.latestVersionBySystem);
     api.get("/atualizacoes/por-sistema", atualizacoes.porSistema);
     api.get("/atualizacoes/export", atualizacoes.exportXlsx);
     // Prévia antes de importar: só lê, mas com o mesmo papel da importação --
@@ -175,10 +173,7 @@ class ApiRouter {
     // Agendamentos
     api.get("/agendamentos", agendamentos.list);
     api.get("/agendamentos/lembretes", agendamentos.lembretes);
-    api.post("/agendamentos/excluir-lote", requireRole("admin"), agendamentos.removeMany);
-    api.post("/agendamentos/concluir-lote", requireRole("operador", "admin"), agendamentos.markDoneMany);
     api.post("/agendamentos", requireRole("operador", "admin"), agendamentos.create);
-    api.post("/agendamentos/gerar-lote", requireRole("operador", "admin"), agendamentos.gerarLote);
     api.put("/agendamentos/:id", requireRole("operador", "admin"), agendamentos.update);
     api.patch("/agendamentos/:id/done", requireRole("operador", "admin"), agendamentos.markDone);
     api.patch("/agendamentos/:id/reabrir", requireRole("operador", "admin"), agendamentos.reabrir);

@@ -158,11 +158,6 @@ class AtualizacaoService {
     return { excluidos, registros };
   }
 
-  /** Registro mais recente de um cliente especifico (aba Consultar Cliente). */
-  lastUpdateForClient(nome) {
-    return this.db.atualizacoes.lastUpdateForClient(nome);
-  }
-
   /**
    * As últimas N atualizações de um cliente específico (aba Consultar Cliente,
    * "Histórico recente").
@@ -176,11 +171,6 @@ class AtualizacaoService {
   recentUpdatesForClient(nome, limit = 5) {
     const efetivo = String(limit) === "todas" ? -1 : Math.min(Math.max(Number(limit) || 5, 1), 50);
     return this.db.atualizacoes.recentUpdatesForClient(nome, efetivo);
-  }
-
-  /** Última versão registrada para cada sistema do histórico operacional. */
-  latestVersionBySystem() {
-    return this.db.atualizacoes.latestVersionBySystem();
   }
 
   /**
