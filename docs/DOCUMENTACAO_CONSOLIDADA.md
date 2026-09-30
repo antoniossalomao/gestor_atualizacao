@@ -378,9 +378,9 @@ pelo navegador, sem bundler:
 app/App.js        -- classe raiz: login vs. shell principal, troca de aba, mantém cada View viva
 app/View.js       -- classe base: listeners rastreados (removidos no destroy()) + ciclo
                      stale-while-revalidate
-app/*.js          -- o esqueleto: router, prefs, SwrCache, theme, appearance, notify, Shortcuts
+app/*.js          -- o esqueleto: Router, prefs, SwrCache, theme, appearance, notify, atalhos
 components/*.js   -- peças de UI reaproveitáveis: SortableTable, Pagination, Autocomplete, Modal,
-                     Toast, CommandPalette (Ctrl+K), EmptyState, ConexaoBanner, MenuConta,
+                     Toast, CommandPalette (Ctrl+K), estadoVazio, ConexaoBanner, MenuConta,
                      MenuNotificacoes (o sino do cabeçalho); e os pequenos ajudantes que
                      precisam do DOM: elemento (`el`), botaoOcupado, arquivos (baixar/escolher),
                      areaDeTransferencia (copiar), detalhesRetorno
@@ -416,7 +416,7 @@ app/theme.js + app/appearance.js + views/ConfiguracoesView.js
                 /api/usuarios/me/sessoes).
                 As preferências são da CONTA: ficam em usuario_preferencias no servidor
                 (GET/PUT /api/preferencias). O localStorage continua sendo escrito, mas como
-                cache -- theme-init.js roda no <head> e precisa de resposta síncrona, senão a
+                cache -- temaInicial.js roda no <head> e precisa de resposta síncrona, senão a
                 página nasceria no tema errado e trocaria na cara de quem olha. prefs.js
                 (conectarPreferencias) busca as da conta no login e corrige o cache se
                 divergir, e limpa o cache quando quem entra é outra pessoa
@@ -638,7 +638,7 @@ migração (parser de query string, `path-to-regexp`, assinatura de handler de e
 usava os padrões que mudaram.
 
 O que mudou de fato no código, por causa do endurecimento de CSP feito junto: o script inline de
-tema no `<head>` de `client/index.html` foi extraído para `client/js/theme-init.js`, e
+tema no `<head>` de `client/index.html` foi extraído para `client/js/temaInicial.js`, e
 `Server.js`/`requireAgent.js` ganharam uma CSP sob medida e comparação de token em tempo
 constante.
 
@@ -771,7 +771,7 @@ arquivar no escuro.
 Detalhado em [2.2](#22-arquitetura-do-código). Em resumo: viviam só no `localStorage`, e o efeito
 aparecia na hora errada — trocar de máquina ou de navegador devolvia o app aos padrões, e num
 computador compartilhado as escolhas de uma pessoa recebiam a seguinte. O `localStorage` continua
-sendo escrito como **cache**, porque `theme-init.js` roda no `<head>` e precisa de resposta
+sendo escrito como **cache**, porque `temaInicial.js` roda no `<head>` e precisa de resposta
 síncrona; esperar uma requisição ali faria a página nascer no tema errado. Migração é invisível: a
 conta que entra sem nada salvo no servidor sobe o que estava no navegador. O aviso de falhas por
 notificação não acompanha a conta — depende de permissão concedida por aparelho.
@@ -870,7 +870,7 @@ precisou. `data-transparencia="reduzida"` desliga o `backdrop-filter` da barra l
 cabeçalho, dos modais e da paleta, e troca os véus por cor cheia. `data-zebra="nao"` apaga a listra
 mexendo no token `--veu-linha`, e não num seletor que desfaça o `background` da linha ímpar: um
 seletor com `:root[...]` na frente ganharia também das linhas de severidade e de atraso, que
-precisam continuar pintadas. Contraste e transparência entraram também no `theme-init.js` (no
+precisam continuar pintadas. Contraste e transparência entraram também no `temaInicial.js` (no
 `<head>`), pelo mesmo motivo do tema: redefinem cor, e cor aplicada tarde é o que se vê piscar.
 
 **Login.** Botão de mostrar a senha e aviso de Caps Lock. O aviso escuta `keyup` além de `keydown`
@@ -1351,7 +1351,7 @@ restaurar um backup.
 
 **Contexto.** O servidor tem ~13 serviços e ~13 controllers, com dependências reais entre eles:
 quase todo serviço recebe o banco e o `HistoricoService`; o `AlertaAgenteService` recebe
-`VersaoService` e `NotificationService`; o `SaudeService` recebe banco, backups e versões. Esse é o
+`VersaoService` e `NotificacaoService`; o `SaudeService` recebe banco, backups e versões. Esse é o
 ponto em que projetos Node costumam adotar um container de DI (`awilix`, `tsyringe`,
 `InversifyJS`) ou partir para singletons importados diretamente.
 
@@ -2888,7 +2888,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 | Resumo/gráficos | `ResumoView.js`, `components/charts/LineChart.js`, `BarChart.js`, `PieChart.js`, `domain/resumo.js` |
 | Indicadores | `server/src/services/AtualizacaoService.js`, `server/src/database/AtualizacaoRepository.js` |
 | Sistemas | `SistemasView.js`, `SistemaRepository.js`, `ClienteService.js`, `SistemasController.js` |
-| Relatórios | `AtualizacoesView.js`, `components/RelatorioModal.js`, `domain/relatorio.js` |
+| Relatórios | `AtualizacoesView.js`, `components/relatorioModal.js`, `domain/relatorio.js` |
 | Agendamentos | `AgendamentosView.js`, `templates/agendamentos.js`, `AgendamentoService.js`, `AgendamentoRepository.js` |
 | Clientes/Consulta | `ClientesView.js`, `ConsultaView.js`, `AcessosModal.js`, `domain/matrizVersoes.js` |
 | Administração | `AdministracaoView.js`, `views/administracao/`, `templates/administracao.js` |

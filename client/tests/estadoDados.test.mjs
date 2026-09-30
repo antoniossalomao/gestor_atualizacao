@@ -1,6 +1,6 @@
 /*
  * Testes do aviso de dados desatualizados (P03, docs/MELHORIAS.md;
- * utils/estadoDados.js, usado pela View.swr).
+ * utils/EstadoDados.js, usado pela View.swr).
  *
  * O que erra em silêncio se quebrar:
  *  - a falha não avisar → a tela mostra dado velho como se fosse atual, que
@@ -13,7 +13,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { EstadoDados, descreverFalha, formatarMomento, grupoDaChave } from "../js/utils/estadoDados.js";
+import { EstadoDados, descreverFalha, formatarMomento, grupoDaChave } from "../js/utils/EstadoDados.js";
 
 const cancelado = { cancelled: true, name: "RequestCancelled" };
 const erro = (status, message = "") => ({ status, message });

@@ -1,6 +1,6 @@
 import { View } from "../app/View.js";
 import { debounce } from "../utils/debounce.js";
-import { emptyState } from "../components/EmptyState.js";
+import { emptyState } from "../components/estadoVazio.js";
 import { plural, html } from "../utils/html.js";
 import { copyToClipboard } from "../components/areaDeTransferencia.js";
 import { toast } from "../components/Toast.js";

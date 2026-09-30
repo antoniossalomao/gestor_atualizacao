@@ -25,7 +25,7 @@ class AtualizacaoService {
   /**
    * @param {import('../database/Database').Database} db
    * @param {import('./HistoricoService').HistoricoService} historico
-   * @param {import('./NotificationService').NotificationService} [notifications]
+   * @param {import('./NotificacaoService').NotificacaoService} [notifications]
    */
   /**
    * @param {{valor(nome: string): any}} [regras] ConfiguracaoSistemaService. Opcional

@@ -1,7 +1,7 @@
 import { View } from "../app/View.js";
 import { toast } from "../components/Toast.js";
 import { icon } from "../utils/icons.js";
-import { emptyState } from "../components/EmptyState.js";
+import { emptyState } from "../components/estadoVazio.js";
 import { escapeAttr, escapeHtml, plural } from "../utils/html.js";
 import { formatarDataHora, tempoRelativo, formatarBytes } from "../utils/date.js";
 import { Modal } from "../components/Modal.js";

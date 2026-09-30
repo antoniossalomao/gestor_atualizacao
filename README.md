@@ -537,7 +537,7 @@ exigiu nenhuma mudança de rota.
 
 **O que mudou de fato no código, por causa do endurecimento de CSP feito
 junto (não das majors em si):** o script inline de tema no `<head>` de
-`client/index.html` foi extraído para `client/js/theme-init.js`, e
+`client/index.html` foi extraído para `client/js/temaInicial.js`, e
 `Server.js`/`requireAgent.js` ganharam uma CSP sob medida e comparação
 de token em tempo constante — ver histórico do git para o antes/depois.
 

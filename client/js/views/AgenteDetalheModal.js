@@ -2,7 +2,7 @@ import { Modal } from "../components/Modal.js";
 import { escapeHtml } from "../utils/html.js";
 import { copyToClipboard } from "../components/areaDeTransferencia.js";
 import { formatarDataHora, tempoRelativo, formatarDuracao } from "../utils/date.js";
-import { emptyState } from "../components/EmptyState.js";
+import { emptyState } from "../components/estadoVazio.js";
 import { faseLabel } from "../domain/agenteLabels.js";
 import { ApiError } from "../api/ApiClient.js";
 import { toast } from "../components/Toast.js";

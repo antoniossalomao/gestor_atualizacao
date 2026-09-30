@@ -154,7 +154,7 @@ export const DURACOES_AVISO = [
 
 /**
  * O período com que a tela Atualizações já abre filtrada. As chaves são as
- * dos botões de período da própria tela (ver components/DatePresets.js),
+ * dos botões de período da própria tela (ver components/presetsDeData.js),
  * para a preferência e o clique no botão darem exatamente o mesmo recorte.
  */
 export const PERIODOS_INICIAIS = [
@@ -466,7 +466,7 @@ export const aparencia = {
     return DURACOES_AVISO.find((d) => d.valor === this.duracaoAvisos())?.fator ?? 1;
   },
 
-  /** Chave de DatePresets ("hoje", "mes"...) ou "" para abrir sem filtro de data. */
+  /** Chave de presetsDeData ("hoje", "mes"...) ou "" para abrir sem filtro de data. */
   periodoAtualizacoes() {
     return umDe("periodoAtualizacoes", PERIODOS_INICIAIS, PADROES.periodoAtualizacoes);
   },

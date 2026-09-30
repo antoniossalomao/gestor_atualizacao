@@ -2,7 +2,7 @@ import { View } from "../app/View.js";
 import { SortableTable } from "../components/SortableTable.js";
 import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
-import { emptyState } from "../components/EmptyState.js";
+import { emptyState } from "../components/estadoVazio.js";
 import { ApiError } from "../api/ApiClient.js";
 import { prefs } from "../app/prefs.js";
 import { debounce } from "../utils/debounce.js";

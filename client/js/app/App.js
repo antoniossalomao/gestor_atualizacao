@@ -2,9 +2,9 @@ import { icon, simboloMarca } from "../utils/icons.js";
 import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
 import { SwrCache } from "./SwrCache.js";
-import { Router } from "./router.js";
+import { Router } from "./Router.js";
 import { CommandPalette } from "../components/CommandPalette.js";
-import { ligarAtalhoAjuda, mostrarAtalhos } from "./Shortcuts.js";
+import { ligarAtalhoAjuda, mostrarAtalhos } from "./atalhos.js";
 import { theme } from "./theme.js";
 import { settings, conectarPreferencias } from "./prefs.js";
 import { aparencia, reaplicarAparencia } from "./appearance.js";
@@ -198,7 +198,7 @@ export class App {
     this.tabsNoMenu = this.tabsAtivas.filter((t) => !t.rodape);
 
     // As preferências de apresentação são da CONTA, não do navegador. O
-    // localStorage já pintou a tela (theme-init.js, no <head>, antes do
+    // localStorage já pintou a tela (temaInicial.js, no <head>, antes do
     // primeiro pixel) -- isto busca as da conta e corrige se divergirem, o
     // que é o caso quando a pessoa entra de outra máquina ou quando outra
     // pessoa usou este mesmo navegador antes. Sem `await`: o app não fica

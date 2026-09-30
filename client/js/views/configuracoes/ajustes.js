@@ -20,7 +20,7 @@ import {
 } from "../../app/appearance.js";
 import { settings, prefs } from "../../app/prefs.js";
 import { notificacoes } from "../../app/notify.js";
-import { ATALHOS } from "../../app/Shortcuts.js";
+import { ATALHOS } from "../../app/atalhos.js";
 import { COMO_USAR_TELAS, NOVIDADES, explicacaoSituacoes } from "../../domain/ajuda.js";
 import { toast } from "../../components/Toast.js";
 

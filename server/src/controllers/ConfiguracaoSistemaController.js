@@ -6,7 +6,7 @@
 class ConfiguracaoSistemaController {
   /**
    * @param {import('../services/ConfiguracaoSistemaService').ConfiguracaoSistemaService} configuracaoSistemaService
-   * @param {import('../services/NotificationService').NotificationService} [notifications]
+   * @param {import('../services/NotificacaoService').NotificacaoService} [notifications]
    */
   constructor(configuracaoSistemaService, notifications) {
     this.configuracaoSistemaService = configuracaoSistemaService;

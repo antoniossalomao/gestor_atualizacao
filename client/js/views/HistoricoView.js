@@ -2,7 +2,7 @@ import { View } from "../app/View.js";
 import { SortableTable } from "../components/SortableTable.js";
 import { Pagination } from "../components/Pagination.js";
 import { debounce } from "../utils/debounce.js";
-import { emptyState } from "../components/EmptyState.js";
+import { emptyState } from "../components/estadoVazio.js";
 import { plural } from "../utils/html.js";
 import { tempoRelativo, formatarDataHora } from "../utils/date.js";
 import { prefs } from "../app/prefs.js";

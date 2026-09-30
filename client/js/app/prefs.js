@@ -180,7 +180,7 @@ function limparDuradouras() {
 /**
  * Liga o cache local à conta: o servidor passa a ser a fonte da verdade.
  *
- * O localStorage continua existindo, e não é redundância. `theme-init.js`
+ * O localStorage continua existindo, e não é redundância. `temaInicial.js`
  * roda no `<head>`, antes do primeiro pixel, e precisa de uma resposta
  * SÍNCRONA -- esperar uma requisição ali significaria a página nascer no tema
  * errado e trocar na cara de quem está olhando. Então: o cache pinta na hora,

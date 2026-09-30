@@ -6,7 +6,7 @@ import { debounce } from "../utils/debounce.js";
 import { formatarDataHora, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { ApiError } from "../api/ApiClient.js";
 import { Modal } from "../components/Modal.js";
-import { emptyState } from "../components/EmptyState.js";
+import { emptyState } from "../components/estadoVazio.js";
 import { escapeHtml, plural } from "../utils/html.js";
 import { prefs } from "../app/prefs.js";
 import { filtrarClientesDoSistema } from "../domain/filtrosSistemas.js";

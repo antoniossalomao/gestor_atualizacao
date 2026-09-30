@@ -1,5 +1,5 @@
 /** Rotas de gerenciamento de contas (tela de Usuários, aberta pelo cabeçalho). */
-class UsersController {
+class UsuariosController {
   /** @param {import('../services/AuthService').AuthService} authService */
   constructor(authService) {
     this.authService = authService;
@@ -95,4 +95,4 @@ class UsersController {
   };
 }
 
-module.exports = { UsersController };
+module.exports = { UsuariosController };

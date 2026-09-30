@@ -6,7 +6,7 @@ import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
 import { debounce } from "../utils/debounce.js";
 import { icon, iconHtml } from "../utils/icons.js";
-import { emptyState } from "../components/EmptyState.js";
+import { emptyState } from "../components/estadoVazio.js";
 import { html, plural } from "../utils/html.js";
 import { marcarOcupado } from "../components/botaoOcupado.js";
 import { prefs } from "../app/prefs.js";

@@ -12,7 +12,7 @@ const { ClienteService } = require("./services/ClienteService");
 const { AtualizacaoService } = require("./services/AtualizacaoService");
 const { AgendamentoService } = require("./services/AgendamentoService");
 const { BackupService } = require("./services/BackupService");
-const { NotificationService } = require("./services/NotificationService");
+const { NotificacaoService } = require("./services/NotificacaoService");
 const { VersaoService } = require("./services/VersaoService");
 const { PreferenciaService } = require("./services/PreferenciaService");
 const { AlertaAgenteService } = require("./services/AlertaAgenteService");
@@ -25,7 +25,7 @@ const { AgendamentosController } = require("./controllers/AgendamentosController
 const { ResumoController } = require("./controllers/ResumoController");
 const { BackupsController } = require("./controllers/BackupsController");
 const { HistoricoController } = require("./controllers/HistoricoController");
-const { UsersController } = require("./controllers/UsersController");
+const { UsuariosController } = require("./controllers/UsuariosController");
 const { VersoesController } = require("./controllers/VersoesController");
 const { PreferenciasController } = require("./controllers/PreferenciasController");
 const { ConfiguracaoSistemaController } = require("./controllers/ConfiguracaoSistemaController");
@@ -86,7 +86,7 @@ class Server {
     // Uma vez só, na primeira subida depois de as regras irem para o banco --
     // ver ConfiguracaoSistemaService.importarValoresIniciais.
     configuracaoSistema.importarValoresIniciais(this.config.ambiente || {});
-    const notifications = new NotificationService({ webhookUrl: () => configuracaoSistema.valor("discordWebhookUrl") });
+    const notifications = new NotificacaoService({ webhookUrl: () => configuracaoSistema.valor("discordWebhookUrl") });
     const versoes = new VersaoService(this.db, historico);
     this.services = {
       historico,
@@ -121,7 +121,7 @@ class Server {
       resumo: new ResumoController(s.atualizacoes),
       backups: new BackupsController(s.backups),
       historico: new HistoricoController(s.historico),
-      usuarios: new UsersController(s.auth),
+      usuarios: new UsuariosController(s.auth),
       // A URL pública entra nos links de download dos pacotes. É regra da
       // equipe (Administração); sem ela, vale o endereço pelo qual o admin
       // acessou o painel ao enviar o pacote.
@@ -159,7 +159,7 @@ class Server {
     // CSP sob medida (refinamento prometido no comentário antigo aqui):
     // script-src fica só 'self' -- a proteção real contra XSS está em não
     // liberar 'unsafe-inline' aqui, por isso o script de tema saiu do
-    // <head> para client/js/theme-init.js (ver index.html). style-src
+    // <head> para client/js/temaInicial.js (ver index.html). style-src
     // precisa de 'unsafe-inline' porque várias views montam HTML com
     // atributo style="" direto (ex.: ClientesView, AtualizacoesView,
     // BarChart/PieChart) -- CSP não bloqueia style.propriedade via JS, só

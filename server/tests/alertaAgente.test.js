@@ -13,7 +13,7 @@
  *
  * Nenhum dos dois gera erro. Por isso o teste.
  *
- * O `VersaoService` e o `NotificationService` sao dubles: o que esta sob teste
+ * O `VersaoService` e o `NotificacaoService` sao dubles: o que esta sob teste
  * e' a MAQUINA DE ESTADOS, nao o calculo da situacao (que e' do painel) nem o
  * envio HTTP.
  */

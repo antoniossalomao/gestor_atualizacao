@@ -11,16 +11,16 @@ import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { icon, iconHtml } from "../utils/icons.js";
 import { html, plural } from "../utils/html.js";
 import { ImportacaoModal } from "../components/ImportacaoModal.js";
-import { abrirRelatorio } from "../components/RelatorioModal.js";
+import { abrirRelatorio } from "../components/relatorioModal.js";
 import { relatorioDeAtualizacao, relatorioDoCliente, relatorioSituacao, relatorioDoPeriodo, versaoRegistrada } from "../domain/relatorio.js";
 import { splitSistemas } from "../domain/matrizVersoes.js";
-import { emptyState } from "../components/EmptyState.js";
+import { emptyState } from "../components/estadoVazio.js";
 import { withBusyButton, marcarOcupado } from "../components/botaoOcupado.js";
 import { baixarBlob } from "../components/arquivos.js";
 import { prefs } from "../app/prefs.js";
 import { aparencia } from "../app/appearance.js";
 import { Drawer } from "../components/Drawer.js";
-import { montarPresets, intervaloPreset } from "../components/DatePresets.js";
+import { montarPresets, intervaloPreset } from "../components/presetsDeData.js";
 import { chipsFiltroAtualizacoes, htmlChips } from "../templates/filtros.js";
 
 /**
@@ -143,7 +143,7 @@ export class AtualizacoesView extends View {
           Sem coluna de caixinhas, o Shift+clique não tem NENHUM indício visual
           na tabela -- é um gesto que ninguém adivinha sozinho. Esta linha é a
           única pista de que ele existe (a lista de atalhos, aberta com "?",
-          também o documenta -- ver Shortcuts.js). Fica sempre visível, mas
+          também o documenta -- ver atalhos.js). Fica sempre visível, mas
           discreta: uma frase, não um card chamando atenção.
         -->
         <p class="text-muted bulk-hint">

@@ -5,7 +5,7 @@
  * nova). Se `webhookUrl` não estiver configurada, todo método aqui vira
  * um no-op silencioso -- a integração é opcional.
  */
-class NotificationService {
+class NotificacaoService {
   /**
    * @param {{discordWebhookUrl?: string, webhookUrl?: () => string}} config
    *   `webhookUrl` (função) é o caminho de produção: o webhook é uma regra da
@@ -102,4 +102,4 @@ class NotificationService {
   }
 }
 
-module.exports = { NotificationService };
+module.exports = { NotificacaoService };

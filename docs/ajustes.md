@@ -379,15 +379,18 @@ e `npm run test:navegador` continuam passando.
 
 ### A16 — Organização
 
-- [ ] Conferir cada arquivo contra a regra de pastas do `CLAUDE.md`:
+- [x] Conferir cada arquivo contra a regra de pastas do `CLAUDE.md`:
       servidor em `routes → controllers → services → database`, SQL só em
       `database/`, `shared/` só com dois consumidores; front em `utils/`,
       `domain/`, `templates/`, `components/`, `views/` e `app/`.
-- [ ] `domain/`, `templates/` e `utils/` sem nenhum acesso ao DOM.
+- [x] `domain/`, `templates/` e `utils/` sem nenhum acesso ao DOM.
 - [ ] Nomes de arquivo no mesmo padrão da pasta (classe em PascalCase,
       módulo de funções em camelCase) e em português.
-- [ ] Testes ao lado do que testam e com nomes que digam a regra coberta.
-- [ ] Mover o que estiver fora do lugar, sem mudar comportamento.
+      _O padrão está feito (A16). A tradução dos nomes em inglês fica para
+      o A18, pasta por pasta, junto com os identificadores: renomear o
+      arquivo sem renomear a classe deixaria os dois discordando._
+- [x] Testes ao lado do que testam e com nomes que digam a regra coberta.
+- [x] Mover o que estiver fora do lugar, sem mudar comportamento.
 
 **Aceite:** nenhum arquivo fora da regra de pastas; `npm run check` passa.
 

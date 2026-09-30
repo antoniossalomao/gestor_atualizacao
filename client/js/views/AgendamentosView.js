@@ -7,7 +7,7 @@ import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
 import { debounce } from "../utils/debounce.js";
 import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
-import { emptyState } from "../components/EmptyState.js";
+import { emptyState } from "../components/estadoVazio.js";
 import { plural, html } from "../utils/html.js";
 import { iconHtml } from "../utils/icons.js";
 import { marcarOcupado } from "../components/botaoOcupado.js";

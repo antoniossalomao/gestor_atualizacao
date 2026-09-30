@@ -1,5 +1,5 @@
 import { RequestCancelled } from "../api/ApiClient.js";
-import { EstadoDados } from "../utils/estadoDados.js";
+import { EstadoDados } from "../utils/EstadoDados.js";
 import { el } from "../components/elemento.js";
 import { icon } from "../utils/icons.js";
 
@@ -31,7 +31,7 @@ const ATRASO_INDICADOR_MS = 180;
  * ciclo "mostra o que tem guardado, revalida por trás, redesenha só se mudou"
  * (ver SwrCache) e ainda cuida do indicador de atualização em segundo plano
  * e do aviso de dados desatualizados quando a busca falha (ver
- * utils/estadoDados.js).
+ * utils/EstadoDados.js).
  */
 export class View {
   /**

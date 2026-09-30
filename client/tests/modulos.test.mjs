@@ -28,7 +28,7 @@ const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const CLIENT = path.resolve(AQUI, "..");
 
 /** Os arquivos que o index.html carrega -- tudo o mais entra pelo grafo. */
-const PONTOS_DE_ENTRADA = ["js/main.js", "js/theme-init.js"];
+const PONTOS_DE_ENTRADA = ["js/main.js", "js/temaInicial.js"];
 
 function listarModulos(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {

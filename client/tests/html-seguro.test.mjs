@@ -36,7 +36,7 @@ const TETO = {
   "components/MenuConta.js": 1,
   "components/Drawer.js": 1,
   "components/ConexaoBanner.js": 1,
-  "app/Shortcuts.js": 1,
+  "app/atalhos.js": 1,
 };
 
 function listar(dir) {

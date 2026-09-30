@@ -17,7 +17,7 @@ class AlertaAgenteService {
   /**
    * @param {import('../database/Database').Database} db
    * @param {import('./VersaoService').VersaoService} versaoService
-   * @param {import('./NotificationService').NotificationService} notifications
+   * @param {import('./NotificacaoService').NotificacaoService} notifications
    * @param {import('./ConfiguracaoSistemaService').ConfiguracaoSistemaService} configuracaoSistema
    */
   constructor(db, versaoService, notifications, configuracaoSistema) {

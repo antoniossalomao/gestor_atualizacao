@@ -5,7 +5,7 @@ import { icon } from "../utils/icons.js";
 import { escapeHtml } from "../utils/html.js";
 import { copyToClipboard } from "../components/areaDeTransferencia.js";
 import { marcarOcupado } from "../components/botaoOcupado.js";
-import { emptyState } from "../components/EmptyState.js";
+import { emptyState } from "../components/estadoVazio.js";
 
 /**
  * Janela flutuante com os acessos remotos (AnyDesk / Suporte Bredas) das

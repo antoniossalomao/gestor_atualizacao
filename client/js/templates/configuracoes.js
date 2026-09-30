@@ -123,7 +123,7 @@ export function previaTabela() {
 }
 
 /**
- * Os atalhos de um grupo, no formato da lista do `?` (app/Shortcuts.js).
+ * Os atalhos de um grupo, no formato da lista do `?` (app/atalhos.js).
  * @param {Array<[string, string, string]>} atalhos
  */
 export function listaAtalhos(atalhos) {

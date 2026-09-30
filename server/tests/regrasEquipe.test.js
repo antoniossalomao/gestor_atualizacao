@@ -21,7 +21,7 @@ const { HistoricoService } = require("../src/services/HistoricoService");
 const { ConfiguracaoSistemaService, TOKEN_DE_EXEMPLO } = require("../src/services/ConfiguracaoSistemaService");
 const { AgendamentoService } = require("../src/services/AgendamentoService");
 const { AtualizacaoService } = require("../src/services/AtualizacaoService");
-const { NotificationService } = require("../src/services/NotificationService");
+const { NotificacaoService } = require("../src/services/NotificacaoService");
 const { AlertaAgenteService } = require("../src/services/AlertaAgenteService");
 const { REGRAS, validarRegra, converterRegra } = require("../src/config/regrasEquipe");
 const { Server } = require("../src/Server");
@@ -309,11 +309,11 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
   await t.test("Discord: o webhook é lido a cada envio, não guardado na subida", async () => {
     const env = ambiente();
     try {
-      const notifications = new NotificationService({ webhookUrl: () => env.regras.valor("discordWebhookUrl") });
+      const notifications = new NotificacaoService({ webhookUrl: () => env.regras.valor("discordWebhookUrl") });
       assert.equal(notifications.webhookUrl, "");
       env.regras.atualizar(ADMIN, { discordWebhookUrl: WEBHOOK });
       assert.equal(notifications.webhookUrl, WEBHOOK);
-      assert.deepEqual(await new NotificationService({}).testar(), { ok: false, detalhe: "Nenhum webhook configurado." });
+      assert.deepEqual(await new NotificacaoService({}).testar(), { ok: false, detalhe: "Nenhum webhook configurado." });
     } finally {
       env.cleanup();
     }
@@ -321,7 +321,7 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
 
   await t.test("Alerta de agentes: configurar o webhook com o servidor no ar liga o timer", () => {
     const env = ambiente();
-    const notifications = new NotificationService({ webhookUrl: () => env.regras.valor("discordWebhookUrl") });
+    const notifications = new NotificacaoService({ webhookUrl: () => env.regras.valor("discordWebhookUrl") });
     const alerta = new AlertaAgenteService(env.db, { painel: () => ({ agentes: [] }) }, notifications, env.regras);
     try {
       alerta.start(() => env.regras.valor("alertaAgentesIntervaloMinutos") * 60_000);

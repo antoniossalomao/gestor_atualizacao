@@ -1,7 +1,7 @@
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
 import { toast } from "../../components/Toast.js";
-import { emptyState } from "../../components/EmptyState.js";
+import { emptyState } from "../../components/estadoVazio.js";
 import { html } from "../../utils/html.js";
 import { iconHtml } from "../../utils/icons.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
