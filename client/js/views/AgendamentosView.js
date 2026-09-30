@@ -401,22 +401,7 @@ export class AgendamentosView extends View {
       }
     });
 
-    this.kanban.addEventListener("dragend", () => {
-      for (const c of this.kanban.querySelectorAll(".kanban-card.is-dragging")) {
-        c.classList.remove("is-dragging");
-      }
-      for (const col of this.kanban.querySelectorAll(".kanban-column")) {
-        col.classList.remove("is-drop-target");
-        col.classList.remove("is-col-dragging");
-        col.classList.remove("is-col-target");
-      }
-      setTimeout(() => {
-        this._isDragging = false;
-        this._lastDragEnd = Date.now(); // registrado DEPOIS do timeout: clique falso jamais passa daqui
-        this._draggedCardId = null;
-        this._draggedColStatus = null;
-      }, 80);
-    });
+    this.kanban.addEventListener("dragend", () => this._encerrarArrasto());
 
     this.kanban.addEventListener("dragover", (e) => {
       const col = e.target.closest(".kanban-column");
@@ -457,17 +442,41 @@ export class AgendamentosView extends View {
       if (this._draggedCardId || e.dataTransfer.types.includes("application/x-kanban-card")) {
         const cardId = e.dataTransfer.getData("application/x-kanban-card") || e.dataTransfer.getData("text/plain") || this._draggedCardId;
         const novoStatus = col.dataset.status;
+        // Encerrado aqui, e não só no dragend: o _moverCard redesenha o quadro
+        // na hora, o cartão de origem sai do DOM, e o dragend -- que o
+        // navegador dispara nesse cartão -- não sobe mais até o quadro. Sem
+        // isto _draggedCardId ficava preso, e o próximo arrasto de COLUNA era
+        // tratado como arrasto daquele cartão antigo.
+        this._encerrarArrasto();
         if (cardId && novoStatus && novoStatus !== FILTRO_ARQUIVADAS) {
           this._moverCard(cardId, novoStatus);
         }
       } else if (this._draggedColStatus || e.dataTransfer.types.includes("application/x-kanban-column")) {
         const origemStatus = e.dataTransfer.getData("application/x-kanban-column") || this._draggedColStatus;
         const destinoStatus = col.dataset.status;
+        this._encerrarArrasto();
         if (origemStatus && destinoStatus && origemStatus !== destinoStatus) {
           this._reordenarColunas(origemStatus, destinoStatus);
         }
       }
     });
+  }
+
+  _encerrarArrasto() {
+    for (const c of this.kanban.querySelectorAll(".kanban-card.is-dragging")) {
+      c.classList.remove("is-dragging");
+    }
+    for (const col of this.kanban.querySelectorAll(".kanban-column")) {
+      col.classList.remove("is-drop-target");
+      col.classList.remove("is-col-dragging");
+      col.classList.remove("is-col-target");
+    }
+    this._draggedCardId = null;
+    setTimeout(() => {
+      this._isDragging = false;
+      this._lastDragEnd = Date.now(); // registrado DEPOIS do timeout: clique falso jamais passa daqui
+      this._draggedColStatus = null;
+    }, 80);
   }
 
   async refresh() {
@@ -620,15 +629,24 @@ export class AgendamentosView extends View {
     this._renderKanban(this.rows);
 
     try {
+      // A resposta traz a `revisao` nova, e é o Object.assign que a guarda na
+      // linha: sem isso a próxima mudança do mesmo cartão sai com a revisão
+      // antiga e o servidor recusa com 409 (ver AgendamentoService.update).
       const atualizado = await this.api.put(`/agendamentos/${row.id}`, { ...row, status: novoStatus });
       if (atualizado) Object.assign(row, atualizado);
       this._invalidar();
       toast.success(`Tarefa movida para "${novoStatus}".`);
     } catch (err) {
-      // Reverte em caso de erro
       row.status = statusAnterior;
       this._renderKanban(this.rows);
       Modal.alert("Erro ao mover tarefa", errorMessage(err), "error");
+      // Num conflito de verdade (outra pessoa mexeu na tarefa), a linha local
+      // está velha e continuaria recusada em toda tentativa até um F5. Recarregar
+      // traz a revisão atual e o quadro volta a aceitar a mudança.
+      if (err instanceof ApiError && err.status === 409) {
+        this._invalidar();
+        await this._reloadList();
+      }
     }
   }
 

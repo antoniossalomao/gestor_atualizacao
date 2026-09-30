@@ -150,7 +150,12 @@ class AgendamentoService {
       throw new NotFoundError("Esta tarefa não existe mais. Ela pode ter sido excluída por outra pessoa.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${data.tarefa}"`, { antes: atual, depois: data });
-    return data;
+    // Devolve a linha RELIDA, com a `revisao` nova. Devolver só `data` (sem
+    // revisão) fazia o quadro guardar a revisão antiga depois de arrastar um
+    // cartão: a mudança seguinte no mesmo cartão -- voltar de "Em Andamento"
+    // para "A Fazer", por exemplo -- batia em 409 contra a própria pessoa, e
+    // o quadro só voltava a aceitar mudanças depois de um F5.
+    return this.db.agendamentos.find(id);
   }
 
   delete(id, usuario) {

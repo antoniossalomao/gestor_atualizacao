@@ -131,6 +131,21 @@ test("AgendamentoService - concorrência otimista e geração em lote", () => {
       (erro) => erro.statusCode === 409 && /Camila/.test(erro.message)
     );
 
+    // A01: o quadro guarda o que o PUT devolve e manda essa revisão na próxima
+    // mudança. Antes a resposta vinha sem `revisao`, e a segunda mudança do
+    // mesmo cartão (sair de "Em Andamento", por exemplo) era um 409 contra a
+    // própria pessoa. Ida e volta entre "Em Andamento" e cada outro status.
+    let linha = criar(env.service, env.db, { tarefa: "Vai e volta" });
+    for (const outro of STATUS_OPTIONS.filter((s) => s !== "Em Andamento")) {
+      for (const status of ["Em Andamento", outro]) {
+        const resposta = env.service.update(linha.id, { ...linha, status }, USUARIO);
+        assert.equal(resposta.status, status);
+        assert.equal(resposta.revisao, linha.revisao + 1, `revisão nova na resposta ao ir para ${status}`);
+        linha = { ...linha, ...resposta };
+      }
+    }
+    assert.equal(env.db.agendamentos.find(linha.id).status, CONCLUIDO);
+
     const lote = env.service.gerarLote({ clientes: ["Loja 1", "Loja 2", "Loja 1"], sistema: "B_Vendas", responsavel: "Teste" }, USUARIO);
     assert.equal(lote.criados, 2, "remove clientes duplicados antes da transação");
     assert.equal(env.db.agendamentos.list("Atualizar B_Vendas").total, 2);

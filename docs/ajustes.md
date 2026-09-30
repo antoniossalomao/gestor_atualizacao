@@ -80,12 +80,12 @@ do arrastar entre colunas (evento `drop`, perto da linha 450) ou do seletor
 de status. Não está confirmado qual dos dois caminhos falha, ou se os dois
 falham.
 
-- [ ] Reproduzir pelos dois caminhos, com o console aberto.
-- [ ] Achar a causa. Pelo sintoma, o provável é um erro no meio da
+- [x] Reproduzir pelos dois caminhos, com o console aberto.
+- [x] Achar a causa. Pelo sintoma, o provável é um erro no meio da
       atualização (resposta do servidor, cache ou estado do arrastar) que
       deixa o quadro inconsistente.
-- [ ] Corrigir e registrar a causa num comentário.
-- [ ] Teste que cobre a ida e a volta entre `Em Andamento` e os outros status.
+- [x] Corrigir e registrar a causa num comentário.
+- [x] Teste que cobre a ida e a volta entre `Em Andamento` e os outros status.
 
 **Aceite:** a tarefa vai e volta entre os status, pelos dois caminhos, sem
 recarregar a página.

@@ -15,6 +15,8 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Quadro de Agendamentos não trava mais na segunda mudança de status — A01 (30/09/2026):** depois de mover uma tarefa (arrastando ou pelo formulário), a mudança seguinte da mesma tarefa — tirá-la de "Em Andamento", por exemplo — era recusada com "Este agendamento foi atualizado por…" com o nome da própria pessoa, e o quadro só voltava a aceitar mudanças com F5. O servidor devolvia a tarefa salva sem a revisão nova, e a tela seguia mandando a antiga. Agora a resposta traz a revisão atual; num conflito de verdade (outra pessoa mexeu), o quadro recarrega sozinho. O arrasto de coluna também deixou de ser confundido com o último cartão arrastado.
+
 - **Situação dos clientes pela data do atendimento (29/09/2026):** a versão recebida não decide mais se o cliente está em dia — vale só a data do último atendimento contra a data da versão oficial (ou da versão-alvo, em Campanhas). Quem foi atendido depois da oficial conta como em dia mesmo com uma versão anterior gravada. A coluna "Versão recebida" saiu da aba Sistemas e a marca "(pela data)" saiu das telas. A versão recebida continua gravada e aparece na ficha, no relatório e na exportação da campanha. Revisão registrada na [ADR-0008](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0008).
 - **Formulário de campanha:** o campo Descrição não fica mais colado no Cidade.
 
