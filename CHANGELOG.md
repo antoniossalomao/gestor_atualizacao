@@ -15,6 +15,8 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **"Nova Campanha" na Ação rápida — A05 (30/09/2026):** o atalho Alt+N passa a oferecer Nova Campanha, que abre direto o formulário da campanha. Para quem só consulta, o botão aparece desativado, como os demais.
+
 - **Clientes abre sempre por ID crescente — A04 (30/09/2026):** ao entrar na tela, a lista volta à ordem de cadastro (ID 1, 2, 3…). A ordenação escolhida vale enquanto se está na tela e deixou de ser lembrada na próxima abertura; a busca continua sendo.
 
 - **Regime tributário na Ficha 360° — A03 (30/09/2026):** o regime gravado no cadastro do cliente passa a aparecer na ficha, em Resumo & Cadastro ("—" quando vazio) e no cabeçalho, junto de cidade e grupo.

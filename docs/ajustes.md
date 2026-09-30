@@ -148,8 +148,8 @@ ordenação salva (`prefs "clientes:filtros"`).
 
 **Onde:** lista de itens em `client/js/app/App.js`, perto da linha 596.
 
-- [ ] Incluir "Nova campanha", abrindo o formulário de nova campanha.
-- [ ] Respeitar a permissão: botão desativado para quem não pode criar.
+- [x] Incluir "Nova campanha", abrindo o formulário de nova campanha.
+- [x] Respeitar a permissão: botão desativado para quem não pode criar.
 
 ### A06 — Tabelas ocupam a altura disponível da página
 

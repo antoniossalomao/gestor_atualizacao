@@ -594,6 +594,7 @@ export class App {
       ["atualizacoes", "Nova Atualização", "atualizacoes"],
       ["agendamentos", "Novo Agendamento", "agendamentos"],
       ["clientes", "Novo Cliente", "clientes"],
+      ["campanhas", "Nova Campanha", "campanhas"],
       ...(this.atualizadorHabilitado ? [["versoes", "Publicar Nova Versão", "versoes"]] : []),
     ];
     box.innerHTML = `<h3 class="modal-box__title">Ação rápida</h3><p class="modal-box__message">Comece uma tarefa sem perder tempo procurando a tela.</p>

@@ -136,6 +136,12 @@ export class CampanhasView extends View {
     this.tableEl.addEventListener("click", (e) => this._acaoLinha(e));
   }
 
+  /** "Nova Campanha" da Ação rápida (App._abrirAcoesRapidas) chega aqui com `novo`. */
+  aplicarParams({ novo } = {}) {
+    if (!novo || this.user?.role === "consulta") return;
+    this._abrirFormulario();
+  }
+
   async refresh() {
     for (const b of this.container.querySelectorAll("[data-lista]")) {
       const ativo = (b.getAttribute("data-lista") === "encerradas") === this.mostrarEncerradas;
