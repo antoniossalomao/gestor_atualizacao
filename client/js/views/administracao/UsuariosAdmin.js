@@ -5,7 +5,7 @@ import { toast } from "../../components/Toast.js";
 import { Drawer } from "../../components/Drawer.js";
 import { html } from "../../utils/html.js";
 import { iconHtml } from "../../utils/icons.js";
-import { marcarOcupado } from "../../utils/guard.js";
+import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { rotuloPapel } from "../../domain/pessoa.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { legendaPapeis, linhaUsuario } from "../../templates/administracao.js";

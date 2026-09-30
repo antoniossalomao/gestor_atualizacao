@@ -3,7 +3,7 @@ import { Modal } from "../../components/Modal.js";
 import { toast } from "../../components/Toast.js";
 import { html } from "../../utils/html.js";
 import { iconHtml } from "../../utils/icons.js";
-import { marcarOcupado } from "../../utils/guard.js";
+import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { cartaoPerfil, listaSessoes } from "../../templates/configuracoes.js";
 

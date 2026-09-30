@@ -2,8 +2,9 @@ import { ApiError } from "../api/ApiClient.js";
 import { Modal } from "../components/Modal.js";
 import { toast } from "../components/Toast.js";
 import { icon } from "../utils/icons.js";
-import { escapeHtml, copyToClipboard } from "../utils/html.js";
-import { marcarOcupado } from "../utils/guard.js";
+import { escapeHtml } from "../utils/html.js";
+import { copyToClipboard } from "../components/areaDeTransferencia.js";
+import { marcarOcupado } from "../components/botaoOcupado.js";
 import { emptyState } from "../components/EmptyState.js";
 
 /**

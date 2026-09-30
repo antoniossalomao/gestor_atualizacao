@@ -8,7 +8,7 @@ import { debounce } from "../utils/debounce.js";
 import { icon, iconHtml } from "../utils/icons.js";
 import { emptyState } from "../components/EmptyState.js";
 import { html, plural } from "../utils/html.js";
-import { marcarOcupado } from "../utils/guard.js";
+import { marcarOcupado } from "../components/botaoOcupado.js";
 import { prefs } from "../app/prefs.js";
 import { aparencia } from "../app/appearance.js";
 import { Autocomplete } from "../components/Autocomplete.js";

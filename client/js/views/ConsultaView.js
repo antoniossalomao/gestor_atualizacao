@@ -1,7 +1,8 @@
 import { View } from "../app/View.js";
 import { debounce } from "../utils/debounce.js";
 import { emptyState } from "../components/EmptyState.js";
-import { plural, html, copyToClipboard } from "../utils/html.js";
+import { plural, html } from "../utils/html.js";
+import { copyToClipboard } from "../components/areaDeTransferencia.js";
 import { toast } from "../components/Toast.js";
 import { iconHtml } from "../utils/icons.js";
 import { relatorioDeAtualizacao, haQuantoTempo } from "../domain/relatorio.js";

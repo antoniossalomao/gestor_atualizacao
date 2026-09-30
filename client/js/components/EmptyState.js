@@ -1,5 +1,5 @@
 import { icon } from "../utils/icons.js";
-import { el } from "../utils/html.js";
+import { el } from "./elemento.js";
 
 /**
  * Estado vazio com ícone, título, explicação e (quando faz sentido) um botão

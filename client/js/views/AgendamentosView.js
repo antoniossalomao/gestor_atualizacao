@@ -10,7 +10,7 @@ import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { emptyState } from "../components/EmptyState.js";
 import { plural, html } from "../utils/html.js";
 import { iconHtml } from "../utils/icons.js";
-import { marcarOcupado } from "../utils/guard.js";
+import { marcarOcupado } from "../components/botaoOcupado.js";
 import { prefs } from "../app/prefs.js";
 import { Drawer } from "../components/Drawer.js";
 import { STATUS_CONCLUIDO } from "../domain/agendamento.js";

@@ -1,7 +1,7 @@
 import { Modal } from "./Modal.js";
 import { ApiError } from "../api/ApiClient.js";
-import { escolherArquivo } from "../utils/arquivo.js";
-import { withBusyButton } from "../utils/guard.js";
+import { escolherArquivo } from "./arquivos.js";
+import { withBusyButton } from "./botaoOcupado.js";
 import { orientacaoImportacao, previaImportacao, resultadoImportacao } from "../templates/importacao.js";
 
 /**

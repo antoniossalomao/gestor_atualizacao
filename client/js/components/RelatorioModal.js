@@ -1,5 +1,6 @@
 import { Modal } from "./Modal.js";
-import { html, copyToClipboard } from "../utils/html.js";
+import { html } from "../utils/html.js";
+import { copyToClipboard } from "./areaDeTransferencia.js";
 import { toast } from "./Toast.js";
 import { aparencia } from "../app/appearance.js";
 

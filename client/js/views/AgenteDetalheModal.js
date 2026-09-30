@@ -1,11 +1,13 @@
 import { Modal } from "../components/Modal.js";
-import { copyToClipboard, escapeHtml } from "../utils/html.js";
+import { escapeHtml } from "../utils/html.js";
+import { copyToClipboard } from "../components/areaDeTransferencia.js";
 import { formatarDataHora, tempoRelativo, formatarDuracao } from "../utils/date.js";
 import { emptyState } from "../components/EmptyState.js";
 import { faseLabel } from "../domain/agenteLabels.js";
 import { ApiError } from "../api/ApiClient.js";
 import { toast } from "../components/Toast.js";
-import { criarDetalhesRetorno, relatorioRetornosTexto } from "../domain/agenteReport.js";
+import { relatorioRetornosTexto } from "../domain/agenteReport.js";
+import { criarDetalhesRetorno } from "../components/detalhesRetorno.js";
 import { classificarRetorno } from "../domain/agenteStatus.js";
 
 const LIMITE_RETORNOS = 300;

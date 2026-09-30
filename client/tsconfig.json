@@ -37,7 +37,13 @@
     // especificadores como o navegador resolve módulos ES nativos, que é
     // exatamente o que acontece aqui.
     "moduleResolution": "bundler",
-    "lib": ["es2022", "dom"],
+    // Sem "dom", de propósito: é essa ausência que transforma um `document`, um
+    // `window` ou um `localStorage` dentro de domain/, utils/ ou templates/ em
+    // erro de tipo. "webworker" traz o que existe fora de uma página (timers,
+    // URL, Blob, fetch) sem trazer a árvore de elementos. Até o A16 (30/09/2026)
+    // a lib era "dom" e este portão só parecia existir: utils/ abrigava quatro
+    // módulos que tocavam o documento, e nada avisava.
+    "lib": ["es2022", "webworker"],
 
     "strict": true,
     // Desligado de propósito. Com ele ligado, toda função sem `@param` vira

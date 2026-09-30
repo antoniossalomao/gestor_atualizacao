@@ -7,10 +7,10 @@ import { ApiError } from "../api/ApiClient.js";
 import { prefs } from "../app/prefs.js";
 import { debounce } from "../utils/debounce.js";
 import { isValidDateBR, mascaraDataBR, todayBR } from "../utils/date.js";
-import { baixarBlob } from "../utils/arquivo.js";
+import { baixarBlob } from "../components/arquivos.js";
 import { html } from "../utils/html.js";
 import { iconHtml } from "../utils/icons.js";
-import { withBusyButton } from "../utils/guard.js";
+import { withBusyButton } from "../components/botaoOcupado.js";
 import { filtrarClientesCampanha, tarefaDaCampanha } from "../domain/campanhas.js";
 import {
   listaCampanhas,

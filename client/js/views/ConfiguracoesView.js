@@ -8,7 +8,7 @@ import { TelaComAbas } from "../components/TelaComAbas.js";
 import { html } from "../utils/html.js";
 import { iconHtml } from "../utils/icons.js";
 import { filtrarPorBusca } from "../utils/busca.js";
-import { baixarTexto, escolherArquivo } from "../utils/arquivo.js";
+import { baixarTexto, escolherArquivo } from "../components/arquivos.js";
 import { resultadosBusca } from "../templates/configuracoes.js";
 import { definirAbas, chavesDaAba } from "./configuracoes/ajustes.js";
 import { SecaoAjustes } from "./configuracoes/SecaoAjustes.js";

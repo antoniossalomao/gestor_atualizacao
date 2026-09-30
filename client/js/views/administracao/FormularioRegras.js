@@ -2,7 +2,7 @@ import { ApiError } from "../../api/ApiClient.js";
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
 import { toast } from "../../components/Toast.js";
-import { marcarOcupado } from "../../utils/guard.js";
+import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { alteracoesRegras } from "../../domain/administracao.js";
 
 /**

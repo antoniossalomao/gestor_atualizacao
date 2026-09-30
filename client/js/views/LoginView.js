@@ -1,5 +1,5 @@
 import { ApiError } from "../api/ApiClient.js";
-import { marcarOcupado } from "../utils/guard.js";
+import { marcarOcupado } from "../components/botaoOcupado.js";
 import { icon, simboloMarca } from "../utils/icons.js";
 
 /**

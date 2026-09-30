@@ -1,6 +1,7 @@
 import { View } from "../app/View.js";
 import { SortableTable } from "../components/SortableTable.js";
-import { blendHex, tokenHex } from "../utils/color.js";
+import { blendHex } from "../utils/color.js";
+import { tokenHex } from "../app/theme.js";
 import { debounce } from "../utils/debounce.js";
 import { formatarDataHora, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { ApiError } from "../api/ApiClient.js";

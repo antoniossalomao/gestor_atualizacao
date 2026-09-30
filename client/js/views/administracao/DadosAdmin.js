@@ -1,11 +1,11 @@
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
 import { toast } from "../../components/Toast.js";
-import { marcarOcupado } from "../../utils/guard.js";
+import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { html } from "../../utils/html.js";
 import { iconHtml } from "../../utils/icons.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
-import { baixarBlob } from "../../utils/arquivo.js";
+import { baixarBlob } from "../../components/arquivos.js";
 import { ImportacaoModal } from "../../components/ImportacaoModal.js";
 
 /**

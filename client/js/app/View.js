@@ -1,6 +1,6 @@
 import { RequestCancelled } from "../api/ApiClient.js";
 import { EstadoDados } from "../utils/estadoDados.js";
-import { el } from "../utils/html.js";
+import { el } from "../components/elemento.js";
 import { icon } from "../utils/icons.js";
 
 /**

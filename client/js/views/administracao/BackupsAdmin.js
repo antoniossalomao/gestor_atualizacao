@@ -4,7 +4,7 @@ import { toast } from "../../components/Toast.js";
 import { emptyState } from "../../components/EmptyState.js";
 import { html } from "../../utils/html.js";
 import { iconHtml } from "../../utils/icons.js";
-import { marcarOcupado } from "../../utils/guard.js";
+import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { linhaBackup } from "../../templates/administracao.js";
 import { mensagem } from "./FormularioRegras.js";
