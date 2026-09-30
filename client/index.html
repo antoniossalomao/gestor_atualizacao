@@ -45,7 +45,15 @@
     Nao ha nenhum framework por tras disso -- so classes de JavaScript puro
     manipulando o DOM diretamente.
   -->
-  <div id="app"></div>
+  <div id="app">
+    <!-- Enquanto o /auth/status não volta a tela ficava em branco, e com o
+         servidor lento parecia que o endereço estava errado (A12). O
+         JavaScript troca tudo isto pelo login ou pelo painel. -->
+    <div class="auth-screen auth-screen--carregando" aria-busy="true">
+      <span class="spinner" aria-hidden="true"></span>
+      <span>Carregando o Gestor…</span>
+    </div>
+  </div>
   <div id="toast-stack" aria-live="polite" aria-atomic="false"></div>
 
   <script type="module" src="/js/main.js"></script>

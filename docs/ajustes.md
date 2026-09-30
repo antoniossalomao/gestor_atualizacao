@@ -333,12 +333,12 @@ mesmo peso. Exemplos: "Dados e importação" › "Histórico de atualizações";
 
 ### A12 — Tela de login
 
-- [ ] Identidade visual: painel com marca e nome do sistema em telas largas,
+- [x] Identidade visual: painel com marca e nome do sistema em telas largas,
       formulário sozinho no celular.
-- [ ] Estados claros de carregando e de erro.
-- [ ] Botão de mostrar senha e aviso de Caps Lock ligado.
-- [ ] Revisar no tema claro e no escuro.
-- [ ] Sem biblioteca externa nem etapa de build (ADR-0001).
+- [x] Estados claros de carregando e de erro.
+- [x] Botão de mostrar senha e aviso de Caps Lock ligado.
+- [x] Revisar no tema claro e no escuro.
+- [x] Sem biblioteca externa nem etapa de build (ADR-0001).
 
 ## Fase 5 — Limpeza, organização e auditoria
 

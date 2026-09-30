@@ -5724,6 +5724,13 @@ hr.separator {
   background: radial-gradient(circle at 15% 20%, var(--halo-topo), transparent 32%), var(--cor-fundo);
 }
 
+/* Antes do /auth/status voltar (index.html). */
+.auth-screen--carregando {
+  gap: var(--sp-3);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-base);
+}
+
 /*
  * Painel de marca ao lado do formulário -- só em telas largas (ver o
  * media query abaixo). Estreita, era só o card sozinho boiando no meio de um
@@ -5735,21 +5742,39 @@ hr.separator {
   display: none;
 }
 
+/*
+ * Em tela larga, a tela se divide em duas metades (A12, 30/09/2026): a marca
+ * num painel de verdade, tingido com a cor de destaque, e o formulário na
+ * outra. Antes o "painel" era só texto solto no mesmo fundo do resto, e o
+ * logo e o nome apareciam duas vezes -- a regra que escondia o do cartão
+ * ficava ANTES da regra base dele no arquivo e perdia (ver .auth-card__marca
+ * lá embaixo, agora com a exceção depois da base).
+ * O tingido é color-mix sobre a superfície, e não uma cor fixa: acompanha o
+ * tema claro, o escuro e a cor de destaque escolhida, sem texto branco sobre
+ * azul que o contraste alto não aguentaria.
+ */
 @media (min-width: 900px) {
-  .auth-screen {
-    gap: 64px;
+  .auth-screen:not(.auth-screen--carregando) {
+    display: grid;
+    grid-template-columns: minmax(360px, 5fr) 7fr;
+    align-items: stretch;
+    padding: 0;
   }
   .auth-screen__brand {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: var(--sp-4);
-    width: min(340px, 32vw);
+    padding: var(--sp-8) clamp(32px, 6vw, 96px);
+    border-right: 1px solid var(--cor-borda);
+    background:
+      radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cor-accent) 26%, transparent), transparent 55%),
+      linear-gradient(165deg, color-mix(in srgb, var(--cor-accent) 14%, var(--cor-superficie)), var(--cor-superficie));
   }
-  /* A marca já aparece inteira no painel ao lado -- repeti-la, pequena, em
-     cima do formulário também seria a mesma informação duas vezes na mesma
-     tela. */
-  .auth-card__logo {
-    display: none;
+  .auth-screen > .auth-card {
+    align-self: center;
+    justify-self: center;
+    margin: var(--sp-8);
   }
 }
 
@@ -5757,53 +5782,55 @@ hr.separator {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 11px;
+  width: 56px;
+  height: 56px;
+  border-radius: 13px;
   background: var(--cor-accent);
   color: var(--cor-sobre-accent);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--cor-accent) 35%, transparent);
 }
 .auth-screen__brand-mark svg {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
 }
 
 .auth-screen__brand-name {
   font-family: var(--fonte-display);
-  font-size: var(--txt-xl);
+  font-size: var(--txt-2xl);
   font-weight: var(--peso-extra);
   letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
 .auth-screen__brand-tagline {
-  margin: -8px 0 0;
+  margin: -6px 0 0;
   color: var(--cor-texto-sub);
-  font-size: var(--txt-base);
-  max-width: 30ch;
+  font-size: var(--txt-md);
+  max-width: 32ch;
 }
 
 .auth-screen__brand-list {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
-  margin: var(--sp-2) 0 0;
+  margin: var(--sp-4) 0 0;
   padding: 0;
   list-style: none;
 }
 .auth-screen__brand-list li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: var(--cor-texto-sub);
-  font-size: var(--txt-sm);
+  gap: 12px;
+  color: var(--cor-texto);
+  font-size: var(--txt-base);
 }
 .auth-screen__brand-list svg {
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
-  padding: 5px;
-  border-radius: 7px;
-  background: var(--cor-superficie-alta);
+  padding: 7px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--cor-accent) 16%, var(--cor-superficie));
   color: var(--cor-accent);
   box-sizing: content-box;
 }
@@ -5820,21 +5847,40 @@ hr.separator {
   box-shadow: var(--sombra-flutuante);
 }
 
+.auth-card__marca {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+.auth-card__marca-nome {
+  font-family: var(--fonte-display);
+  font-size: var(--txt-md);
+  font-weight: var(--peso-extra);
+  letter-spacing: -0.01em;
+}
+
 .auth-card__logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  margin-bottom: var(--sp-4);
+  width: 40px;
+  height: 40px;
   border-radius: 9px;
   background: var(--cor-accent);
   color: var(--cor-sobre-accent);
 }
 
 .auth-card__logo svg {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
+}
+
+/* Depois da regra base, de propósito (ver o comentário do painel de marca). */
+@media (min-width: 900px) {
+  .auth-card__marca {
+    display: none;
+  }
 }
 
 .auth-card h2 {
@@ -5861,17 +5907,47 @@ hr.separator {
   padding: 11px 14px;
 }
 
+/* O erro ficava colado no rótulo "Usuário" logo abaixo, e parecia ser
+   só daquele campo. Agora tem espaço, borda e um sinal de alerta. */
 .auth-card__error {
   display: none;
-  padding: 9px 12px;
+  margin-bottom: var(--sp-4);
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--cor-vermelho) 40%, transparent);
   border-radius: var(--raio-pequeno);
   background: var(--cor-vermelho-fraco);
   color: var(--cor-vermelho);
   font-size: var(--txt-sm);
+  font-weight: var(--peso-medio);
 }
 
 .auth-card__error.is-visible {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.auth-card__error.is-visible::before {
+  content: "!";
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--cor-vermelho);
+  color: var(--cor-superficie);
+  font-size: 11px;
+  font-weight: var(--peso-extra);
+  line-height: 1;
+}
+
+.auth-card .input[aria-invalid="true"] {
+  border-color: var(--cor-vermelho);
+}
+
+.auth-card form[aria-busy="true"] .input {
+  opacity: 0.7;
 }
 
 /* ==========================================================================
