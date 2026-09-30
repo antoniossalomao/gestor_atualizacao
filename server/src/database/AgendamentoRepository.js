@@ -1,6 +1,7 @@
 const { BaseRepository } = require("./BaseRepository");
-const { DATE_SORT_EXPR, titleCase } = require("./AtualizacaoRepository");
-const { buildOrderBy } = require("../shared/sortHelper");
+const { DATE_SORT_EXPR } = require("./AtualizacaoRepository");
+const { titleCase } = require("../shared/normalizacao");
+const { buildOrderBy } = require("./ordenacao");
 const { FILTRO_ARQUIVADAS, STATUS_OPTIONS } = require("../config/constants");
 
 const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];

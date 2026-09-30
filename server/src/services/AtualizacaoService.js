@@ -1,10 +1,9 @@
 const ExcelJS = require("exceljs");
-const { splitSystems } = require("../database/AtualizacaoRepository");
 
 const { COLUMNS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
 const { REGRAS } = require("../config/regrasEquipe");
-const { dataValida, parseData } = require("../shared/validation");
-const { normalizarSistemas, normalizarResponsavel } = require("../shared/normalizacao");
+const { dataValida, parseData } = require("./validacao");
+const { normalizarSistemas, normalizarResponsavel, splitSystems } = require("../shared/normalizacao");
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
 const { situacaoDoSistema, situacaoDoCliente, contaComoAtraso, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL } = require("./situacaoVersao");
 const { acharSistema } = require("../database/SistemaRepository");
@@ -633,7 +632,7 @@ class AtualizacaoService {
     const naoCadastrados = new Set();
     // Lido uma vez para o lote todo, e não uma por linha (medido: P05).
     const catalogo = this.db.sistemas.todos();
-    this.db.conn.transaction(() => {
+    this.db.transacao(() => {
       for (const { registro } of aplicar) {
         const sistemas = this._versoesLegadas(registro, this._resolverSistemas(registro, catalogo));
         const linha = this._paraTabela(registro);
@@ -641,7 +640,7 @@ class AtualizacaoService {
         this.db.atualizacoes.insert(linha, sistemas);
         this._marcarSuporteBredasSeNecessario(registro, usuario);
       }
-    })();
+    });
     const resumo = this._resumoLeitura(leitura);
     const inserted = aplicar.length;
     const ignoradas = leitura.linhas.length - inserted;

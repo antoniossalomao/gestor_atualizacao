@@ -1,5 +1,5 @@
 const { ValidationError } = require("../shared/errors");
-const { parsePaginacao } = require("../shared/pagination");
+const { parsePaginacao } = require("./paginacao");
 
 /**
  * Le o intervalo de datas da query string. Nao valida o formato aqui de

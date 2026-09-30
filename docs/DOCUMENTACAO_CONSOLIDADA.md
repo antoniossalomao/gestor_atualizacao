@@ -726,7 +726,7 @@ dois formatos vêm da mesma consulta (o histórico do cliente serve aos dois), e
 formato no modal não vai à rede. Única mudança no backend: `limit=todas` em
 `/atualizacoes/recent-by-client/:nome`, que antes travava em 50.
 
-**Padronização de nomes de sistema e de responsável** (`services/normalizacao.js`). O campo
+**Padronização de nomes de sistema e de responsável** (`shared/normalizacao.js`). O campo
 "Sistema" sempre foi texto livre e tinha acumulado **144 grafias para 14 sistemas** — `B_NFE`
 (342 ocorrências), `B_importaXML` (301), `B_areadocontador e B_importaXML` (203), `B_vendas`,
 `NFCe`, `Sped`. Não era um problema estético: `relatorioPorSistema` compara texto exato, então
@@ -1452,12 +1452,14 @@ escopada ao código puro dos dois lados:
 
 | Config | Cobre | Critério |
 |---|---|---|
-| `client/tsconfig.json` | `js/domain/`, `js/utils/` | não tocam no DOM ([ADR 4.5](#45-adr-0005--clientjs-dividido-por-responsabilidade)) |
-| `server/tsconfig.json` | `src/shared/`, `services/normalizacao.js` | não falam com o Node nem com o banco |
+| `client/tsconfig.json` | `js/domain/`, `js/utils/`, `js/templates/` | não tocam no DOM ([ADR 4.5](#45-adr-0005--clientjs-dividido-por-responsabilidade)) |
+| `server/tsconfig.json` | `src/shared/`, `controllers/paginacao.js`, `database/ordenacao.js`, `services/validacao.js` | não falam com o Node nem com o banco |
 
-Nos dois casos a `lib` do TypeScript é só `es2022` — sem `dom`, sem `node`; é essa ausência que
-torna o critério automático: um arquivo novo que precise do `document` ou do `fs` está na pasta
-errada, e o erro é o aviso. Execução por `npm run check`, também no CI. Modo estrito ligado, exceto
+Nos dois casos a `lib` do TypeScript não tem `dom` nem `node`: no servidor é só `es2022`; no cliente,
+`es2022` mais `webworker` (timers, `URL`, `Blob`, `fetch`, sem a árvore de elementos). É essa ausência
+que torna o critério automático: um arquivo novo que precise do `document` ou do `fs` está na pasta
+errada, e o erro é o aviso. (No cliente a `lib` chegou a ter `dom` por um tempo, e o portão só parecia
+existir: até o A16, de 30/09/2026, `utils/` abrigava quatro módulos que tocavam o documento.) Execução por `npm run check`, também no CI. Modo estrito ligado, exceto
 `noImplicitAny`.
 
 **Consequências.**

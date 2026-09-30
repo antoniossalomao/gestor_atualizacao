@@ -18,6 +18,8 @@ const {
   normalizarSistemas,
   normalizarResponsavel,
   canonizarResponsaveis,
+  splitSystems,
+  titleCase,
 } = require("../src/shared/normalizacao");
 
 /** O catálogo oficial, como viria da tabela `sistemas`. */
@@ -193,5 +195,23 @@ test("normalizacao - canonizarResponsaveis()", async (t) => {
 
   await t.test("lista vazia devolve mapa vazio", () => {
     assert.equal(canonizarResponsaveis([]).size, 0);
+  });
+});
+
+test("splitSystems e titleCase - o texto simples das duas camadas", async (t) => {
+  // Moraram em AtualizacaoRepository até o A16 (30/09/2026), de onde serviços e
+  // outro repositório os importavam; o lugar de texto puro usado por duas
+  // camadas é este arquivo.
+  await t.test("splitSystems separa por vírgula, apara e descarta vazios", () => {
+    assert.deepEqual(splitSystems("B_Vendas, B_NFe ,  ,B_Estoque"), ["B_Vendas", "B_NFe", "B_Estoque"]);
+    assert.deepEqual(splitSystems(""), []);
+    assert.deepEqual(splitSystems(null), []);
+    assert.deepEqual(splitSystems(undefined), []);
+  });
+
+  await t.test("titleCase põe cada palavra em maiúscula inicial e o resto em minúscula", () => {
+    assert.equal(titleCase("camila silva"), "Camila Silva");
+    assert.equal(titleCase("CAMILA SILVA"), "Camila Silva");
+    assert.equal(titleCase("maria"), "Maria");
   });
 });

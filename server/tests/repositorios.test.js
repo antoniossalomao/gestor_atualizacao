@@ -239,3 +239,28 @@ test("AtualizacaoRepository - ordenação por coluna", async (t) => {
     env.cleanup();
   }
 });
+
+test("Database.transacao - escritas de vários repositórios entram juntas ou não entram", async (t) => {
+  const env = ambiente();
+  try {
+    await t.test("se algo lança no meio, nada do que veio antes fica gravado", () => {
+      assert.throws(() => env.db.transacao(() => {
+        inserir(env.db, { cliente: "Loja A", sistema: "B_Vendas", data: "01/09/2026" });
+        inserir(env.db, { cliente: "Loja B", sistema: "B_NFe", data: "02/09/2026" });
+        throw new Error("falhou no meio");
+      }), /falhou no meio/);
+      assert.equal(env.db.atualizacoes.count(), 0, "a atualização gravada antes do erro foi desfeita");
+    });
+
+    await t.test("sem erro, tudo entra e o valor de fn é devolvido", () => {
+      const r = env.db.transacao(() => {
+        inserir(env.db, { cliente: "Loja B", sistema: "B_Vendas", data: "02/09/2026" });
+        return "pronto";
+      });
+      assert.equal(r, "pronto");
+      assert.equal(env.db.atualizacoes.count(), 1);
+    });
+  } finally {
+    env.cleanup();
+  }
+});

@@ -7,7 +7,7 @@ arquivo resume só o que é **não óbvio** e o que mais se erra por aqui.
 
 ```bash
 cd web
-npm run check     # tipos (client/js/domain, client/js/utils, server/src/shared)
+npm run check     # tipos e "sem DOM" (client/js/domain, utils, templates; núcleo puro do servidor)
 npm test          # servidor + cliente
 ```
 
@@ -32,7 +32,7 @@ coisas que `npm test` não enxerga.
   corrigir um bug não óbvio, **acrescente** o porquê.
 - **Não escreva em inglês** nomes de domínio, mensagens ao usuário ou
   comentários. Inglês só onde a linguagem impõe (`get`, `catch`, `async`).
-- **Não use `sortBy` da URL direto no SQL.** Use `shared/sortHelper.js`.
+- **Não use `sortBy` da URL direto no SQL.** Use `database/ordenacao.js`.
 - **Não monte HTML com template literal cru.** Use a tag `html` de
   `js/utils/html.js`, que escapa tudo o que é interpolado. Os ícones entram
   com `iconHtml()`. `confiavel()` só vale para marcação gerada pelo próprio

@@ -151,7 +151,7 @@ class ClienteService {
   }
 
   salvarVersaoSistema(nome, data, usuario, versaoEsperada) {
-    const { dataValida } = require("../shared/validation");
+    const { dataValida } = require("./validacao");
     if (typeof data !== "string" || (data !== "" && !dataValida(data))) {
       throw new ValidationError("Informe uma data válida no formato dd/mm/aaaa.");
     }

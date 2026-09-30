@@ -1,9 +1,9 @@
 const ExcelJS = require("exceljs");
 
 const { STATUS_OPTIONS } = require("../config/constants");
-const { dataValida } = require("../shared/validation");
+const { dataValida } = require("./validacao");
 const { ValidationError, NotFoundError } = require("../shared/errors");
-const { splitSystems } = require("../database/AtualizacaoRepository");
+const { splitSystems } = require("../shared/normalizacao");
 const { acharSistema } = require("../database/SistemaRepository");
 const { situacaoDoSistema, contaParaVersao } = require("./situacaoVersao");
 

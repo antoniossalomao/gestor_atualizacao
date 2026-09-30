@@ -151,7 +151,7 @@ server/                backend (Express + SQLite via better-sqlite3)
   src/services/          regras de negócio
   src/database/          um repositório por tabela; único lugar que escreve SQL
   src/middlewares/       autenticação, papéis, limite de tentativas, tratamento de erro e 404
-  src/shared/            peças usadas por MAIS DE UMA camada (erros, paginação, ordenação, validação)
+  src/shared/            peças usadas por MAIS DE UMA camada (erros, normalização de nomes)
   src/config/            constantes do domínio
   tests/                 testes do servidor (node:test, sem framework externo)
   tsconfig.json          escopo da verificação de tipos do núcleo puro

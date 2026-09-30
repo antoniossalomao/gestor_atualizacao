@@ -193,8 +193,23 @@ function canonizarResponsaveis(ocorrencias) {
   return new Map([...grupos].map(([k, { responsavel }]) => [k, responsavel]));
 }
 
+/** "a, b, c" -> ["a", "b", "c"] -- o texto de sistemas que a visão monta. */
+function splitSystems(text) {
+  return String(text || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+/** "camila silva" -> "Camila Silva" (equivalente simples de str.title() do Python). */
+function titleCase(text) {
+  return text.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
+}
+
 module.exports = {
   chave,
+  splitSystems,
+  titleCase,
   normalizarSistemas,
   normalizarResponsavel,
   canonizarResponsaveis,

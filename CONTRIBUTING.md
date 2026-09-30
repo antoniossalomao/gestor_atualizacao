@@ -88,9 +88,11 @@ npm run check        # deve sair limpo, sempre
 Não compila nada: lê o JavaScript que já existe e as anotações JSDoc que ele já
 tem, e falha se houver inconsistência. Cobre o código **puro** dos dois lados:
 
-- `client/js/domain/` e `client/js/utils/` — não tocam no DOM;
-- `server/src/shared/` e `services/normalizacao.js` — não falam com o Node nem
-  com o banco.
+- `client/js/domain/`, `client/js/utils/` e `client/js/templates/` — não tocam
+  no DOM;
+- `server/src/shared/` e os três arquivos de uma camada só que são texto puro
+  (`controllers/paginacao.js`, `database/ordenacao.js`, `services/validacao.js`)
+  — não falam com o Node nem com o banco.
 
 Ali o resultado é binário: **zero erros, ou achou algo real.** Já encontrou um
 bug em produção: o painel de Saúde reportava "0 pacotes, 0 bytes" para sempre,
@@ -173,7 +175,7 @@ de erro têm um lugar só.
 Três coisas quebram silenciosamente e caro:
 
 1. **SQL montado com texto vindo do usuário.** Ordenação por coluna já tem uma
-   porta de entrada segura (`shared/sortHelper.js`), que só aceita chaves de
+   porta de entrada segura (`database/ordenacao.js`), que só aceita chaves de
    uma lista fixa. Use-a; não interpole `sortBy` no SQL.
 2. **Uma rota nova sem `requireAuth`/`requireRole`.** O padrão é fechado: as
    proteções são montadas sobre a subárvore inteira em `routes/index.js`.

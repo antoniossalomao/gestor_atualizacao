@@ -1,5 +1,6 @@
 const { BaseRepository } = require("./BaseRepository");
-const { buildOrderBy } = require("../shared/sortHelper");
+const { buildOrderBy } = require("./ordenacao");
+const { titleCase } = require("../shared/normalizacao");
 
 // Datas sao guardadas como texto "dd/mm/aaaa"; esta expressao SQL as
 // converte para "aaaammdd" para permitir ordenacao cronologica (ordenar o
@@ -457,17 +458,4 @@ class AtualizacaoRepository extends BaseRepository {
   }
 }
 
-/** "a, b, c" -> ["a", "b", "c"] -- o texto de sistemas que a visão monta. */
-function splitSystems(text) {
-  return String(text || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-/** "camila silva" -> "Camila Silva" (equivalente simples de str.title() do Python). */
-function titleCase(text) {
-  return text.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
-}
-
-module.exports = { AtualizacaoRepository, DATE_SORT_EXPR, COLUMNS, titleCase, splitSystems };
+module.exports = { AtualizacaoRepository, DATE_SORT_EXPR };

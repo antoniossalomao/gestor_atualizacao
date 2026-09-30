@@ -4,7 +4,6 @@ const Sqlite3 = require("better-sqlite3");
 
 const { SISTEMAS_CONHECIDOS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
 const { lerRegra } = require("../config/regrasEquipe");
-const { BaseRepository } = require("./BaseRepository");
 const { AtualizacaoRepository } = require("./AtualizacaoRepository");
 const { ClienteRepository } = require("./ClienteRepository");
 const { ClienteAcessoRepository } = require("./ClienteAcessoRepository");
@@ -601,6 +600,26 @@ class Database {
   }
 
   /**
+   * Executa `fn` numa transação só: ou tudo entra, ou nada entra. Existe para
+   * o serviço que precisa juntar escritas de VÁRIOS repositórios (a importação
+   * de planilha) sem pôr a mão na conexão -- SQL e transação são de database/.
+   * Devolve o que `fn` devolver.
+   */
+  transacao(fn) {
+    return this.conn.transaction(fn)();
+  }
+
+  /** O que o PRAGMA integrity_check diz do banco aberto ("ok" quando está íntegro). */
+  verificarIntegridade() {
+    return this.conn.pragma("integrity_check")[0]?.integrity_check || "ok";
+  }
+
+  /** Modo de gravação do SQLite ("wal" em produção; ver _open). */
+  modoDeGravacao() {
+    return this.conn.pragma("journal_mode")[0]?.journal_mode || "wal";
+  }
+
+  /**
    * Copia gestao.db para a pasta "backups" (ao lado dele). Qualquer falha
    * aqui (disco cheio, sem permissao) e ignorada silenciosamente: um
    * backup que falha nao pode impedir o servidor de subir nem uma
@@ -842,4 +861,4 @@ function timestamp() {
   );
 }
 
-module.exports = { Database, BaseRepository };
+module.exports = { Database };

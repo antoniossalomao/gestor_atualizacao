@@ -22,10 +22,12 @@
   // com 210 avisos falsos não é lido -- e portão que ninguém lê não é portão.
   //
   // O que ESTÁ coberto aqui é exatamente onde mora a regra de negócio pura: as
-  // defesas compartilhadas (paginação, ordenação segura, validação de data,
-  // erros de domínio) e a normalização de sistemas/responsáveis. Foi em
-  // `shared/sortHelper.js` que estava o `?sortBy=constructor` que derrubava
-  // qualquer listagem paginada.
+  // defesas (paginação, ordenação segura, validação de data), os erros de
+  // domínio e a normalização de sistemas/responsáveis. Três delas são usadas
+  // por uma camada só e por isso moram nela (controllers/paginacao.js,
+  // database/ordenacao.js, services/validacao.js), não em shared/ -- daí a
+  // lista de arquivos no "include". Foi em database/ordenacao.js que estava o
+  // `?sortBy=constructor` que derrubava qualquer listagem paginada.
   "compilerOptions": {
     "noEmit": true,
     "allowJs": true,
@@ -48,5 +50,5 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/shared/**/*.js", "src/services/normalizacao.js"]
+  "include": ["src/shared/**/*.js", "src/controllers/paginacao.js", "src/database/ordenacao.js", "src/services/validacao.js"]
 }

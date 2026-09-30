@@ -1,4 +1,4 @@
-const { parseData } = require("../shared/validation");
+const { parseData } = require("./validacao");
 
 /**
  * A regra de "este cliente está em dia?" -- uma só, usada pelo Resumo, pela

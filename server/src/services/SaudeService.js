@@ -23,18 +23,14 @@ class SaudeService {
   obterDiagnostico() {
     let integridade = "ok";
     try {
-      const conn = this.db.conn || this.db;
-      const res = conn.pragma("integrity_check");
-      integridade = res[0]?.integrity_check || "ok";
+      integridade = this.db.verificarIntegridade();
     } catch {
       integridade = "erro_ao_verificar";
     }
 
     let journalMode = "wal";
     try {
-      const conn = this.db.conn || this.db;
-      const res = conn.pragma("journal_mode");
-      journalMode = res[0]?.journal_mode || "wal";
+      journalMode = this.db.modoDeGravacao();
     } catch {
       journalMode = "desconhecido";
     }

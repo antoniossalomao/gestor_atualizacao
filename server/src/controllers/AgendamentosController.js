@@ -1,4 +1,4 @@
-const { parsePaginacao } = require("../shared/pagination");
+const { parsePaginacao } = require("./paginacao");
 
 /** Rotas da agenda de tarefas internas (aba Agendamentos). */
 class AgendamentosController {

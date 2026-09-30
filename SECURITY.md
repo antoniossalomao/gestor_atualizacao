@@ -26,7 +26,7 @@ trate como incidente: rotacione primeiro, avise depois.
 | Limite de tentativas de login | `middlewares/LoginRateLimiter.js` | força bruta contra senha fraca |
 | Papéis (RBAC) por subárvore de rota | `middlewares/requireRole.js`, `routes/index.js` | padrão fechado: rota nova nasce protegida |
 | CSP sem `script-src unsafe-inline` | `Server.js` | reduz o estrago de um XSS |
-| `ORDER BY` só a partir de lista fixa | `shared/sortHelper.js` | injeção de SQL via `?sortBy=` |
+| `ORDER BY` só a partir de lista fixa | `database/ordenacao.js` | injeção de SQL via `?sortBy=` |
 | Escape de HTML na montagem de tela | `client/js/utils/html.js` | XSS armazenado vindo de campo de texto |
 | Somente HTTPS na rede | `docker-compose.yml`, `proxy/Caddyfile`, `config/transporte.js`, `middlewares/exigirHttps.js` | senha e cookie nunca trafegam em texto puro; HTTP puro só escuta em `127.0.0.1` |
 | Cookie `Secure` + HSTS com HTTPS ligado | `Server.js` | o navegador não manda a sessão nem volta a tentar `http://` |
