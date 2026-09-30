@@ -362,14 +362,14 @@ Levantamento feito agora (arquivos locais, fora do git):
 | `../backups-deploy/` | 2 bancos de 29/09 | manter |
 | `server/data/gestao.db` e `sessions.sqlite` | banco local de 22/09 | conferir se ainda é usado fora do Docker |
 
-- [ ] Conferir também a pasta de backups dentro do volume do Docker no
+- [x] Conferir também a pasta de backups dentro do volume do Docker no
       servidor (192.168.0.85), com a mesma regra de data.
 - [ ] Varrer o repositório inteiro atrás de arquivo sem uso: módulo que
       ninguém importa, CSS sem seletor usado, ícone não referenciado, script
       antigo, documento que ninguém mais cita, teste de algo que não existe.
 - [ ] Varrer código morto dentro dos arquivos: função exportada e nunca
       chamada, regra de configuração não lida, rota sem tela.
-- [ ] **Antes de apagar, entregar a lista com o motivo de cada item para
+- [x] **Antes de apagar, entregar a lista com o motivo de cada item para
       aprovação.** Bancos e backups não estão no git; apagar é definitivo.
 - [ ] Fora do escopo: a pasta `../atualizador` (o Atualizador Automático
       está pausado).

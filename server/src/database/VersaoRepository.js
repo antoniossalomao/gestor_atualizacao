@@ -80,13 +80,6 @@ class VersaoRepository extends BaseRepository {
     return this.find(id);
   }
 
-  publish(id, publicadoEm) {
-    this.conn
-      .prepare(`UPDATE ${this.table} SET status = 'publicada', publicado_em = @publicadoEm, substituido_em = NULL, substituido_por = NULL WHERE id = @id`)
-      .run({ id, publicadoEm });
-    return this.find(id);
-  }
-
   /**
    * Publica a versão indicada e substitui as versões anteriores em uma ÚNICA
    * transação atômica SQLite, garantindo que o catálogo nunca fique em estado inconsistente.
@@ -148,21 +141,6 @@ class VersaoRepository extends BaseRepository {
     });
     tx();
     return this.find(anteriorId);
-  }
-
-  /**
-   * Tira de circulacao as versoes indicadas, anotando quando e por qual
-   * versao elas foram substituidas.
-   */
-  substituir(ids, quando, porId) {
-    if (ids.length === 0) return;
-    const stmt = this.conn.prepare(
-      `UPDATE ${this.table} SET status = 'substituida', substituido_em = @quando, substituido_por = @porId WHERE id = @id`
-    );
-    const emLote = this.conn.transaction((lista) => {
-      for (const id of lista) stmt.run({ id, quando, porId });
-    });
-    emLote(ids);
   }
 
   remove(id) {

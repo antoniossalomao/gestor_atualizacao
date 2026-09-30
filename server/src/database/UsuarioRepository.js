@@ -34,12 +34,6 @@ class UsuarioRepository extends BaseRepository {
     return this.findById(info.lastInsertRowid);
   }
 
-  /** Atualiza o papel do usuário (admin, operador ou consulta). */
-  updateRole(id, role) {
-    this.conn.prepare("UPDATE usuarios SET role = ? WHERE id = ?").run(role, id);
-    return this.findById(id);
-  }
-
   /** Atualiza nome e papel de um usuário existente. */
   updateUser(id, { nome, role }) {
     if (nome && role) {
