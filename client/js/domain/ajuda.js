@@ -122,8 +122,3 @@ export function explicacaoSituacoes(prazoDias) {
     },
   ];
 }
-
-/** O texto de busca de uma lista de pares título/texto. */
-export function textoDeBusca(itens) {
-  return itens.map((i) => `${i.titulo} ${i.texto}`).join(" ");
-}

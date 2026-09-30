@@ -9,7 +9,7 @@ import { toast } from "../components/Toast.js";
 import { debounce } from "../utils/debounce.js";
 import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
 import { icon, iconHtml } from "../utils/icons.js";
-import { html, plural, copyToClipboard } from "../utils/html.js";
+import { html, plural } from "../utils/html.js";
 import { ImportacaoModal } from "../components/ImportacaoModal.js";
 import { abrirRelatorio } from "../components/RelatorioModal.js";
 import { relatorioDeAtualizacao, relatorioDoCliente, relatorioSituacao, relatorioDoPeriodo, versaoRegistrada } from "../domain/relatorio.js";

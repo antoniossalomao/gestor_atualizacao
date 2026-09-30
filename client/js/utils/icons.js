@@ -37,7 +37,6 @@ const PATHS = {
   alerta: '<path d="M10 3.5 2.5 16.5h15L10 3.5zM10 8.5v3.5M10 14.2v.1" stroke-linecap="round" stroke-linejoin="round"/>',
   vazio: '<path d="M2.5 11.5h4l1.2 2.2h4.6l1.2-2.2h4M3.5 11.5 5.8 4.4A1.4 1.4 0 0 1 7.1 3.5h5.8a1.4 1.4 0 0 1 1.3.9l2.3 7.1v3.6a1.4 1.4 0 0 1-1.4 1.4H4.9a1.4 1.4 0 0 1-1.4-1.4z" stroke-linecap="round" stroke-linejoin="round"/>',
   temaClaro: '<circle cx="10" cy="10" r="3.6"/><path d="M10 1.8v2M10 16.2v2M18.2 10h-2M3.8 10h-2M15.8 4.2l-1.4 1.4M5.6 14.4l-1.4 1.4M15.8 15.8l-1.4-1.4M5.6 5.6 4.2 4.2" stroke-linecap="round"/>',
-  temaEscuro: '<path d="M16.5 11.8A7 7 0 0 1 8.2 3.5a7 7 0 1 0 8.3 8.3z" stroke-linecap="round" stroke-linejoin="round"/>',
   temaSistema: '<rect x="2.5" y="4" width="15" height="10" rx="1.5"/><path d="M7 17h6M10 14v3" stroke-linecap="round"/>',
   teclado: '<rect x="2" y="5" width="16" height="10" rx="1.6"/><path d="M5.5 8.5h.01M8.5 8.5h.01M11.5 8.5h.01M14.5 8.5h.01M6.5 11.5h7" stroke-linecap="round"/>',
   painel: '<rect x="2.5" y="3.5" width="15" height="13" rx="1.8"/><path d="M8 3.5v13" stroke-linecap="round"/>',

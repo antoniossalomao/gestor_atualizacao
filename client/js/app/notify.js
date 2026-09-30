@@ -142,11 +142,6 @@ export const notificacoes = {
     this.tocarSom();
   },
 
-  /** Preferência salva, independente da permissão já ter sido concedida. */
-  desejadas() {
-    return settings.get(CHAVE, false) === true;
-  },
-
   /**
    * Liga ou desliga. Ligar pode exigir a permissão do navegador -- e se a
    * pessoa recusar, a preferência NÃO fica marcada: um interruptor ligado que

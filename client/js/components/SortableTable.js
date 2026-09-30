@@ -184,10 +184,6 @@ export class SortableTable {
     }, ATRASO_REFRESH_MS);
   }
 
-  selectByKey(key) {
-    this._marcarSelecionada(key);
-  }
-
   clearSelection() {
     this._marcarSelecionada(null);
   }
