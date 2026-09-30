@@ -13,10 +13,10 @@ npm test          # servidor + cliente
 
 Os dois têm que passar. Não relate conclusão sem ter rodado.
 
-Mexeu em tela, componente ou CSS? Rode também `npm run test:navegador`
-(Chrome sem janela, ~2 min; ver CONTRIBUTING, "Testes de navegador"). Ele já
-achou modal aberto atrás da gaveta e foco perdido ao fechar formulário —
-coisas que `npm test` não enxerga.
+Mexeu em tela, componente ou CSS? O repositório não tem testes de navegador (a
+suíte saiu em 29/09/2026) e `npm test` não enxerga modal aberto atrás da gaveta
+nem foco perdido ao fechar formulário: abra a tela no navegador, nos dois temas,
+e confira o que mudou.
 
 ## O que NÃO fazer
 

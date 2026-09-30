@@ -4,7 +4,7 @@
 # Docker" e "HTTPS" do README.md.
 #
 # Somente HTTPS: o painel (gestor) não publica porta nenhuma; quem atende a
-# rede é o proxy (Caddy), na 443. Ver P01 em docs/MELHORIAS.md.
+# rede é o proxy (Caddy), na 443. Ver ADR-0010 em docs/DOCUMENTACAO_CONSOLIDADA.md.
 
 services:
   gestor:

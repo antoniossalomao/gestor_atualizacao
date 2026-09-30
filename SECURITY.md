@@ -1,8 +1,9 @@
 # Segurança
 
-O [plano vigente de melhorias](docs/MELHORIAS.md#plano-vigente) reúne as
-próximas ações de segurança do painel. Para pedidos gerais, vale o
-[escopo documentado no README](README.md#escopo-das-melhorias).
+As decisões de segurança do painel estão registradas como ADRs na
+[documentação consolidada](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0010) (HTTPS no
+ADR-0010, proteção CSRF no [ADR-0011](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0011)).
+Para pedidos gerais, vale o [escopo documentado no README](README.md#escopo-das-melhorias).
 
 Este é um sistema **interno**: roda na rede da empresa, atende uma equipe
 pequena e guarda dados de clientes (nomes, cidades, sistemas instalados e
@@ -76,6 +77,7 @@ revistas:
 ## Dependências
 
 `npm audit` no diretório `server/` antes de publicar uma mudança que mexa em
-`package.json`. O histórico de endurecimento e as decisões sobre dependências
-estão no [CHANGELOG](CHANGELOG.md) — inclusive por que o armazenamento de
-sessão é uma classe própria em vez de um pacote pronto.
+`package.json` (o CI também roda, só sobre o que vai para a produção). O
+histórico de endurecimento e as decisões sobre dependências estão no
+[README](README.md#segurança-das-dependências) — inclusive por que o
+armazenamento de sessão é uma classe própria em vez de um pacote pronto.

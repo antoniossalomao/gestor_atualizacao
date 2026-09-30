@@ -5,10 +5,9 @@ meses, sem lembrar de nada. O [README](README.md) explica **o que** o sistema
 faz; este arquivo explica **como trabalhar** nele.
 
 **Escopo de melhorias:** o Atualizador Automático está pausado. Pedidos gerais
-de análise, planejamento ou melhoria do sistema web devem seguir o
-[planejamento vigente](docs/MELHORIAS.md#plano-vigente) e deixar esse
-módulo fora do escopo. A [regra completa](README.md#escopo-das-melhorias)
-só muda com pedido explícito de retomada ou análise específica.
+de análise, planejamento ou melhoria do sistema web deixam esse módulo fora do
+escopo. A [regra completa](README.md#escopo-das-melhorias) só muda com pedido
+explícito de retomada ou análise específica.
 
 ## Preparar a máquina
 
@@ -23,7 +22,7 @@ npm run dev              # sobe com reinício automático em http://localhost:30
 
 Na primeira vez, com o banco vazio, o próprio app pede para criar a conta de
 administrador inicial. Não existe seed nem migration a rodar à mão: o schema é
-criado e evoluído por `src/database/Database.js` na subida.
+criado e evoluído por `src/database/Database.js` e `src/database/migracoes.js` na subida.
 
 **Nunca aponte o `DB_PATH` do seu ambiente de desenvolvimento para o
 `gestao.db` de produção.** Use uma cópia. Vários testes e telas gravam de
@@ -52,31 +51,16 @@ testes novos:
   `find(id)` com o id vindo de `SELECT MAX(id)`, não a última linha da lista.
 - `list()` não traz `criado_em`/`concluido_em`; só `find(id)` traz.
 
-### Testes de navegador
+### Conferir a tela no navegador
 
-```bash
-npm run test:navegador    # fluxos completos num Chrome sem janela (~2 min)
-node --test navegador/login.test.mjs   # um arquivo só
-```
-
-Sobem um `Server` de verdade num banco descartável e controlam o Chrome (ou
-Edge) já instalado pelo protocolo de depuração — sem Playwright, sem baixar
-navegador ([ADR-0012](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0012)). Cobrem
-login e sessão, atualizações (criar, editar, conflito, falha da API, filtro,
-relatório, exclusão), tarefas, campanhas, importação, teclado e foco, nome
-acessível em tudo que se aciona e rolagem horizontal nas larguras de uso.
-
-- **Não fazem parte do `npm test`**: precisam do Chrome e levam minutos. Rode
-  sempre que mexer em tela, componente ou CSS; o CI roda em todo PR.
-- Sem Chrome, os testes são pulados com aviso. Chrome em outro lugar:
-  `CHROME_PATH=...`.
-- Um passo que falha salva a tela em `navegador/.falhas/` (fora do git) — é a
-  primeira coisa a olhar.
-- Cliques e teclas são eventos de entrada de verdade: um botão coberto por
-  outro elemento **falha o teste**, como falharia para a pessoa. Não troque
-  `pagina.clicar` por `elemento.click()` para "fazer passar".
-- Dados de apoio (clientes, atualizações de exemplo) entram pela API
-  (`amb.api`), não pela tela: o que se testa pela tela é o fluxo.
+O repositório **não tem testes de navegador**: a suíte que existiu (Chrome sem
+janela, [ADR-0012](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0012)) saiu em
+29/09/2026 (commit `2935b5e`), por decisão da equipe. O `npm test` não enxerga
+modal aberto atrás da gaveta, foco perdido ao fechar um formulário nem botão
+coberto por outro elemento; por isso, quem mexe em tela, componente ou CSS abre
+a tela no navegador, nos dois temas, e confere o que mudou. É também a razão de
+`domain/` e `templates/` existirem: a regra e a marcação ficam testáveis no
+Node, e a view só junta.
 
 ### Verificação de tipos
 
@@ -140,19 +124,25 @@ Sem framework e **sem etapa de build**: o que está em `client/` é exatamente o
 que o navegador executa. Não introduza um bundler sem uma razão que justifique
 perder isso.
 
-A divisão das pastas segue uma regra só:
+A divisão das pastas segue uma regra só, e três delas **não tocam no DOM**: o
+`npm run check` confere (a `lib` do TypeScript não tem `dom`) e um teste procura
+`document` e `window` por texto.
 
-- **`utils/`** — não conhece o negócio. `formatarData`, `escapeHtml`, `debounce`.
-- **`domain/`** — conhece o negócio, **não toca no DOM**. É o que dá para testar
-  no Node sem navegador — e por isso é onde a lógica difícil deve morar.
+- **`utils/`** — genérico, não conhece o negócio. `formatarData`, `escapeHtml`, `debounce`.
+- **`domain/`** — conhece o negócio. É o que dá para testar no Node sem
+  navegador — e por isso é onde a lógica difícil deve morar.
+- **`templates/`** — marcação montada com a tag `html` (que escapa tudo); a view
+  só joga o resultado num `innerHTML`.
 - **`components/`** — peça de UI que não sabe em que tela está. Recebe dados,
-  devolve elemento, emite evento.
+  devolve elemento, emite evento. Os pequenos ajudantes que precisam do DOM
+  (criar elemento, botão ocupado, baixar arquivo, copiar) moram aqui.
 - **`views/`** — uma tela. Conhece o domínio e o DOM, e junta os componentes.
 - **`app/`** — o esqueleto: `App`, `View`, rota, tema, preferências, cache.
 
 Na dúvida sobre onde colocar um arquivo novo, pergunte na ordem: *precisa do
-DOM?* Se não, é `utils/` ou `domain/`. *Fala de cliente/atualização/agente?* Se
-sim, `domain/`. *É reaproveitável entre telas?* Se sim, `components/`.
+DOM?* Se não, é `utils/` (genérico), `domain/` (fala de cliente, atualização ou
+agente) ou `templates/` (é marcação). *É reaproveitável entre telas?* Se sim,
+`components/`. *É uma tela?* `views/`.
 
 `js/api/ApiClient.js` é o **único** lugar que chama `fetch`. Uma tela nunca
 fala HTTP direto — assim autenticação, cancelamento de requisição e tratamento

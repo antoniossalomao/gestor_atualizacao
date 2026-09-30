@@ -1,7 +1,7 @@
 /**
  * Com SESSION_SECURE=true, recusa qualquer pedido que não tenha chegado por
- * HTTPS -- o "caminho alternativo" do critério de aceite do P01
- * (docs/MELHORIAS.md). Sem isto, quem digitasse http://IP:3000 direto na
+ * HTTPS -- o "caminho alternativo" do critério de aceite do
+ * ADR-0010. Sem isto, quem digitasse http://IP:3000 direto na
  * porta do Node continuaria mandando a senha em texto puro: o cookie
  * "Secure" protege a sessão, mas não o POST do login, que sai antes dele.
  *

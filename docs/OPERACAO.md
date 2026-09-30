@@ -114,14 +114,14 @@ backup anterior — ver abaixo.
 **Sintoma:** um cliente ficou para trás, ou a aba **Distribuição** mostra o
 agente como *offline* (sem contato há 24h+) ou com *erro*.
 
-Com `DISCORD_WEBHOOK_URL` configurada, o próprio app avisa no canal quando um
+Com o webhook do Discord configurado (Administração → Integrações), o próprio app avisa no canal quando um
 agente entra nesse estado — e avisa de novo quando volta. O aviso sai **na
 transição**, não a cada ciclo, para não virar ruído.
 
 Investigue nesta ordem — do mais provável para o menos:
 
 0. **O Atualizador está ligado?** Desde 22/09/2026 ele está **desativado de
-   propósito** em Administração → Atualizador (ver a seção 3.4 de
+   propósito** em Administração → Integrações (ver a seção 3.4 de
    [DOCUMENTACAO_CONSOLIDADA.md](DOCUMENTACAO_CONSOLIDADA.md#34-estado-atual-pré-piloto)).
    Desativado, a API dos agentes responde 403 a tudo, e a aba Distribuição
    nem aparece. Nenhum cliente atualiza e nenhum alerta sai. Se for esse
@@ -138,14 +138,14 @@ Investigue nesta ordem — do mais provável para o menos:
 
 3. **O agente consegue alcançar o painel?** Da máquina do cliente:
    ```powershell
-   Invoke-WebRequest "$($env:API_URL)/agente/status/<CODIGO_CLIENTE>" -Headers @{ "x-agent-token" = "<token>" }
+   Invoke-WebRequest "<API_URL do atualizador.ini>/update/status/<CNPJ do cliente>" -Headers @{ "x-agent-token" = "<token>" }
    ```
    - **401** → o `API_TOKEN` do `atualizador.ini` não bate com o
      `AGENT_API_TOKEN` do servidor. Ver [rotação de token](#rotacionar-o-token-dos-agentes).
    - **sem resposta** → rede/firewall, ou `API_URL` apontando para um endereço
      que o cliente não enxerga.
 
-4. **O endereço para os agentes está certo?** (Administração → Atualizador →
+4. **O endereço para os agentes está certo?** (Administração → Integrações →
    "Endereço deste servidor para os agentes".) Esta é a armadilha clássica: se
    estiver `https://localhost`, o link de download que o agente recebe
    aponta para **ele mesmo**, e o download falha sempre. Tem que ser o endereço
@@ -171,7 +171,8 @@ Investigue nesta ordem — do mais provável para o menos:
 ## Restaurar um backup
 
 Um `gestao.db` é copiado para `server/data/backups/` **toda vez que o servidor
-sobe**, e as 10 cópias mais recentes ficam guardadas.
+sobe**, e as cópias mais recentes ficam guardadas (10 por padrão; o número é uma
+regra da equipe, em Administração → Backups e recuperação).
 
 Pelo painel (**Administração → Backups**), como administrador:
 
@@ -200,7 +201,7 @@ não é uma operação isolada no servidor:
 2. Atualize o `API_TOKEN` no `atualizador.ini` de **todos** os agentes
    instalados e reinicie cada serviço.
 3. **Só então** troque o `AGENT_API_TOKEN` no `.env` do servidor e reinicie.
-   (A chave não é editável pelo navegador: a tela Administração → Atualizador
+   (A chave não é editável pelo navegador: a tela Administração → Integrações
    só mostra se ela está configurada e como termina, para conferir que a
    troca pegou.)
 
@@ -234,7 +235,7 @@ O banco é SQLite com driver **síncrono**, então uma consulta lenta trava o
 processo inteiro ([ADR-0002](DOCUMENTACAO_CONSOLIDADA.md#adr-0002)). Com o
 volume atual isso é teórico, mas se acontecer:
 
-1. **Confira o tamanho do banco** em **Administração → Saúde do servidor**.
+1. **Confira o tamanho do banco** em **Administração → Diagnóstico**.
 2. **Alguém pediu uma página gigante?** O `pageSize` tem teto de 200 no
    servidor, então não é isso. Importação e exportação de planilha travam o
    processo enquanto rodam, mas têm limite (5.000 e 10.000 linhas — no limite,
@@ -254,7 +255,7 @@ Docker guarda com o container):
 
 | Pasta | O que é | Pode apagar? |
 |---|---|---|
-| `server/data/backups/` | cópias do banco na subida | as 10 mais recentes são mantidas automaticamente; as antigas já saem sozinhas |
+| `server/data/backups/` | cópias do banco na subida | as mais recentes (10 por padrão) são mantidas automaticamente; as antigas já saem sozinhas |
 | `server/data/packages/` | pacotes de versão servidos aos agentes | **cuidado**: um pacote apagado quebra o download de quem ainda não atualizou |
 
 O painel de **Saúde** mostra o total e o tamanho dos pacotes. (Esse número ficou
@@ -268,10 +269,10 @@ isso, e está corrigido.)
 ```powershell
 cd web
 npm run check     # verificação estática de tipos
-npm test          # 458 testes
+npm test          # servidor e front-end
 ```
 
-E, pelo navegador, **Administração → Saúde do servidor**: integridade do banco,
+E, pelo navegador, **Administração → Diagnóstico**: integridade do banco,
 último backup, situação de cada agente, uso de memória e tempo no ar.
 
 `statusGeral` só fica `saudavel` quando a integridade do banco está `ok` **e**

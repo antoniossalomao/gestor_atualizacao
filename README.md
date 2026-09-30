@@ -53,18 +53,24 @@ hoje. Tarefas concluídas podem ser arquivadas manualmente ou saem da lista
 principal automaticamente após o prazo configurado nas regras da equipe
 (continuam disponíveis no filtro "Arquivadas").
 
-**Resumo** — quantas atualizações no mês, por responsável e por sistema,
-tendência dos últimos 12 meses (com zero nos meses vazios e comparação parcial
-justa), card de situação das versões dos clientes (Em dia, Desatualizados,
-Verificação pendente), indicador de clientes sem atualização há mais de N dias
-e o tempo médio que uma tarefa leva entre ser criada e ser concluída, por pessoa.
+**Resumo** — quantas atualizações no mês, por responsável e por sistema (as
+barras vêm em ordem, com a comparação com o mesmo período do mês anterior;
+clicar numa barra abre Atualizações já filtrada), tendência dos últimos 12
+meses (com zero nos meses vazios e comparação parcial justa), card de situação
+das versões dos clientes (Em dia, Aguardando atualização, Desatualizados, com o
+prazo depois da versão oficial do [ADR-0013](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0013)),
+indicador de clientes sem atualização há mais de N dias e o tempo médio que uma
+tarefa leva entre ser criada e ser concluída, por pessoa.
 
 **Sistemas** — consulta da situação de versões dos clientes e painel dedicado de
-**Versões oficiais**. A consulta oferece busca rápida e filtros por status (Em dia,
-Desatualizado, Nunca atualizado, Sem referência ou Sem informação) e por sistema,
-com cartões de métricas sincronizados. O gerenciador de versões oficiais registra a data
-de referência com autoria (quem alterou por último) e detecção de edição concorrente,
-garantindo que referências não retroajam sobre atualizações antigas (ADR-0008).
+**Versões oficiais**. A consulta oferece busca rápida e filtros por sistema, por
+situação (Em dia, Aguardando atualização, Desatualizados e Sem versão oficial;
+quem nunca foi atualizado conta como desatualizado) e por data da última
+atualização. Os sistemas marcados como "atualiza junto com o B_Vendas" (hoje NFCe
+e Consignado M2) usam a data da última atualização do B_Vendas do cliente. O
+gerenciador de versões oficiais registra a data de referência com autoria (quem
+alterou por último) e detecção de edição concorrente, garantindo que referências
+não retroajam sobre atualizações antigas (ADR-0008).
 
 **Consulta** — a ficha completa de um cliente: cabeçalho com código, cidade e
 grupo/rede, data da última atualização, componentes fixos (sem
@@ -82,7 +88,7 @@ não muda a meta; encerrar a campanha congela o placar (ADR-0009).
 
 **Administração** — restrita a administradores e organizada em 7 seções por finalidade:
 1. **Pessoas e permissões** (usuários, perfis e permissões);
-2. **Operação** (prazos para clientes desatualizados, arquivamento de tarefas e classificação de sistemas atualizáveis vs fixos);
+2. **Operação** (prazos — sem atualização há N dias, depois da versão oficial e arquivamento de tarefas — e a classificação dos sistemas: atualizável ou fixo, e se atualiza junto com o B_Vendas);
 3. **Dados** (exportação completa, importação em lote com prévia e download do banco);
 4. **Integrações** (notificações no Discord com mensagem de teste e liga/desliga do Atualizador);
 5. **Backups e recuperação** (cópias automáticas a cada inicialização, retenção, download e restauração protegida);
@@ -123,8 +129,8 @@ a situação de cada agente em campo. O agente vive em
   ao copiar.
 - **Nomes de sistema e de responsável são padronizados na gravação** —
   quem digitar `B_NFE` grava `B_NFe`, e `CAMILA` grava `Camila`. Sem isso, o
-  relatório por sistema erra em silêncio (ver a seção de 11/09 abaixo, que
-  conta como isso foi descoberto).
+  relatório por sistema erra em silêncio (a história de como isso foi descoberto
+  está na [seção 2.7 da documentação consolidada](docs/DOCUMENTACAO_CONSOLIDADA.md#27-mudanças-de-11092026)).
 - **Notificação no Discord**, opcional: avisa um canal a cada atualização
   nova, e quando um agente em campo fica offline ou reporta erro.
 - **Paginação e ordenação no servidor** nas listas que crescem
@@ -152,7 +158,7 @@ server/                backend (Express + SQLite via better-sqlite3)
   src/database/          um repositório por tabela; único lugar que escreve SQL
   src/middlewares/       autenticação, papéis, limite de tentativas, tratamento de erro e 404
   src/shared/            peças usadas por MAIS DE UMA camada (erros, normalização de nomes)
-  src/config/            constantes do domínio
+  src/config/            constantes do domínio e as regras da equipe (regrasEquipe.js)
   tests/                 testes do servidor (node:test, sem framework externo)
   tsconfig.json          escopo da verificação de tipos do núcleo puro
 
@@ -162,7 +168,7 @@ client/                front-end (HTML/CSS/JavaScript puro, sem framework nem bu
   js/api/                único lugar que chama fetch
   js/app/                o "esqueleto" do app: App, View, rota, tema, aparência, preferências, cache
   js/components/         peças de UI reaproveitáveis (modal, toast, tabela, paginação...)
-  js/components/charts/  gráficos em SVG escritos à mão (barras, linha, pizza)
+  js/components/charts/  gráficos em SVG escritos à mão (barras e linha)
   js/views/              uma tela por arquivo; views/administracao/ tem uma aba da Administração por arquivo
   js/templates/          marcação das telas, montada com a tag html (escapa tudo), SEM tocar no DOM
   js/domain/             vocabulário do negócio, SEM tocar no DOM (status de agente, relatório, papéis)
@@ -173,16 +179,15 @@ client/                front-end (HTML/CSS/JavaScript puro, sem framework nem bu
 
 docs/                  documentação detalhada, organizada por finalidade
   OPERACAO.md            runbook por sintoma: deu problema agora, o que fazer
-  MELHORIAS.md           plano vigente e backlog histórico
   DOCUMENTACAO_CONSOLIDADA.md  arquitetura, decisões e revisão concluída
 ```
 
 A divisão do `client/js/` segue uma regra só, fácil de aplicar na hora de criar
-um arquivo novo: **`utils/` não conhece o negócio, `domain/` não conhece o DOM,
-`components/` não conhece a tela em que está, `views/` conhece as duas coisas, e
-`app/` é o que segura tudo isso junto.** Antes existia uma pasta `core/` única
-com 35 arquivos misturando as cinco categorias -- ainda funcionava, mas não
-respondia "onde eu ponho isso?" para quem chega.
+um arquivo novo: **`utils/`, `domain/` e `templates/` não tocam no DOM (o
+`npm run check` confere), `components/` não conhece a tela em que está, `views/`
+conhece as duas coisas, e `app/` é o que segura tudo isso junto.** Antes existia
+uma pasta `core/` única com 35 arquivos misturando as categorias -- ainda
+funcionava, mas não respondia "onde eu ponho isso?" para quem chega.
 
 ## Como rodar (desenvolvimento)
 
@@ -217,7 +222,7 @@ npm run check      # verificação de tipos (não compila nada -- ver ADR-0006)
 ```
 
 O front-end **não tem dependência nenhuma** (ver
-[ADR-0001](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0001): não há o que instalar
+[ADR-0001](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0001)): não há o que instalar
 em `client/`.
 
 ### Usando um banco que você já tem
@@ -245,9 +250,11 @@ uma. As principais:
 | `AGENT_API_TOKEN` | Chave compartilhada com os agentes do Atualizador. Para trocar, ver "Rotacionar o token dos agentes" em `docs/OPERACAO.md`. |
 | `TRUST_PROXY` | `true` atrás do proxy HTTPS, junto com `SESSION_SECURE`. Mesmo caso: fixo no Docker, vazio em desenvolvimento. |
 
-**Regras da equipe** (webhook do Discord, URL pública para os agentes, dias até
-um cliente contar como desatualizado, dias até arquivar tarefa concluída,
-cópias de backup, intervalo do alerta de agentes) **não moram no `.env`**:
+**Regras da equipe** (webhook do Discord, URL pública para os agentes, dias sem
+atualização até um cliente entrar na lista do Resumo, prazo depois da versão
+oficial antes de "desatualizado", dias até arquivar tarefa concluída, cópias de
+backup, intervalo do alerta de agentes, liga/desliga do Atualizador) **não moram
+no `.env`**:
 ficam no banco e são editadas em **Administração**, valendo na hora, sem
 reiniciar. `DISCORD_WEBHOOK_URL`, `PUBLIC_URL`,
 `ALERTA_AGENTES_INTERVALO_MINUTOS` e `AGENDAMENTO_ARQUIVAR_DIAS` ainda são
@@ -283,7 +290,8 @@ Isso redefine a senha direto no banco, sem precisar saber a antiga. Veja
 ## Backup e restauração
 
 Uma cópia do `gestao.db` é feita automaticamente na pasta `server/data/backups/` toda vez que o servidor é ligado
-(mantém as 10 mais recentes). O gerenciamento de backups é restrito a administradores.
+(por padrão as 10 mais recentes; o número é uma regra da equipe, em Administração →
+Backups e recuperação). O gerenciamento de backups é restrito a administradores.
 
 A restauração de backup conta com proteção operacional reforçada:
 1. **Download Preventivo:** O administrador pode baixar o banco de dados atual (`.db`) diretamente pelo painel antes de qualquer intervenção, além de baixar cópias individuais de qualquer backup anterior.
@@ -292,8 +300,8 @@ A restauração de backup conta com proteção operacional reforçada:
 
 ## Implantação (deixar acessível para a equipe)
 
-Na rede, o painel **só atende por HTTPS** (decisão de 29/09/2026, P01 de
-[`docs/MELHORIAS.md`](docs/MELHORIAS.md#plano-vigente)). O caminho é o
+Na rede, o painel **só atende por HTTPS** (decisão de 29/09/2026, registrada no
+[ADR-0010](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0010)). O caminho é o
 Docker: o `docker-compose.yml` sobe o painel e, na frente dele, um proxy
 [Caddy](https://caddyserver.com/) que cuida do certificado. Ver
 [Rodar em Docker](#rodar-em-docker) e [HTTPS](#https).
@@ -477,7 +485,7 @@ as máquinas precisam instalá-la de novo.
 
 ### Endereço para os agentes
 
-Em **Administração → Atualizador**, o "Endereço deste servidor para os
+Em **Administração → Integrações**, o "Endereço deste servidor para os
 agentes" passa a ser `https://` + o `GESTOR_ENDERECO`. Os agentes C# que
 apontavam para `http://IP:3000` param de alcançar o painel; ao reativar o
 Atualizador, cada um precisa do endereço novo no `atualizador.ini` e da raiz
@@ -581,11 +589,14 @@ neste arquivo.
 
 ## Documentação
 
-**Escopo das melhorias:** o Atualizador Automático está pausado. Pedidos
-gerais de análise, planejamento e melhorias deste sistema consideram apenas
-o painel de gestão. Não incluir propostas para agentes, distribuição, pacotes
-ou publicação, salvo pedido explícito de retomada ou análise desse módulo.
-O plano vigente está em [MELHORIAS.md](docs/MELHORIAS.md#plano-vigente).
+### Escopo das melhorias
+
+O Atualizador Automático está pausado. Pedidos gerais de análise, planejamento
+e melhorias deste sistema consideram apenas o painel de gestão. Não incluir
+propostas para agentes, distribuição, pacotes ou publicação, salvo pedido
+explícito de retomada ou análise desse módulo.
+
+### Onde está cada documento
 
 | Documento | Para quem, e quando |
 |---|---|
@@ -594,7 +605,6 @@ O plano vigente está em [MELHORIAS.md](docs/MELHORIAS.md#plano-vigente).
 | [`SECURITY.md`](SECURITY.md) | O que protege o quê, onde ficam os segredos, e os limites assumidos de propósito |
 | [`CHANGELOG.md`](CHANGELOG.md) | "Por que isso é assim?" — diário de decisões, em ordem cronológica |
 | [`docs/OPERACAO.md`](docs/OPERACAO.md) | **Deu problema agora.** Runbook por sintoma: servidor fora do ar, ninguém entra, agente parado, restaurar backup |
-| [`docs/MELHORIAS.md`](docs/MELHORIAS.md) | Plano vigente de melhorias e registro histórico das propostas anteriores |
 | [`docs/DOCUMENTACAO_CONSOLIDADA.md`](docs/DOCUMENTACAO_CONSOLIDADA.md) | Arquitetura, decisões incorporadas, visão do projeto e plano de revisão concluído |
 
 A documentação do agente C# fica no repositório dele — em especial

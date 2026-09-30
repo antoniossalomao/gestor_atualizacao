@@ -1,5 +1,5 @@
 /*
- * Testes do token CSRF no ApiClient (P02, docs/MELHORIAS.md; o servidor está
+ * Testes do token CSRF no ApiClient (ADR-0011; o servidor está
  * em server/src/middlewares/protecaoCsrf.js e tem os testes dele).
  *
  * O que erra em silêncio se quebrar:

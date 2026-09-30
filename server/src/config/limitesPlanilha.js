@@ -1,6 +1,7 @@
 /**
  * Quantas linhas uma planilha pode ter na importação e na exportação de
- * atualizações (P05 de docs/MELHORIAS.md).
+ * atualizações (a medição está no CHANGELOG de 29/09/2026 e o que fazer ao
+ * esbarrar neles, em "Lentidão", no docs/OPERACAO.md).
  *
  * São limites de CAPACIDADE do servidor, não regras da equipe -- por isso
  * moram aqui, ao lado do limite de 15 MB do upload (routes/index.js), e não

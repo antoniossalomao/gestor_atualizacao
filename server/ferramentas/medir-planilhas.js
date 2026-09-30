@@ -1,6 +1,6 @@
 /**
- * Mede tempo e memória da importação e da exportação de planilhas (P05 de
- * docs/MELHORIAS.md). Os números que ele imprime são os que justificam os
+ * Mede tempo e memória da importação e da exportação de planilhas (ver
+ * "Lentidão" em docs/OPERACAO.md). Os números que ele imprime são os que justificam os
  * limites de config/limitesPlanilha.js -- rode de novo antes de mexer neles.
  *
  *   node server/ferramentas/medir-planilhas.js

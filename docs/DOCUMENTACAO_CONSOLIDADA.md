@@ -5,15 +5,15 @@
 Documento único que reúne, atualiza e substitui todos os relatórios, auditorias, especificações e
 apresentações que existiam soltos em `web/docs/`. Cada afirmação técnica abaixo foi conferida
 contra o código-fonte real em setembro de 2026 — onde um documento antigo dizia uma coisa e o
-código dizia outra, o código venceu, e a divergência está registrada na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então).
+código dizia outra, o código venceu, e a divergência está registrada na [seção 6](#auditoria-ago-set-2026).
 
 | | |
 |---|---|
-| **Versão deste documento** | 1.5 |
-| **Data** | 28 de setembro de 2026 |
+| **Versão deste documento** | 1.6 |
+| **Data** | 30 de setembro de 2026 |
 | **Autor** | Antonio Salomão |
-| **Nesta revisão** | Integrados os ADRs 0007–0009 e o plano concluído; o backlog ativo ficou em `MELHORIAS.md` |
-| **Substitui** | Ver [seção 7 — histórico deste documento](#7-histórico-deste-documento-o-que-foi-consolidado) |
+| **Nesta revisão** | Auditoria do A17 (30/09/2026): links e âncoras, nomes de tela e de pasta, ADR-0014 (vocabulário), revisões dos ADRs 0005, 0006 e 0012, e o fim do `MELHORIAS.md` (seção 7.3) |
+| **Substitui** | Ver [seção 7 — histórico deste documento](#historico-do-documento) |
 
 > ### Este documento é uma fotografia, não a fonte da verdade
 >
@@ -30,7 +30,6 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 > | Onde colocar cada coisa, como testar | `CONTRIBUTING.md` de cada metade |
 > | **Por que** foi feito assim | Seção 4 deste documento (painel web); `atualizador/docs/adr/` (agente C#) |
 > | O que mudou e quando | [`web/CHANGELOG.md`](../CHANGELOG.md) |
-> | O que ainda falta fazer | [`docs/MELHORIAS.md`](MELHORIAS.md) |
 > | O que fazer quando quebra | [`docs/OPERACAO.md`](OPERACAO.md) |
 > | O que ainda pode dar errado no agente | [`atualizador/RISCOS-CONHECIDOS.md`](../../atualizador/RISCOS-CONHECIDOS.md) |
 >
@@ -52,8 +51,8 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 3. [Atualizador Inteligente de ERP — agente local (C#)](#3-atualizador-inteligente-de-erp--agente-local-c)
 4. [Decisões de arquitetura — ADRs do painel web](#4-decisões-de-arquitetura--adrs-do-painel-web)
 5. [Como verificar](#5-como-verificar)
-6. [Auditoria de agosto/set 2026 — o que mudou desde então](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então)
-7. [Histórico deste documento](#7-histórico-deste-documento-o-que-foi-consolidado)
+6. [Auditoria de agosto/set 2026 — o que mudou desde então](#auditoria-ago-set-2026)
+7. [Histórico deste documento](#historico-do-documento)
 8. [Plano de revisão concluído](#8-plano-de-revisão-concluído--24-a-28092026)
 
 ---
@@ -63,7 +62,7 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 > Esta seção é o conteúdo que antes vivia em
 > `APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md`, um arquivo à parte pensado para quem vai apresentar
 > o projeto para a diretoria sem entrar em detalhe técnico. Incorporado aqui em 22/09/2026 — ver
-> [seção 7](#7-histórico-deste-documento-o-que-foi-consolidado). Quem só precisa desta parte pode
+> [seção 7](#historico-do-documento). Quem só precisa desta parte pode
 > copiá-la para um documento à parte sem perda: ela não depende do resto do arquivo.
 
 **Gestor de Atualizações + Agente Atualizador ERP** · Bredas Sistemas
@@ -318,7 +317,7 @@ como um servidor web acessível por várias pessoas ao mesmo tempo, cada uma com
 **Funcionalidades adicionadas em set/2026:**
 
 - **Alerta proativo de agente offline/com erro** (`AlertaAgenteService`) — confere sozinho, a cada
-  N minutos (regra da equipe, padrão 15, em Administração → Atualizador), a situação de cada agente do Atualizador
+  N minutos (regra da equipe, padrão 15, em Administração → Integrações), a situação de cada agente do Atualizador
   automático e avisa o Discord só na *transição* para "offline" (24h+ sem contato) ou "erro" — não
   repete o aviso a cada ciclo enquanto o problema continua.
 - **Tendência mensal de atualizações** (Resumo) — gráfico dos últimos 12 meses.
@@ -384,10 +383,12 @@ components/*.js   -- peças de UI reaproveitáveis: SortableTable, Pagination, A
                      MenuNotificacoes (o sino do cabeçalho); e os pequenos ajudantes que
                      precisam do DOM: elemento (`el`), botaoOcupado, arquivos (baixar/escolher),
                      areaDeTransferencia (copiar), detalhesRetorno
-components/charts -- PieChart, BarChart, LineChart (SVG escrito à mão)
+components/charts -- BarChart, LineChart (SVG escrito à mão)
 domain/*.js       -- vocabulário do negócio, SEM tocar no DOM: agenteStatus, agenteReport,
                      agenteLabels, relatorio, pessoa, notificacoes. É o que dá para testar fora
                      do navegador
+templates/*.js   -- marcação das telas montada com a tag `html` (escapa tudo), SEM tocar no DOM:
+                     resumo, administracao, configuracoes, consulta, agendamentos, campanhas, filtros
 utils/*.js        -- utilidades genéricas, SEM tocar no DOM: date, html, color, icons, debounce,
                      busca, estadoDados
 views/*.js        -- uma classe por tela (Resumo, Atualizações, Agendamentos, Clientes, Consultar
@@ -437,7 +438,7 @@ revalidação roda em segundo plano, e a tela só é redesenhada se a resposta f
 garante ordem de colunas entre consultas). Escrita numa aba invalida o cache das outras que
 dependem do mesmo dado.
 
-O estado da navegação vive na URL (`#/clientes`, via `app/router.js`): recarregar mantém a tela
+O estado da navegação vive na URL (`#/clientes`, via `app/Router.js`): recarregar mantém a tela
 aberta, e dá para compartilhar o link de uma aba específica.
 
 Toda tela nova deve estender `app/View.js` e usar `this.on(alvo, evento, fn)` em vez de
@@ -450,6 +451,10 @@ a objetos, sem etapa de build. Cada `View` segue o mesmo papel que tinha em `ges
 app Tkinter original, só desenhando HTML/CSS em vez de widgets Tkinter.
 
 ### 2.3 Revisão de interface e distribuição — set/2026
+
+> Nas seções 2.3 a 2.9, os caminhos de arquivo são os da época em que cada mudança foi feita. A pasta
+> `core/`, por exemplo, foi dividida depois em `app/`, `components/`, `domain/` e `utils/` (ver o
+> [ADR-0005](#adr-0005)), e alguns arquivos mudaram de lugar ou de nome desde então.
 
 Uma revisão ampla do front-end e do módulo de distribuição corrigiu defeitos, introduziu o modelo
 de "uma versão no ar por sistema" e deu ao painel do Atualizador automático o acompanhamento que
@@ -975,7 +980,7 @@ pós, já com o banco de volta ao ar).
 `BEXE.fdb` (transação única), marca `CONCLUIDO` e reporta à API. Os terminais leem o `BEXE.fdb` e
 se atualizam sozinhos. Só os `.exe` soltos na **raiz** do pacote entram nessa injeção — dependências
 em subpastas (ex.: `openssl.exe` usado internamente pelo ERP) ficam de fora, ver
-[3.8](#38-histórico-de-correções-críticas).
+[3.8](#39-histórico-de-correções-críticas).
 
 Qualquer exceção na Fase 3/4 dispara o `catch`: tenta restaurar o backup pré com
 `gbak -c -replace_database`, força o banco de volta ao ar, grava `ERRO` com a mensagem em
@@ -1011,7 +1016,7 @@ mantendo os últimos `BACKUPS_PARA_MANTER` ciclos (padrão 10).
 ### 3.4 Estado atual: pré-piloto
 
 > **Em produção, o Atualizador está DESATIVADO** desde 22/09/2026, 09:19 (horário de
-> Brasília), por Antonio Salomão (Administração → Atualizador; registro no
+> Brasília), por Antonio Salomão (Administração → Integrações; registro no
 > Histórico). Enquanto estiver assim:
 >
 > - toda a API dos agentes (`/api/update/*`) responde **403**: nenhum agente consulta,
@@ -1139,7 +1144,7 @@ GET {API_URL}/update/check/{cnpj}?versao={versaoAtual}
 
 `script_url` ainda existe no contrato por compatibilidade, mas **o agente não lê mais esse
 campo** — a Fase 3 aplica os `.sql` do próprio pacote via `ScriptRunnerService`, não um binário
-externo (ver [3.8](#38-histórico-de-correções-críticas)).
+externo (ver [3.8](#39-histórico-de-correções-críticas)).
 
 ```http
 POST {API_URL}/update/log
@@ -1185,7 +1190,7 @@ ponta a ponta. Detalhe completo, com trecho de código e cenário de falha de ca
 | 31/08 | Connection pooling do driver .NET quebrava depois de um `gfix -shut` (conexão em cache ficava inválida) | `Pooling=false` na connection string |
 | 01/09 | `SYS_ATUALIZACAO` **não existe** no `JUNIOR.fdb` real de produção (366 tabelas inspecionadas) — era só assumida pelo projeto | `GarantirTabelaSysAtualizacao` cria a tabela no primeiro ciclo se não existir (idempotente) |
 | 03/09 | `openssl.exe` (dependência interna do B_Vendas, numa subpasta do pacote) era injetado como se fosse um produto novo | Varredura da Fase 4 restrita a `.exe` soltos na **raiz** do pacote |
-| 03/09 | 4 dos 6 campos de `EXECUTAVEIS` gravados em formato errado (nome sem caminho completo, SHA-256 em vez de SHA-1, versão do pacote em vez do `FileVersion`, etc.) — achado comparando campo a campo contra um `BEXE.fdb` real e correto | `InjetarNovosBinarios` reescrito contra o formato confirmado (ver [3.8](#38-histórico-de-correções-críticas)) |
+| 03/09 | 4 dos 6 campos de `EXECUTAVEIS` gravados em formato errado (nome sem caminho completo, SHA-256 em vez de SHA-1, versão do pacote em vez do `FileVersion`, etc.) — achado comparando campo a campo contra um `BEXE.fdb` real e correto | `InjetarNovosBinarios` reescrito contra o formato confirmado (ver [3.8](#39-histórico-de-correções-críticas)) |
 | 03/09 | Configurar o serviço via variável de ambiente exigia elevar e editar o registro do Windows — inviável para instalar em campo | Configuração inteira migrada para `atualizador.ini` (ver [3.6](#36-configuração-atualizadorini)) |
 | 03/09 | Backups pré/pós eram apagados no mesmo ciclo em que nasciam (`Directory.Delete` da pasta de trabalho) | `Worker.ArquivarBackups` move os dois para `PASTA_BACKUPS`, fora da limpeza automática; poda mantém as últimas 10 gerações |
 
@@ -1196,12 +1201,13 @@ sem timeout deixaria o cliente inteiro parado até alguém perceber.
 
 ---
 
+<a id="decisoes-de-arquitetura"></a>
 ## 4. Decisões de arquitetura — ADRs do painel web
 
 > Esta seção reúne os Registros de Decisão de Arquitetura (ADR) que antes existiam como arquivos
 > separados em `web/docs/adr/`. Os primeiros foram incorporados em 22/09/2026;
 > os ADRs 0007–0009, em 28/09/2026 — ver
-> [seção 7](#7-histórico-deste-documento-o-que-foi-consolidado). O agente C# (`atualizador/`) tem
+> [seção 7](#historico-do-documento). O agente C# (`atualizador/`) tem
 > seus próprios ADRs, em `atualizador/docs/adr/` — não fazem parte deste documento.
 
 Um ADR é um documento curto que registra **uma** decisão de arquitetura: o que foi decidido, em
@@ -1431,6 +1437,20 @@ helpers) — descartado: é a divisão certa quando os módulos são independent
 componente é usado por quase toda tela; levaria a uma pasta `compartilhado/` que seria a `core/` de
 volta, com outro nome.
 
+**Revisão de 30/09/2026 (A16).** A tabela acima tinha ficado para trás, e o critério "não toca no DOM"
+não era cumprido. Duas correções:
+
+- Existe `templates/` (marcação montada com a tag `html`, sem DOM), entre `domain/` e `components/`; a
+  ordem das importações é `utils → domain → templates → components → views`, com `app/` por cima de
+  tudo.
+- `utils/`, `domain/` e `templates/` passaram a **não tocar no DOM de fato**. Cinco arquivos tocavam:
+  `utils/arquivo.js` (baixar e escolher arquivo), `utils/guard.js` (botão ocupado), `utils/html.js`
+  (`el()` e `copyToClipboard`), `utils/color.js` (`tokenHex`) e `domain/agenteReport.js`
+  (`criarDetalhesRetorno`). Foram para `components/` (`arquivos`, `botaoOcupado`, `elemento`,
+  `areaDeTransferencia`, `detalhesRetorno`) e `app/theme.js`, sem mudar comportamento. O que garante
+  daqui em diante é o `npm run check` ([ADR-0006](#adr-0006)) e um teste textual em
+  `html-seguro.test.mjs`.
+
 <a id="adr-0006"></a>
 ### 4.6 ADR-0006 — Verificação de tipos sem etapa de build, escopada ao código puro
 
@@ -1458,9 +1478,14 @@ escopada ao código puro dos dois lados:
 Nos dois casos a `lib` do TypeScript não tem `dom` nem `node`: no servidor é só `es2022`; no cliente,
 `es2022` mais `webworker` (timers, `URL`, `Blob`, `fetch`, sem a árvore de elementos). É essa ausência
 que torna o critério automático: um arquivo novo que precise do `document` ou do `fs` está na pasta
-errada, e o erro é o aviso. (No cliente a `lib` chegou a ter `dom` por um tempo, e o portão só parecia
-existir: até o A16, de 30/09/2026, `utils/` abrigava quatro módulos que tocavam o documento.) Execução por `npm run check`, também no CI. Modo estrito ligado, exceto
+errada, e o erro é o aviso. Execução por `npm run check`, também no CI. Modo estrito ligado, exceto
 `noImplicitAny`.
+
+*Revisão de 30/09/2026 (A16).* No cliente, a `lib` chegou a ter `dom`, e o portão só parecia existir:
+`utils/` abrigava quatro módulos que tocavam o documento (download de arquivo, botão ocupado, `el()` e
+cópia para a área de transferência, leitura de variável CSS) e `domain/` montava DOM num deles. Saíram de
+lá (ver a revisão no [ADR-0005](#adr-0005)), a `lib` perdeu o `dom` e o teste textual de
+`html-seguro.test.mjs` passou a cobrir `utils/` também.
 
 **Consequências.**
 
@@ -1814,7 +1839,7 @@ Código: `server/src/services/CampanhaService.js`,
 #### Contexto
 
 O painel ia sair do PC de quem o usa para a rede (P01 do
-[plano de melhorias](MELHORIAS.md#plano-vigente)). Até aqui, a equipe acessava
+plano de melhorias de 28/09/2026 (hoje só no histórico do git)). Até aqui, a equipe acessava
 `http://IP:3000`: senha e cookie de sessão atravessavam a rede em texto puro.
 HTTPS era opcional (`SESSION_SECURE`), e as combinações erradas falhavam em
 silêncio — "ninguém consegue entrar" sem erro nenhum. Os scripts do serviço
@@ -1874,7 +1899,7 @@ jeito de implantar.
 
 Com o painel na rede (ADR-0010), qualquer página aberta no navegador de quem
 está logado podia tentar mandar o painel alterar dados (P02 do
-[plano de melhorias](MELHORIAS.md#plano-vigente)). A defesa era o cookie
+plano de melhorias de 28/09/2026 (hoje só no histórico do git)). A defesa era o cookie
 `SameSite=Lax` mais o fato de a API só entender JSON. Isso barrava o caso
 comum, mas deixava passar o que um `<form>` de outra página consegue mandar
 sem preflight: multipart (importação de planilha, envio de pacote) e POST
@@ -1925,12 +1950,16 @@ considera "o mesmo site" outros serviços do mesmo domínio.
 <a id="adr-0012"></a>
 ### 4.13 ADR-0012 — Testes de navegador pelo protocolo do Chrome, sem Playwright
 
-**Situação:** Aceita (29/09/2026)
+**Situação:** Aceita em 29/09/2026 e **revogada no mesmo dia**: a equipe retirou a pasta `navegador/` do
+repositório (commit `2935b5e`, que descreve a mudança como enxugar a suíte e eliminar redundância). Não há
+mais testes de navegador no repositório nem no CI. O registro fica pelo que a suíte mostrou enquanto existiu
+(o que um Chrome sem janela acha e o `npm test` não acha) e como referência, caso a equipe queira retomar:
+`git show 2935b5e^:navegador`.
 
 #### Contexto
 
 `npm test` cobre regras e módulos, mas não roda os fluxos completos no
-navegador (P04 do [plano de melhorias](MELHORIAS.md#plano-vigente)): foco,
+navegador (P04 do plano de melhorias de 28/09/2026 (hoje só no histórico do git)): foco,
 teclado, o que fica por cima do quê, o que acontece quando a API falha no
 meio de um envio. A ferramenta óbvia seria o Playwright, mas o repositório
 não tem dependência de front-end nem etapa de build
@@ -2095,6 +2124,39 @@ em `registroQueDecide` (`services/situacaoVersao.js`).
 
 ---
 
+<a id="adr-0014"></a>
+### 4.15 ADR-0014 — "Atualização" como termo único
+
+**Situação:** Aceita (30/09/2026)
+
+#### Contexto
+
+O mesmo registro tinha dois nomes. A equipe dizia "atualização" — o que foi feito num cliente, e a
+"última atualização" como a data que importa —, mas o código, as telas, os comentários e a documentação
+carregavam outro termo, herdado da primeira versão. O descompasso chegava à tela (o contador do Resumo e o
+rótulo dele, o parâmetro de data da aba Sistemas) e obrigava quem lia o código a traduzir de cabeça. Uma busca
+por um dos dois termos nunca achava tudo.
+
+#### Decisão
+
+- O registro é uma **atualização**, e a data que importa é a **última atualização**. Vale para telas,
+  mensagens de erro, relatórios, nomes internos (o contador do Resumo é `semAtualizacao`, o parâmetro da
+  aba Sistemas é `atualizacaoAntesDe`), comentários, documentação e mensagens de commit.
+- **O termo antigo não aparece em lugar nenhum** de `client/`, `server/` e `docs/`, nem nos arquivos da
+  raiz. `client/tests/vocabulario.test.mjs` falha se ele voltar, e de propósito **sem lista de exceções**:
+  um arquivo que "precisa" do termo é um arquivo a reescrever. O teste monta o termo em partes para não se
+  reprovar.
+
+#### Consequências
+
+- Uma busca acha tudo de uma vez, e a tela, o código e a conversa da equipe dizem a mesma coisa.
+- O filtro de data da aba Sistemas que já estava salvo no navegador com a chave antiga continua valendo: o
+  código lê a chave antiga (também montada em partes, pela mesma razão do teste) quando não acha a nova.
+- As entradas antigas do CHANGELOG e as seções antigas desta documentação foram reescritas com o termo
+  novo; o histórico do git guarda o texto original.
+
+---
+
 ## 5. Como verificar
 
 **Painel web:**
@@ -2111,7 +2173,7 @@ O console mostra a migração na primeira vez.
 | Paleta | `Ctrl+K`, digitar o nome de um cliente, `Enter` → abre a ficha |
 | Tema | Botão no cabeçalho cicla sistema → escuro → claro; recarregar mantém |
 | Cache | Ir e voltar entre abas → aparece na hora, com a barra fina revalidando |
-| Resumo | Clicar em "Parados há mais de 60 dias" → rola até a lista |
+| Resumo | Clicar em "Sem Atualização Há Mais de 60 Dias" → abre a gaveta com a lista |
 | Distribuição | Escolher sistema → aviso diz qual versão sai do ar |
 | Substituição | Publicar → toast diz qual saiu; a antiga vira "Substituída" |
 | Trava de exclusão | Tentar excluir a versão "No ar" → recusa explicada |
@@ -2130,7 +2192,7 @@ tipos batiam):
 cd web
 npm install       # uma vez; traz só o verificador de tipos
 npm run check     # tipos, sem etapa de build (decisão ADR-0006 na seção 4)
-npm test          # 458 testes: 359 no servidor, 99 no front-end
+npm test          # servidor e front-end
 ```
 
 Entre os testes do front-end há um que **linka o grafo de módulos inteiro** a partir do
@@ -2154,6 +2216,7 @@ teste, ver o passo a passo em `atualizador/README.md` (Fase 2 precisa ser simula
 
 ---
 
+<a id="auditoria-ago-set-2026"></a>
 ## 6. Auditoria de agosto/set 2026 — o que mudou desde então
 
 Em 27/08/2026, uma auditoria técnica comparou três documentos de arquitetura anteriores —
@@ -2200,6 +2263,7 @@ listados como pendências ativas na [seção 3.4](#34-estado-atual-pré-piloto).
 
 ---
 
+<a id="historico-do-documento"></a>
 ## 7. Histórico deste documento — o que foi consolidado
 
 Este documento substitui os seguintes arquivos, que existiam separadamente em `web/docs/` e foram
@@ -2209,14 +2273,14 @@ continua disponível no `git log`, se for preciso consultar o texto original):
 | Arquivo removido | Natureza | Para onde foi |
 |---|---|---|
 | `ARCHITECTURE.md` | Arquitetura do código do painel web | [Seção 2.2](#22-arquitetura-do-código) |
-| `RELATORIO_IMPLEMENTACAO.md` | Relatório de implementação do agente C#, 26–27/08 | Superado pelo estado real de 03/09 — [seção 3](#3-atualizador-inteligente-de-erp--agente-local-c) e [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
+| `RELATORIO_IMPLEMENTACAO.md` | Relatório de implementação do agente C#, 26–27/08 | Superado pelo estado real de 03/09 — [seção 3](#3-atualizador-inteligente-de-erp--agente-local-c) e [seção 6](#auditoria-ago-set-2026) |
 | `REVISAO_INTERFACE.md` | Revisão de interface/distribuição do painel, set/2026 | [Seção 2.3](#23-revisão-de-interface-e-distribuição--set2026) |
-| `Planejamento_Tecnico_Atualizador_ERP_v4.pdf` | Especificação técnica original (MD5, sem estado `PROCESSANDO`) | Contexto histórico na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
-| `Projeto_Arquitetura_Atualizador_ERP.pdf` | Apresentação executiva da mesma arquitetura | Contexto histórico na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
+| `Planejamento_Tecnico_Atualizador_ERP_v4.pdf` | Especificação técnica original (MD5, sem estado `PROCESSANDO`) | Contexto histórico na [seção 6](#auditoria-ago-set-2026) |
+| `Projeto_Arquitetura_Atualizador_ERP.pdf` | Apresentação executiva da mesma arquitetura | Contexto histórico na [seção 6](#auditoria-ago-set-2026) |
 | `Documento_Tecnico_Atualizador_ERP.html`/`.pdf` | Documento técnico v1.0 (26/08) | Substituído pela [seção 3](#3-atualizador-inteligente-de-erp--agente-local-c), que reflete o estado atual |
-| `documento-oficial-atualizador-erp.pdf`/`.docx` | Auditoria técnica completa (27/08) | Resumida na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então); achados individuais na [tabela da seção 3.9](#39-histórico-de-correções-críticas) |
+| `documento-oficial-atualizador-erp.pdf`/`.docx` | Auditoria técnica completa (27/08) | Resumida na [seção 6](#auditoria-ago-set-2026); achados individuais na [tabela da seção 3.9](#39-histórico-de-correções-críticas) |
 | `auditoria_atualizador_erp.html` | Mesma auditoria, versão HTML estilizada | Idem acima |
-| `relatorio-atualizador-erp.docx` | Revisão técnica complementar (27/08), comparando contra um desenho anterior descartado | Resumida no último parágrafo da [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
+| `relatorio-atualizador-erp.docx` | Revisão técnica complementar (27/08), comparando contra um desenho anterior descartado | Resumida no último parágrafo da [seção 6](#auditoria-ago-set-2026) |
 | `apresentacao-atualizador-erp.docx` | Proposta de projeto em linguagem executiva | Conteúdo condensado na [seção 1](#1-visão-geral-do-projeto) |
 | `Apresentacao_Atualizador_Inteligente_ERP.pptx` | Slides gerados a partir do documento técnico e das capturas de tela | Conteúdo coberto pelas seções 1–3; os slides em si não têm informação que não esteja aqui |
 | `tela-distribuicao.png`, `tela-resumo.png` | Capturas de tela usadas nos slides acima | Removidas junto com a apresentação — ilustravam a mesma interface descrita na seção 2 |
@@ -2241,7 +2305,7 @@ movidos para dentro da pasta junto com o resto. A pasta foi reorganizada em dois
 
 **Passo 1 (mais cedo, mesmo dia).** `ANALISE_MELHORIAS_WEB.md` (auditoria técnica, 18/09) e
 `PLANEJAMENTO_MELHORIAS_UX_UI.md` (planejamento de UX/UI, também 18/09) foram fundidos em
-[`MELHORIAS.md`](MELHORIAS.md). Achado na reconciliação: quase todo o roadmap do segundo já tinha
+`MELHORIAS.md` (removido em 30/09/2026, ver 7.3). Achado na reconciliação: quase todo o roadmap do segundo já tinha
 sido entregue — confirmado no código e na entrada "Roadmap UX/UI entregue em quatro frentes" do
 [`CHANGELOG.md`](../CHANGELOG.md) — mas o documento continuava descrevendo esses itens como proposta
 futura. `MELHORIAS.md` ficou com o que sobrou de genuinamente pendente.
@@ -2259,20 +2323,30 @@ incluindo um índice próprio. A organização atual está descrita abaixo.
 
 ### 7.2 Consolidação dos planos e decisões — 28/09/2026
 
-O plano técnico vigente foi incorporado em [`MELHORIAS.md`](MELHORIAS.md#plano-vigente),
+O plano técnico vigente foi incorporado em `MELHORIAS.md`,
 antes do backlog histórico. O planejamento de revisão concluído foi preservado
 integralmente na [seção 8](#plano-revisao-concluido). Os ADRs 0007–0009 foram
 incorporados integralmente à seção 4. Os caminhos antigos passaram a apontar
 para essas seções. Na pasta `docs/` ficam apenas este arquivo,
-[`MELHORIAS.md`](MELHORIAS.md) e [`OPERACAO.md`](OPERACAO.md); o índice está no
+`MELHORIAS.md` e [`OPERACAO.md`](OPERACAO.md); o índice está no
 [`README.md`](../README.md) da raiz. Os arquivos especiais da raiz permanecem.
+
+### 7.3 O fim do `MELHORIAS.md` — 30/09/2026
+
+`docs/MELHORIAS.md` foi removido (commit `6d27219`): repetia o que já está no
+[`CHANGELOG.md`](../CHANGELOG.md) (o que mudou, e por quê) e nesta documentação (as decisões, na
+[seção 4](#decisoes-de-arquitetura)). Os itens do plano que ele carregava (P01 a P05) estão
+registrados nos ADRs 0010 a 0012 e no CHANGELOG. O que ainda falta fazer deixou de ter um arquivo
+próprio no repositório. Na auditoria de 30/09/2026 (A17), os links para ele saíram de todos os
+documentos e dos comentários do código; as menções das seções 7.1 e 7.2, que contam o que houve
+naquelas datas, ficam como registro.
 
 ---
 
 <a id="plano-revisao-concluido"></a>
 ## 8. Plano de revisão concluído — 24 a 28/09/2026
 
-Esta seção preserva as decisões, o checklist e os critérios da revisão concluída. Não é o backlog vigente; para melhorias novas, consulte [MELHORIAS.md](MELHORIAS.md).
+Esta seção preserva as decisões, o checklist e os critérios da revisão concluída. Não é um backlog; o que mudou e por quê está no [CHANGELOG](../CHANGELOG.md).
 
 Data: 24/09/2026 (finalizado em 28/09/2026)
 Situação: **FINALIZADO.** Todas as etapas (E0–E11), todos os itens das seções 3 a 12 e as evoluções 13.1 (Campanhas) e 13.4 (preferências e notificações) foram entregues e verificados. Este documento não recebe mais itens: 13.2 e 13.3 ficam registradas como sugestões para um planejamento futuro, sem compromisso de execução.
@@ -2885,7 +2959,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 |---|---|
 | Marca | `client/js/app/App.js`, `client/index.html`, `client/assets/`, `client/css/theme.css` |
 | Padrões | `client/css/components.css`, `SortableTable.js`, `Drawer.js`, `Modal.js` |
-| Resumo/gráficos | `ResumoView.js`, `components/charts/LineChart.js`, `BarChart.js`, `PieChart.js`, `domain/resumo.js` |
+| Resumo/gráficos | `ResumoView.js`, `components/charts/LineChart.js`, `BarChart.js`, `domain/resumo.js` |
 | Indicadores | `server/src/services/AtualizacaoService.js`, `server/src/database/AtualizacaoRepository.js` |
 | Sistemas | `SistemasView.js`, `SistemaRepository.js`, `ClienteService.js`, `SistemasController.js` |
 | Relatórios | `AtualizacoesView.js`, `components/relatorioModal.js`, `domain/relatorio.js` |

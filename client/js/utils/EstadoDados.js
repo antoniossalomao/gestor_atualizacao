@@ -1,6 +1,7 @@
 /**
  * Estado dos dados de uma tela: quando chegou o que está sendo mostrado e se
- * a última tentativa de atualizar falhou (P03 de docs/MELHORIAS.md).
+ * a última tentativa de atualizar falhou (aviso de dados desatualizados; ver o
+ * CHANGELOG de 29/09/2026).
  *
  * Existe porque o `swr()` da View, para não trocar a tela por uma mensagem de
  * erro, continua mostrando o dado anterior quando uma busca nova falha -- e

@@ -1,5 +1,5 @@
 /*
- * Testes do aviso de dados desatualizados (P03, docs/MELHORIAS.md;
+ * Testes do aviso de dados desatualizados (CHANGELOG de 29/09/2026;
  * utils/EstadoDados.js, usado pela View.swr).
  *
  * O que erra em silêncio se quebrar:

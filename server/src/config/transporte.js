@@ -1,7 +1,7 @@
 /**
  * Decide como o servidor conversa com o navegador: atrás do proxy que termina
  * o HTTPS (o Caddy do docker-compose.yml), ou em HTTP puro só para a própria
- * máquina (P01 do plano de melhorias, docs/MELHORIAS.md).
+ * máquina (ADR-0010).
  *
  * Somente HTTPS na rede (decisão de 29/09/2026, ao preparar o painel para
  * sair do PC de quem o usa): HTTP puro continua existindo, mas escutando só

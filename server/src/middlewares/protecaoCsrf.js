@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const { tokensIguais } = require("./requireAgent");
 
 /**
- * Proteção contra CSRF (P02 de docs/MELHORIAS.md): uma página de OUTRA
+ * Proteção contra CSRF (ADR-0011): uma página de OUTRA
  * origem, aberta no navegador de quem está logado, não consegue mandar o
  * painel alterar nada em nome dessa pessoa.
  *

@@ -1,5 +1,5 @@
 /*
- * P01 -- transporte seguro (docs/MELHORIAS.md). Duas partes:
+ * Transporte seguro (ADR-0010). Duas partes:
  * - lerTransporte: as combinações de SESSION_SECURE/TRUST_PROXY que antes
  *   falhavam em silêncio ("ninguém consegue entrar", cookie por HTTP) agora
  *   recusam a subida, e HTTP puro nunca escuta na rede;

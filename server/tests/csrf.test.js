@@ -1,5 +1,5 @@
 /*
- * P02 -- proteção CSRF (docs/MELHORIAS.md, middlewares/protecaoCsrf.js).
+ * Proteção CSRF (ADR-0011, middlewares/protecaoCsrf.js).
  *
  * O que erra em silêncio se quebrar, e por isso tem teste:
  * - uma escrita com cookie e sem token passar (a proteção não protege nada);

@@ -1,6 +1,5 @@
 /*
- * P05 -- capacidade da importação e da exportação (docs/MELHORIAS.md,
- * config/limitesPlanilha.js).
+ * Capacidade da importação e da exportação (config/limitesPlanilha.js).
  *
  * O que erra em silêncio se quebrar:
  * - o limite deixar de ser checado e uma planilha grande derrubar o servidor

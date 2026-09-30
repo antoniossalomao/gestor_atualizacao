@@ -396,15 +396,18 @@ e `npm run test:navegador` continuam passando.
 
 ### A17 — Auditoria da documentação
 
-- [ ] `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CLAUDE.md`,
+- [x] `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CLAUDE.md`,
       `docs/OPERACAO.md` e `docs/DOCUMENTACAO_CONSOLIDADA.md`: conferir cada
       afirmação contra o código atual (comandos, variáveis do `.env`, rotas,
       regras, portas, forma de instalação com Docker e Caddy).
-- [ ] Incluir as decisões deste plano (A07, A13 e A14) nos ADRs.
-- [ ] Remover o que descreve coisa que não existe mais, e os links
+- [x] Incluir as decisões deste plano (A07, A13 e A14) nos ADRs.
+- [x] Remover o que descreve coisa que não existe mais, e os links
       quebrados.
 - [ ] Decidir o destino de `docs/MELHORIAS.md` (hoje apagado no diretório de
       trabalho, sem commit) e deste `ajustes.md` quando o plano terminar.
+      _O `MELHORIAS.md` já foi removido pelo usuário (commit `6d27219`) e as
+      referências a ele saíram de tudo (seção 7.3 da documentação consolidada).
+      Falta decidir o destino deste `ajustes.md`, que só se resolve no fim._
 
 **Aceite:** quem seguir o README instala e sobe o painel sem precisar de
 informação de fora.
