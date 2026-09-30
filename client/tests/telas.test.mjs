@@ -39,8 +39,9 @@ test("Sistemas: situação e busca filtram clientes sem mudar seus dados", () =>
   ];
   assert.deepEqual(filtrarClientesDoSistema(rows, "Em dia", "agua"), [rows[0]]);
   assert.deepEqual(filtrarClientesDoSistema(rows, "Desatualizados", "araxá"), [rows[1]]);
-  assert.deepEqual(filtrarClientesDoSistema(rows, "Sem informação"), [rows[2]]);
-  assert.deepEqual(filtrarClientesDoSistema(rows, "Aguardando atualização"), [rows[3]], "aguardando não cai em Desatualizados nem em Sem informação");
+  assert.deepEqual(filtrarClientesDoSistema(rows, "Sem versão oficial"), [rows[2]]);
+  assert.deepEqual(filtrarClientesDoSistema(rows, "Aguardando atualização"), [rows[3]], "aguardando não cai em Desatualizados");
+  assert.deepEqual(filtrarClientesDoSistema([{ cliente: "Nova", cidade: "", situacao: "Nunca atualizado" }], "Desatualizados").length, 1, "nunca atualizado é desatualizado");
   assert.equal(rows[0].situacao, "Em dia");
 });
 
@@ -437,8 +438,8 @@ test("Resumo - card de situação: número principal e proporção por sistema",
     foraDaAvaliacao: 0,
     grupos: [
       { chave: "em_dia", rotulo: "Em dia", severidade: "boa", descricao: "", total: 72, pct: 20 },
+      { chave: "aguardando", rotulo: "Aguardando atualização", severidade: "neutra", descricao: "", total: 99, pct: 27 },
       { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "", total: 197, pct: 54 },
-      { chave: "pendente", rotulo: "Verificação pendente", severidade: "media", descricao: "", total: 99, pct: 27 },
     ],
   };
   const m = texto(corpoSituacao(totais, [

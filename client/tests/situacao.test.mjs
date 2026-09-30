@@ -19,8 +19,7 @@ test("totaisSituacao", async (t) => {
   const situacao = {
     em_dia: [cli("A"), cli("B")],
     aguardando: [cli("H")],
-    desatualizado: [cli("C")],
-    pendente: [cli("D")],
+    desatualizado: [cli("C"), cli("D")],
     sem_atualizaveis: [cli("E"), cli("F"), cli("G")],
   };
   const totais = totaisSituacao(situacao);
@@ -28,11 +27,11 @@ test("totaisSituacao", async (t) => {
   await t.test("quem não controla versão fica fora do denominador", () => {
     assert.equal(totais.avaliados, 5, "quem aguarda entra no denominador (A07)");
     assert.equal(totais.foraDaAvaliacao, 3);
-    assert.deepEqual(totais.grupos.map((g) => [g.chave, g.total, g.pct]), [["em_dia", 2, 40], ["aguardando", 1, 20], ["desatualizado", 1, 20], ["pendente", 1, 20]]);
+    assert.deepEqual(totais.grupos.map((g) => [g.chave, g.total, g.pct]), [["em_dia", 2, 40], ["aguardando", 1, 20], ["desatualizado", 2, 40]], "sem grupo 'verificação pendente'");
   });
 
   await t.test("sem ninguém para avaliar, zero -- não NaN nem 100%", () => {
-    const vazio = totaisSituacao({ em_dia: [], desatualizado: [], pendente: [], sem_atualizaveis: [cli("X")] });
+    const vazio = totaisSituacao({ em_dia: [], desatualizado: [], sem_atualizaveis: [cli("X")] });
     assert.equal(vazio.avaliados, 0);
     assert.ok(vazio.grupos.every((g) => g.pct === 0));
     assert.equal(percentual(3, 0), 0);
@@ -49,7 +48,7 @@ test("rótulos da situação", async (t) => {
     ];
     assert.equal(sistemasQueExplicam("desatualizado", sistemas), "B_NFe");
     assert.equal(sistemasQueExplicam("aguardando", sistemas), "B_Importa");
-    assert.equal(sistemasQueExplicam("pendente", sistemas), "B_Ordem: sem referência", "aguardando não é pendência");
+    assert.equal(sistemasQueExplicam("desatualizado", [...sistemas, { sistema: "B_Escola", situacao: "Nunca atualizado" }]), "B_NFe, B_Escola (nunca atualizado)", "nunca atualizado é atraso, e a lista diz qual é");
   });
 
   await t.test("quem foi decidido pelo B_Vendas mostra só ele", () => {
@@ -62,7 +61,7 @@ test("rótulos da situação", async (t) => {
 });
 
 test("corpoSituacao", async (t) => {
-  const situacao = { em_dia: [cli("A")], desatualizado: [cli("B"), cli("C")], pendente: [], sem_atualizaveis: [] };
+  const situacao = { em_dia: [cli("A")], desatualizado: [cli("B"), cli("C")], sem_atualizaveis: [] };
   const maisAtrasados = [
     { sistema: "B_NFe", total: 5 },
     { sistema: "B_Vendas", total: 3 },
@@ -72,7 +71,8 @@ test("corpoSituacao", async (t) => {
   const marcacao = String(corpoSituacao(totaisSituacao(situacao), maisAtrasados));
 
   await t.test("cada total é um botão que abre o seu grupo", () => {
-    for (const chave of ["em_dia", "desatualizado", "pendente"]) assert.match(marcacao, new RegExp(`data-grupo="${chave}"`));
+    for (const chave of ["em_dia", "aguardando", "desatualizado"]) assert.match(marcacao, new RegExp(`data-grupo="${chave}"`));
+    assert.doesNotMatch(marcacao, /data-grupo="pendente"/);
   });
 
   await t.test("grupo vazio não vira pedaço da barra", () => {
@@ -89,7 +89,7 @@ test("corpoSituacao", async (t) => {
   });
 
   await t.test("sem ninguém para avaliar, orienta em vez de mostrar porcentagem", () => {
-    const vazio = String(corpoSituacao(totaisSituacao({ em_dia: [], desatualizado: [], pendente: [], sem_atualizaveis: [] }), []));
+    const vazio = String(corpoSituacao(totaisSituacao({ em_dia: [], desatualizado: [], sem_atualizaveis: [] }), []));
     assert.ok(!vazio.includes("%"));
     assert.match(vazio, /Cadastre clientes/);
   });

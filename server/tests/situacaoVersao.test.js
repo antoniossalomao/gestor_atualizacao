@@ -49,6 +49,16 @@ test("situacaoDoSistema", async (t) => {
     assert.equal(situacaoDoSistema(antes, oficial, { prazoDias: 0, hoje: new Date(2026, 8, 10) }).situacao, "Desatualizado", "prazo 0 é a regra estrita");
   });
 
+  await t.test("quem já estava N dias ou mais antes da oficial é desatualizado na hora, sem esperar o prazo", () => {
+    // O caso de produção: oficial do B_Vendas de 09/09, cliente parado havia
+    // quase um ano, e a primeira versão do prazo o deixava "aguardando".
+    const oficial = "10/09/2026";
+    const noDia = { prazoDias: 60, hoje: new Date(2026, 8, 10) };
+    assert.equal(situacaoDoSistema({ data: "15/10/2025" }, oficial, noDia).situacao, "Desatualizado", "quase um ano antes");
+    assert.equal(situacaoDoSistema({ data: "12/07/2026" }, oficial, noDia).situacao, "Desatualizado", "exatamente 60 dias antes");
+    assert.equal(situacaoDoSistema({ data: "13/07/2026" }, oficial, noDia).situacao, "Aguardando atualização", "59 dias antes: dentro do prazo");
+  });
+
   await t.test("prazo não inventa situação: sem data oficial e sem atualização continuam como antes", () => {
     const prazo = { prazoDias: 60, hoje: new Date(2026, 8, 10) };
     assert.equal(situacaoDoSistema({ data: "01/09/2026" }, "", prazo).situacao, "Sem referência");
@@ -68,7 +78,7 @@ test("situacaoDoCliente", async (t) => {
   await t.test("com B_Vendas, só ele decide", () => {
     assert.equal(grupo(["B_Vendas", "Em dia"], ["B_NFe", "Desatualizado"]), "em_dia", "NFe atrasada não derruba");
     assert.equal(grupo(["B_Vendas", "Desatualizado"], ["B_NFe", "Em dia"]), "desatualizado");
-    assert.equal(grupo(["B_Vendas", "Nunca atualizado"], ["B_NFe", "Em dia"]), "pendente");
+    assert.equal(grupo(["B_Vendas", "Nunca atualizado"], ["B_NFe", "Em dia"]), "desatualizado", "nunca atualizado é desatualizado");
     assert.deepEqual(situacaoDoCliente([{ sistema: "B_Vendas", situacao: "Em dia" }]), { grupo: "em_dia", decididoPor: "B_Vendas" });
   });
 
@@ -79,12 +89,18 @@ test("situacaoDoCliente", async (t) => {
     assert.equal(grupo(["B_Vendas", "Aguardando atualização"], ["B_NFe", "Desatualizado"]), "aguardando", "com B_Vendas, só ele decide");
     assert.equal(grupo(["B_NFe", "Aguardando atualização"], ["B_Importa", "Em dia"]), "aguardando");
     assert.equal(grupo(["B_NFe", "Aguardando atualização"], ["B_Importa", "Desatualizado"]), "desatualizado");
-    assert.equal(grupo(["B_NFe", "Aguardando atualização"], ["B_Importa", "Nunca atualizado"]), "pendente", "falta de dado não se esconde atrás do prazo");
+    assert.equal(grupo(["B_NFe", "Aguardando atualização"], ["B_Importa", "Nunca atualizado"]), "desatualizado", "nunca atualizado não se esconde atrás do prazo");
   });
   await t.test("sem B_Vendas, em dia só com TODOS em dia", () => {
     assert.equal(grupo(["B_NFe", "Em dia"], ["B_Importa", "Em dia"]), "em_dia");
-    assert.equal(grupo(["B_NFe", "Em dia"], ["B_Importa", "Nunca atualizado"]), "pendente");
+    assert.equal(grupo(["B_NFe", "Em dia"], ["B_Importa", "Nunca atualizado"]), "desatualizado");
+    assert.equal(grupo(["B_NFe", "Em dia"], ["B_Importa", "Sem informação"]), "desatualizado", "data ilegível: não dá para dizer que recebeu");
     assert.equal(situacaoDoCliente([{ sistema: "B_NFe", situacao: "Em dia" }]).decididoPor, null);
+  });
+  await t.test("sistema sem versão oficial não julga ninguém", () => {
+    assert.equal(grupo(["B_NFe", "Em dia"], ["B_Ordem", "Sem referência"]), "em_dia");
+    assert.equal(grupo(["B_Vendas", "Sem referência"], ["B_NFe", "Desatualizado"]), "desatualizado", "B_Vendas sem oficial não decide; os outros decidem");
+    assert.equal(grupo(["B_Ordem", "Sem referência"]), "sem_atualizaveis");
   });
   await t.test("sem sistema que controle versão fica fora da conta", () => {
     assert.equal(situacaoDoCliente([]).grupo, "sem_atualizaveis");
@@ -144,10 +160,10 @@ test("Resumo - situação dos clientes", async (t) => {
     await t.test("cada cliente cai em um grupo só, e os grupos somam o total", () => {
       // A Loja está com a NFe atrasada, mas o B_Vendas em dia: conta em dia.
       assert.deepEqual(nomes("em_dia"), ["Loja Dois Sistemas"]);
-      assert.deepEqual(nomes("desatualizado"), ["Mercado Atrasado"]);
-      assert.deepEqual(nomes("pendente"), ["Nunca Atendido"]);
+      assert.deepEqual(nomes("desatualizado"), ["Mercado Atrasado", "Nunca Atendido"], "nunca atualizado é desatualizado");
       assert.deepEqual(nomes("sem_atualizaveis"), ["Só Fixos"]);
-      const soma = s.em_dia.length + s.desatualizado.length + s.pendente.length + s.sem_atualizaveis.length;
+      assert.equal(s.pendente, undefined, "não há mais grupo pendente");
+      const soma = s.em_dia.length + s.aguardando.length + s.desatualizado.length + s.sem_atualizaveis.length;
       assert.equal(soma, env.db.clientes.count());
     });
 
@@ -166,8 +182,9 @@ test("Resumo - situação dos clientes", async (t) => {
     });
 
     await t.test("o card aponta o sistema com mais clientes atrasados", () => {
-      // Os dois clientes com B_NFe estão atrasados nele: 2 de 2.
-      assert.deepEqual(s.sistemasMaisAtrasados, [{ sistema: "B_NFe", total: 2, clientes: 2 }]);
+      // Os dois clientes com B_NFe estão atrasados nele: 2 de 2. O B_Vendas
+      // nunca atualizado do "Nunca Atendido" também é atraso: 1 de 2.
+      assert.deepEqual(s.sistemasMaisAtrasados, [{ sistema: "B_NFe", total: 2, clientes: 2 }, { sistema: "B_Vendas", total: 1, clientes: 2 }]);
     });
 
     await t.test("nova atualização recebe a oficial e tira o cliente do atraso", () => {

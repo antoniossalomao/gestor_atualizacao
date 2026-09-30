@@ -140,9 +140,9 @@ const ESTADO_PELA_REGRA = {
   "Em dia": { estadoLabel: "Em dia", estadoBadge: "badge--success" },
   "Aguardando atualização": { estadoLabel: "Aguardando atualização", estadoBadge: "badge--muted" },
   Desatualizado: { estadoLabel: "Desatualizado", estadoBadge: "badge--warning" },
-  "Nunca atualizado": { estadoLabel: "Nunca atualizado", estadoBadge: "badge--muted" },
+  "Nunca atualizado": { estadoLabel: "Nunca atualizado", estadoBadge: "badge--warning" },
   "Sem referência": { estadoLabel: "Sem versão oficial", estadoBadge: "badge--muted" },
-  "Sem informação": { estadoLabel: "Sem informação", estadoBadge: "badge--muted" },
+  "Sem informação": { estadoLabel: "Sem informação", estadoBadge: "badge--warning" },
 };
 
 function estadoPelaRegra(situacao) {

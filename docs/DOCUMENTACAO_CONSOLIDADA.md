@@ -2035,6 +2035,28 @@ publicação, e não o atraso da equipe.
 - **Reaproveitar `desatualizadoDias`:** tem o mesmo número (60), mas mede
   outra coisa; juntar as duas faria mudar uma mexer na outra sem aviso.
 
+#### Revisão depois da publicação (30/09/2026)
+
+Com a regra acima no ar, o Resumo de produção mostrou **nenhum** cliente
+desatualizado: a oficial do B_Vendas era de 09/09, então até quem estava
+parado havia quase um ano ficava "aguardando" até 08/11. E 99 clientes
+apareciam em "Verificação pendente", todos por nunca terem sido
+atualizados. A equipe decidiu:
+
+- **Desatualizado também quando a última atualização é N dias ou mais
+  anterior à oficial** — o cliente já estava longe da versão quando ela
+  saiu. "Aguardando" fica só para quem foi atualizado menos de N dias antes
+  da oficial, e só enquanto a oficial tem menos de N dias.
+- **Nunca atualizado é desatualizado.** O grupo "Verificação pendente" saiu
+  do card, do Resumo e dos filtros. Uma data ilegível conta igual. Um
+  sistema sem versão oficial ("Sem referência") sai da conta do cliente.
+- **Continua valendo que, com B_Vendas, o card julga o cliente pelo
+  B_Vendas**; a regra do prazo vale para cada sistema, na aba Sistemas, na
+  ficha e em "Onde estão os atrasos".
+
+Na cópia de produção do mesmo dia: 75 em dia, 123 aguardando, 170
+desatualizados (antes: 75, 194, 0 e 99 pendentes).
+
 #### Complemento: sistemas que atualizam junto com o B_Vendas (A13, 30/09/2026)
 
 **Contexto.** NFCe e Consignado M2 são dependências do B_Vendas: vão para o

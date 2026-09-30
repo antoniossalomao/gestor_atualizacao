@@ -27,10 +27,18 @@ const { parseData } = require("../shared/validation");
  *     atualização anterior à oficial não basta para estar desatualizado:
  *     com a regra estrita, TODO cliente ficava vermelho no dia seguinte à
  *     publicação de uma versão, antes de a equipe ter tido tempo de
- *     visitar alguém. Durante `prazoVersaoDias` (regras da equipe, padrão
- *     60) contados da DATA da versão oficial -- a dd/mm/aaaa que as telas
- *     mostram, não o dia em que alguém a cadastrou no painel --, o cliente
- *     fica "Aguardando atualização"; depois disso, "Desatualizado".
+ *     visitar alguém. Com N = `prazoVersaoDias` (regras da equipe, padrão
+ *     60), quem tem a última atualização anterior à oficial é:
+ *       - "Desatualizado" se ela é N dias ou mais ANTERIOR à oficial (já
+ *         estava longe dela quando a versão saiu), ou se a oficial saiu há N
+ *         dias ou mais (o prazo venceu);
+ *       - "Aguardando atualização" nos outros casos: foi atualizado pouco
+ *         antes da versão sair, e a versão é recente.
+ *     A primeira versão (publicada em 30/09/2026) só contava da data da
+ *     oficial: com a oficial do B_Vendas de 09/09, cliente parado havia um
+ *     ano também ficava "aguardando", e o Resumo não mostrava nenhum
+ *     desatualizado. As datas são a dd/mm/aaaa que as telas mostram, e não o
+ *     dia em que alguém cadastrou a oficial no painel.
  *     Campanhas chamam sem prazo: lá a pergunta é "já chegou na meta?".
  */
 
@@ -55,7 +63,9 @@ function situacaoDoSistema(registro, oficial, { prazoDias = null, hoje = new Dat
   const inicioDeHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
   // round, e não floor: numa virada de horário de verão o dia tem 23 ou 25 h.
   const diasDesdeOficial = Math.round((inicioDeHoje.getTime() - dataOficial.getTime()) / DIA_MS);
-  return { situacao: diasDesdeOficial < prazoDias ? "Aguardando atualização" : "Desatualizado" };
+  const diasAntesDaOficial = Math.round((dataOficial.getTime() - dataAtualizacao.getTime()) / DIA_MS);
+  const prazoVencido = diasDesdeOficial >= prazoDias || diasAntesDaOficial >= prazoDias;
+  return { situacao: prazoVencido ? "Desatualizado" : "Aguardando atualização" };
 }
 
 /** O sistema que, quando o cliente tem, decide sozinho a situação dele. */
@@ -94,26 +104,39 @@ function registroQueDecide(sistema, proprio, principal) {
  * número que não batia com o que a equipe vê no dia a dia. Nome fixo aqui,
  * e não regra editável, por escolha da equipe.
  *
- * Sem B_Vendas, valem todos os sistemas: um atraso confirmado ganha de uma
- * informação faltando em outro sistema, e em dia é só com todos em dia.
+ * Sem B_Vendas, valem todos os sistemas: desatualizado se algum estiver, em
+ * dia só com todos em dia.
  *
- * "Aguardando atualização" só decide quando não falta informação em
- * nenhum sistema: falta de dado é pendência de verdade, e o prazo não a
- * esconde.
+ * **Nunca atualizado é desatualizado** (decisão da equipe, 30/09/2026). Antes
+ * havia um grupo "Verificação pendente" para quem não tinha data, e em
+ * produção ele só juntava clientes nunca atualizados -- 99 de 368 -- como
+ * se faltasse conferir alguma coisa. O mesmo vale para uma data que não se
+ * consegue ler ("Sem informação"): não há como dizer que recebeu a versão.
+ * Já "Sem referência" (o sistema não tem versão oficial cadastrada) não
+ * julga ninguém: o sistema sai da conta, como um fixo.
  *
  * Os grupos não se sobrepõem, para as contagens do Resumo somarem o total.
  * @param {Array<{sistema: string, situacao: string}>} sistemas
- * @returns {{grupo: "desatualizado"|"aguardando"|"pendente"|"em_dia"|"sem_atualizaveis", decididoPor: string|null}}
+ * @returns {{grupo: "desatualizado"|"aguardando"|"em_dia"|"sem_atualizaveis", decididoPor: string|null}}
  */
 function situacaoDoCliente(sistemas) {
-  if (sistemas.length === 0) return { grupo: "sem_atualizaveis", decididoPor: null };
-  const principal = sistemas.find((s) => s.sistema.toLowerCase() === SISTEMA_PRINCIPAL.toLowerCase());
-  const consideradas = principal ? [principal.situacao] : sistemas.map((s) => s.situacao);
+  const avaliaveis = sistemas.filter((s) => s.situacao !== "Sem referência");
+  if (avaliaveis.length === 0) return { grupo: "sem_atualizaveis", decididoPor: null };
+  const principal = avaliaveis.find((s) => s.sistema.toLowerCase() === SISTEMA_PRINCIPAL.toLowerCase());
+  const consideradas = principal ? [principal.situacao] : avaliaveis.map((s) => s.situacao);
   const decididoPor = principal ? principal.sistema : null;
-  if (consideradas.includes("Desatualizado")) return { grupo: "desatualizado", decididoPor };
+  if (consideradas.some(contaComoAtraso)) return { grupo: "desatualizado", decididoPor };
   if (consideradas.every((s) => s === "Em dia")) return { grupo: "em_dia", decididoPor };
-  if (consideradas.every((s) => s === "Em dia" || s === "Aguardando atualização")) return { grupo: "aguardando", decididoPor };
-  return { grupo: "pendente", decididoPor };
+  return { grupo: "aguardando", decididoPor };
+}
+
+/**
+ * Situações de UM sistema que põem o cliente como desatualizado -- e que o
+ * card conta em "Onde estão os atrasos".
+ * @param {string} situacao
+ */
+function contaComoAtraso(situacao) {
+  return situacao === "Desatualizado" || situacao === "Nunca atualizado" || situacao === "Sem informação";
 }
 
 
@@ -122,4 +145,4 @@ function contaParaVersao(sistema) {
   return Boolean(sistema && sistema.ativo && sistema.controla_versao);
 }
 
-module.exports = { situacaoDoSistema, situacaoDoCliente, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL };
+module.exports = { situacaoDoSistema, situacaoDoCliente, contaComoAtraso, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL };

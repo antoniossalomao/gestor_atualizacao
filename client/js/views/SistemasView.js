@@ -24,7 +24,10 @@ export class SistemasView extends View {
     super(container, api, ctx);
     const salvo = prefs.get("sistemas:filtros", {});
     this.sistema = salvo.sistema || "";
-    this.situacao = salvo.situacao || "Todos";
+    // "Sem informação" saiu do filtro em 30/09/2026 (nunca atualizado passou
+    // a ser desatualizado): uma escolha salva com ele não casaria com opção
+    // nenhuma, e a lista abriria vazia sem motivo aparente.
+    this.situacao = salvo.situacao && salvo.situacao !== "Sem informação" ? salvo.situacao : "Todos";
     this.busca = salvo.busca || "";
     this.atualizacaoAntesDe = salvo.atualizacaoAntesDe || salvo[CHAVE_ANTIGA_DATA] || "";
     this.versoes = [];
@@ -43,7 +46,7 @@ export class SistemasView extends View {
           <div class="field">
             <label class="field__label" for="sis-situacao">Situação</label>
             <select class="input" id="sis-situacao" data-role="situacao-filter">
-              <option>Todos</option><option>Em dia</option><option>Aguardando atualização</option><option>Desatualizados</option><option>Sem informação</option>
+              <option>Todos</option><option>Em dia</option><option>Aguardando atualização</option><option>Desatualizados</option><option>Sem versão oficial</option>
             </select>
           </div>
           <div class="field">

@@ -15,9 +15,8 @@ export const GRUPOS_SITUACAO = [
   { chave: "em_dia", rotulo: "Em dia", severidade: "boa", descricao: "B_Vendas atualizado na data da versão oficial ou depois (sem B_Vendas: todos os sistemas)." },
   // Neutro, e não amarelo: ninguém está errado ainda. É a versão oficial que
   // acabou de sair, dentro do prazo da equipe (A07).
-  { chave: "aguardando", rotulo: "Aguardando atualização", severidade: "neutra", descricao: "Última atualização antes da versão oficial, mas a oficial saiu há menos dias que o prazo da equipe." },
-  { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "Última atualização do B_Vendas antes da versão oficial, e o prazo já passou (sem B_Vendas: de algum sistema)." },
-  { chave: "pendente", rotulo: "Verificação pendente", severidade: "media", descricao: "Sem atraso confirmado, mas falta informação para decidir." },
+  { chave: "aguardando", rotulo: "Aguardando atualização", severidade: "neutra", descricao: "Atualizado pouco antes da versão oficial, que ainda está dentro do prazo da equipe." },
+  { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "B_Vendas nunca atualizado, ou com a última atualização antes da versão oficial e o prazo vencido (sem B_Vendas: algum sistema assim)." },
 ];
 
 /**
@@ -47,12 +46,15 @@ export function totaisSituacao(situacao) {
   };
 }
 
+/** Situações de um sistema que põem o cliente como desatualizado (mesma lista de contaComoAtraso, no servidor). */
+const ATRASO = ["Desatualizado", "Nunca atualizado", "Sem informação"];
+
 /**
  * O que a lista de um grupo mostra na coluna "Sistemas": os sistemas que
  * puseram o cliente naquele grupo. Quem tem B_Vendas foi decidido só por
  * ele (`decididoPor`, ver services/situacaoVersao.js no servidor), então só
- * ele aparece. Sem B_Vendas, um desatualizado lista os atrasados (não os em
- * dia), e um pendente lista os que estão sem informação.
+ * ele aparece. Sem B_Vendas, um desatualizado lista os atrasados (e diz
+ * quando é "nunca atualizado"), e um aguardando lista os que aguardam.
  * @param {string} grupo
  * @param {Array<{sistema: string, situacao: string}>} sistemas
  * @param {string|null} [decididoPor]
@@ -61,13 +63,11 @@ export function sistemasQueExplicam(grupo, sistemas, decididoPor = null) {
   const relevantes = decididoPor
     ? sistemas.filter((s) => s.sistema === decididoPor)
     : grupo === "desatualizado"
-      ? sistemas.filter((s) => s.situacao === "Desatualizado")
+      ? sistemas.filter((s) => ATRASO.includes(s.situacao))
       : grupo === "aguardando"
         ? sistemas.filter((s) => s.situacao === "Aguardando atualização")
-        : grupo === "pendente"
-          ? sistemas.filter((s) => !["Em dia", "Desatualizado", "Aguardando atualização"].includes(s.situacao))
-          : sistemas;
+        : sistemas;
   return relevantes
-    .map((s) => (grupo === "pendente" ? `${s.sistema}: ${s.situacao.toLowerCase()}` : s.sistema))
+    .map((s) => (s.situacao === "Nunca atualizado" || s.situacao === "Sem informação" ? `${s.sistema} (${s.situacao.toLowerCase()})` : s.sistema))
     .join(", ");
 }

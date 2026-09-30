@@ -207,7 +207,7 @@ export class ResumoView extends View {
     );
   }
 
-  /** @param {string} chave em_dia | aguardando | desatualizado | pendente */
+  /** @param {string} chave em_dia | aguardando | desatualizado */
   _listarGrupo(chave) {
     const grupo = GRUPOS_SITUACAO.find((g) => g.chave === chave);
     const clientes = this.resumo?.situacaoClientes?.[chave] || [];
@@ -217,7 +217,7 @@ export class ResumoView extends View {
       colunas: [
         { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
         { key: "cidade", label: "Cidade" },
-        { key: "sistemas", label: { desatualizado: "Sistemas atrasados", aguardando: "Sistemas aguardando", pendente: "O que falta" }[chave] || "Sistemas" },
+        { key: "sistemas", label: { desatualizado: "Sistemas atrasados", aguardando: "Sistemas aguardando" }[chave] || "Sistemas" },
       ],
       linhas: clientes.map((c) => ({ nome: c.nome, cidade: c.cidade, sistemas: sistemasQueExplicam(chave, c.sistemas, c.decididoPor) })),
       chave: (row) => row.nome,

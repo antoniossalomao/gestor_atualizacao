@@ -6,7 +6,7 @@ const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, parseData } = require("../shared/validation");
 const { normalizarSistemas, normalizarResponsavel } = require("../shared/normalizacao");
 const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
-const { situacaoDoSistema, situacaoDoCliente, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL } = require("./situacaoVersao");
+const { situacaoDoSistema, situacaoDoCliente, contaComoAtraso, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL } = require("./situacaoVersao");
 const { acharSistema } = require("../database/SistemaRepository");
 const { LIMITE_LINHAS_IMPORTACAO, LIMITE_LINHAS_EXPORTACAO } = require("../config/limitesPlanilha");
 const { contarLinhasXlsx } = require("./contarLinhasXlsx");
@@ -495,7 +495,7 @@ class AtualizacaoService {
     }
 
     const idPrincipal = this.db.sistemas.resolver(SISTEMA_PRINCIPAL)?.id;
-    const grupos = { desatualizado: [], aguardando: [], pendente: [], em_dia: [], sem_atualizaveis: [] };
+    const grupos = { desatualizado: [], aguardando: [], em_dia: [], sem_atualizaveis: [] };
     /** Quantos clientes estão atrasados em cada sistema -- os "mais atrasados" do card. */
     const atrasosPorSistema = new Map();
     /** Quantos clientes avaliados usam cada sistema -- o "de quantos" do card. */
@@ -512,7 +512,7 @@ class AtualizacaoService {
         const { situacao } = situacaoDoSistema(registro, sistema.ultima_versao, prazo);
         sistemas.push({ sistema: sistema.nome, situacao });
         clientesPorSistema.set(sistema.nome, (clientesPorSistema.get(sistema.nome) || 0) + 1);
-        if (situacao === "Desatualizado") atrasosPorSistema.set(sistema.nome, (atrasosPorSistema.get(sistema.nome) || 0) + 1);
+        if (contaComoAtraso(situacao)) atrasosPorSistema.set(sistema.nome, (atrasosPorSistema.get(sistema.nome) || 0) + 1);
       }
       sistemas.sort((a, b) => a.sistema.localeCompare(b.sistema, "pt-BR"));
       const { grupo, decididoPor } = situacaoDoCliente(sistemas);
