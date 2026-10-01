@@ -204,7 +204,7 @@ export class AcessosModal {
       Modal.alert("Validação", "Campo 'Máquina' é obrigatório.", "warning").then(() => this.fields.maquina.focus());
       return;
     }
-    const data = {
+    const dados = {
       maquina,
       anydesk: this.fields.anydesk.value.trim(),
       suporteBredas: this.fields.suporteBredas.value.trim(),
@@ -214,10 +214,10 @@ export class AcessosModal {
     const liberar = marcarOcupado(this.salvarBtn);
     try {
       if (this.editingId == null) {
-        await this.api.post(`/clientes/${this.cliente.id}/acessos`, data);
+        await this.api.post(`/clientes/${this.cliente.id}/acessos`, dados);
         avisoRapido.sucesso(`Máquina "${maquina}" adicionada.`);
       } else {
-        await this.api.put(`/clientes/acessos/${this.editingId}`, data);
+        await this.api.put(`/clientes/acessos/${this.editingId}`, dados);
         avisoRapido.sucesso(`Máquina "${maquina}" atualizada.`);
       }
       this._reiniciarFormulario();

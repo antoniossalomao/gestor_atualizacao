@@ -540,11 +540,11 @@ export class ClientesView extends View {
   }
 
   async adicionarCliente() {
-    const data = this._lerFormulario();
-    if (!data) return;
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
-      await this.api.post("/clientes", data);
+      await this.api.post("/clientes", dados);
       this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
@@ -563,11 +563,11 @@ export class ClientesView extends View {
       Modal.alert("Seleção", "Selecione um cliente na tabela primeiro.", "warning");
       return;
     }
-    const data = this._lerFormulario();
-    if (!data) return;
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
-      await this.api.put(`/clientes/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
+      await this.api.put(`/clientes/${this.selectedId}`, { ...dados, revisao: this.selectedRevision });
       this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });

@@ -754,17 +754,17 @@ export class AtualizacoesView extends View {
   }
 
   _lerFormulario() {
-    const data = {};
-    for (const col of COLUNAS_ATUALIZACOES) data[col.key] = this.fields[col.key].value.trim();
-    if (!data.cliente) {
+    const dados = {};
+    for (const col of COLUNAS_ATUALIZACOES) dados[col.key] = this.fields[col.key].value.trim();
+    if (!dados.cliente) {
       Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning").then(() => this.fields.cliente.focus());
       return null;
     }
-    if (!dataBRValida(data.data)) {
+    if (!dataBRValida(dados.data)) {
       Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning").then(() => this.fields.data.focus());
       return null;
     }
-    return data;
+    return dados;
   }
 
   _enviar() {
@@ -773,11 +773,11 @@ export class AtualizacoesView extends View {
   }
 
   async adicionarAtualizacao() {
-    const data = this._lerFormulario();
-    if (!data) return;
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
-      await this.api.post("/atualizacoes", data);
+      await this.api.post("/atualizacoes", dados);
       this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
@@ -799,11 +799,11 @@ export class AtualizacoesView extends View {
       Modal.alert("Seleção", "Selecione um registro na tabela primeiro.", "warning");
       return;
     }
-    const data = this._lerFormulario();
-    if (!data) return;
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
-      await this.api.put(`/atualizacoes/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
+      await this.api.put(`/atualizacoes/${this.selectedId}`, { ...dados, revisao: this.selectedRevision });
       this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });

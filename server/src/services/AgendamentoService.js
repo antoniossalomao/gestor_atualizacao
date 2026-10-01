@@ -92,17 +92,17 @@ class AgendamentoService {
   }
 
   create(input, usuario) {
-    const data = this._validar(input);
-    this.db.agendamentos.insert(data);
-    this.historico.registrar(usuario, "criar", "agendamento", `Tarefa "${data.tarefa}"`);
-    return data;
+    const dados = this._validar(input);
+    this.db.agendamentos.insert(dados);
+    this.historico.registrar(usuario, "criar", "agendamento", `Tarefa "${dados.tarefa}"`);
+    return dados;
   }
 
   // Ver o comentario equivalente em AtualizacaoService: "zero linhas
   // afetadas" precisa virar 404, senao a tela confirma uma alteracao que
   // nao aconteceu numa tarefa que outra pessoa ja excluiu.
   update(id, input, usuario) {
-    const data = this._validar(input);
+    const dados = this._validar(input);
     // concluido_em so existe enquanto a tarefa ESTA "Concluído" agora:
     // acabou de virar -> grava a hora; deixou de ser (reaberta) -> limpa;
     // continua concluída de uma edição pra outra -> preserva a data
@@ -111,17 +111,17 @@ class AgendamentoService {
     const statusConcluido = OPCOES_STATUS[OPCOES_STATUS.length - 1];
     const atual = this.db.agendamentos.find(id);
     let concluidoEm = null;
-    if (data.status === statusConcluido) {
+    if (dados.status === statusConcluido) {
       concluidoEm = atual && atual.status === statusConcluido ? atual.concluidoEm : new Date().toISOString();
     }
     const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
-    if (this.db.agendamentos.update(id, { ...data, concluidoEm }, revisaoEsperada, usuario?.nome || "") === 0) {
+    if (this.db.agendamentos.update(id, { ...dados, concluidoEm }, revisaoEsperada, usuario?.nome || "") === 0) {
       const agora = this.db.agendamentos.find(id);
       if (agora && revisaoEsperada != null) throw new ErroDeConflito(`Este agendamento foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, agora);
       throw new ErroNaoEncontrado("Esta tarefa não existe mais. Ela pode ter sido excluída por outra pessoa.");
     }
-    this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${data.tarefa}"`, { antes: atual, depois: data });
-    // Devolve a linha RELIDA, com a `revisao` nova. Devolver só `data` (sem
+    this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${dados.tarefa}"`, { antes: atual, depois: dados });
+    // Devolve a linha RELIDA, com a `revisao` nova. Devolver só `dados` (sem
     // revisão) fazia o quadro guardar a revisão antiga depois de arrastar um
     // cartão: a mudança seguinte no mesmo cartão -- voltar de "Em Andamento"
     // para "A Fazer", por exemplo -- batia em 409 contra a própria pessoa, e

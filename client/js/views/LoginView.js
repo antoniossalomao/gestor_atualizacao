@@ -151,7 +151,7 @@ export class LoginView {
     event.preventDefault();
     this._esconderErro();
     const form = event.currentTarget;
-    const data = Object.fromEntries(new FormData(form).entries());
+    const dados = Object.fromEntries(new FormData(form).entries());
     const submitBtn = form.querySelector('button[type="submit"]');
     // Spinner em vez de só desabilitar: o login é a primeira coisa que a
     // pessoa faz no app, e um botão que apenas fica cinza por dois segundos
@@ -166,7 +166,7 @@ export class LoginView {
     form.setAttribute("aria-busy", "true");
     try {
       const path = this.mode === "setup" ? "/auth/setup" : "/auth/login";
-      const { user } = await this.api.post(path, data);
+      const { user } = await this.api.post(path, dados);
       this.onSuccess(user);
     } catch (err) {
       this._mostrarErro(err instanceof ErroApi ? err.message : "Não foi possível conectar ao servidor.");

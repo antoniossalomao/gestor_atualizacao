@@ -812,17 +812,17 @@ export class AgendamentosView extends View {
   }
 
   _lerFormulario() {
-    const data = {};
-    for (const col of COLUNAS_AGENDAMENTOS) data[col.key] = this.fields[col.key].value.trim();
-    if (!data.tarefa) {
+    const dados = {};
+    for (const col of COLUNAS_AGENDAMENTOS) dados[col.key] = this.fields[col.key].value.trim();
+    if (!dados.tarefa) {
       Modal.alert("Validação", "Campo 'Tarefa' é obrigatório.", "warning").then(() => this.fields.tarefa.focus());
       return null;
     }
-    if (!dataBRValida(data.data)) {
+    if (!dataBRValida(dados.data)) {
       Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning").then(() => this.fields.data.focus());
       return null;
     }
-    return data;
+    return dados;
   }
 
   _enviar() {
@@ -831,11 +831,11 @@ export class AgendamentosView extends View {
   }
 
   async adicionarTarefa() {
-    const data = this._lerFormulario();
-    if (!data) return;
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
-      await this.api.post("/agendamentos", data);
+      await this.api.post("/agendamentos", dados);
       this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
@@ -851,11 +851,11 @@ export class AgendamentosView extends View {
 
   async alterarTarefa() {
     if (this.selectedId == null) return;
-    const data = this._lerFormulario();
-    if (!data) return;
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
-      await this.api.put(`/agendamentos/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
+      await this.api.put(`/agendamentos/${this.selectedId}`, { ...dados, revisao: this.selectedRevision });
       this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });

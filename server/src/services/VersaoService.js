@@ -254,9 +254,9 @@ class VersaoService {
           ],
         };
       }
-      const data = this._validar(input);
+      const dados = this._validar(input);
       const item = this.db.versoes.insert({
-        ...data,
+        ...dados,
         criadoEm: new Date().toISOString(),
         criadoPor: usuario?.id || null,
       });
