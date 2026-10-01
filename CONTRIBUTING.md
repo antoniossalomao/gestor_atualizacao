@@ -38,7 +38,7 @@ npm run test:client       # só o front-end
 node --test server/tests/clientes.test.js   # um arquivo só, ao investigar
 ```
 
-Os testes do servidor sobem um `BancoDeDados` -- e, em `routing.test.js`, um
+Os testes do servidor sobem um `BancoDeDados` -- e, em `roteamento.test.js`, um
 `Server` completo numa porta efêmera -- com um banco SQLite descartável num
 diretório temporário. **Não há mock de banco.** Não precisam de rede nem de
 banco pré-existente: se um deles falhar, é o código que quebrou.
@@ -174,7 +174,7 @@ Três coisas quebram silenciosamente e caro:
    já recusa script inline, mas isso é a segunda linha de defesa, não a
    primeira.
 
-Ao mexer em qualquer um dos três, rode `server/tests/security.test.js`.
+Ao mexer em qualquer um dos três, rode `server/tests/seguranca.test.js`.
 
 ## Commits
 

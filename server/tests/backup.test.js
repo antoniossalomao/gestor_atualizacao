@@ -15,7 +15,7 @@
  * A quarta protege contra INCONSISTENCIA: uma sessao criada depois do backup
  * aponta para um usuario que pode nao existir no banco restaurado.
  *
- * `security.test.js` ja cobre parte disso pelo angulo de permissao; aqui o
+ * `seguranca.test.js` ja cobre parte disso pelo angulo de permissao; aqui o
  * foco e' o efeito no disco e a ordem em que as travas sao aplicadas.
  */
 const test = require("node:test");

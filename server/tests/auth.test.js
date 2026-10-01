@@ -1,7 +1,7 @@
 /*
  * Testes do fluxo de autenticacao: primeiro acesso, login e troca de senha.
  *
- * `security.test.js` cobre este servico pelo angulo das PERMISSOES (quem pode
+ * `seguranca.test.js` cobre este servico pelo angulo das PERMISSOES (quem pode
  * criar conta, quem pode rebaixar quem). Aqui o foco e' o outro lado: a porta
  * de entrada em si.
  *

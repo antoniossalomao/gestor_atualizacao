@@ -1,7 +1,7 @@
 /*
  * Testes do roteamento HTTP de ponta a ponta: sobe um Server de verdade numa
  * porta efemera, com banco descartavel, e confere o que cada tipo de caminho
- * responde. Complementa security.test.js, que testa as regras em memoria --
+ * responde. Complementa seguranca.test.js, que testa as regras em memoria --
  * aqui o que esta sob teste e' a MONTAGEM do Express em si (ordem de API x
  * estatico x fallback de SPA), que nenhum teste de unidade alcanca.
  */

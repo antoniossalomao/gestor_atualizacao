@@ -1428,7 +1428,7 @@ para arquivos antigos, em anotações fora do repositório, quebraram.
 respondia 200 com o `index.html`, porque o fallback de SPA capturava qualquer caminho fora de
 `/api`; o navegador só reclamava depois, com uma mensagem de MIME type que manda procurar no lugar
 errado. Corrigido em `Servidor.js` e `middlewares/rotaNaoEncontrada.js`, com teste de regressão em
-`tests/routing.test.js`.
+`tests/roteamento.test.js`.
 
 **Alternativas consideradas.** Manter `core/` e só criar subpastas dentro dela — descartado:
 manteria o nome que não significa nada, só empurrando o problema um nível abaixo. Organizar por
