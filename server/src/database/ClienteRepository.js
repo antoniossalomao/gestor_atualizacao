@@ -77,6 +77,16 @@ class ClienteRepository extends BaseRepository {
     return this.conn.prepare("SELECT id, codigo, nome, cidade FROM clientes").all();
   }
 
+  /**
+   * Clientes sem nenhum sistema marcado -- Administração > Dados. Ficam fora
+   * de toda conta de situação, e isso não aparecia em lugar nenhum.
+   */
+  semSistema() {
+    return this.conn
+      .prepare("SELECT c.id, c.nome, c.cidade FROM clientes c WHERE NOT EXISTS (SELECT 1 FROM cliente_sistemas x WHERE x.cliente_id = c.id) ORDER BY c.nome COLLATE NOCASE")
+      .all();
+  }
+
   /** Clientes que têm um sistema marcado no cadastro -- relatório por sistema. */
   clientesDoSistema(sistemaId) {
     return this.conn

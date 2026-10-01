@@ -2,7 +2,7 @@ import { aparencia } from "../../app/aparencia.js";
 import { html } from "../../utils/html.js";
 import { iconeHtml } from "../../utils/icones.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
-import { previaTabela } from "../../templates/configuracoes.js";
+import { previaAmostra, previaTabela } from "../../templates/configuracoes.js";
 import { montarControle } from "./controles.js";
 
 /**
@@ -29,6 +29,8 @@ export class SecaoAjustes {
     this.acoes = acoes;
     /** @type {Array<() => void>} */
     this.sincronizadores = [];
+    /** @type {Array<{linha: HTMLElement, depende: () => boolean}>} */
+    this.dependentes = [];
     this._desenhar();
   }
 
@@ -44,11 +46,12 @@ export class SecaoAjustes {
           ${iconeHtml("restaurar")} Restaurar esta seção</button>`,
       })}
       <div class="cfg-corpo${aba.previa ? " cfg-corpo--com-previa" : ""}">
-        <div class="cfg-cartoes" data-role="cartoes"></div>
+        <div class="cfg-cartoes${aba.previa ? "" : " cfg-cartoes--colunas"}" data-role="cartoes"></div>
         ${
           aba.previa &&
           html`<aside class="card secao-card cfg-previa-cartao">
-            ${tituloCartao({ titulo: "Prévia", descricao: "Uma tabela de exemplo, com os ajustes desta aba aplicados." })}
+            ${tituloCartao({ titulo: "Prévia", descricao: "Como ficam as telas com os ajustes desta aba." })}
+            ${previaAmostra()}
             ${previaTabela()}
           </aside>`
         }
@@ -68,6 +71,7 @@ export class SecaoAjustes {
         linha.dataset.chaves = (item.chaves || []).join(",");
         linhas.appendChild(linha);
         this.sincronizadores.push(sincronizar);
+        if (item.depende) this.dependentes.push({ linha, depende: item.depende });
       }
       el.appendChild(linhas);
       cartoes.appendChild(el);
@@ -96,6 +100,17 @@ export class SecaoAjustes {
    */
   atualizar() {
     for (const sincronizar of this.sincronizadores) sincronizar();
+    // Linha que só faz sentido com outra ligada ("Das"/"Até as" do horário
+    // silencioso): continua à vista, para se saber que existe, mas apagada e
+    // sem aceitar clique. Escondê-la fazia o cartão pular de altura a cada
+    // clique no interruptor; deixá-la ativa sugeria que ela valia sozinha.
+    for (const { linha, depende } of this.dependentes) {
+      const ativa = Boolean(depende());
+      linha.classList.toggle("is-inativo", !ativa);
+      for (const controle of linha.querySelectorAll("input, select, button")) {
+        /** @type {HTMLInputElement} */ (controle).disabled = !ativa;
+      }
+    }
     const mudadas = aparencia.diferencas();
     let naAba = 0;
     for (const linha of this.container.querySelectorAll(".cfg-linha")) {

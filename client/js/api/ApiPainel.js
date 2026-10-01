@@ -19,6 +19,17 @@ export class ErroApi extends Error {
 }
 
 /**
+ * O que mostrar a quem usa quando um pedido falha: a mensagem do servidor,
+ * que já vem escrita para ser lida, ou uma frase genérica para o resto (rede
+ * caída, erro de programação) -- um "TypeError: ..." na tela não ajuda
+ * ninguém.
+ * @param {unknown} err
+ */
+export function mensagemDeErro(err) {
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
+}
+
+/**
  * Erro lançado quando uma requisição foi cancelada de propósito -- porque
  * outra, mais nova, tomou o lugar dela (ver `key` em `get`). Quem chamou deve
  * simplesmente ignorar: não é falha, é a resposta que não interessa mais.

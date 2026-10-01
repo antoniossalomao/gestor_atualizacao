@@ -1,7 +1,7 @@
 import { html, confiavel } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
 import { formatarBytes, formatarDataHora, tempoRelativo } from "../utils/data.js";
-import { rotuloPapel, descricaoPapel } from "../domain/pessoa.js";
+import { iniciais, rotuloPapel, descricaoPapel } from "../domain/pessoa.js";
 import { formatarTempoAtivo, papelNormalizado } from "../domain/administracao.js";
 
 /**
@@ -53,20 +53,40 @@ export function legendaPapeis() {
 }
 
 /**
+ * A fileira de contagem em cima da tabela de pessoas ("2 Administradores ·
+ * 5 Operadores"). Com uma equipe de quinze, "quantos admins existem?" é a
+ * pergunta que se faz antes de tirar o papel de alguém.
+ * @param {{admin: number, operador: number, consulta: number}} contagem
+ */
+export function resumoPapeis(contagem) {
+  const total = contagem.admin + contagem.operador + contagem.consulta;
+  return html`
+    <div class="admin-resumo-papeis">
+      <span class="admin-resumo-papeis__total"><strong>${total}</strong> ${total === 1 ? "conta" : "contas"}</span>
+      ${["admin", "operador", "consulta"].map(
+        (p) => html`<span class="admin-resumo-papeis__item"><span class="admin-pessoa__avatar admin-pessoa__avatar--${p} admin-pessoa__avatar--ponto" aria-hidden="true"></span>${rotuloPapel(p)} <strong>${contagem[p]}</strong></span>`
+      )}
+    </div>`;
+}
+
+/**
  * Conteúdo de uma `<tr>` da tabela de usuários.
- * @param {{id: number, nome: string, usuario: string, role?: string, ultimo_login?: string|null}} u
+ * @param {{id: number, nome: string, usuario: string, role?: string, ultimo_login?: string|null, sessoes?: number}} u
  * @param {{ehVoce: boolean}} opcoes quem está logado não muda o próprio papel nem se remove por aqui
  */
 export function linhaUsuario(u, { ehVoce }) {
   const papel = papelNormalizado(u.role);
   const acesso = u.ultimo_login
-    ? html`<span title="${formatarDataHora(u.ultimo_login)}">${tempoRelativo(u.ultimo_login).replace(/^./, (letra) => letra.toLocaleUpperCase("pt-BR"))}</span>`
+    ? html`<span title="${formatarDataHora(u.ultimo_login)}">${primeiraMaiuscula(tempoRelativo(u.ultimo_login))}</span>`
     : html`<span class="text-muted">Nunca entrou</span>`;
   return html`
     <td data-label="Pessoa">
       <div class="admin-pessoa">
-        <span><strong>${u.nome}</strong>${ehVoce && html` <span class="text-muted">(você)</span>`}</span>
-        <span class="text-muted">@${u.usuario}</span>
+        <span class="admin-pessoa__avatar admin-pessoa__avatar--${papel}" aria-hidden="true">${iniciais(u.nome || u.usuario)}</span>
+        <div class="admin-pessoa__texto">
+          <span><strong>${u.nome}</strong>${ehVoce && html` <span class="text-muted">(você)</span>`}</span>
+          <span class="text-muted">@${u.usuario}</span>
+        </div>
       </div>
     </td>
     <td data-label="Papel">${
@@ -76,20 +96,121 @@ export function linhaUsuario(u, { ehVoce }) {
             ${PAPEIS.map((p) => html`<option value="${p.valor}" ${p.valor === papel && confiavel("selected")}>${rotuloPapel(p.valor)}</option>`)}
           </select>`
     }</td>
-    <td data-label="Último acesso">${acesso}</td>
+    <td data-label="Último acesso">
+      <div class="admin-pessoa__texto">
+        ${acesso}
+        ${(u.sessoes ?? 0) > 0 && html`<span class="text-muted">${u.sessoes === 1 ? "1 sessão aberta" : `${u.sessoes} sessões abertas`}</span>`}
+      </div>
+    </td>
     <td data-label="" class="admin-tabela__acoes">${
       !ehVoce &&
-      html`<button type="button" class="btn btn--small btn--danger" data-action="remover" data-id="${u.id}">Remover acesso</button>`
+      html`<button type="button" class="btn btn--small" data-action="gerenciar" data-id="${u.id}" aria-label="Gerenciar a conta de ${u.nome}">
+        ${iconeHtml("editar")} Gerenciar</button>`
     }</td>`;
 }
 
 /**
+ * O que vai dentro da gaveta "Gerenciar conta" de outra pessoa. Uma gaveta, e
+ * não quatro botões na linha: nome, senha, sessões e remoção são raros, e
+ * quatro botões em cada uma de quinze linhas viravam uma parede de ações.
+ * A remoção fica por último e separada: é a única que não se desfaz.
+ */
+export function gavetaConta() {
+  return html`
+    <div class="admin-conta">
+      <form class="admin-conta__bloco" data-role="form-nome" novalidate>
+        <h3>Nome</h3>
+        <div class="admin-campo-acao">
+          <input type="text" class="input" id="conta-nome" name="conta-nome" data-campo="nome" maxlength="80" autocomplete="off" aria-label="Nome da pessoa" />
+          <button type="submit" class="btn btn--accent" data-action="salvar-nome" disabled>Salvar</button>
+        </div>
+        <p class="field__help">Aparece no menu, no Histórico e como responsável nos registros novos.</p>
+      </form>
+
+      <form class="admin-conta__bloco" data-role="form-senha" novalidate>
+        <h3>Redefinir a senha</h3>
+        <p class="field__help">Para quem esqueceu a sua. A pessoa é desconectada de todos os aparelhos e entra com a senha nova.</p>
+        <div class="admin-conta__campos">
+          <div class="field">
+            <label class="field__label" for="conta-senha">Senha nova</label>
+            <input type="password" class="input" id="conta-senha" name="conta-senha" data-campo="senha" autocomplete="new-password" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="conta-senha2">Repita</label>
+            <input type="password" class="input" id="conta-senha2" name="conta-senha2" data-campo="senha2" autocomplete="new-password" />
+          </div>
+        </div>
+        <p class="admin-form__estado admin-conta__aviso" data-role="aviso-senha" aria-live="polite"></p>
+        <button type="submit" class="btn" data-action="redefinir-senha" disabled>Redefinir senha</button>
+      </form>
+
+      <section class="admin-conta__bloco">
+        <h3>Sessões abertas</h3>
+        <p class="field__help" data-role="texto-sessoes"></p>
+        <button type="button" class="btn" data-action="encerrar-sessoes">Encerrar todas</button>
+      </section>
+
+      <section class="admin-conta__bloco admin-conta__bloco--perigo">
+        <h3>Remover acesso</h3>
+        <p class="field__help">A pessoa deixa de entrar e é desconectada na hora. O que ela fez continua no Histórico.</p>
+        <button type="button" class="btn btn--danger" data-action="remover">Remover acesso</button>
+      </section>
+    </div>`;
+}
+
+/** Até quantos nomes a conferência mostra antes de "e mais N". */
+const NOMES_NA_CONFERENCIA = 8;
+
+/**
+ * As duas linhas da conferência de cadastros, cada uma com a conta, os
+ * primeiros nomes e o atalho para onde se corrige.
+ * @param {{clientesSemSistema: Array<{nome: string}>, sistemasSemReferencia: string[]}} dados
+ */
+export function conferenciaCadastros({ clientesSemSistema, sistemasSemReferencia }) {
+  const linha = ({ titulo, vazio, ajuda, nomes, botao }) => html`
+    <div class="cfg-group admin-conferencia">
+      <div class="cfg-group__labels">
+        <span class="cfg-group__title">${titulo}
+          <span class="badge ${nomes.length ? "badge--warning" : "badge--success"}">${nomes.length || "Nenhum"}</span></span>
+        <span class="cfg-group__help">${nomes.length ? ajuda : vazio}</span>
+        ${
+          nomes.length > 0 &&
+          html`<span class="admin-conferencia__nomes">${nomes.slice(0, NOMES_NA_CONFERENCIA).join(", ")}${
+            nomes.length > NOMES_NA_CONFERENCIA ? ` e mais ${nomes.length - NOMES_NA_CONFERENCIA}` : ""
+          }</span>`
+        }
+      </div>
+      ${nomes.length > 0 && botao}
+    </div>`;
+  return html`
+    ${linha({
+      titulo: "Clientes sem nenhum sistema",
+      vazio: "Todo cliente tem ao menos um sistema marcado.",
+      ajuda: "Ficam fora da situação de versão e do Resumo. Marque os sistemas no cadastro do cliente.",
+      nomes: clientesSemSistema.map((c) => c.nome),
+      botao: html`<button type="button" class="btn btn--small" data-ir="clientes">${iconeHtml("clientes")} Abrir Clientes</button>`,
+    })}
+    ${linha({
+      titulo: "Sistemas atualizáveis sem versão oficial",
+      vazio: "Todo sistema atualizável tem versão oficial cadastrada.",
+      ajuda: "Aparecem como \"Sem versão oficial\" e não contam contra ninguém. Cadastre a versão em Sistemas › Versões oficiais, ou marque como Fixo.",
+      nomes: sistemasSemReferencia,
+      botao: html`<button type="button" class="btn btn--small" data-ir="sistemas">${iconeHtml("sistemas")} Abrir Sistemas</button>`,
+    })}`;
+}
+
+/**
  * Conteúdo de uma `<tr>` da tabela de backups.
- * @param {{arquivo: string, label: string, tamanhoBytes?: number, integro?: boolean}} b
+ * @param {{arquivo: string, label: string, data?: string|null, tamanhoBytes?: number, integro?: boolean}} b
  */
 export function linhaBackup(b) {
   return html`
-    <td data-label="Cópia"><strong>${b.label}</strong></td>
+    <td data-label="Cópia">
+      <div class="admin-pessoa__texto">
+        <strong>${b.label}</strong>
+        ${b.data && html`<span class="text-muted">${primeiraMaiuscula(tempoRelativo(b.data))}</span>`}
+      </div>
+    </td>
     <td data-label="Tamanho">${b.tamanhoBytes ? formatarBytes(b.tamanhoBytes) : "—"}</td>
     <td data-label="Verificação">${
       b.integro === false
@@ -103,6 +224,70 @@ export function linhaBackup(b) {
       <button type="button" class="btn btn--small btn--danger" data-action="restaurar" data-arquivo="${b.arquivo}"
               ${b.integro === false && confiavel('disabled title="Cópia corrompida não pode ser restaurada."')}>Restaurar</button>
     </td>`;
+}
+
+/**
+ * O topo do Diagnóstico: a frase que resume, a lista do que precisa de
+ * atenção (cada item leva à aba onde se resolve) e a hora da conferência --
+ * sem ela, "Conferir de novo" não dava sinal de ter feito alguma coisa.
+ * @param {ReturnType<typeof import("../domain/administracao.js").situacaoDiagnostico>} situacao
+ * @param {Date} conferidoEm
+ */
+export function resumoDiagnostico(situacao, conferidoEm) {
+  const hora = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(conferidoEm);
+  const ABAS = { backups: "Backups", integracoes: "Integrações" };
+  return html`
+    <section class="admin-diagnostico is-${situacao.tom}" role="status">
+      <div class="admin-diagnostico__cabeca">
+        <span class="admin-diagnostico__icone" aria-hidden="true">${iconeHtml(situacao.tom === "ok" ? "check" : "alerta")}</span>
+        <strong>${situacao.titulo}</strong>
+        <span class="admin-diagnostico__hora">Conferido às ${hora}</span>
+      </div>
+      ${
+        situacao.pendencias.length > 0 &&
+        html`<ul class="admin-diagnostico__lista">
+          ${situacao.pendencias.map(
+            (p) => html`<li class="is-${p.tom}">
+              <span>${p.texto}</span>
+              <button type="button" class="btn btn--small btn--ghost" data-ir-aba="${p.aba}">Abrir ${ABAS[p.aba] || p.aba} ${iconeHtml("seta")}</button>
+            </li>`
+          )}
+        </ul>`
+      }
+    </section>`;
+}
+
+/**
+ * A faixa em cima das abas da Administração quando algo precisa de atenção:
+ * uma linha, com o que é e o atalho para a aba. Some quando não há nada (uma
+ * faixa verde "Tudo certo" permanente vira papel de parede).
+ * @param {ReturnType<typeof import("../domain/administracao.js").situacaoDiagnostico>} situacao
+ */
+export function faixaPendencias(situacao) {
+  if (situacao.pendencias.length === 0) return html``;
+  const ABAS = { backups: "Backups", integracoes: "Integrações" };
+  return html`
+    <div class="admin-faixa is-${situacao.tom}" role="status">
+      <span class="admin-faixa__icone" aria-hidden="true">${iconeHtml("alerta")}</span>
+      <strong>${situacao.titulo}</strong>
+      <ul>
+        ${situacao.pendencias.map(
+          (p) => html`<li><button type="button" class="admin-faixa__item is-${p.tom}" data-ir-aba="${p.aba}"
+            title="Abrir ${ABAS[p.aba] || p.aba}">${p.texto}</button></li>`
+        )}
+      </ul>
+    </div>`;
+}
+
+/**
+ * Aviso da chave dos agentes, em bloco e com o texto inteiro: num selo
+ * arredondado, "Ainda é o valor de exemplo do .env.example..." quebrava em
+ * três linhas espremidas na ponta direita da linha.
+ * @param {{texto: string, tom: "ok"|"alerta"|"perigo"}} chave
+ */
+export function avisoChave(chave) {
+  if (chave.tom === "ok") return html`<span class="badge badge--success">${chave.texto}</span>`;
+  return html`<p class="admin-aviso admin-aviso--${chave.tom}" role="note">${iconeHtml("alerta")}<span>${chave.texto}</span></p>`;
 }
 
 /**
@@ -140,8 +325,11 @@ export function blocosSaude(dados, { atualizadorHabilitado }) {
       ${blocoSaude({
         icone: "backups",
         titulo: "Backups",
-        selo: dados.backups?.total ? [`${dados.backups.total} cópias`, "muted"] : ["Nenhuma cópia", "warning"],
-        linhas: [["Última cópia", dados.backups?.ultimo ? formatarDataHora(dados.backups.ultimo) : "Nenhuma ainda"]],
+        selo: dados.backups?.total ? [`${dados.backups.total} ${dados.backups.total === 1 ? "cópia" : "cópias"}`, "muted"] : ["Nenhuma cópia", "warning"],
+        linhas: [
+          ["Última cópia", dados.backups?.ultimo ? formatarDataHora(dados.backups.ultimo) : "Nenhuma ainda"],
+          ...(dados.backups?.ultimo ? [/** @type {[string, unknown]} */ (["Feita", tempoRelativo(dados.backups.ultimo)])] : []),
+        ],
       })}
       ${
         atualizadorHabilitado
@@ -162,6 +350,11 @@ export function blocosSaude(dados, { atualizadorHabilitado }) {
             })
       }
     </div>`;
+}
+
+/** "há 3 dias" -> "Há 3 dias", no começo de uma célula. */
+function primeiraMaiuscula(texto) {
+  return texto.replace(/^./, (letra) => letra.toLocaleUpperCase("pt-BR"));
 }
 
 /** "3 (120 MB)", ou "Nenhum" -- "0 (—)" parecia dado faltando, não pasta vazia. */

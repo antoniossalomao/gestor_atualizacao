@@ -383,3 +383,142 @@ test("Relatório usa cópia recebida e versão anterior do mesmo sistema", () =>
   assert.match(texto, /^B_Vendas: 09\/09\/2026$/m);
   assert.doesNotMatch(texto, /Motivo:|Código:|Cidade:|ATUALIZAÇÃO #/);
 });
+
+test("Administração - situação do Diagnóstico e contagem de papéis", async (t) => {
+  const { situacaoDiagnostico, contarPapeis } = await import("../js/domain/administracao.js");
+  const AGORA = Date.parse("2026-10-01T12:00:00Z");
+  const saudavel = {
+    banco: { integridade: "ok" },
+    backups: { total: 3, ultimo: "2026-09-30T12:00:00Z" },
+    agentes: { erro: 0 },
+  };
+
+  await t.test("tudo certo: tom ok e nenhuma pendência", () => {
+    const r = situacaoDiagnostico(saudavel, { atualizadorHabilitado: true, chaveAgentes: { situacao: "configurada" }, agora: AGORA });
+    assert.equal(r.tom, "ok");
+    assert.deepEqual(r.pendencias, []);
+  });
+
+  await t.test("sem nenhuma cópia não é \"Tudo em ordem\" (era a contradição da tela)", () => {
+    const r = situacaoDiagnostico({ ...saudavel, backups: { total: 0, ultimo: null } }, { atualizadorHabilitado: false, agora: AGORA });
+    assert.equal(r.tom, "alerta");
+    assert.match(r.pendencias[0].texto, /Nenhuma cópia/);
+  });
+
+  await t.test("cópia velha avisa; cópia de ontem não", () => {
+    const velha = situacaoDiagnostico({ ...saudavel, backups: { total: 1, ultimo: "2026-09-20T12:00:00Z" } }, { atualizadorHabilitado: false, agora: AGORA });
+    assert.match(velha.pendencias[0].texto, /11 dias/);
+    assert.equal(situacaoDiagnostico(saudavel, { atualizadorHabilitado: false, agora: AGORA }).pendencias.length, 0);
+  });
+
+  await t.test("banco corrompido e chave de exemplo vêm primeiro, como perigo", () => {
+    const r = situacaoDiagnostico(
+      { banco: { integridade: "erro" }, backups: { total: 0 }, agentes: { erro: 2 } },
+      { atualizadorHabilitado: true, chaveAgentes: { situacao: "exemplo" }, agora: AGORA }
+    );
+    assert.equal(r.tom, "perigo");
+    assert.deepEqual(r.pendencias.map((p) => p.tom), ["perigo", "perigo", "alerta", "alerta"]);
+    assert.match(r.titulo, /4 pontos/);
+  });
+
+  await t.test("com o Atualizador desligado, agentes e chave não contam", () => {
+    const r = situacaoDiagnostico({ ...saudavel, agentes: { erro: 5 } }, { atualizadorHabilitado: false, chaveAgentes: { situacao: "ausente" }, agora: AGORA });
+    assert.equal(r.tom, "ok");
+  });
+
+  await t.test("papéis contados, e conta antiga \"user\" conta como operador", () => {
+    assert.deepEqual(contarPapeis([{ role: "admin" }, { role: "user" }, { role: "operador" }, { role: "consulta" }]), { admin: 1, operador: 2, consulta: 1 });
+    assert.deepEqual(contarPapeis([]), { admin: 0, operador: 0, consulta: 0 });
+  });
+});
+
+test("Administração - pendências por aba", async () => {
+  const { pendenciasPorAba } = await import("../js/domain/administracao.js");
+  assert.deepEqual(pendenciasPorAba([{ aba: "backups" }, { aba: "integracoes" }, { aba: "backups" }]), { backups: 2, integracoes: 1 });
+  assert.deepEqual(pendenciasPorAba([]), {});
+});
+
+test("Administração - sistemas sem versão oficial", async () => {
+  const { sistemasSemReferencia } = await import("../js/domain/administracao.js");
+  const catalogo = [
+    { nome: "B_Vendas", ativo: 1, controlaVersao: 1, ultimaVersao: "2026-09-01" },
+    { nome: "B_NFe", ativo: 1, controlaVersao: 1, ultimaVersao: "" },
+    { nome: "Suporte", ativo: 1, controlaVersao: 0, ultimaVersao: null },
+    { nome: "Antigo", ativo: 0, controlaVersao: 1, ultimaVersao: null },
+    { nome: "DFe", ativo: 1, controlaVersao: 1, ultimaVersao: null },
+  ];
+  // Fixo e inativo não entram: não têm versão para acompanhar.
+  assert.deepEqual(sistemasSemReferencia(catalogo), ["B_NFe", "DFe"]);
+  assert.deepEqual(sistemasSemReferencia(null), []);
+});
+
+test("Administração - diagnóstico em texto para o suporte", async (t) => {
+  const { textoDiagnostico, situacaoDiagnostico } = await import("../js/domain/administracao.js");
+  const dados = {
+    banco: { caminho: "gestao.db", tamanhoBytes: 2048, integridade: "ok", journalMode: "wal" },
+    servidor: { versao: "2.1.0", node: "v22.0.0", plataforma: "win32 (x64)", uptimeSegundos: 3700, memoriaHeapUsadaMB: 20, memoriaHeapTotalMB: 30 },
+    backups: { total: 0, ultimo: null },
+    agentes: { total: 3, ok: 2, offline: 1, erro: 0 },
+    pacotes: { total: 0, tamanhoBytes: 0 },
+  };
+  const situacao = situacaoDiagnostico(dados, { atualizadorHabilitado: true, chaveAgentes: { situacao: "exemplo" } });
+  const texto = textoDiagnostico(dados, situacao, { atualizadorHabilitado: true, conferidoEm: new Date("2026-10-01T15:00:00Z"), navegador: "Chrome" });
+
+  await t.test("traz a situação, as pendências e os números de cada bloco", () => {
+    assert.match(texto, /2 pontos precisam de atenção/);
+    assert.match(texto, /- A chave dos agentes ainda é o valor de exemplo/);
+    assert.match(texto, /Servidor: v2\.1\.0/);
+    assert.match(texto, /No ar há: 1h 1m/);
+    assert.match(texto, /Backups: 0 · último nenhum/);
+    assert.match(texto, /Agentes: 3 \(2 em dia · 1 sem contato · 0 com erro\)/);
+    assert.match(texto, /Navegador: Chrome/);
+    assert.match(texto, /Pacotes em disco: nenhum/);
+  });
+
+  await t.test("nada que dê acesso: só o nome do arquivo do banco, nunca a chave", () => {
+    assert.doesNotMatch(texto, /AGENT_API_TOKEN|terminando em/);
+    assert.match(texto, /Banco: gestao\.db/);
+  });
+
+  await t.test("com o Atualizador desligado, diz isso em vez de contar agentes", () => {
+    const off = textoDiagnostico(dados, situacaoDiagnostico(dados, { atualizadorHabilitado: false }), { atualizadorHabilitado: false, conferidoEm: new Date() });
+    assert.match(off, /Atualizador: desligado/);
+    assert.doesNotMatch(off, /Agentes:/);
+  });
+});
+
+test("Administração - classificação dos sistemas em lote", async (t) => {
+  const { alteracoesClassificacao } = await import("../js/domain/administracao.js");
+  const salvos = [
+    { id: 1, controlaVersao: 1, atualizaComPrincipal: 0 },
+    { id: 2, controlaVersao: 0, atualizaComPrincipal: 0 },
+    { id: 3, controlaVersao: 1, atualizaComPrincipal: 1 },
+  ];
+
+  await t.test("sem mudança, nada vai ao servidor", () => {
+    assert.deepEqual(alteracoesClassificacao(salvos, {
+      1: { controlaVersao: true, atualizaComPrincipal: false },
+      2: { controlaVersao: false },
+      3: { controlaVersao: true, atualizaComPrincipal: true },
+    }), []);
+  });
+
+  await t.test("só as linhas alteradas, com o que mudou", () => {
+    assert.deepEqual(alteracoesClassificacao(salvos, {
+      1: { controlaVersao: true, atualizaComPrincipal: true },
+      2: { controlaVersao: true, atualizaComPrincipal: false },
+      3: { controlaVersao: true, atualizaComPrincipal: true },
+    }), [
+      { id: 1, controlaVersao: true, atualizaComPrincipal: true },
+      { id: 2, controlaVersao: true, atualizaComPrincipal: false },
+    ]);
+  });
+
+  await t.test("virar Fixo não manda a caixa do B_Vendas (ela some na tela)", () => {
+    assert.deepEqual(alteracoesClassificacao(salvos, { 3: { controlaVersao: false, atualizaComPrincipal: true } }), [{ id: 3, controlaVersao: false }]);
+  });
+
+  await t.test("B_Vendas não tem a caixa: atualizaComPrincipal ausente não conta como mudança", () => {
+    assert.deepEqual(alteracoesClassificacao(salvos, { 1: { controlaVersao: true } }), []);
+  });
+});

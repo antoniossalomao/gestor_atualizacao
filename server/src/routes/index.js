@@ -144,6 +144,7 @@ class ApiRouter {
     // Clientes: leitura aberta a Consulta; escrita a Operador/Admin; exclusão em lote a Admin
     api.get("/clientes", clientes.list);
     api.get("/clientes/names", clientes.names);
+    api.get("/clientes/sem-sistema", exigirPapel("admin"), clientes.semSistema);
     api.get("/clientes/opcoes-por-codigo", clientes.opcoesPorCodigo);
     api.get("/clientes/grupos", clientes.grupos);
     api.get("/clientes/cidades", clientes.cidades);
@@ -213,6 +214,7 @@ class ApiRouter {
 
     // Backups: listagem para usuários autorizados, download e restore exclusivos do Admin
     api.get("/backups", backups.list);
+    api.post("/backups", this.limitadorDeBackup, exigirPapel("admin"), backups.criar);
     api.get("/backups/atual/download", this.limitadorDeBackup, exigirPapel("admin"), backups.downloadCurrent);
     api.get("/backups/:arquivo/download", this.limitadorDeBackup, exigirPapel("admin"), backups.download);
     api.post("/backups/:arquivo/restore", this.limitadorDeBackup, exigirPapel("admin"), backups.restore);
@@ -231,6 +233,10 @@ class ApiRouter {
     api.put("/usuarios/:id", exigirPapel("admin"), usuarios.update);
     api.put("/usuarios/me/senha", usuarios.changeOwnPassword);
     api.delete("/usuarios/:id", exigirPapel("admin"), usuarios.remove);
+    // Ações do administrador sobre OUTRA conta. Depois das rotas de "me"
+    // de propósito, como as outras com ":id".
+    api.put("/usuarios/:id/senha", exigirPapel("admin"), usuarios.redefinirSenha);
+    api.delete("/usuarios/:id/sessoes", exigirPapel("admin"), usuarios.encerrarSessoesDe);
 
     // Versões e Distribuição -- bloqueadas enquanto o Atualizador estiver
     // desativado em Configurações (ver exigirAtualizadorHabilitado); sem

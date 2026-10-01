@@ -35,6 +35,23 @@ class BackupService {
   }
 
   /**
+   * Uma cópia agora, pedida pela tela -- antes de mexer em muita coisa (uma
+   * importação grande, uma reclassificação de sistemas), quando a última
+   * cópia automática é da subida do servidor, talvez de semanas atrás. Entra
+   * na mesma conta da retenção: com o limite cheio, a mais antiga sai.
+   * @param {{id:number, nome:string, usuario:string, role:string}} usuario
+   */
+  criar(usuario) {
+    if (!usuario || usuario.role !== "admin") {
+      throw new ErroDePermissao("Apenas administradores podem fazer cópias do banco.");
+    }
+    const feita = this.db._backup();
+    if (!feita) throw new ErroDeValidacao("Não foi possível fazer a cópia agora. Confira o espaço em disco e as permissões da pasta do banco.");
+    this.historico?.registrar(usuario, "criar", "backup", `Cópia do banco feita pela tela (${feita.arquivo})`);
+    return this.list().find((b) => b.arquivo === feita.arquivo) || { arquivo: feita.arquivo, integro: feita.integro };
+  }
+
+  /**
    * Restaura o banco de dados com proteção máxima:
    * - Apenas administradores
    * - Confirmação com a palavra exata "RESTAURAR"

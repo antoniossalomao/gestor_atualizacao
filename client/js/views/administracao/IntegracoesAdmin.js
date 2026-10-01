@@ -3,7 +3,7 @@ import { html } from "../../utils/html.js";
 import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
-import { linhaRegraNumero, rodapeFormulario } from "../../templates/administracao.js";
+import { avisoChave, linhaRegraNumero, rodapeFormulario } from "../../templates/administracao.js";
 import { descreverChaveAgentes } from "../../domain/administracao.js";
 import { FormularioRegras, mensagem } from "./FormularioRegras.js";
 
@@ -13,17 +13,22 @@ import { FormularioRegras, mensagem } from "./FormularioRegras.js";
  */
 export class IntegracoesAdmin extends FormularioRegras {
   nomes = ["discordWebhookUrl", "atualizadorHabilitado", "publicUrl", "alertaAgentesIntervaloMinutos"];
+  rotuloPendencia = "Administração › Integrações";
 
   desenhar({ valores, definicoes, chaveAgentes }) {
     const chave = descreverChaveAgentes(chaveAgentes);
-    const tomChave = { ok: "success", alerta: "warning", perigo: "danger" }[chave.tom] || "info";
 
     this.container.innerHTML = html`
       ${cabecalhoSecao({
         titulo: "Integrações e alertas",
         descricao: "Comunicação com canais externos e conectividade dos agentes automáticos.",
       })}
-      <form class="card secao-card admin-form" data-role="form" novalidate>
+      <!-- Um formulário só, com um Salvar só, mas dois cartões: Discord e
+           Atualizador são assuntos diferentes, e num cartão único o segundo
+           título parecia uma linha a mais do primeiro. A barra de salvar fica
+           presa no pé da tela enquanto se rola (ver .admin-form--cartoes). -->
+      <form class="admin-form admin-form--cartoes" data-role="form" novalidate>
+       <section class="card secao-card">
         ${tituloCartao({
           titulo: "Alertas externos (Discord)",
           descricao: "Notificações enviadas ao canal da equipe sobre eventos críticos do sistema.",
@@ -50,7 +55,9 @@ export class IntegracoesAdmin extends FormularioRegras {
             <li>Com o Atualizador ligado: agentes que ficam sem contato ou reportam incidentes.</li>
           </ul>
         </div>
+       </section>
 
+       <section class="card secao-card">
         ${tituloCartao({
           titulo: "Atualizador automático e agentes",
           descricao: "Instalação remota de versões nos clientes e monitoramento de conectividade.",
@@ -89,17 +96,18 @@ export class IntegracoesAdmin extends FormularioRegras {
           max: definicoes.alertaAgentesIntervaloMinutos?.max ?? 1440,
         })}
 
-        <div class="cfg-group">
+        <div class="cfg-group${chave.tom === "ok" ? "" : " cfg-group--largo"}">
           <div class="cfg-group__labels">
             <span class="cfg-group__title">Chave dos agentes</span>
             <span class="cfg-group__help">
-              Definida em <code>AGENT_API_TOKEN</code> no arquivo .env do servidor. Segredo de infraestrutura mascarado para segurança.
+              Definida em <code>AGENT_API_TOKEN</code> no arquivo .env do servidor. Por ser segredo, só o final aparece aqui.
             </span>
           </div>
-          <span class="badge badge--${tomChave} admin-chave">${chave.texto}</span>
+          ${avisoChave(chave)}
         </div>
+       </section>
 
-        ${rodapeFormulario()}
+       <div class="card admin-form__barra">${rodapeFormulario()}</div>
       </form>`;
 
     this.container.querySelector('[data-action="testar-discord"]')?.addEventListener("click", (e) => {

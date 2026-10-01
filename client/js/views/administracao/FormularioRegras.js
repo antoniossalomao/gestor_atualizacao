@@ -1,9 +1,10 @@
-import { ErroApi } from "../../api/ApiPainel.js";
+import { mensagemDeErro } from "../../api/ApiPainel.js";
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
 import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { alteracoesRegras } from "../../domain/administracao.js";
+import { alteracoesPendentes } from "../../app/alteracoesPendentes.js";
 
 /**
  * Base das abas que editam regras da equipe (Regras, Notificações,
@@ -23,11 +24,21 @@ import { alteracoesRegras } from "../../domain/administracao.js";
 export class FormularioRegras extends View {
   /** @type {string[]} */
   nomes = [];
+  /** Onde o formulário mora, para o aviso de "não salvo" ao sair da conta. */
+  rotuloPendencia = "Administração";
 
   constructor(container, api, ctx) {
     super(container, api, ctx);
     /** Guardado inteiro: o Atualizador precisa de `ctx.recarregarApp`. */
     this.ctx = ctx;
+    this._desfazerPendencia = alteracoesPendentes.registrar(() =>
+      this.form?.classList.contains("is-sujo") ? `${this.rotuloPendencia}: ${this.estado?.textContent}` : null
+    );
+  }
+
+  destroy() {
+    this._desfazerPendencia();
+    super.destroy();
   }
 
   async refresh() {
@@ -130,6 +141,5 @@ export class FormularioRegras extends View {
   }
 }
 
-export function mensagem(err) {
-  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
-}
+/** O mesmo `mensagemDeErro` de api/ApiPainel.js, com o nome que as abas daqui já usam. */
+export const mensagem = mensagemDeErro;

@@ -123,6 +123,88 @@ export function previaTabela() {
 }
 
 /**
+ * O resto da interface, ao lado da tabela da prévia: botões, selos, um campo
+ * e texto corrido. A cor de destaque, o contraste, o anel de foco e o tamanho
+ * do texto mudam muito mais nessas peças do que numa tabela -- com só a
+ * tabela à vista, escolher a cor de destaque era escolher no escuro.
+ *
+ * É de mentira (`aria-hidden`, `inert`): nada aqui responde a clique nem
+ * entra na ordem do Tab.
+ */
+export function previaAmostra() {
+  return html`
+    <div class="cfg-amostra" aria-hidden="true" inert>
+      <p class="cfg-amostra__texto">
+        <strong>Mercado Bom Preço</strong> recebeu o B_Vendas 4.12.0 hoje.
+        <span class="cfg-amostra__link">Ver a ficha</span>
+      </p>
+      <div class="cfg-amostra__selos">
+        <span class="badge badge--success">Em dia</span>
+        <span class="badge badge--muted">Aguardando atualização</span>
+        <span class="badge badge--warning">Desatualizado</span>
+      </div>
+      <div class="cfg-amostra__linha">
+        <input type="text" class="input" value="Buscar cliente…" tabindex="-1" readonly />
+        <button type="button" class="btn" tabindex="-1">Cancelar</button>
+        <button type="button" class="btn btn--accent" tabindex="-1">Salvar</button>
+      </div>
+    </div>`;
+}
+
+/**
+ * As regras da equipe em blocos: o número grande, o que ele faz embaixo. Para
+ * administrador, cada bloco ganha o botão que leva à aba da Administração
+ * onde a regra se muda.
+ * @param {ReturnType<typeof import("../domain/regrasEquipe.js").resumoRegrasEquipe>} regras
+ * @param {{ehAdmin: boolean}} opcoes
+ */
+export function blocosRegras(regras, { ehAdmin }) {
+  return html`
+    <ul class="cfg-regras">
+      ${regras.map(
+        (r) => html`
+          <li class="cfg-regra" data-ajuste="regra-${r.id}">
+            <span class="cfg-regra__titulo">${r.titulo}</span>
+            <strong class="cfg-regra__valor">${r.valor}</strong>
+            <p class="cfg-regra__texto">${r.texto}</p>
+            ${
+              ehAdmin &&
+              html`<button type="button" class="btn btn--small btn--ghost cfg-regra__editar" data-action="editar-regra" data-aba="${r.abaAdmin}">
+                Mudar na Administração ${iconeHtml("seta")}</button>`
+            }
+          </li>`
+      )}
+    </ul>`;
+}
+
+/** O que é só de quem usa e o que é da equipe inteira, lado a lado. */
+export function escopoPreferencias() {
+  const lado = (icone, titulo, descricao, itens) => html`
+    <div class="cfg-escopo__lado">
+      <div class="cfg-escopo__cabeca">
+        <span class="cfg-escopo__icone" aria-hidden="true">${iconeHtml(icone)}</span>
+        <div><strong>${titulo}</strong><span>${descricao}</span></div>
+      </div>
+      <ul>${itens.map((i) => html`<li>${i}</li>`)}</ul>
+    </div>`;
+  return html`
+    <div class="cfg-escopo">
+      ${lado("conta", "Só para você", "Nestas Configurações. Cada pessoa escolhe as suas, sem mexer nas dos outros.", [
+        "Tema, cores, tamanho do texto e densidade",
+        "Tela inicial, linhas por página e menu lateral",
+        "Avisos, sino, som e horário silencioso",
+        "Nome de exibição, senha e sessões abertas",
+      ])}
+      ${lado("escudo", "Para toda a equipe", "Na Administração, só para administradores. Ficam registradas na Auditoria.", [
+        "Prazos da situação e do Resumo",
+        "Arquivamento das tarefas concluídas",
+        "Classificação dos sistemas (atualizável ou fixo)",
+        "Alertas no Discord, Atualizador e backups",
+      ])}
+    </div>`;
+}
+
+/**
  * Os atalhos de um grupo, no formato da lista do `?` (app/atalhos.js).
  * @param {Array<[string, string, string]>} atalhos
  */

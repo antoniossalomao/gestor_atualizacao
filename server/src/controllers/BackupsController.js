@@ -29,6 +29,14 @@ class BackupsController {
     }
   };
 
+  criar = (req, res, next) => {
+    try {
+      res.status(201).json(this.backupService.criar(req.session.user));
+    } catch (err) {
+      next(err);
+    }
+  };
+
   restore = (req, res, next) => {
     try {
       this.backupService.restore(req.params.arquivo, req.session.user, req.body || {});

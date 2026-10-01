@@ -2631,6 +2631,138 @@ table.data-table {
 .cfg-previa {
   margin-top: var(--sp-4);
 }
+/* O resto da interface na prévia: texto, selos, campo e botões. */
+.cfg-amostra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  padding: var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-fundo-alt);
+  pointer-events: none;
+  user-select: none;
+}
+.cfg-amostra__texto {
+  margin: 0;
+  font-size: var(--txt-base);
+  line-height: 1.5;
+}
+.cfg-amostra__link {
+  color: var(--cor-accent);
+  font-weight: var(--peso-forte);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cfg-amostra__selos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.cfg-amostra__linha {
+  display: flex;
+  gap: var(--sp-2);
+}
+.cfg-amostra__linha .input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* -- Regras da equipe: o número grande, o que ele faz embaixo -- */
+.cfg-regras {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--sp-3);
+  margin: var(--sp-4) 0 var(--sp-4);
+  padding: 0;
+  list-style: none;
+}
+.cfg-regra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+}
+.cfg-regra__titulo {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-forte);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.cfg-regra__valor {
+  font: var(--peso-extra) var(--txt-2xl) / 1.15 var(--fonte-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.cfg-regra__texto {
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  line-height: 1.5;
+}
+.cfg-regra__editar {
+  align-self: flex-start;
+  margin-top: var(--sp-2);
+  margin-left: calc(-1 * var(--sp-2));
+}
+.cfg-regra__editar svg {
+  width: 14px;
+  height: 14px;
+}
+.cfg-regra.is-destacado {
+  animation: cfg-linha-destaque 2s ease-out;
+}
+
+.cfg-escopo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-4);
+  margin: var(--sp-4) 0 var(--sp-4);
+}
+.cfg-escopo__lado {
+  padding: var(--sp-4);
+  border-radius: var(--raio);
+  background: var(--cor-fundo-alt);
+}
+.cfg-escopo__cabeca {
+  display: flex;
+  gap: var(--sp-3);
+}
+.cfg-escopo__cabeca strong {
+  display: block;
+  font-size: var(--txt-base);
+}
+.cfg-escopo__cabeca span:not(.cfg-escopo__icone) {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+.cfg-escopo__icone {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+.cfg-escopo__icone svg {
+  width: 18px;
+  height: 18px;
+}
+.cfg-escopo ul {
+  margin: var(--sp-3) 0 0;
+  padding-left: calc(32px + var(--sp-3) + 1em);
+  color: var(--cor-texto);
+  font-size: var(--txt-sm);
+  line-height: 1.7;
+}
 /* Com `table-layout: fixed`, a largura das colunas sai da primeira linha. */
 .cfg-previa th:nth-child(1) {
   width: 50%;
@@ -2676,6 +2808,28 @@ table.data-table {
   outline: 2px solid transparent;
   outline-offset: 3px;
   animation: cfg-cartao-destaque 2s ease-out;
+}
+
+/* Abas sem prévia (Trabalho diário, Notificações) em duas colunas de
+   cartões quando a tela é larga. Numa coluna só, o rótulo ficava a mais de
+   um palmo do controle que ele descreve, e a aba virava rolagem pura. Em
+   colunas de jornal, e não em grade: os cartões têm alturas muito
+   diferentes, e uma grade deixaria buracos ao lado dos curtos. */
+.cfg-cartoes--colunas {
+  display: block;
+  columns: 2 520px;
+  column-gap: var(--sp-4);
+}
+.cfg-cartoes--colunas > .cfg-cartao {
+  break-inside: avoid;
+  margin-bottom: var(--sp-4);
+}
+
+/* Linha que depende de outra desligada ("Das"/"Até as" do horário
+   silencioso): à vista, mas apagada. */
+.cfg-linha.is-inativo .cfg-group__labels,
+.cfg-linha.is-inativo > :not(.cfg-group__labels) {
+  opacity: 0.5;
 }
 
 /* -- uma linha de ajuste: rótulo à esquerda, controle à direita -- */
@@ -3342,12 +3496,17 @@ table.data-table {
 /* -- conta: senha -- */
 .cfg-senha__campos {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
   gap: var(--sp-4);
-  padding: var(--sp-4) 0;
+  padding: var(--sp-4) 0 var(--sp-2);
 }
-.cfg-senha .admin-form__rodape {
-  margin-bottom: calc(var(--sp-2) * -1);
+/* O aviso ("as duas senhas não são iguais") ocupa a linha só quando existe. */
+.cfg-senha__estado {
+  margin: 0 0 var(--sp-3);
+}
+.cfg-senha__estado:empty {
+  display: none;
 }
 .admin-form__estado.is-erro {
   color: var(--cor-vermelho);
@@ -3511,6 +3670,466 @@ table.data-table {
   background: var(--cor-superficie-hover);
 }
 
+/* -- Configurações > Sobre e ajuda --
+   Desenho próprio, e não o das linhas de ajuste: ajuda é para ler, e
+   quarenta blocos de "título + texto cinza" de mesmo peso viravam uma
+   parede (o porquê inteiro está em js/templates/sobre.js). */
+
+.sobre {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: var(--sp-5);
+  align-items: start;
+}
+.sobre__conteudo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+/* Rolar até uma seção não pode esconder o título dela atrás do cabeçalho
+   fixo do app. */
+.sobre__conteudo > section {
+  scroll-margin-top: 88px;
+}
+.sobre__conteudo > section:focus {
+  outline: none;
+}
+
+.sobre__indice {
+  position: sticky;
+  top: 88px;
+  padding-left: var(--sp-3);
+  border-left: 1px solid var(--cor-borda);
+}
+.sobre__indice-titulo {
+  display: block;
+  margin-bottom: var(--sp-2);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-forte);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sobre__indice ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sobre__indice button {
+  position: relative;
+  width: 100%;
+  padding: 5px var(--sp-2);
+  border: 0;
+  border-radius: var(--raio-pequeno);
+  background: none;
+  color: var(--cor-texto-sub);
+  font: inherit;
+  font-size: var(--txt-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.sobre__indice button:hover {
+  background: var(--cor-superficie-hover);
+  color: var(--cor-texto);
+}
+/* A marca da seção atual fica em cima da linha do índice, como um cursor. */
+.sobre__indice button.is-atual {
+  color: var(--cor-accent);
+  font-weight: var(--peso-forte);
+}
+.sobre__indice button.is-atual::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: calc(-1 * var(--sp-3) - 1px);
+  width: 2px;
+  border-radius: 2px;
+  background: var(--cor-accent);
+}
+
+/* O alvo da busca acende como as linhas de ajuste. */
+.sobre [data-ajuste].is-destacado {
+  border-radius: var(--raio-pequeno);
+  animation: cfg-linha-destaque 2s ease-out;
+}
+
+/* Cartão do topo: o que é, e que versão. */
+.sobre-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  padding: var(--sp-5) var(--sp-6);
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--cor-accent) 10%, transparent), transparent 60%),
+    var(--card-gradiente);
+}
+.sobre-hero:focus {
+  outline: none;
+}
+.sobre-hero__marca {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--cor-accent) 30%, transparent);
+}
+.sobre-hero__marca svg {
+  width: 36px;
+  height: 36px;
+}
+.sobre-hero__texto {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.sobre-hero__texto h3 {
+  margin: 0;
+  font: var(--peso-extra) var(--txt-xl) / 1.2 var(--fonte-display);
+  letter-spacing: -0.02em;
+}
+.sobre-hero__texto p {
+  margin: var(--sp-1) 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+.sobre-hero__fatos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  font-size: var(--txt-sm);
+}
+.sobre-hero__acoes {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+.sobre-hero__acoes .btn svg,
+.sobre-tela__corpo .btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sobre-secao {
+  padding-bottom: var(--sp-5);
+}
+
+/* Novidades: uma linha do tempo, a data na coluna da esquerda e uma só vez. */
+.sobre-tempo {
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sobre-tempo__grupo {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--sp-4);
+}
+.sobre-tempo__data {
+  padding-top: 1px;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--peso-forte);
+}
+.sobre-tempo__itens {
+  margin: 0;
+  padding: 0 0 0 var(--sp-4);
+  border-left: 2px solid var(--cor-borda);
+  list-style: none;
+}
+.sobre-tempo__item {
+  position: relative;
+  padding-bottom: var(--sp-4);
+}
+.sobre-tempo__item::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: calc(-1 * var(--sp-4) - 6px);
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--cor-superficie);
+  border-radius: 50%;
+  background: var(--cor-accent);
+}
+.sobre-tempo__item strong {
+  display: block;
+  font-size: var(--txt-base);
+}
+.sobre-tempo__item p {
+  margin: 2px 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  line-height: 1.5;
+}
+.sobre-tempo__mais {
+  margin-left: calc(96px + var(--sp-4));
+}
+
+/* Telas: uma grade de cartões que abrem no lugar. */
+.sobre-telas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  align-items: start;
+}
+.sobre-tela {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  transition: border-color var(--transicao), box-shadow var(--transicao);
+}
+.sobre-tela:hover,
+.sobre-tela[open] {
+  border-color: var(--card-borda-hover);
+}
+.sobre-tela[open] {
+  box-shadow: var(--sombra-card);
+}
+.sobre-tela summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--raio);
+  cursor: pointer;
+  list-style: none;
+}
+.sobre-tela summary::-webkit-details-marker {
+  display: none;
+}
+.sobre-tela summary:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: 2px;
+}
+.sobre-tela__icone {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+.sobre-tela__icone svg {
+  width: 18px;
+  height: 18px;
+}
+.sobre-tela__textos {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sobre-tela__textos strong {
+  font-size: var(--txt-base);
+}
+.sobre-tela__textos span {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  line-height: 1.45;
+}
+.sobre-tela__seta {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--cor-texto-fraco);
+  transition: transform var(--transicao);
+}
+.sobre-tela__seta svg {
+  width: 14px;
+  height: 14px;
+}
+.sobre-tela[open] .sobre-tela__seta {
+  transform: rotate(90deg);
+}
+.sobre-tela__corpo {
+  padding: 0 var(--sp-3) var(--sp-3) calc(32px + 2 * var(--sp-3));
+}
+.sobre-tela__corpo p {
+  margin: 0 0 var(--sp-3);
+  color: var(--cor-texto);
+  font-size: var(--txt-sm);
+  line-height: 1.55;
+}
+
+/* Situações: a mesma bolinha colorida do Resumo, e as regras embaixo. */
+.sobre-situacoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--sp-3);
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sobre-situacao {
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+}
+.sobre-situacao__nome {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: var(--peso-forte);
+}
+.sobre-situacao p,
+.sobre-regra p {
+  margin: var(--sp-1) 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  line-height: 1.5;
+}
+/* Fora da conta (sem versão oficial, componente fixo): um anel, e não uma
+   bolinha cheia -- não é uma situação boa nem ruim, é "não se aplica". */
+.situacao__marca.is-fora {
+  border: 2px solid var(--cor-texto-fraco);
+  background: transparent;
+}
+.sobre-regras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--raio);
+  background: var(--cor-fundo-alt);
+}
+.sobre-regra strong {
+  font-size: var(--txt-sm);
+}
+
+/* Atalhos: um bloco por grupo, em colunas de jornal. Numa grade, o grupo
+   comprido (Tabelas) ia para baixo do primeiro e deixava um buraco ao lado;
+   em colunas, os grupos se acomodam e as duas terminam quase na mesma altura. */
+.sobre-atalhos {
+  columns: 2 380px;
+  column-gap: var(--sp-6);
+  margin-top: var(--sp-2);
+}
+.sobre-atalhos__grupo {
+  break-inside: avoid;
+  padding-top: var(--sp-3);
+}
+.sobre-atalhos__grupo h4 {
+  margin: 0 0 var(--sp-1);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-forte);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sobre-atalhos .cfg-atalhos {
+  grid-template-columns: minmax(0, 1fr);
+}
+.sobre-atalhos .cfg-atalhos__linha dt {
+  flex: 0 0 120px;
+}
+
+/* Suporte: dois caminhos, lado a lado. */
+.sobre-suporte {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+.sobre-suporte__item {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+}
+.sobre-suporte__item strong {
+  font-size: var(--txt-base);
+}
+.sobre-suporte__item p {
+  margin: var(--sp-1) 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  line-height: 1.5;
+}
+.sobre-suporte__icone {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-sub);
+}
+.sobre-suporte__icone svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Sem espaço para o índice ao lado, ele vira uma fileira de atalhos em cima. */
+@media (max-width: 1100px) {
+  .sobre {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sobre__indice {
+    position: static;
+    order: -1;
+    padding-left: 0;
+    border-left: 0;
+  }
+  .sobre__indice-titulo {
+    display: none;
+  }
+  .sobre__indice ul {
+    flex-direction: row;
+    gap: var(--sp-2);
+    overflow-x: auto;
+  }
+  .sobre__indice button {
+    width: auto;
+    padding: 5px var(--sp-3);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--raio-pilula);
+    white-space: nowrap;
+  }
+  .sobre__indice button.is-atual::before {
+    content: none;
+  }
+}
+@media (max-width: 760px) {
+  .sobre-hero {
+    flex-wrap: wrap;
+    padding: var(--sp-4);
+  }
+  .sobre-hero__acoes {
+    justify-content: flex-start;
+  }
+  .sobre-tempo__grupo {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-2);
+  }
+  .sobre-tempo__mais {
+    margin-left: 0;
+  }
+  .sobre-atalhos {
+    columns: 1;
+  }
+}
+
 /* Numa tela estreita a prévia desce para baixo dos ajustes, e cada linha
    empilha o rótulo em cima do controle: rótulo e controle lado a lado num
    celular deixam os dois espremidos. */
@@ -3526,10 +4145,17 @@ table.data-table {
   .cfg-senha__campos {
     grid-template-columns: minmax(0, 1fr);
   }
+  .cfg-senha__botao {
+    justify-self: end;
+  }
 }
 @media (max-width: 760px) {
-  .cfg-busca {
+  .cfg-busca,
+  .admin-pessoas__busca {
     width: 100%;
+  }
+  .admin-diagnostico__cabeca {
+    flex-wrap: wrap;
   }
   .cfg-resultado__caminho {
     display: none;
@@ -6849,8 +7475,151 @@ h1, h2, h3, strong {
 }
 .admin-pessoa {
   display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.admin-pessoa__texto {
+  display: flex;
   flex-direction: column;
   gap: 1px;
+  min-width: 0;
+}
+/* A cor do avatar é a do papel: numa lista de quinze, os administradores se
+   acham pela cor antes de se ler a coluna Papel. */
+.admin-pessoa__avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-extra);
+}
+.admin-pessoa__avatar--admin {
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+.admin-pessoa__avatar--operador {
+  background: var(--status-ok-bg);
+  color: var(--status-ok-texto);
+}
+.admin-pessoa__avatar--ponto {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: var(--sp-1);
+  border: 1px solid var(--cor-borda-forte);
+  vertical-align: -1px;
+}
+.admin-pessoa__avatar--ponto.admin-pessoa__avatar--admin {
+  border-color: var(--cor-accent);
+}
+.admin-pessoa__avatar--ponto.admin-pessoa__avatar--operador {
+  border-color: var(--status-ok-solido);
+}
+
+/* Gaveta "Gerenciar conta": blocos separados por fio, a remoção por último. */
+.admin-conta {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--sp-2);
+}
+.admin-conta__bloco {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+.admin-conta__bloco:first-child {
+  padding-top: 0;
+}
+.admin-conta__bloco:last-child:not(.admin-conta__bloco--perigo) {
+  border-bottom: 0;
+}
+.admin-conta__bloco h3 {
+  margin: 0;
+  font: var(--peso-forte) var(--txt-md) / 1.3 var(--fonte-display);
+}
+.admin-conta__bloco .field__help {
+  margin: 0;
+}
+.admin-conta__bloco .admin-campo-acao {
+  width: 100%;
+}
+.admin-conta__campos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+  width: 100%;
+}
+.admin-conta__aviso:empty {
+  display: none;
+}
+.admin-conta__aviso {
+  margin: 0;
+}
+.admin-conta__bloco--perigo {
+  margin-top: var(--sp-2);
+  padding: var(--sp-4);
+  border: 1px solid color-mix(in srgb, var(--cor-vermelho) 35%, var(--cor-borda));
+  border-radius: var(--raio);
+}
+
+.admin-conferencia .cfg-group__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.admin-conferencia__nomes {
+  margin-top: var(--sp-1);
+  color: var(--cor-texto);
+  font-size: var(--txt-sm);
+}
+.admin-conferencia__carregando {
+  margin: 0;
+  padding: var(--sp-4) 0;
+}
+
+.admin-pessoas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.admin-pessoas__barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.admin-pessoas__busca {
+  width: 280px;
+}
+.admin-pessoas__vazio {
+  margin: 0;
+  padding: var(--sp-5);
+  text-align: center;
+}
+.admin-resumo-papeis {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+.admin-resumo-papeis strong {
+  color: var(--cor-texto);
+}
+.admin-resumo-papeis__total {
+  padding-right: var(--sp-4);
+  border-right: 1px solid var(--cor-borda);
 }
 .admin-papel {
   width: auto;
@@ -6942,6 +7711,204 @@ h1, h2, h3, strong {
 .admin-form.is-sujo .admin-form__estado {
   color: var(--cor-accent);
   font-weight: var(--peso-forte);
+}
+
+/* Integrações: dois cartões e um Salvar só. A barra fica presa no pé da
+   tela enquanto há o que rolar: num formulário alto, o botão no fim do
+   segundo cartão ficava fora de vista justamente quando havia o que salvar. */
+.admin-form--cartoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: 0;
+}
+.admin-form--cartoes > .secao-card {
+  padding-bottom: var(--sp-2);
+}
+.admin-form__barra {
+  position: sticky;
+  bottom: var(--sp-4);
+  z-index: 1;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: var(--sombra-flutuante);
+}
+.admin-form__barra .admin-form__rodape {
+  margin: 0;
+  border-top: 0;
+}
+/* Sem nada para salvar, a barra fica no lugar dela, no fim: presa no pé da
+   tela ela só cobriria o formulário com dois botões desligados. */
+.admin-form--cartoes:not(.is-sujo) .admin-form__barra {
+  position: static;
+  box-shadow: var(--sombra-card);
+}
+.admin-form--cartoes > .secao-card > .cfg-group:last-child {
+  border-bottom: 0;
+}
+
+/* Aviso em bloco (a chave dos agentes): texto inteiro, sinal e cor do tom. */
+.admin-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-left-width: 3px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  font-size: var(--txt-sm);
+}
+.admin-aviso svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+.admin-aviso--alerta {
+  border-left-color: var(--cor-amarelo);
+}
+.admin-aviso--alerta svg {
+  color: var(--cor-amarelo);
+}
+.admin-aviso--perigo {
+  border-left-color: var(--cor-vermelho);
+  background: var(--status-erro-bg);
+}
+.admin-aviso--perigo svg {
+  color: var(--cor-vermelho);
+}
+
+/* Faixa de pendências da Administração, entre as abas e o conteúdo. */
+.admin-faixa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  margin-top: var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-amarelo);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-amarelo-fraco);
+  font-size: var(--txt-sm);
+}
+.admin-faixa.is-perigo {
+  border-left-color: var(--cor-vermelho);
+  background: var(--status-erro-bg);
+}
+.admin-faixa__icone {
+  display: grid;
+  color: var(--cor-amarelo);
+}
+.admin-faixa.is-perigo .admin-faixa__icone {
+  color: var(--cor-vermelho);
+}
+.admin-faixa__icone svg {
+  width: 16px;
+  height: 16px;
+}
+.admin-faixa ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-faixa__item {
+  padding: 2px var(--sp-2);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pilula);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  font: inherit;
+  cursor: pointer;
+}
+.admin-faixa__item:hover {
+  border-color: var(--cor-borda-forte);
+}
+.admin-faixa__item.is-perigo {
+  color: var(--cor-vermelho);
+  font-weight: var(--peso-forte);
+}
+
+/* Topo do Diagnóstico: a frase é o pior bloco, e cada pendência leva à aba
+   onde se resolve. */
+.admin-diagnostico {
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  border: 1px solid var(--cor-borda);
+  border-left: 4px solid var(--severidade-boa);
+  border-radius: var(--raio);
+  background: var(--card-gradiente);
+  box-shadow: var(--sombra-card);
+}
+.admin-diagnostico.is-alerta {
+  border-left-color: var(--cor-amarelo);
+}
+.admin-diagnostico.is-perigo {
+  border-left-color: var(--cor-vermelho);
+}
+.admin-diagnostico__cabeca {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.admin-diagnostico__cabeca strong {
+  font-size: var(--txt-md);
+}
+.admin-diagnostico__icone {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--status-ok-bg);
+  color: var(--severidade-boa);
+}
+.admin-diagnostico.is-alerta .admin-diagnostico__icone {
+  background: var(--cor-amarelo-fraco);
+  color: var(--cor-amarelo);
+}
+.admin-diagnostico.is-perigo .admin-diagnostico__icone {
+  background: var(--status-erro-bg);
+  color: var(--cor-vermelho);
+}
+.admin-diagnostico__icone svg {
+  width: 15px;
+  height: 15px;
+}
+.admin-diagnostico__hora {
+  margin-left: auto;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+  font-variant-numeric: tabular-nums;
+}
+.admin-diagnostico__lista {
+  display: flex;
+  flex-direction: column;
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-diagnostico__lista li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0 var(--sp-2) calc(26px + var(--sp-2));
+  border-top: 1px solid var(--cor-borda);
+  font-size: var(--txt-sm);
+}
+.admin-diagnostico__lista li.is-perigo span {
+  color: var(--cor-vermelho);
+  font-weight: var(--peso-forte);
+}
+.admin-diagnostico__lista .btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* -- saúde do servidor -- */
@@ -7314,7 +8281,9 @@ h1, h2, h3, strong {
 /* Estado que o Gestor só informa (Configurações > Notificações > Permissão
    do navegador). Texto, não interruptor: quem decide é o navegador. */
 .cfg-estado {
-  max-width: 340px;
+  /* Em porcentagem, e não só em px: na coluna de cartões (metade da tela) os
+     340px fixos espremiam o rótulo da linha em duas palavras por linha. */
+  max-width: min(340px, 60%);
   padding: 6px 10px;
   border: 1px solid var(--cor-borda);
   border-left: 3px solid var(--cor-borda-forte);
@@ -7422,6 +8391,28 @@ h1, h2, h3, strong {
   transition: background var(--transicao);
 }
 .admin-sistema.is-alterado { background: var(--cor-accent-fraco); }
+/* Linha escondida pelo filtro: `hidden` perde para o `display` da regra acima. */
+.admin-sistema[hidden] { display: none; }
+.admin-sistemas__barra {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+.admin-sistemas__filtro { width: 280px; }
+.admin-sistemas__total { font-size: var(--txt-sm); }
+.admin-sistemas__rodape.is-sujo .admin-form__estado {
+  color: var(--cor-accent);
+  font-weight: var(--peso-forte);
+}
+/* Com sistema marcado e não salvo, a barra fica presa no pé da tela: a
+   lista é longa, e o Salvar no fim dela ficava fora de vista. */
+.admin-sistemas__rodape.is-sujo {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  box-shadow: 0 -6px 16px color-mix(in srgb, var(--cor-texto) 8%, transparent);
+}
 .admin-sistema__nome { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
 .admin-sistema__nome strong { overflow-wrap: anywhere; }
 .admin-sistema__nome small { color: var(--cor-texto-fraco); font-size: var(--txt-sm); }

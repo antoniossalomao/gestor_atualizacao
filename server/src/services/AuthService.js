@@ -101,7 +101,9 @@ class AuthService {
 
   /** Todas as contas cadastradas (sem hash de senha), para a tela de Usuários. */
   listarUsuarios() {
-    return this.db.usuarios.list();
+    // Quantas sessões abertas cada conta tem: a tela só oferece "Encerrar
+    // sessões" para quem tem alguma, e mostra o número.
+    return this.db.usuarios.list().map((u) => ({ ...u, sessoes: this.sessionStore?.listarPorUsuario(u.id).length ?? 0 }));
   }
 
   /**
@@ -131,8 +133,19 @@ class AuthService {
       }
     }
 
+    // Mesma limpeza e limite do "meu nome" (atualizarMeuNome): o nome que o
+    // administrador digita para outra pessoa aparece nos mesmos lugares.
+    let novoNome = alvo.nome;
+    if (nome !== undefined) {
+      novoNome = String(nome ?? "").trim().replace(/\s+/g, " ");
+      if (!novoNome) throw new ErroDeValidacao("Informe o nome da pessoa.");
+      if (novoNome.length > NOME_MAX_LENGTH) {
+        throw new ErroDeValidacao(`O nome pode ter no máximo ${NOME_MAX_LENGTH} caracteres.`);
+      }
+    }
+
     const atualizado = this.db.usuarios.alterarUsuario(id, {
-      nome: (nome || alvo.nome).trim(),
+      nome: novoNome,
       role: novoPapel,
     });
 
@@ -144,12 +157,17 @@ class AuthService {
     // permissão e não justifica deslogar ninguém.
     if (alvo.role !== atualizado.role) this.sessionStore?.limparPorUsuario(id);
 
-    if (this.historico) {
+    // O registro diz o que mudou de fato: "atualizado para papel [admin]"
+    // num rename deixava a Auditoria sugerindo uma promoção que não houve.
+    const mudancas = [];
+    if (alvo.nome !== atualizado.nome) mudancas.push(`nome alterado de "${alvo.nome}" para "${atualizado.nome}"`);
+    if (alvo.role !== atualizado.role) mudancas.push(`papel alterado para [${atualizado.role}]`);
+    if (this.historico && mudancas.length > 0) {
       this.historico.registrar(
         usuarioLogado,
         "atualizar",
         "usuario",
-        `Usuário "${atualizado.nome}" (@${atualizado.usuario}) atualizado para papel [${atualizado.role}]`
+        `Usuário "${atualizado.nome}" (@${atualizado.usuario}): ${mudancas.join("; ")}`
       );
     }
     return atualizado;
@@ -187,6 +205,68 @@ class AuthService {
     // que tinha até o cookie expirar (7 dias).
     this.sessionStore?.limparPorUsuario(id);
     this.historico.registrar(usuarioLogado, "excluir", "usuario", `Usuário "${alvo.nome}" (@${alvo.usuario})`);
+  }
+
+  /**
+   * Senha nova para OUTRA pessoa, definida por um administrador -- para
+   * quem esqueceu a sua. Antes o único caminho era o script `resetar-senha`
+   * no servidor, ou apagar a conta e criar outra (perdendo o vínculo do
+   * Histórico com a conta antiga).
+   *
+   * Todas as sessões da pessoa caem: se alguém estava usando a conta dela,
+   * para de usar agora. A própria senha não passa por aqui: quem troca a
+   * sua precisa confirmar a atual (ver trocarSenha), e um atalho de admin
+   * que pulasse essa confirmação seria exatamente o que ela existe para
+   * impedir numa sessão esquecida aberta.
+   * @param {number} id
+   * @param {unknown} senhaNova
+   * @param {{id:number, nome:string, role:string}} usuarioLogado
+   */
+  redefinirSenha(id, senhaNova, usuarioLogado) {
+    if (usuarioLogado.role !== "admin") {
+      throw new ErroDePermissao("Apenas administradores podem redefinir a senha de outra pessoa.");
+    }
+    if (id === usuarioLogado.id) {
+      throw new ErroDeValidacao("Para trocar a sua própria senha, use Configurações › Minha conta.");
+    }
+    const alvo = this.db.usuarios.buscarPorId(id);
+    if (!alvo) throw new ErroDeValidacao("Usuário não encontrado.");
+    if (typeof senhaNova !== "string" || senhaNova.length < SENHA_MIN_LENGTH) {
+      throw new ErroDeValidacao(`A nova senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
+    }
+    this.db.usuarios.alterarHashDaSenha(id, bcrypt.hashSync(senhaNova, SALT_ROUNDS));
+    this.sessionStore?.limparPorUsuario(id);
+    this.historico?.registrar(usuarioLogado, "atualizar", "usuario", `Senha de "${alvo.nome}" (@${alvo.usuario}) redefinida por um administrador`);
+  }
+
+  /**
+   * Desconecta OUTRA pessoa de todos os aparelhos -- "o computador do balcão
+   * ficou com a conta da Maria aberta". A conta continua existindo e a senha
+   * continua a mesma; para impedir a volta, é redefinir a senha ou remover.
+   * @param {number} id
+   * @param {{id:number, nome:string, role:string}} usuarioLogado
+   * @returns {number} quantas sessões caíram
+   */
+  encerrarSessoesDe(id, usuarioLogado) {
+    if (usuarioLogado.role !== "admin") {
+      throw new ErroDePermissao("Apenas administradores podem encerrar as sessões de outra pessoa.");
+    }
+    if (id === usuarioLogado.id) {
+      throw new ErroDeValidacao("Para encerrar as suas sessões, use Configurações › Minha conta.");
+    }
+    const alvo = this.db.usuarios.buscarPorId(id);
+    if (!alvo) throw new ErroDeValidacao("Usuário não encontrado.");
+    const total = this.sessionStore?.listarPorUsuario(id).length ?? 0;
+    this.sessionStore?.limparPorUsuario(id);
+    if (total > 0) {
+      this.historico?.registrar(
+        usuarioLogado,
+        "excluir",
+        "usuario",
+        `${total === 1 ? "1 sessão" : `${total} sessões`} de "${alvo.nome}" (@${alvo.usuario}) encerrada${total === 1 ? "" : "s"} por um administrador`
+      );
+    }
+    return total;
   }
 
   /** @returns {{id:number, nome:string, usuario:string, role:string}} usuario autenticado (sem o hash da senha) */

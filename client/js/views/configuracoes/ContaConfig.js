@@ -1,4 +1,4 @@
-import { ErroApi } from "../../api/ApiPainel.js";
+import { mensagemDeErro as mensagem } from "../../api/ApiPainel.js";
 import { Modal } from "../../components/Modal.js";
 import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { html } from "../../utils/html.js";
@@ -6,6 +6,7 @@ import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { cartaoPerfil, listaSessoes } from "../../templates/configuracoes.js";
+import { alteracoesPendentes } from "../../app/alteracoesPendentes.js";
 
 const SENHA_MINIMA = 8;
 
@@ -42,10 +43,17 @@ export class ContaConfig {
     // a resposta do servidor, alguns milissegundos depois.
     this.perfil = { ...opcoes.usuario, criado_em: null };
     this._desenhar();
+    this._desfazerPendencia = alteracoesPendentes.registrar(() => {
+      const senhaDigitada = [...this.container.querySelectorAll('[data-role="form-senha"] input')].some(
+        (campo) => /** @type {HTMLInputElement} */ (campo).value
+      );
+      if (senhaDigitada) return "Configurações › Minha conta: senha nova digitada e não trocada";
+      if (this._nomeSujo()) return "Configurações › Minha conta: nome alterado e não salvo";
+      return null;
+    });
   }
 
   _desenhar() {
-    const ehAdmin = this.opcoes.usuario.role === "admin";
     this.container.innerHTML = html`
       ${cabecalhoSecao({
         titulo: "Conta",
@@ -76,11 +84,11 @@ export class ContaConfig {
                 <label class="field__label" for="cfg-senha-repetida">Repita a nova senha</label>
                 <input type="password" class="input" id="cfg-senha-repetida" data-campo="senhaRepetida" autocomplete="new-password" />
               </div>
+              <!-- O botão na mesma fileira dos campos: num rodapé próprio ele
+                   deixava uma faixa vazia da largura do cartão inteiro. -->
+              <button type="submit" class="btn btn--accent cfg-senha__botao" data-action="trocar-senha" disabled>Trocar senha</button>
             </div>
-            <footer class="admin-form__rodape">
-              <span class="admin-form__estado" data-role="estado-senha" aria-live="polite"></span>
-              <button type="submit" class="btn btn--accent" data-action="trocar-senha" disabled>Trocar senha</button>
-            </footer>
+            <p class="admin-form__estado cfg-senha__estado" data-role="estado-senha" aria-live="polite"></p>
           </form>
         </section>
 
@@ -118,17 +126,6 @@ export class ContaConfig {
           </div>
         </section>
 
-        ${
-          ehAdmin &&
-          html`<button type="button" class="card cfg-link cfg-link--cartao" data-action="administracao">
-            <span class="cfg-link__icon">${iconeHtml("escudo")}</span>
-            <span class="cfg-link__labels">
-              <strong>Administração da equipe</strong>
-              <span>Usuários e papéis, histórico de alterações, regras da equipe, backups e saúde do servidor.</span>
-            </span>
-            <span class="cfg-link__seta">${iconeHtml("seta")}</span>
-          </button>`
-        }
       </div>`.toString();
 
     this._pintarPerfil();
@@ -140,7 +137,6 @@ export class ContaConfig {
     on("exportar", () => this.opcoes.exportar());
     on("importar", () => this.opcoes.importar());
     on("restaurar-tudo", () => this.opcoes.restaurarTudo());
-    on("administracao", () => this.opcoes.navigate("administracao"));
   }
 
   async refresh() {
@@ -157,6 +153,10 @@ export class ContaConfig {
     }
     this._pintarSessoes(sessoes);
     this.atualizarResumo();
+  }
+
+  destroy() {
+    this._desfazerPendencia();
   }
 
   /** O texto "3 ajustes fora do padrão", que a tela recalcula a cada mudança. */
@@ -306,6 +306,3 @@ export class ContaConfig {
   }
 }
 
-function mensagem(err) {
-  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
-}

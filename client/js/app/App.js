@@ -7,6 +7,7 @@ import { PaletaDeComandos } from "../components/PaletaDeComandos.js";
 import { ligarAtalhoAjuda, mostrarAtalhos } from "./atalhos.js";
 import { temaApp } from "./tema.js";
 import { duradouras, conectarPreferencias } from "./preferencias.js";
+import { alteracoesPendentes } from "./alteracoesPendentes.js";
 import { aparencia, reaplicarAparencia } from "./aparencia.js";
 import { RequisicaoCancelada } from "../api/ApiPainel.js";
 import { LoginView } from "../views/LoginView.js";
@@ -322,9 +323,20 @@ export class App {
   }
 
   async _logout() {
-    // A confirmação é desligável (Configurações > Navegação): protege quem
-    // clica sem querer, e só atrasa quem sempre sai de propósito.
-    if (aparencia.confirmarSaida()) {
+    // Sair desmonta o app inteiro, e com ele o que estiver digitado e não
+    // salvo. Este aviso não é desligável como o de baixo: ele só aparece
+    // quando há algo a perder.
+    const pendentes = alteracoesPendentes.lista();
+    if (pendentes.length > 0) {
+      const ok = await Modal.confirm(
+        "Sair sem salvar?",
+        `Há alterações que ainda não foram salvas e serão perdidas:\n\n${pendentes.map((p) => `• ${p}`).join("\n")}`,
+        { confirmLabel: "Sair mesmo assim" }
+      );
+      if (!ok) return;
+    } else if (aparencia.confirmarSaida()) {
+      // A confirmação comum é desligável (Configurações > Trabalho diário):
+      // protege quem clica sem querer, e só atrasa quem sempre sai de propósito.
       const ok = await Modal.confirm("Sair", "Deseja encerrar sua sessão?", { confirmLabel: "Sair", danger: false });
       if (!ok) return;
     }
@@ -587,7 +599,7 @@ export class App {
         // Só as Configurações usam estes -- são as partes do shell que ela
         // mexe (o menu lateral, o cabeçalho com o nome) sem sair procurando
         // elementos pela tela e adivinhando como cada um se comporta.
-        abasDoMenu: this.tabsNoMenu.map((t) => ({ key: t.key, label: t.label })),
+        abasDoMenu: this.tabsNoMenu.map((t) => ({ key: t.key, label: t.label, icone: t.icon, descricao: t.descricao })),
         definirSidebar: (recolhida) => this._definirSidebar(recolhida),
         sincronizarPreferencias: () => this._sincronizarComPreferencias(),
         aoMudarNome: (nome) => this._aoMudarNome(nome),
