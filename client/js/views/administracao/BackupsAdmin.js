@@ -153,6 +153,7 @@ export class BackupsAdmin extends View {
 /** O cartão "Política de retenção": uma regra da equipe, `backupsManter`. */
 class RetencaoBackups extends FormularioRegras {
   nomes = ["backupsManter"];
+  rotuloPendencia = "Administração › Backups";
 
   desenhar({ valores, definicoes }) {
     this.container.innerHTML = html`

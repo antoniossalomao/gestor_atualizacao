@@ -11,6 +11,7 @@ import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { gavetaConta, legendaPapeis, linhaUsuario, resumoPapeis } from "../../templates/administracao.js";
 import { contarPapeis } from "../../domain/administracao.js";
 import { filtrarPorBusca } from "../../utils/busca.js";
+import { alteracoesPendentes } from "../../app/alteracoesPendentes.js";
 
 /**
  * Aba Usuários da Administração: quem entra no sistema e com que papel.
@@ -118,6 +119,11 @@ export class UsuariosAdmin extends View {
       if (botao) this._gerenciar(botao.dataset.id);
     });
     this._montarGavetaConta();
+    this._desfazerPendencia = alteracoesPendentes.registrar(() => {
+      if (this.drawer.aberta && this.drawer.suja) return "Administração › Pessoas: nova conta preenchida e não criada";
+      if (this.gavetaConta.aberta && this.gavetaConta.suja) return `Administração › Pessoas: alterações na conta de "${this.alvo?.nome}" não salvas`;
+      return null;
+    });
   }
 
   async refresh() {
@@ -379,6 +385,7 @@ export class UsuariosAdmin extends View {
   }
 
   destroy() {
+    this._desfazerPendencia?.();
     this.drawer?.destroy();
     this.gavetaConta?.destroy();
     super.destroy();

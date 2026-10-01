@@ -14,6 +14,7 @@ import { FormularioRegras } from "./FormularioRegras.js";
  */
 export class OperacaoAdmin extends FormularioRegras {
   nomes = ["prazoVersaoDias", "desatualizadoDias", "agendamentoArquivarDias"];
+  rotuloPendencia = "Administração › Operação";
 
   constructor(container, api, ctx) {
     super(container, api, ctx);

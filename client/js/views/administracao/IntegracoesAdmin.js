@@ -13,6 +13,7 @@ import { FormularioRegras, mensagem } from "./FormularioRegras.js";
  */
 export class IntegracoesAdmin extends FormularioRegras {
   nomes = ["discordWebhookUrl", "atualizadorHabilitado", "publicUrl", "alertaAgentesIntervaloMinutos"];
+  rotuloPendencia = "Administração › Integrações";
 
   desenhar({ valores, definicoes, chaveAgentes }) {
     const chave = descreverChaveAgentes(chaveAgentes);

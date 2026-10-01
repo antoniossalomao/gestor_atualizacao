@@ -15,6 +15,12 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Aviso de alteração não salva — F7 (01/10/2026):** trocar de tela já não perdia nada, porque as telas ficam montadas. Perdia-se ao recarregar ou fechar a página e ao sair da conta, que desmonta o app. Agora, com uma regra da equipe alterada e não salva, uma gaveta de Pessoas preenchida ou uma senha/nome digitados em Minha conta:
+  - recarregar ou fechar a página dispara o aviso do navegador;
+  - "Sair da conta" pergunta "Sair sem salvar?" e lista o que vai se perder.
+
+  Esse aviso não é desligável como a confirmação comum de saída, porque só aparece quando há algo a perder. O registro fica em `utils/pendencias.js`, com teste.
+
 - **Administração › Pessoas, contas de outras pessoas — F2 (01/10/2026):** cada linha ganhou "Gerenciar", que abre uma gaveta com quatro blocos:
   - **Nome:** com a mesma limpeza e o mesmo limite do próprio nome.
   - **Redefinir a senha:** para quem esqueceu a sua. Antes o único caminho era o script `resetar-senha` no servidor, ou apagar a conta e perder o vínculo com o Histórico. A pessoa é desconectada de todos os aparelhos.

@@ -6,6 +6,7 @@ import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { cartaoPerfil, listaSessoes } from "../../templates/configuracoes.js";
+import { alteracoesPendentes } from "../../app/alteracoesPendentes.js";
 
 const SENHA_MINIMA = 8;
 
@@ -42,6 +43,14 @@ export class ContaConfig {
     // a resposta do servidor, alguns milissegundos depois.
     this.perfil = { ...opcoes.usuario, criado_em: null };
     this._desenhar();
+    this._desfazerPendencia = alteracoesPendentes.registrar(() => {
+      const senhaDigitada = [...this.container.querySelectorAll('[data-role="form-senha"] input')].some(
+        (campo) => /** @type {HTMLInputElement} */ (campo).value
+      );
+      if (senhaDigitada) return "Configurações › Minha conta: senha nova digitada e não trocada";
+      if (this._nomeSujo()) return "Configurações › Minha conta: nome alterado e não salvo";
+      return null;
+    });
   }
 
   _desenhar() {
@@ -144,6 +153,10 @@ export class ContaConfig {
     }
     this._pintarSessoes(sessoes);
     this.atualizarResumo();
+  }
+
+  destroy() {
+    this._desfazerPendencia();
   }
 
   /** O texto "3 ajustes fora do padrão", que a tela recalcula a cada mudança. */
