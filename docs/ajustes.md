@@ -1,6 +1,6 @@
 # Ajustes do painel — plano de 30/09/2026
 
-**Estado (01/10/2026):** Fases 1 a 4 entregues; Fase 5 em andamento (A18 parcial).
+**Estado (01/10/2026):** plano concluído; este arquivo será apagado depois.
 **Branch:** `ajustes-painel`.
 
 Este plano é independente de `MELHORIAS.md`.
@@ -405,11 +405,11 @@ e `npm run test:navegador` continuam passando.
 - [x] Incluir as decisões deste plano (A07, A13 e A14) nos ADRs.
 - [x] Remover o que descreve coisa que não existe mais, e os links
       quebrados.
-- [ ] Decidir o destino de `docs/MELHORIAS.md` (hoje apagado no diretório de
+- [x] Decidir o destino de `docs/MELHORIAS.md` (hoje apagado no diretório de
       trabalho, sem commit) e deste `ajustes.md` quando o plano terminar.
       _O `MELHORIAS.md` já foi removido pelo usuário (commit `6d27219`) e as
       referências a ele saíram de tudo (seção 7.3 da documentação consolidada).
-      Falta decidir o destino deste `ajustes.md`, que só se resolve no fim._
+      Decisão do usuário (01/10/2026): este `ajustes.md` será apagado depois, e as decisões já estão nos ADRs e no CHANGELOG._
 
 **Aceite:** quem seguir o README instala e sobe o painel sem precisar de
 informação de fora.
@@ -419,12 +419,12 @@ informação de fora.
 Revisão arquivo por arquivo, dividida por pasta, com um commit por pasta se
 ficar grande.
 
-- [ ] **Orientação a objetos onde o projeto já usa:** views, componentes,
+- [x] **Orientação a objetos onde o projeto já usa:** views, componentes,
       serviços, controladores e repositórios como classes, com
       responsabilidade única e sem lógica de negócio duplicada. `domain/`,
       `utils/` e `templates/` continuam como funções puras: é o que as torna
       testáveis sem navegador, e não é para virar classe.
-- [ ] **Organização interna:** métodos curtos, nomes que dizem o que fazem,
+- [x] **Organização interna:** métodos curtos, nomes que dizem o que fazem,
       nada de função gigante com tudo misturado.
 - [x] **Comentários:** explicam o **porquê** (armadilha, decisão da equipe,
       bug de produção). Ficam os que já existem e são desse tipo; saem os que
@@ -450,14 +450,19 @@ ficar grande.
 - Comentários: saíram a história do app Python/Tkinter, as faixas decorativas, o
   "o que mudou nesta revisão" (reescrito no presente, com o porquê) e as marcas
   `I07`… do plano antigo que não existe mais.
+- Auditoria de lógica duplicada entre front-end e servidor: a lista de "sistemas
+que explicam o grupo" no Resumo era reescrita no cliente (com uma cópia de
+  `contaComoAtraso`); passou para `situacaoVersao.sistemasQueExplicam`, e o
+  cliente só formata o texto. A validação de data dd/mm/aaaa existe nos dois
+  lados de propósito (aviso na tela; o servidor é quem decide). O resto do
+  cliente só apresenta o que o servidor calcula.
 - Métodos longos divididos: `Servidor._configurarExpress`, `SaudeService.obterDiagnostico`,
   `ConsultaView._desenharDetalhe`.
-- **Falta:** os demais métodos acima de 100 linhas (`App._montarEsqueleto`,
+- **Não será feito:** os demais métodos acima de 100 linhas (`App._montarEsqueleto`,
   `DistribuicaoView._desenharAgentes`, `GraficoDeLinhas.render`, `abrirRelatorio`) — são
   telas, e o repositório não tem teste de navegador; dividir sem conferir no
   navegador nos dois temas arrisca regressão silenciosa. Os `_montarDom` são
-  só marcação. Falta também a auditoria de lógica de negócio duplicada entre
-  views e serviços (item de orientação a objetos).
+  só marcação. Decisão do usuário (01/10/2026): não dividir as telas.
 
 **Aceite:** um desenvolvedor novo lê qualquer arquivo e entende o que faz e
 por que é daquele jeito, sem comentários de enfeite.

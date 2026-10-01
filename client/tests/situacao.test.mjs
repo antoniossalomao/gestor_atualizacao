@@ -10,7 +10,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { totaisSituacao, percentual, sistemasQueExplicam } from "../js/domain/situacao.js";
+import { totaisSituacao, percentual, descreverSistemasQueExplicam } from "../js/domain/situacao.js";
 import { corpoSituacao } from "../js/templates/resumo.js";
 
 const cli = (nome) => ({ nome, cidade: "—", sistemas: [] });
@@ -39,24 +39,17 @@ test("totaisSituacao", async (t) => {
 });
 
 test("rótulos da situação", async (t) => {
-  await t.test("a lista de um grupo mostra os sistemas que o puseram ali", () => {
-    const sistemas = [
-      { sistema: "B_NFe", situacao: "Desatualizado" },
-      { sistema: "B_Vendas", situacao: "Em dia" },
-      { sistema: "B_Ordem", situacao: "Sem referência" },
-      { sistema: "B_Importa", situacao: "Aguardando atualização" },
-    ];
-    assert.equal(sistemasQueExplicam("desatualizado", sistemas), "B_NFe");
-    assert.equal(sistemasQueExplicam("aguardando", sistemas), "B_Importa");
-    assert.equal(sistemasQueExplicam("desatualizado", [...sistemas, { sistema: "B_Escola", situacao: "Nunca atualizado" }]), "B_NFe, B_Escola (nunca atualizado)", "nunca atualizado é atraso, e a lista diz qual é");
-  });
-
-  await t.test("quem foi decidido pelo B_Vendas mostra só ele", () => {
-    const sistemas = [
-      { sistema: "B_Vendas", situacao: "Em dia" },
-      { sistema: "B_NFe", situacao: "Desatualizado" },
-    ];
-    assert.equal(sistemasQueExplicam("em_dia", sistemas, "B_Vendas"), "B_Vendas");
+  await t.test("a lista escreve os sistemas que o servidor mandou, e diz quando nunca foi atualizado", () => {
+    assert.equal(descreverSistemasQueExplicam([{ sistema: "B_NFe", situacao: "Desatualizado" }]), "B_NFe");
+    assert.equal(
+      descreverSistemasQueExplicam([
+        { sistema: "B_NFe", situacao: "Desatualizado" },
+        { sistema: "B_Escola", situacao: "Nunca atualizado" },
+        { sistema: "B_Loc", situacao: "Sem informação" },
+      ]),
+      "B_NFe, B_Escola (nunca atualizado), B_Loc (sem informação)"
+    );
+    assert.equal(descreverSistemasQueExplicam([]), "");
   });
 });
 

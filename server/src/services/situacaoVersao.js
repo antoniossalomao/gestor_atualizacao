@@ -131,6 +131,23 @@ function situacaoDoCliente(sistemas) {
 }
 
 /**
+ * Os sistemas que explicam por que o cliente está no grupo: o que a lista do
+ * Resumo mostra na coluna "Sistemas". Quem tem B_Vendas foi decidido só por
+ * ele, então só ele aparece. Sem B_Vendas, um desatualizado lista os
+ * atrasados e um aguardando lista os que aguardam. A regra mora aqui, ao
+ * lado de situacaoDoCliente, para o front-end só formatar o que recebe.
+ * @param {"desatualizado"|"aguardando"|"em_dia"|"sem_atualizaveis"} grupo
+ * @param {Array<{sistema: string, situacao: string}>} sistemas
+ * @param {string|null} decididoPor
+ */
+function sistemasQueExplicam(grupo, sistemas, decididoPor) {
+  if (decididoPor) return sistemas.filter((s) => s.sistema === decididoPor);
+  if (grupo === "desatualizado") return sistemas.filter((s) => contaComoAtraso(s.situacao));
+  if (grupo === "aguardando") return sistemas.filter((s) => s.situacao === "Aguardando atualização");
+  return sistemas;
+}
+
+/**
  * Situações de UM sistema que põem o cliente como desatualizado -- e que o
  * card conta em "Onde estão os atrasos".
  * @param {string} situacao
@@ -145,4 +162,4 @@ function contaParaVersao(sistema) {
   return Boolean(sistema && sistema.ativo && sistema.controla_versao);
 }
 
-module.exports = { situacaoDoSistema, situacaoDoCliente, contaComoAtraso, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL };
+module.exports = { situacaoDoSistema, situacaoDoCliente, sistemasQueExplicam, contaComoAtraso, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL };

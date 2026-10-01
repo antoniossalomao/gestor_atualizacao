@@ -46,28 +46,14 @@ export function totaisSituacao(situacao) {
   };
 }
 
-/** Situações de um sistema que põem o cliente como desatualizado (mesma lista de contaComoAtraso, no servidor). */
-const ATRASO = ["Desatualizado", "Nunca atualizado", "Sem informação"];
-
 /**
- * O que a lista de um grupo mostra na coluna "Sistemas": os sistemas que
- * puseram o cliente naquele grupo. Quem tem B_Vendas foi decidido só por
- * ele (`decididoPor`, ver services/situacaoVersao.js no servidor), então só
- * ele aparece. Sem B_Vendas, um desatualizado lista os atrasados (e diz
- * quando é "nunca atualizado"), e um aguardando lista os que aguardam.
- * @param {string} grupo
- * @param {Array<{sistema: string, situacao: string}>} sistemas
- * @param {string|null} [decididoPor]
+ * Texto da coluna "Sistemas" das listas do Resumo. QUAIS sistemas explicam o
+ * grupo é regra do servidor (`explicam`, em services/situacaoVersao.js);
+ * aqui só se escreve, e quem nunca foi atualizado diz isso.
+ * @param {Array<{sistema: string, situacao: string}>} explicam
  */
-export function sistemasQueExplicam(grupo, sistemas, decididoPor = null) {
-  const relevantes = decididoPor
-    ? sistemas.filter((s) => s.sistema === decididoPor)
-    : grupo === "desatualizado"
-      ? sistemas.filter((s) => ATRASO.includes(s.situacao))
-      : grupo === "aguardando"
-        ? sistemas.filter((s) => s.situacao === "Aguardando atualização")
-        : sistemas;
-  return relevantes
+export function descreverSistemasQueExplicam(explicam) {
+  return explicam
     .map((s) => (s.situacao === "Nunca atualizado" || s.situacao === "Sem informação" ? `${s.sistema} (${s.situacao.toLowerCase()})` : s.sistema))
     .join(", ");
 }

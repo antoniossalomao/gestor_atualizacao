@@ -5,7 +5,7 @@ const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, lerData } = require("./validacao");
 const { normalizarSistemas, normalizarResponsavel, separarSistemas } = require("../shared/normalizacao");
 const { ErroDeValidacao, ErroNaoEncontrado, ErroDeConflito } = require("../shared/erros");
-const { situacaoDoSistema, situacaoDoCliente, contaComoAtraso, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL } = require("./situacaoVersao");
+const { situacaoDoSistema, situacaoDoCliente, sistemasQueExplicam, contaComoAtraso, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL } = require("./situacaoVersao");
 const { acharSistema } = require("../database/SistemaRepository");
 const { LIMITE_LINHAS_IMPORTACAO, LIMITE_LINHAS_EXPORTACAO } = require("../config/limitesPlanilha");
 const { contarLinhasXlsx } = require("./contarLinhasXlsx");
@@ -504,7 +504,7 @@ class AtualizacaoService {
       }
       sistemas.sort((a, b) => a.sistema.localeCompare(b.sistema, "pt-BR"));
       const { grupo, decididoPor } = situacaoDoCliente(sistemas);
-      grupos[grupo].push({ nome, cidade: cidade || "—", sistemas, decididoPor });
+      grupos[grupo].push({ nome, cidade: cidade || "—", sistemas, decididoPor, explicam: sistemasQueExplicam(grupo, sistemas, decididoPor) });
     }
     for (const lista of Object.values(grupos)) lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 

@@ -16,7 +16,30 @@ const os = require("node:os");
 const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AtualizacaoService } = require("../src/services/AtualizacaoService");
-const { situacaoDoSistema, situacaoDoCliente, contaParaVersao } = require("../src/services/situacaoVersao");
+const { situacaoDoSistema, situacaoDoCliente, sistemasQueExplicam, contaParaVersao } = require("../src/services/situacaoVersao");
+
+test("sistemasQueExplicam - o que a lista do Resumo mostra na coluna Sistemas", async (t) => {
+  const sistemas = [
+    { sistema: "B_NFe", situacao: "Desatualizado" },
+    { sistema: "B_Vendas", situacao: "Em dia" },
+    { sistema: "B_Ordem", situacao: "Sem referência" },
+    { sistema: "B_Importa", situacao: "Aguardando atualização" },
+    { sistema: "B_Escola", situacao: "Nunca atualizado" },
+  ];
+  const nomes = (lista) => lista.map((s) => s.sistema);
+  await t.test("desatualizado lista os atrasados, e nunca atualizado é atraso", () => {
+    assert.deepEqual(nomes(sistemasQueExplicam("desatualizado", sistemas, null)), ["B_NFe", "B_Escola"]);
+  });
+  await t.test("aguardando lista só quem aguarda", () => {
+    assert.deepEqual(nomes(sistemasQueExplicam("aguardando", sistemas, null)), ["B_Importa"]);
+  });
+  await t.test("quem foi decidido pelo B_Vendas mostra só ele", () => {
+    assert.deepEqual(nomes(sistemasQueExplicam("em_dia", sistemas, "B_Vendas")), ["B_Vendas"]);
+  });
+  await t.test("em dia, sem B_Vendas, mostra todos", () => {
+    assert.equal(sistemasQueExplicam("em_dia", sistemas, null).length, sistemas.length);
+  });
+});
 
 test("situacaoDoSistema", async (t) => {
   await t.test("sem prazo (Campanhas), atualizado antes da oficial é desatualizado; na data dela ou depois, em dia", () => {

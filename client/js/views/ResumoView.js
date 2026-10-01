@@ -6,7 +6,7 @@ import { GraficoDeLinhas } from "../components/graficos/GraficoDeLinhas.js";
 import { html, plural } from "../utils/html.js";
 import { hojeBR } from "../utils/data.js";
 import { formatarMes, primeiroDiaDoMes, tendenciaMensal, barrasPorSistema, variacaoMesAnterior } from "../domain/resumo.js";
-import { GRUPOS_SITUACAO, totaisSituacao, sistemasQueExplicam } from "../domain/situacao.js";
+import { GRUPOS_SITUACAO, totaisSituacao, descreverSistemasQueExplicam } from "../domain/situacao.js";
 import { blocoDeNumero, deltaTendencia, corpoSituacao } from "../templates/resumo.js";
 
 /**
@@ -218,7 +218,7 @@ export class ResumoView extends View {
         { key: "cidade", label: "Cidade" },
         { key: "sistemas", label: { desatualizado: "Sistemas atrasados", aguardando: "Sistemas aguardando" }[chave] || "Sistemas" },
       ],
-      linhas: clientes.map((c) => ({ nome: c.nome, cidade: c.cidade, sistemas: sistemasQueExplicam(chave, c.sistemas, c.decididoPor) })),
+      linhas: clientes.map((c) => ({ nome: c.nome, cidade: c.cidade, sistemas: descreverSistemasQueExplicam(c.explicam) })),
       chave: (row) => row.nome,
       vazio: "Nenhum cliente nesta situação.",
     });
