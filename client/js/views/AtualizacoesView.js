@@ -63,10 +63,10 @@ export class AtualizacoesView extends View {
     this.sistema = "";
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "desc";
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       <form class="card" data-role="form" novalidate>
         <div class="form-grid form-grid--2" data-role="fields"></div>
@@ -167,7 +167,7 @@ export class AtualizacoesView extends View {
       </div>
     `;
 
-    this._buildFields();
+    this._montarCampos();
 
     // Larguras ajustadas para caber sem rolamento horizontal (ver
     // CHANGELOG): "máquinas" e "ações" estavam estreitas demais para o
@@ -210,7 +210,7 @@ export class AtualizacoesView extends View {
         })),
         { key: "acoes", label: "Ações", largura: LARGURAS_ATUALIZACAO.acoes, render: (row) => acoesAtualizacao(row, this.user?.role) },
       ],
-      onSelect: (row) => this._loadIntoForm(row),
+      onSelect: (row) => this._carregarNoFormulario(row),
       // Seleção múltipla: esta é a tabela onde faz sentido: importar uma
       // planilha errada e precisar remover as sessenta linhas que entraram
       // significava sessenta ciclos de "clicar na linha, clicar em Excluir".
@@ -236,12 +236,12 @@ export class AtualizacoesView extends View {
         this.sortDir = dir;
         this.page = 1;
         this._salvarFiltros();
-        this._reloadList();
+        this._recarregarLista();
       },
     });
     this.pagination = new Paginacao(this.container.querySelector('[data-role="pagination"]'), (page) => {
       this.page = page;
-      this._reloadList();
+      this._recarregarLista();
     });
 
     this.form = this.container.querySelector('[data-role="form"]');
@@ -261,7 +261,7 @@ export class AtualizacoesView extends View {
     const reload = aguardarPausa(() => {
       this.page = 1;
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     }, 200);
     this.searchInput.addEventListener("input", () => {
       this.busca = this.searchInput.value.trim();
@@ -273,7 +273,7 @@ export class AtualizacoesView extends View {
       this.page = 1;
       this._trocouDeFiltro();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
@@ -297,7 +297,7 @@ export class AtualizacoesView extends View {
       this.page = 1;
       this._trocouDeFiltro();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     }, 300);
     for (const campo of [this.desdeInput, this.ateInput]) {
       campo.addEventListener("input", () => {
@@ -330,7 +330,7 @@ export class AtualizacoesView extends View {
       if (!botao) return;
       const row = this.table.rows.find((item) => String(item.id) === botao.dataset.id);
       if (!row) return;
-      this._loadIntoForm(row);
+      this._carregarNoFormulario(row);
       if (botao.dataset.rowAction === "editar") this.drawer.abrir({ foco: this.fields.cliente });
       if (botao.dataset.rowAction === "relatorio") this.abrirRelatorio();
       if (botao.dataset.rowAction === "cliente") this.navigate("consulta", { cliente: row.cliente });
@@ -361,7 +361,7 @@ export class AtualizacoesView extends View {
     // campo -- antes era preciso amarrar o Enter campo por campo, na mão.
     this.form.addEventListener("submit", (e) => {
       e.preventDefault();
-      this._submit();
+      this._enviar();
     });
     this.updateBtn?.addEventListener("click", () => this.alterarAtualizacao());
     this.deleteBtn?.addEventListener("click", () => this.excluirAtualizacao());
@@ -381,7 +381,7 @@ export class AtualizacoesView extends View {
       if (acao === "import") { fechar(); this.abrirImportacao(); }
     });
 
-    this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
+    this.on(document, "keydown", (e) => this._aoTeclarGlobal(e));
 
     if (this.user?.role === "consulta") {
       this.form.hidden = true;
@@ -472,7 +472,7 @@ export class AtualizacoesView extends View {
   }
 
 
-  _buildFields() {
+  _montarCampos() {
     const wrap = this.container.querySelector('[data-role="fields"]');
     this.fields = {};
     for (const col of COLUNAS_ATUALIZACOES) {
@@ -535,14 +535,14 @@ export class AtualizacoesView extends View {
         this.responsavel = this.responsavelFilter.value;
       }
     );
-    await this._reloadList();
+    await this._recarregarLista();
   }
 
   _chaveLista() {
     return `atualizacoes:lista:${this.busca}|${this.responsavel}|${this.sistema}|${this.desde}|${this.ate}|${this.page}|${this.sortBy}|${this.sortDir}`;
   }
 
-  async _reloadList() {
+  async _recarregarLista() {
     this.table.definirRecarregando(true);
     try {
       const resposta = await this.swr(
@@ -576,7 +576,7 @@ export class AtualizacoesView extends View {
       // uma página sozinho, em vez de mostrar "nenhum registro" enganosamente.
       if (resposta && resposta.rows.length === 0 && this.page > 1 && resposta.total > 0) {
         this.page -= 1;
-        return this._reloadList();
+        return this._recarregarLista();
       }
     } finally {
       this.table.definirRecarregando(false);
@@ -602,7 +602,7 @@ export class AtualizacoesView extends View {
     this.page = 1;
     this._trocouDeFiltro();
     this._salvarFiltros();
-    this._reloadList();
+    this._recarregarLista();
     // Atualiza contagem no botão Filtros após mudar o período
     this._atualizarBotaoFiltros?.();
   }
@@ -649,7 +649,7 @@ export class AtualizacoesView extends View {
         this._trocouDeFiltro();
         this._salvarFiltros();
         this.page = 1;
-        this._reloadList();
+        this._recarregarLista();
       },
       responsavel: () => {
         this.responsavel = "Todos";
@@ -657,13 +657,13 @@ export class AtualizacoesView extends View {
         this._trocouDeFiltro();
         this._salvarFiltros();
         this.page = 1;
-        this._reloadList();
+        this._recarregarLista();
       },
       sistema: () => {
         this.sistema = "";
         this._trocouDeFiltro();
         this.page = 1;
-        this._reloadList();
+        this._recarregarLista();
       },
       periodo: () => this._aplicarPeriodo("", ""),
     };
@@ -695,7 +695,7 @@ export class AtualizacoesView extends View {
     });
   }
 
-  _loadIntoForm(row) {
+  _carregarNoFormulario(row) {
     this.selectedId = row.id;
     // Guardado inteiro (e não só o id) porque o relatório sai DO REGISTRO
     // SALVO, não do que está digitado no formulário: quem abriu a linha,
@@ -753,7 +753,7 @@ export class AtualizacoesView extends View {
     }
   }
 
-  _readForm() {
+  _lerFormulario() {
     const data = {};
     for (const col of COLUNAS_ATUALIZACOES) data[col.key] = this.fields[col.key].value.trim();
     if (!data.cliente) {
@@ -767,13 +767,13 @@ export class AtualizacoesView extends View {
     return data;
   }
 
-  _submit() {
+  _enviar() {
     if (this.selectedId == null) this.adicionarAtualizacao();
     else this.alterarAtualizacao();
   }
 
   async adicionarAtualizacao() {
-    const data = this._readForm();
+    const data = this._lerFormulario();
     if (!data) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
@@ -785,7 +785,7 @@ export class AtualizacoesView extends View {
       // é onde o registro recém-criado aparece.
       this.page = 1;
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso("Registro adicionado.");
     } catch (err) {
       Modal.alert("Erro", mensagemDeErro(err), "error");
@@ -799,7 +799,7 @@ export class AtualizacoesView extends View {
       Modal.alert("Seleção", "Selecione um registro na tabela primeiro.", "warning");
       return;
     }
-    const data = this._readForm();
+    const data = this._lerFormulario();
     if (!data) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
@@ -808,7 +808,7 @@ export class AtualizacoesView extends View {
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso("Registro atualizado.");
     } catch (err) {
       Modal.alert("Erro", mensagemDeErro(err), "error");
@@ -839,12 +839,12 @@ export class AtualizacoesView extends View {
       await this.api.delete(`/atualizacoes/${id}`);
       this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.desfazer(`Registro de ${dadosAntes.cliente || "cliente"} excluído.`, async () => {
         try {
           await this.api.post("/atualizacoes", dadosAntes);
           this._invalidar();
-          await this._reloadList();
+          await this._recarregarLista();
           avisoRapido.sucesso("Exclusão desfeita.");
         } catch {
           avisoRapido.erro("Não foi possível desfazer a exclusão.");
@@ -903,7 +903,7 @@ export class AtualizacoesView extends View {
       this.table.limparMarcadas();
       this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
 
       avisoRapido.desfazer(`${plural(excluidos, "registro")} ${excluidos === 1 ? "excluído" : "excluídos"}.`, async () => {
         try {
@@ -915,12 +915,12 @@ export class AtualizacoesView extends View {
             await this.api.post("/atualizacoes", { ...dados, restaurarVersoes: true });
           }
           this._invalidar();
-          await this._reloadList();
+          await this._recarregarLista();
           avisoRapido.sucesso("Exclusão desfeita.");
         } catch {
           avisoRapido.erro("Não foi possível desfazer tudo. Confira a lista.");
           this._invalidar();
-          this._reloadList();
+          this._recarregarLista();
         }
       });
     } catch (err) {
@@ -975,7 +975,7 @@ export class AtualizacoesView extends View {
         this.page = 1;
         this._invalidar();
         this.cache?.invalidar("campanhas:");
-        await this._reloadList();
+        await this._recarregarLista();
       },
     }).open();
   }
@@ -1093,7 +1093,7 @@ export class AtualizacoesView extends View {
     this.cache?.invalidar("versoes:");
   }
 
-  _onGlobalKeydown(e) {
+  _aoTeclarGlobal(e) {
     if (!this.visivel) return;
     if (ehCampoDeTexto(e.target)) return;
     if (e.key === "Delete" && this.selectedId != null) this.excluirAtualizacao();

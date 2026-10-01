@@ -60,7 +60,7 @@ class ClienteService {
    * @param {{id:number, nome:string}|null} usuario quem está fazendo a ação (para o histórico)
    */
   create(input, usuario) {
-    const { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validate(input);
+    const { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validar(input);
     // Bloqueia nome duplicado ANTES de inserir: dois clientes com o mesmo
     // nome seriam indistinguiveis nas telas que listam por nome, e o vinculo
     // de uma atualização digitada pelo nome escolheria um deles as cegas.
@@ -75,7 +75,7 @@ class ClienteService {
   update(id, input, usuario) {
     const existente = this.db.clientes.obterPorId(id);
     if (!existente) throw new ErroNaoEncontrado("Cliente não encontrado.");
-    const { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validate(input);
+    const { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validar(input);
     if (this.db.clientes.nomeExiste(nome, id)) {
       throw new ErroDeValidacao(`Já existe um cliente chamado '${nome}'.`);
     }
@@ -239,7 +239,7 @@ class ClienteService {
     return { removed: true, clientesAfetados };
   }
 
-  _validate(input) {
+  _validar(input) {
     const nome = (input.nome || "").trim();
     if (!nome) throw new ErroDeValidacao("Campo 'Cliente' é obrigatório.");
     const codigo = (input.codigo || "").trim();
@@ -261,7 +261,7 @@ class ClienteService {
   adicionarAcesso(clienteId, input, usuario) {
     const cliente = this.db.clientes.obterPorId(clienteId);
     if (!cliente) throw new ErroNaoEncontrado("Cliente não encontrado.");
-    const { maquina, anydesk, suporteBredas, observacoes } = this._validateAcesso(input);
+    const { maquina, anydesk, suporteBredas, observacoes } = this._validarAcesso(input);
     const id = this.db.clienteAcessos.insert(clienteId, maquina, anydesk, suporteBredas, observacoes);
     this.historico.registrar(usuario, "criar", "acesso", `Acesso "${maquina}" de "${cliente.nome}"`);
     return this.db.clienteAcessos.obterPorId(id);
@@ -270,7 +270,7 @@ class ClienteService {
   alterarAcesso(id, input, usuario) {
     const existente = this.db.clienteAcessos.obterPorId(id);
     if (!existente) throw new ErroNaoEncontrado("Acesso não encontrado.");
-    const { maquina, anydesk, suporteBredas, observacoes } = this._validateAcesso(input);
+    const { maquina, anydesk, suporteBredas, observacoes } = this._validarAcesso(input);
     this.db.clienteAcessos.update(id, maquina, anydesk, suporteBredas, observacoes);
     const cliente = this.db.clientes.obterPorId(existente.clienteId);
     this.historico.registrar(usuario, "atualizar", "acesso", `Acesso "${maquina}" de "${cliente ? cliente.nome : existente.clienteId}"`);
@@ -290,7 +290,7 @@ class ClienteService {
     );
   }
 
-  _validateAcesso(input) {
+  _validarAcesso(input) {
     const maquina = (input.maquina || "").trim();
     if (!maquina) throw new ErroDeValidacao("Campo 'Máquina' é obrigatório.");
     const anydesk = (input.anydesk || "").trim();

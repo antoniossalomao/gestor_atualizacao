@@ -65,12 +65,12 @@ class ApiRouter {
     // Antes de qualquer rota, inclusive dos uploads: uma escrita recusada
     // não pode deixar nem o arquivo gravado pelo multer. Ver protecaoCsrf.js.
     this.router.use(protecaoCsrf);
-    this._registerAuthRoutes();
-    this._registerProtectedRoutes();
+    this._registrarRotasDeAutenticacao();
+    this._registrarRotasProtegidas();
   }
 
   // Rotas que precisam funcionar ANTES do login (checar status, logar, criar o 1o admin)
-  _registerAuthRoutes() {
+  _registrarRotasDeAutenticacao() {
     const { auth } = this.controllers;
     this.router.get("/auth/status", auth.status);
     this.router.post("/auth/setup", this.loginLimiter.middleware, auth.configurarAdmin);
@@ -90,7 +90,7 @@ class ApiRouter {
   }
 
   // Rotas autenticadas e controladas por papéis (RBAC)
-  _registerProtectedRoutes() {
+  _registrarRotasProtegidas() {
     const {
       clientes,
       sistemas,

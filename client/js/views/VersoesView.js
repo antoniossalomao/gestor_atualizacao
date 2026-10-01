@@ -30,7 +30,7 @@ export class VersoesView extends View {
     this.pilotCodes = new Set();
     this.busca = "";
     this.filtroStatus = "todos";
-    this._buildDom();
+    this._montarDom();
   }
 
   aplicarParams({ novo } = {}) {
@@ -38,7 +38,7 @@ export class VersoesView extends View {
     this.container.querySelector('input, select, textarea')?.focus();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = `
       <div class="toolbar versions-toolbar">
         <div class="toolbar-spacer"></div>
@@ -188,24 +188,24 @@ export class VersoesView extends View {
       this.form.hidden = true;
     }
 
-    this.form.addEventListener("submit", (event) => this._submit(event));
-    this.systemSelect.addEventListener("change", () => this._updateReplacementWarning());
+    this.form.addEventListener("submit", (event) => this._enviar(event));
+    this.systemSelect.addEventListener("change", () => this._atualizarAvisoDeSubstituicao());
     for (const campo of this.form.querySelectorAll('[name="alcance"]')) campo.addEventListener("change", () => {
       this.form.querySelector('[data-role="pilot-targets"]').hidden = campo.value !== "piloto" || !campo.checked;
-      this._renderPilotPicker();
-      this._updateReplacementWarning();
+      this._desenharSeletorDePiloto();
+      this._atualizarAvisoDeSubstituicao();
     });
-    this.pilotSearch.addEventListener("input", () => this._renderPilotPicker());
-    this.container.querySelector('[data-action="add-changelog-item"]').addEventListener("click", () => this._addChangelogItem("", true));
-    this._resetChangelog();
+    this.pilotSearch.addEventListener("input", () => this._desenharSeletorDePiloto());
+    this.container.querySelector('[data-action="add-changelog-item"]').addEventListener("click", () => this._adicionarItemDeNovidades("", true));
+    this._reiniciarNovidades();
     this.container.querySelector('[data-action="refresh"]').addEventListener("click", () => this.refresh(true));
     this.container.querySelector('[data-role="search"]').addEventListener("input", (event) => {
       this.busca = event.target.value.trim().toLowerCase();
-      this._renderHistory();
+      this._desenharHistorico();
     });
     this.container.querySelector('[data-role="status"]').addEventListener("change", (event) => {
       this.filtroStatus = event.target.value;
-      this._renderHistory();
+      this._desenharHistorico();
     });
   }
 
@@ -224,8 +224,8 @@ export class VersoesView extends View {
         this.systems = systems || [];
         this.versions = versions || [];
         this.clients = clients || [];
-        this._populateSystems();
-        this._renderPilotPicker();
+        this._preencherListaDeSistemas();
+        this._desenharSeletorDePiloto();
         this._render();
       }
     );
@@ -241,13 +241,13 @@ export class VersoesView extends View {
     const sistemasPublicados = new Set(publicadas.map((v) => v.sistema));
     const semPublicacao = this.systems.filter((s) => !sistemasPublicados.has(s));
 
-    this._renderStats(publicadas.length, rascunhos.length + pilotos.length, substituidas.length, semPublicacao);
-    this._renderPublished([...pilotos, ...publicadas]);
-    this._renderHistory();
-    this._updateReplacementWarning();
+    this._desenharNumeros(publicadas.length, rascunhos.length + pilotos.length, substituidas.length, semPublicacao);
+    this._desenharPublicadas([...pilotos, ...publicadas]);
+    this._desenharHistorico();
+    this._atualizarAvisoDeSubstituicao();
   }
 
-  _renderStats(publicadas, rascunhos, substituidas, semPublicacao) {
+  _desenharNumeros(publicadas, rascunhos, substituidas, semPublicacao) {
     this.container.querySelector('[data-role="stats"]').innerHTML = `
       <div class="version-stat"><span>No ar agora</span><strong>${publicadas}</strong></div>
       <div class="version-stat${rascunhos > 0 ? " version-stat--pending" : ""}"><span>Rascunhos</span><strong>${rascunhos}</strong></div>
@@ -278,7 +278,7 @@ export class VersoesView extends View {
     coverage.appendChild(box);
   }
 
-  _renderPublished(versions) {
+  _desenharPublicadas(versions) {
     const list = this.container.querySelector('[data-role="published"]');
     list.replaceChildren();
     this.container.querySelector('[data-role="publishedCount"]').textContent = plural(versions.length, "versão", "versões");
@@ -342,7 +342,7 @@ export class VersoesView extends View {
     }
   }
 
-  _renderHistory() {
+  _desenharHistorico() {
     const body = this.container.querySelector('[data-role="history"]');
     if (!body) return;
     body.replaceChildren();
@@ -404,7 +404,7 @@ export class VersoesView extends View {
         promote.className = "btn btn--small btn--accent";
         promote.textContent = "Promover para geral";
         promote.disabled = !isAdmin;
-        promote.addEventListener("click", () => this._promote(item, promote));
+        promote.addEventListener("click", () => this._promover(item, promote));
         actions.appendChild(promote);
       } else if (item.status !== "publicada") {
         if (isAdmin) {
@@ -412,7 +412,7 @@ export class VersoesView extends View {
           publish.type = "button";
           publish.className = "btn btn--small btn--accent";
           publish.textContent = "Publicar";
-          publish.addEventListener("click", () => this._publish(item, publish));
+          publish.addEventListener("click", () => this._publicar(item, publish));
           actions.appendChild(publish);
         } else {
           const rascunho = document.createElement("span");
@@ -447,7 +447,7 @@ export class VersoesView extends View {
     }
   }
 
-  _populateSystems() {
+  _preencherListaDeSistemas() {
     const current = this.systemSelect.value;
     this.systemSelect.innerHTML =
       `<option value="">Selecione o sistema…</option>` +
@@ -458,7 +458,7 @@ export class VersoesView extends View {
       : "Nenhum sistema cadastrado. Cadastre um na aba Clientes antes de enviar.";
   }
 
-  _updateReplacementWarning() {
+  _atualizarAvisoDeSubstituicao() {
     const warning = this.container.querySelector('[data-role="replacement-warning"]');
     const text = this.container.querySelector('[data-role="replacement-text"]');
     const system = this.systemSelect.value;
@@ -476,7 +476,7 @@ export class VersoesView extends View {
       : `O envio cria um rascunho. Esta será a primeira versão publicada de ${system}.`;
   }
 
-  _renderPilotPicker() {
+  _desenharSeletorDePiloto() {
     const selected = this.container.querySelector('[data-role="pilot-selected"]');
     const suggestions = this.container.querySelector('[data-role="pilot-suggestions"]');
     const count = this.container.querySelector('[data-role="pilot-count"]');
@@ -497,7 +497,7 @@ export class VersoesView extends View {
       remove.textContent = "×";
       remove.addEventListener("click", () => {
         this.pilotCodes.delete(codigo);
-        this._renderPilotPicker();
+        this._desenharSeletorDePiloto();
       });
       chip.appendChild(remove);
       selected.appendChild(chip);
@@ -524,19 +524,19 @@ export class VersoesView extends View {
       option.addEventListener("click", () => {
         this.pilotCodes.add(cliente.codigo);
         this.pilotSearch.value = "";
-        this._renderPilotPicker();
+        this._desenharSeletorDePiloto();
         this.pilotSearch.focus();
       });
       suggestions.appendChild(option);
     }
   }
 
-  _resetChangelog() {
+  _reiniciarNovidades() {
     this.changelogItems.replaceChildren();
-    this._addChangelogItem("", false);
+    this._adicionarItemDeNovidades("", false);
   }
 
-  _addChangelogItem(value = "", focus = false) {
+  _adicionarItemDeNovidades(value = "", focus = false) {
     const line = document.createElement("div");
     line.className = "changelog-item";
     const input = document.createElement("input");
@@ -544,7 +544,7 @@ export class VersoesView extends View {
     input.className = "input";
     input.placeholder = "ex.: Corrige cálculo de desconto no orçamento";
     input.value = value;
-    input.addEventListener("input", () => this._syncChangelog());
+    input.addEventListener("input", () => this._sincronizarNovidades());
 
     const remove = document.createElement("button");
     remove.type = "button";
@@ -554,24 +554,24 @@ export class VersoesView extends View {
     remove.textContent = "✕";
     remove.addEventListener("click", () => {
       line.remove();
-      if (!this.changelogItems.children.length) this._addChangelogItem("", false);
-      this._syncChangelog();
+      if (!this.changelogItems.children.length) this._adicionarItemDeNovidades("", false);
+      this._sincronizarNovidades();
     });
 
     line.append(input, remove);
     this.changelogItems.appendChild(line);
     if (focus) input.focus();
-    this._syncChangelog();
+    this._sincronizarNovidades();
   }
 
-  _syncChangelog() {
+  _sincronizarNovidades() {
     const items = [...this.changelogItems.querySelectorAll("input")]
       .map((input) => input.value.trim())
       .filter(Boolean);
     this.changelogValue.value = items.map((item) => `- ${item}`).join("\n");
   }
 
-  async _submit(event) {
+  async _enviar(event) {
     event.preventDefault();
     const formData = new FormData(this.form);
     if (!formData.get("sistema")) {
@@ -587,28 +587,28 @@ export class VersoesView extends View {
 
     const button = this.form.querySelector('button[type="submit"]');
     button.disabled = true;
-    this._showProgress(0);
+    this._mostrarProgresso(0);
     try {
-      await this.api.enviarFormulario("/versoes", formData, { onProgress: (percent) => this._showProgress(percent) });
+      await this.api.enviarFormulario("/versoes", formData, { onProgress: (percent) => this._mostrarProgresso(percent) });
       this.form.reset();
       this.pilotCodes.clear();
       this.pilotSearch.value = "";
       this.form.querySelector('[data-role="pilot-targets"]').hidden = true;
-      this._renderPilotPicker();
-      this._resetChangelog();
-      this._updateReplacementWarning();
+      this._desenharSeletorDePiloto();
+      this._reiniciarNovidades();
+      this._atualizarAvisoDeSubstituicao();
       avisoRapido.sucesso("Versão enviada como rascunho. Revise e publique no histórico abaixo.");
-      this._invalidateVersions();
+      this._invalidarVersoes();
       await this.refresh();
     } catch (error) {
       await Modal.alert("Não foi possível salvar", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
     } finally {
       button.disabled = false;
-      this._hideProgress();
+      this._esconderProgresso();
     }
   }
 
-  _showProgress(percent) {
+  _mostrarProgresso(percent) {
     this.uploadProgress.hidden = false;
     const fill = this.uploadProgress.querySelector(".upload-progress__fill");
     const text = this.uploadProgress.querySelector('[data-role="upload-progress-text"]');
@@ -622,13 +622,13 @@ export class VersoesView extends View {
     text.textContent = percent >= 100 ? "Processando no servidor…" : `${percent}%`;
   }
 
-  _hideProgress() {
+  _esconderProgresso() {
     this.uploadProgress.hidden = true;
     this.uploadProgress.classList.remove("is-indeterminate");
     this.uploadProgress.querySelector(".upload-progress__fill").style.width = "0";
   }
 
-  async _publish(item, button) {
+  async _publicar(item, button) {
     const current = this.versions.find((version) => version.status === "publicada" && version.sistema === item.sistema);
     const confirmed = await Modal.confirm(
       "Publicar versão",
@@ -646,7 +646,7 @@ export class VersoesView extends View {
       avisoRapido.sucesso(
         replaced.length ? `Versão ${item.versao} no ar. A ${replaced[0].versao} foi substituída.` : `Versão ${item.versao} publicada.`
       );
-      this._invalidateVersions();
+      this._invalidarVersoes();
       await this.refresh();
     } catch (error) {
       await Modal.alert("Não foi possível publicar", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
@@ -670,7 +670,7 @@ export class VersoesView extends View {
     try {
       await this.api.delete(`/versoes/${item.id}`);
       avisoRapido.sucesso(`Versão ${item.versao} excluída.`);
-      this._invalidateVersions();
+      this._invalidarVersoes();
       await this.refresh();
     } catch (error) {
       await Modal.alert("Não foi possível excluir", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
@@ -678,14 +678,14 @@ export class VersoesView extends View {
     }
   }
 
-  async _promote(item, button) {
+  async _promover(item, button) {
     const ok = await Modal.confirm("Promover versão piloto", `Liberar ${item.sistema} ${item.versao} para todos os clientes e substituir a produção atual?`, { confirmLabel: "Promover", danger: false });
     if (!ok) return;
     button.disabled = true;
     try {
       await this.api.post(`/versoes/${item.id}/promover`);
       avisoRapido.sucesso("Versão promovida para produção geral.");
-      this._invalidateVersions();
+      this._invalidarVersoes();
       await this.refresh();
     } catch (error) {
       await Modal.alert("Não foi possível promover", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
@@ -700,7 +700,7 @@ export class VersoesView extends View {
     try {
       const resultado = await this.api.post(`/versoes/${item.id}/rollback`);
       avisoRapido.sucesso(`Rollback concluído. ${resultado.versao.versao} voltou ao ar.`);
-      this._invalidateVersions();
+      this._invalidarVersoes();
       await this.refresh();
     } catch (error) {
       await Modal.alert("Não foi possível reverter", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
@@ -708,7 +708,7 @@ export class VersoesView extends View {
     }
   }
 
-  _invalidateVersions() {
+  _invalidarVersoes() {
     this.cache?.invalidar("versoes:");
     this.cache?.invalidar("distribuicao:");
   }

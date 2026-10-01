@@ -98,23 +98,23 @@ export class ApiPainel {
    */
   get(path, params, options = {}) {
     const query = params ? `?${new URLSearchParams(limparParametros(params))}` : "";
-    return this._request(`${path}${query}`, { method: "GET" }, options);
+    return this._requisitar(`${path}${query}`, { method: "GET" }, options);
   }
 
   post(path, body, options = {}) {
-    return this._request(path, { method: "POST", body: JSON.stringify(body) }, options);
+    return this._requisitar(path, { method: "POST", body: JSON.stringify(body) }, options);
   }
 
   put(path, body, options = {}) {
-    return this._request(path, { method: "PUT", body: JSON.stringify(body) }, options);
+    return this._requisitar(path, { method: "PUT", body: JSON.stringify(body) }, options);
   }
 
   patch(path, body, options = {}) {
-    return this._request(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }, options);
+    return this._requisitar(path, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }, options);
   }
 
   delete(path, options = {}) {
-    return this._request(path, { method: "DELETE" }, options);
+    return this._requisitar(path, { method: "DELETE" }, options);
   }
 
   /** Envia um arquivo (multipart/form-data) -- usado pela importação de planilha. */
@@ -178,7 +178,7 @@ export class ApiPainel {
             return resolve(null);
           }
         }
-        if (xhr.status === 401) this._notifyUnauthorized();
+        if (xhr.status === 401) this._avisarNaoAutorizado();
         const { mensagem, codigo } = extrairErroXhr(xhr);
         reject(new ErroApi(mensagem, xhr.status, codigo));
       });
@@ -202,8 +202,8 @@ export class ApiPainel {
       });
       this._guardarTokenCsrf(res.headers.get(CABECALHO_CSRF));
       if (!res.ok) {
-        if (res.status === 401) this._notifyUnauthorized();
-        const { mensagem, codigo } = await this._extractError(res);
+        if (res.status === 401) this._avisarNaoAutorizado();
+        const { mensagem, codigo } = await this._extrairErro(res);
         throw new ErroApi(mensagem, res.status, codigo);
       }
       return await res.blob();
@@ -229,17 +229,17 @@ export class ApiPainel {
     this._unauthorizedNotified = false;
   }
 
-  async _request(path, options, opcoes = {}) {
+  async _requisitar(path, options, opcoes = {}) {
     try {
-      return await this._requestUmaVez(path, options, opcoes);
+      return await this._requisitarUmaVez(path, options, opcoes);
     } catch (error) {
       if (!(error instanceof ErroApi) || error.codigo !== "csrf") throw error;
       await this._renovarTokenCsrf();
-      return this._requestUmaVez(path, options, opcoes);
+      return this._requisitarUmaVez(path, options, opcoes);
     }
   }
 
-  async _requestUmaVez(path, options, { key } = {}) {
+  async _requisitarUmaVez(path, options, { key } = {}) {
     // Uma chave = no máximo uma requisição viva. A anterior é abortada, e o
     // `await` de quem a esperava rejeita com RequisicaoCancelada (ignorado por
     // quem chamou), então só a resposta mais nova chega a renderizar.
@@ -339,7 +339,7 @@ export class ApiPainel {
    */
   async _renovarTokenCsrf() {
     this._tokenCsrf = null;
-    await this._requestUmaVez("/auth/status", { method: "GET" });
+    await this._requisitarUmaVez("/auth/status", { method: "GET" });
   }
 
   /** @param {string|null} token */
@@ -350,8 +350,8 @@ export class ApiPainel {
   async _parse(res) {
     if (res.status === 204) return null;
     if (!res.ok) {
-      if (res.status === 401) this._notifyUnauthorized();
-      const { mensagem, codigo } = await this._extractError(res);
+      if (res.status === 401) this._avisarNaoAutorizado();
+      const { mensagem, codigo } = await this._extrairErro(res);
       throw new ErroApi(mensagem, res.status, codigo);
     }
     const texto = await res.text();
@@ -362,14 +362,14 @@ export class ApiPainel {
    * Avisa UMA vez que a sessão caiu. Sem essa trava, uma tela que dispara
    * três chamadas em paralelo abriria três telas de login empilhadas.
    */
-  _notifyUnauthorized() {
+  _avisarNaoAutorizado() {
     if (this._unauthorizedNotified) return;
     this._unauthorizedNotified = true;
     if (this.onUnauthorized) this.onUnauthorized();
   }
 
   /** @returns {Promise<{mensagem: string, codigo?: string}>} */
-  async _extractError(res) {
+  async _extrairErro(res) {
     try {
       return lerErro(await res.json());
     } catch {

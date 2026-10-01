@@ -92,7 +92,7 @@ class AgendamentoService {
   }
 
   create(input, usuario) {
-    const data = this._validate(input);
+    const data = this._validar(input);
     this.db.agendamentos.insert(data);
     this.historico.registrar(usuario, "criar", "agendamento", `Tarefa "${data.tarefa}"`);
     return data;
@@ -102,7 +102,7 @@ class AgendamentoService {
   // afetadas" precisa virar 404, senao a tela confirma uma alteracao que
   // nao aconteceu numa tarefa que outra pessoa ja excluiu.
   update(id, input, usuario) {
-    const data = this._validate(input);
+    const data = this._validar(input);
     // concluido_em so existe enquanto a tarefa ESTA "Concluído" agora:
     // acabou de virar -> grava a hora; deixou de ser (reaberta) -> limpa;
     // continua concluída de uma edição pra outra -> preserva a data
@@ -145,7 +145,7 @@ class AgendamentoService {
     this.historico.registrar(usuario, "marcar_concluida", "agendamento", `Tarefa #${id} concluída`);
   }
 
-  _validate(input) {
+  _validar(input) {
     const tarefa = (input.tarefa || "").trim();
     if (!tarefa) throw new ErroDeValidacao("Campo 'Tarefa' é obrigatório.");
     const data = (input.data || "").trim();

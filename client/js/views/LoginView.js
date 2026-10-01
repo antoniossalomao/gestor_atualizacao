@@ -103,7 +103,7 @@ export class LoginView {
     this.root.appendChild(screen);
 
     this.errorBox = card.querySelector(".auth-card__error");
-    card.querySelector("form").addEventListener("submit", (e) => this._onSubmit(e));
+    card.querySelector("form").addEventListener("submit", (e) => this._aoEnviar(e));
     this._ligarSenha(card);
     card.querySelector('input[name="usuario"]').focus();
   }
@@ -147,9 +147,9 @@ export class LoginView {
     });
   }
 
-  async _onSubmit(event) {
+  async _aoEnviar(event) {
     event.preventDefault();
-    this._hideError();
+    this._esconderErro();
     const form = event.currentTarget;
     const data = Object.fromEntries(new FormData(form).entries());
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -169,7 +169,7 @@ export class LoginView {
       const { user } = await this.api.post(path, data);
       this.onSuccess(user);
     } catch (err) {
-      this._showError(err instanceof ErroApi ? err.message : "Não foi possível conectar ao servidor.");
+      this._mostrarErro(err instanceof ErroApi ? err.message : "Não foi possível conectar ao servidor.");
       // O foco volta para a senha: é o campo que quase sempre precisa mudar,
       // e sem isso a pessoa tem que pegar o mouse depois de cada erro.
       form.querySelector('input[name="senha"]').select();
@@ -186,17 +186,17 @@ export class LoginView {
    * ouve de novo por que o login falhou, e a marca some assim que a pessoa
    * começa a corrigir.
    */
-  _showError(message) {
+  _mostrarErro(message) {
     this.errorBox.textContent = message;
     this.errorBox.classList.add("is-visible");
     for (const campo of this._camposDeEntrada()) {
       campo.setAttribute("aria-invalid", "true");
       campo.setAttribute("aria-describedby", "login-erro");
-      campo.addEventListener("input", () => this._hideError(), { once: true });
+      campo.addEventListener("input", () => this._esconderErro(), { once: true });
     }
   }
 
-  _hideError() {
+  _esconderErro() {
     this.errorBox.classList.remove("is-visible");
     for (const campo of this._camposDeEntrada()) {
       campo.removeAttribute("aria-invalid");

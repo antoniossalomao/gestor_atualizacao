@@ -48,10 +48,10 @@ export class HistoricoView extends View {
     this.entidade = salvo.entidade || "Todos";
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "desc";
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = `
       <div class="card">
         <div class="toolbar">
@@ -111,12 +111,12 @@ export class HistoricoView extends View {
         this.sortDir = dir;
         this.page = 1;
         this._salvarFiltros();
-        this._reloadList();
+        this._recarregarLista();
       },
     });
     this.pagination = new Paginacao(this.container.querySelector('[data-role="pagination"]'), (page) => {
       this.page = page;
-      this._reloadList();
+      this._recarregarLista();
     });
 
     this.searchInput = this.container.querySelector('[data-role="search"]');
@@ -128,7 +128,7 @@ export class HistoricoView extends View {
     const reload = aguardarPausa(() => {
       this.page = 1;
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     }, 200);
     this.searchInput.addEventListener("input", () => {
       this.busca = this.searchInput.value.trim();
@@ -140,17 +140,17 @@ export class HistoricoView extends View {
       this.page = 1;
       this._pintarLimparFiltros();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
     this._pintarLimparFiltros();
   }
 
   async refresh() {
-    await this._reloadList();
+    await this._recarregarLista();
   }
 
-  async _reloadList() {
+  async _recarregarLista() {
     this.table.definirRecarregando(true);
     try {
       await this.swr(
@@ -204,7 +204,7 @@ export class HistoricoView extends View {
     this.page = 1;
     this._pintarLimparFiltros();
     this._salvarFiltros();
-    this._reloadList();
+    this._recarregarLista();
   }
 
   _salvarFiltros() {

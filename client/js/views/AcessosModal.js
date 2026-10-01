@@ -68,19 +68,19 @@ export class AcessosModal {
 
     this.toggleBtn.addEventListener("click", () => {
       const visible = !this.form.hidden;
-      if (visible) this._resetForm();
-      else this._toggleForm(true);
+      if (visible) this._reiniciarFormulario();
+      else this._alternarFormulario(true);
     });
-    this.cancelarEdicaoBtn.addEventListener("click", () => this._resetForm());
+    this.cancelarEdicaoBtn.addEventListener("click", () => this._reiniciarFormulario());
     this.form.addEventListener("submit", (e) => {
       e.preventDefault();
-      this._submit();
+      this._enviar();
     });
 
-    await this._reload();
+    await this._recarregar();
   }
 
-  async _reload() {
+  async _recarregar() {
     const acessos = await this.api.get(`/clientes/${this.cliente.id}/acessos`);
     const list = this.box.querySelector('[data-role="list"]');
     list.replaceChildren();
@@ -161,7 +161,7 @@ export class AcessosModal {
     return linha;
   }
 
-  _toggleForm(visivel) {
+  _alternarFormulario(visivel) {
     this.form.hidden = !visivel;
     this.toggleBtn.setAttribute("aria-expanded", String(visivel));
     if (visivel) this.fields.maquina.focus();
@@ -177,7 +177,7 @@ export class AcessosModal {
     this.cancelarEdicaoBtn.hidden = false;
     this.toggleBtn.textContent = "";
     this.toggleBtn.innerHTML = `${iconeSvg("minus")} Nova Máquina`;
-    this._toggleForm(true);
+    this._alternarFormulario(true);
     this._marcarEdicao();
   }
 
@@ -188,17 +188,17 @@ export class AcessosModal {
     }
   }
 
-  _resetForm() {
+  _reiniciarFormulario() {
     this.editingId = null;
     for (const input of Object.values(this.fields)) input.value = "";
     this.salvarBtn.textContent = "Adicionar Máquina";
     this.cancelarEdicaoBtn.hidden = true;
     this.toggleBtn.innerHTML = `${iconeSvg("plus")} Nova Máquina`;
-    this._toggleForm(false);
+    this._alternarFormulario(false);
     this._marcarEdicao();
   }
 
-  async _submit() {
+  async _enviar() {
     const maquina = this.fields.maquina.value.trim();
     if (!maquina) {
       Modal.alert("Validação", "Campo 'Máquina' é obrigatório.", "warning").then(() => this.fields.maquina.focus());
@@ -220,8 +220,8 @@ export class AcessosModal {
         await this.api.put(`/clientes/acessos/${this.editingId}`, data);
         avisoRapido.sucesso(`Máquina "${maquina}" atualizada.`);
       }
-      this._resetForm();
-      await this._reload();
+      this._reiniciarFormulario();
+      await this._recarregar();
     } catch (err) {
       Modal.alert("Validação", mensagemDeErro(err), "warning");
     } finally {
@@ -240,7 +240,7 @@ export class AcessosModal {
     const liberar = marcarOcupado(botao);
     try {
       await this.api.delete(`/clientes/acessos/${acesso.id}`);
-      await this._reload();
+      await this._recarregar();
       avisoRapido.sucesso(`Máquina "${acesso.maquina}" removida.`);
     } catch (err) {
       liberar();

@@ -46,11 +46,11 @@ const UM_DIA_MS = 24 * 60 * 60 * 1000;
 // (ate 8 caracteres, sem barra). Serve para separar "/clientes" (rota do
 // front-end, cai no index.html) de "/js/app/App.js" ou "/css/theme.css"
 // (arquivo que ou existe, ou e' 404) -- ver o fallback no fim de
-// _configureExpress().
+// _configurarExpress().
 const EXTENSAO_DE_ARQUIVO = /\.[a-zA-Z0-9]{1,8}$/;
 
 // Caminhos dentro de client/ que existem para o desenvolvimento e nao devem
-// ser servidos pelo navegador -- ver _configureExpress().
+// ser servidos pelo navegador -- ver _configurarExpress().
 const NAO_SERVIR = [/^\/package(-lock)?\.json$/, /^\/tests(\/|$)/];
 
 /**
@@ -70,12 +70,12 @@ class Servidor {
     this.db = new BancoDeDados(config.dbPath);
     this.app = express();
     this.app.locals.agentApiToken = config.agentApiToken;
-    this._buildServices();
-    this._buildControllers();
-    this._configureExpress();
+    this._montarServicos();
+    this._montarControladores();
+    this._configurarExpress();
   }
 
-  _buildServices() {
+  _montarServicos() {
     // "historico" é passado para os demais serviços registrarem quem fez
     // o quê -- ver services/HistoricoService.js.
     const historico = new HistoricoService(this.db);
@@ -108,7 +108,7 @@ class Servidor {
     };
   }
 
-  _buildControllers() {
+  _montarControladores() {
     const s = this.services;
     this.controllers = {
       auth: new AuthController(s.auth, s.configuracaoSistema),
@@ -132,7 +132,7 @@ class Servidor {
     this.loginLimiter = new LimitadorDeLogin();
   }
 
-  _configureExpress() {
+  _configurarExpress() {
     const dbDir = path.dirname(this.db.path);
 
     // Atras de um proxy reverso (Caddy/nginx terminando o HTTPS), a conexao
@@ -208,7 +208,7 @@ class Servidor {
     this.services.backups.definirArmazemDeSessao(this.sessionStore);
     // Permite que AuthService.trocarSenha invalide as sessões ativas do
     // usuário após a troca de senha -- mesmo padrão de injeção pós-construção
-    // usado por BackupService acima (o store só existe aqui, depois de _buildServices).
+    // usado por BackupService acima (o store só existe aqui, depois de _montarServicos).
     this.services.auth.definirArmazemDeSessao(this.sessionStore);
     this.app.use(
       session({

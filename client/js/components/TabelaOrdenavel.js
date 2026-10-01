@@ -143,22 +143,22 @@ export class TabelaOrdenavel {
       }
     }
 
-    this._renderHead();
-    this._renderBody();
+    this._desenharCabecalho();
+    this._desenharCorpo();
   }
 
   /** Substitui os dados exibidos, mantendo ordenação/seleção quando possível. */
   definirLinhas(rows) {
     this.loading = false;
     this.rows = rows;
-    if (this.sortState.key && !this.serverSort) this._applySort();
+    if (this.sortState.key && !this.serverSort) this._aplicarOrdenacao();
     // A âncora do Shift é um ÍNDICE de linha, não a chave de um registro --
     // depois de uma virada de página (ou de a lista mudar por qualquer outro
     // motivo), "linha 4" já não é o mesmo registro de antes. As MARCAS
     // continuam de propósito (é assim que dá para marcar linhas espalhadas em
     // páginas diferentes), só a âncora precisa esquecer o índice velho.
     this._ancoraIndex = -1;
-    this._renderBody();
+    this._desenharCorpo();
   }
 
   /**
@@ -231,7 +231,7 @@ export class TabelaOrdenavel {
     this.onMultiSelect(this.selecionadas);
   }
 
-  _renderHead() {
+  _desenharCabecalho() {
     const tr = document.createElement("tr");
 
     for (const col of this.columns) {
@@ -267,7 +267,7 @@ export class TabelaOrdenavel {
         seta.setAttribute("aria-hidden", "true");
         seta.textContent = ordenadaPor ? (this.sortState.reverse ? "▼" : "▲") : "";
         botao.appendChild(seta);
-        botao.addEventListener("click", () => this._sortBy(col));
+        botao.addEventListener("click", () => this._ordenarPor(col));
         th.appendChild(botao);
         if (ordenadaPor) th.classList.add("is-sorted");
       } else {
@@ -285,38 +285,38 @@ export class TabelaOrdenavel {
    */
   definirOrdem(key, reverse = false) {
     this.sortState = { key, reverse };
-    this._renderHead();
+    this._desenharCabecalho();
   }
 
-  _sortBy(col) {
+  _ordenarPor(col) {
     const reverse = this.sortState.key === col.key ? !this.sortState.reverse : false;
     this.sortState = { key: col.key, reverse };
-    this._renderHead();
+    this._desenharCabecalho();
     if (this.serverSort) {
       this.onSortChange(col.key, reverse ? "desc" : "asc");
       return;
     }
-    this._applySort();
+    this._aplicarOrdenacao();
     // Mesmo motivo do reset em `definirLinhas`: a ordem das linhas mudou, e a âncora
     // é um índice nessa ordem. Nenhuma tabela com `multiSelect` usa ordenação
     // no cliente hoje (todas são `serverSort: true`, que devolve por aqui bem
     // antes desta linha) -- isto é só para não deixar uma pegadinha pronta
     // caso uma futura passe a usar as duas coisas juntas.
     this._ancoraIndex = -1;
-    this._renderBody();
+    this._desenharCorpo();
   }
 
-  _applySort() {
+  _aplicarOrdenacao() {
     const col = this.columns.find((c) => c.key === this.sortState.key);
     if (!col) return;
     const factor = this.sortState.reverse ? -1 : 1;
     this.rows = [...this.rows].sort((a, b) => factor * compararValores(a[col.key], b[col.key], col.type));
   }
 
-  _renderBody() {
+  _desenharCorpo() {
     if (this.loading) {
       this.tbody.replaceChildren();
-      this._renderSkeleton();
+      this._desenharEsqueleto();
       return;
     }
     if (this.rows.length === 0) {
@@ -526,7 +526,7 @@ export class TabelaOrdenavel {
   }
 
   /** Linhas de "esqueleto" enquanto a primeira busca ainda não voltou. */
-  _renderSkeleton() {
+  _desenharEsqueleto() {
     const LINHAS = 5;
     for (let i = 0; i < LINHAS; i++) {
       const tr = document.createElement("tr");

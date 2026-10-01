@@ -125,8 +125,8 @@ export class MenuNotificacoes {
    */
   atualizar(notificacoes) {
     this.notificacoes = notificacoes || [];
-    this._renderLista();
-    this._renderContador();
+    this._desenharLista();
+    this._desenharContador();
   }
 
   /** Quantas estão pendentes, tenham sido vistas ou não. */
@@ -144,11 +144,11 @@ export class MenuNotificacoes {
   }
 
   /** A marcação (e o porquê do escape de data-params) está em templates/notificacoes.js. */
-  _renderLista() {
+  _desenharLista() {
     this.lista.innerHTML = listaNotificacoes(this.notificacoes);
   }
 
-  _renderContador() {
+  _desenharContador() {
     const total = this.total();
     const visivel = this.pendentesNaoVistas() > 0;
     this.contador.hidden = !visivel;
@@ -171,7 +171,7 @@ export class MenuNotificacoes {
 
   _marcarVistas() {
     prefs.set(CHAVE_VISTAS, new Date().toDateString());
-    this._renderContador();
+    this._desenharContador();
     this.acoes.aoMarcarVistas?.();
   }
 

@@ -27,10 +27,10 @@ export class ConsultaView extends View {
     this.allNames = [];
     this.currentMatches = [];
     this.activeName = null;
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       <div class="consulta-layout">
         <div class="card consulta-search">
@@ -47,16 +47,16 @@ export class ConsultaView extends View {
     this.countLabel = this.container.querySelector('[data-role="count"]');
     this.detailBox = this.container.querySelector('[data-role="detail"]');
 
-    this.searchInput.addEventListener("input", aguardarPausa(() => this._filterMatches(), 200));
+    this.searchInput.addEventListener("input", aguardarPausa(() => this._filtroCasa(), 200));
     // Setas percorrem a lista de resultados sem tirar a mão do campo de busca.
     this.searchInput.addEventListener("keydown", (e) => this._navegarResultados(e));
     // Uma vez o foco DENTRO da lista (o `primeiro.focus()` logo abaixo leva
     // para lá), as setas paravam de fazer qualquer coisa -- só o Tab movia.
     // Delegado no container em vez de um listener por botão: a lista é
-    // redesenhada inteira a cada busca (ver _filterMatches).
+    // redesenhada inteira a cada busca (ver _filtroCasa).
     this.matchesBox.addEventListener("keydown", (e) => this._navegarNaLista(e));
 
-    this._renderDetailVazio();
+    this._desenharDetalheVazio();
   }
 
   /** Chamado pela paleta de comandos ao escolher um cliente. */
@@ -71,7 +71,7 @@ export class ConsultaView extends View {
       () => this.api.get("/clientes/names", null, { key: "clientes:names" }),
       (nomes) => {
         this.allNames = nomes;
-        this._filterMatches();
+        this._filtroCasa();
       }
     );
 
@@ -80,12 +80,12 @@ export class ConsultaView extends View {
       const alvo = this._clientePendente;
       this._clientePendente = null;
       this.searchInput.value = alvo;
-      this._filterMatches();
-      await this._selectClient(alvo);
+      this._filtroCasa();
+      await this._selecionarCliente(alvo);
     }
   }
 
-  _filterMatches() {
+  _filtroCasa() {
     const termo = this.searchInput.value.trim().toLowerCase();
     const todos = termo ? this.allNames.filter((n) => n.toLowerCase().includes(termo)) : this.allNames;
     this.currentMatches = todos.slice(0, MAX_SUGESTOES);
@@ -116,7 +116,7 @@ export class ConsultaView extends View {
       item.setAttribute("role", "option");
       item.setAttribute("aria-selected", String(nome === this.activeName));
       item.textContent = nome;
-      item.addEventListener("click", () => this._selectClient(nome));
+      item.addEventListener("click", () => this._selecionarCliente(nome));
       this.matchesBox.appendChild(item);
     }
   }
@@ -126,7 +126,7 @@ export class ConsultaView extends View {
     const primeiro = this.matchesBox.querySelector(".consulta-matches__item");
     if (!primeiro) return;
     e.preventDefault();
-    if (e.key === "Enter") this._selectClient(this.currentMatches[0]);
+    if (e.key === "Enter") this._selecionarCliente(this.currentMatches[0]);
     else primeiro.focus();
   }
 
@@ -150,9 +150,9 @@ export class ConsultaView extends View {
     itens[Math.max(0, proximo)].focus();
   }
 
-  async _selectClient(nome) {
+  async _selecionarCliente(nome) {
     this.activeName = nome;
-    this._filterMatches();
+    this._filtroCasa();
 
     try {
       const cliente = await this.api.get(`/clientes/by-nome/${encodeURIComponent(nome)}`, null, { key: "consulta:cliente" });
@@ -166,14 +166,14 @@ export class ConsultaView extends View {
         this.api.get(`/clientes/${cliente.id}/acessos`, null, { key: "consulta:acessos" }).catch(() => []),
         this.api.get(`/atualizacoes/situacao-cliente/${encodeURIComponent(nome)}`, null, { key: "consulta:situacao" }),
       ]);
-      this._renderDetail(cliente, historico, painelVersoes, acessos, situacaoSistemas);
+      this._desenharDetalhe(cliente, historico, painelVersoes, acessos, situacaoSistemas);
     } catch (erro) {
       if (erro?.cancelled) return; // outra seleção, mais nova, tomou o lugar
       avisoRapido.erro("Não foi possível carregar os dados deste cliente.");
     }
   }
 
-  _renderDetailVazio() {
+  _desenharDetalheVazio() {
     this.detailBox.replaceChildren(
       estadoVazio({
         titulo: "Selecione um cliente",
@@ -183,7 +183,7 @@ export class ConsultaView extends View {
     );
   }
 
-  _renderDetail(cliente, historico, painelVersoes, acessos = [], situacaoSistemas = []) {
+  _desenharDetalhe(cliente, historico, painelVersoes, acessos = [], situacaoSistemas = []) {
     this.detailBox.innerHTML = html`
       <div class="consulta-detail__name"></div>
       <div class="consulta-detail__subtitle"></div>
@@ -265,7 +265,7 @@ export class ConsultaView extends View {
     });
 
     // Matriz Comparativa de Versões e Telemetria de Agentes
-    this._renderMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas);
+    this._desenharMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas);
 
     const caixa = this.detailBox.querySelector('[data-role="ultima"]');
     if (!historico || historico.length === 0) {
@@ -325,7 +325,7 @@ export class ConsultaView extends View {
   }
 
   /** As contas estão em domain/matrizVersoes.js e a marcação em templates/consulta.js -- os dois testados. */
-  _renderMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas = []) {
+  _desenharMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas = []) {
     const container = this.detailBox.querySelector('[data-role="versao-matriz"]');
     const fixos = situacaoSistemas.filter((s) => s.fixo);
     const nomesFixos = new Set(fixos.map((s) => s.sistema.toLocaleLowerCase("pt-BR")));

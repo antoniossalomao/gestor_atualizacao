@@ -69,8 +69,8 @@ export class CampoComSugestoes {
     input.setAttribute("aria-expanded", "false");
     input.setAttribute("aria-controls", this.list.id);
 
-    this._onInputBound = () => this._onInput();
-    this._onKeydownBound = (e) => this._onKeydown(e);
+    this._onInputBound = () => this._aoDigitar();
+    this._onKeydownBound = (e) => this._aoTeclar(e);
     input.addEventListener("input", this._onInputBound);
     input.addEventListener("focus", this._onInputBound);
     input.addEventListener("keydown", this._onKeydownBound);
@@ -84,7 +84,7 @@ export class CampoComSugestoes {
     this.values = values || [];
   }
 
-  _onInput() {
+  _aoDigitar() {
     const typed = this.input.value.trim().toLowerCase();
     if (typed.length < this.minChars) {
       this._close();
@@ -172,7 +172,7 @@ export class CampoComSugestoes {
     }
   }
 
-  _onKeydown(e) {
+  _aoTeclar(e) {
     if (!this.aberta) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();

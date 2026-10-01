@@ -1362,7 +1362,7 @@ ponto em que projetos Node costumam adotar um container de DI (`awilix`, `tsyrin
 `InversifyJS`) ou partir para singletons importados diretamente.
 
 **Decisão.** A classe `Server` monta tudo à mão, em ordem explícita, em dois métodos:
-`_buildServices()` e `_buildControllers()`. Cada dependência é passada pelo construtor. Nenhum
+`_montarServicos()` e `_montarControladores()`. Cada dependência é passada pelo construtor. Nenhum
 serviço importa outro diretamente. Nenhum módulo exporta instância pronta — só classes.
 
 **Consequências.**
@@ -1375,7 +1375,7 @@ execução; zero mágica — nenhuma resolução por nome, nenhum decorator, nen
 
 *Custos aceitos:* acrescentar um serviço exige editar `Servidor.js` (é uma linha, e o incômodo é
 proporcional ao custo real de acrescentar um serviço, o que é saudável); a ordem de construção
-dentro de `_buildServices()` importa (está explícito no código); uma instância de `BackupService`
+dentro de `_montarServicos()` importa (está explícito no código); uma instância de `BackupService`
 acaba criada duas vezes — inofensivo, mas é o tipo de duplicação que um container evitaria de graça.
 
 **Alternativas consideradas.** Container de DI (`awilix` etc.) — descartado: resolve acoplamento em

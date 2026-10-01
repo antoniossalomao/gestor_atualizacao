@@ -57,7 +57,7 @@ export class AgendamentosView extends View {
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "asc";
     this.ordemColunas = this._carregarOrdemColunas();
-    this._buildDom();
+    this._montarDom();
   }
 
   _carregarOrdemColunas() {
@@ -81,10 +81,10 @@ export class AgendamentosView extends View {
     nova.splice(para, 0, removido);
     this.ordemColunas = nova;
     prefs.set("agendamentos:colunas", nova);
-    this._renderKanban(this.rows);
+    this._desenharKanban(this.rows);
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       <form class="card" data-role="form" novalidate>
         <div class="form-grid form-grid--2" data-role="fields"></div>
@@ -113,7 +113,7 @@ export class AgendamentosView extends View {
           </div>
           <div class="field">
             <!-- id "age-filtro-*", e não "age-status": esse é o do campo do
-                 formulário (ver _buildFields). Com os dois iguais, o <label>
+                 formulário (ver _montarCampos). Com os dois iguais, o <label>
                  de um apontava para o outro e um dos <select> ficava sem nome
                  para o leitor de tela (achado pelo teste de navegador). -->
             <label class="field__label" for="age-filtro-status">Status</label>
@@ -152,7 +152,7 @@ export class AgendamentosView extends View {
     `;
 
 
-    this._buildFields();
+    this._montarCampos();
 
     this.form = this.container.querySelector('[data-role="form"]');
     this.drawer = new Gaveta(this.form, {
@@ -178,7 +178,7 @@ export class AgendamentosView extends View {
 
     const reload = aguardarPausa(() => {
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     }, 200);
 
     this.searchInput.addEventListener("input", () => {
@@ -191,14 +191,14 @@ export class AgendamentosView extends View {
       this.status = this.statusFilter.value;
       this._pintarLimparFiltros();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     });
 
     this.prioridadeFilter?.addEventListener("change", () => {
       this.prioridade = this.prioridadeFilter.value;
       this._pintarLimparFiltros();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     });
 
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
@@ -237,7 +237,7 @@ export class AgendamentosView extends View {
       this._pintarFiltrosRapidos();
       this._pintarLimparFiltros();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     });
 
     this.addBtn = this.form.querySelector('[data-action="add"]');
@@ -273,15 +273,15 @@ export class AgendamentosView extends View {
 
     this.form.addEventListener("submit", (e) => {
       e.preventDefault();
-      this._submit();
+      this._enviar();
     });
     this.updateBtn?.addEventListener("click", () => this.alterarTarefa());
 
     // Ações rápidas e drag-and-drop no quadro Kanban
     this.kanban.addEventListener("click", (e) => this._acaoRapida(e));
-    this._bindKanbanDragDrop();
+    this._ligarArrastarKanban();
 
-    this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
+    this.on(document, "keydown", (e) => this._aoTeclarGlobal(e));
 
     if (this.user?.role === "consulta") {
       this.form.hidden = true;
@@ -310,7 +310,7 @@ export class AgendamentosView extends View {
   }
 
 
-  _buildFields() {
+  _montarCampos() {
     const wrap = this.container.querySelector('[data-role="fields"]');
     this.fields = {};
     for (const col of COLUNAS_AGENDAMENTOS) {
@@ -369,7 +369,7 @@ export class AgendamentosView extends View {
     this.sistemaAutocomplete = new CampoComSugestoes(this.fields.sistema, { values: [] });
   }
 
-  _bindKanbanDragDrop() {
+  _ligarArrastarKanban() {
     this.kanban.addEventListener("dragstart", (e) => {
       const card = e.target.closest(".kanban-card");
       if (card) {
@@ -498,10 +498,10 @@ export class AgendamentosView extends View {
         this.sistemaAutocomplete?.definirValores(sistemas || []);
       }
     );
-    await this._reloadList();
+    await this._recarregarLista();
   }
 
-  async _reloadList() {
+  async _recarregarLista() {
     this.kanban.classList.add("is-refreshing");
     try {
       await this.swr(
@@ -523,7 +523,7 @@ export class AgendamentosView extends View {
           ),
         (resposta) => {
           this.rows = resposta.rows || [];
-          this._renderKanban(this.rows);
+          this._desenharKanban(this.rows);
           const countEl = this.container.querySelector('[data-role="count"]');
           if (countEl) countEl.textContent = plural(resposta.total, "tarefa");
           this._pintarArquivadas(resposta);
@@ -534,7 +534,7 @@ export class AgendamentosView extends View {
     }
   }
 
-  _renderKanban(rows) {
+  _desenharKanban(rows) {
     if (this.status === FILTRO_ARQUIVADAS) {
       const colunas = [
         {
@@ -628,7 +628,7 @@ export class AgendamentosView extends View {
     const statusAnterior = row.status;
     // Atualização otimista imediata na UI
     row.status = novoStatus;
-    this._renderKanban(this.rows);
+    this._desenharKanban(this.rows);
 
     try {
       // A resposta traz a `revisao` nova, e é o Object.assign que a guarda na
@@ -640,14 +640,14 @@ export class AgendamentosView extends View {
       avisoRapido.sucesso(`Tarefa movida para "${novoStatus}".`);
     } catch (err) {
       row.status = statusAnterior;
-      this._renderKanban(this.rows);
+      this._desenharKanban(this.rows);
       Modal.alert("Erro ao mover tarefa", mensagemDeErro(err), "error");
       // Num conflito de verdade (outra pessoa mexeu na tarefa), a linha local
       // está velha e continuaria recusada em toda tentativa até um F5. Recarregar
       // traz a revisão atual e o quadro volta a aceitar a mudança.
       if (err instanceof ErroApi && err.status === 409) {
         this._invalidar();
-        await this._reloadList();
+        await this._recarregarLista();
       }
     }
   }
@@ -658,7 +658,7 @@ export class AgendamentosView extends View {
       e.stopPropagation();
       const row = this.rows?.find((item) => String(item.id) === botao.dataset.id);
       if (!row) return;
-      this._loadIntoForm(row);
+      this._carregarNoFormulario(row);
       if (botao.dataset.rowAction === "editar") this.drawer.abrir({ foco: this.fields.tarefa });
       if (botao.dataset.rowAction === "arquivar") await this.arquivar(botao);
       if (botao.dataset.rowAction === "concluir") await this._moverCard(row.id, STATUS_CONCLUIDO);
@@ -675,7 +675,7 @@ export class AgendamentosView extends View {
     if (card && !acabouDeDragar) {
       const row = this.rows?.find((item) => String(item.id) === card.dataset.id);
       if (row) {
-        this._loadIntoForm(row);
+        this._carregarNoFormulario(row);
         this.drawer.abrir({ foco: this.fields.tarefa });
       }
     }
@@ -722,7 +722,7 @@ export class AgendamentosView extends View {
     this._pintarLimparFiltros();
     this._pintarFiltrosRapidos();
     this._salvarFiltros();
-    this._reloadList();
+    this._recarregarLista();
   }
 
   _salvarFiltros() {
@@ -736,7 +736,7 @@ export class AgendamentosView extends View {
     });
   }
 
-  _loadIntoForm(row) {
+  _carregarNoFormulario(row) {
     this.selectedId = row.id;
     this.selectedRevision = row.revisao;
     for (const col of COLUNAS_AGENDAMENTOS) {
@@ -779,7 +779,7 @@ export class AgendamentosView extends View {
       const tarefa = await this.api.patch(`/agendamentos/${this.selectedId}/reabrir`);
       this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso(`"${tarefa.tarefa}" voltou para a lista como "${OPCOES_STATUS[0]}".`);
     } catch (err) {
       Modal.alert("Erro", mensagemDeErro(err), "error");
@@ -792,12 +792,12 @@ export class AgendamentosView extends View {
     if (status !== undefined) {
       this.status = status;
       if (this.statusFilter) this.statusFilter.value = status;
-      this._reloadList();
+      this._recarregarLista();
     }
     if (filtro !== undefined) {
       this.busca = filtro;
       if (this.searchInput) this.searchInput.value = filtro;
-      this._reloadList();
+      this._recarregarLista();
     }
     if (novo) {
       this.limparFormulario();
@@ -811,7 +811,7 @@ export class AgendamentosView extends View {
     }
   }
 
-  _readForm() {
+  _lerFormulario() {
     const data = {};
     for (const col of COLUNAS_AGENDAMENTOS) data[col.key] = this.fields[col.key].value.trim();
     if (!data.tarefa) {
@@ -825,13 +825,13 @@ export class AgendamentosView extends View {
     return data;
   }
 
-  _submit() {
+  _enviar() {
     if (this.selectedId == null) this.adicionarTarefa();
     else this.alterarTarefa();
   }
 
   async adicionarTarefa() {
-    const data = this._readForm();
+    const data = this._lerFormulario();
     if (!data) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
@@ -840,7 +840,7 @@ export class AgendamentosView extends View {
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso("Tarefa adicionada.");
     } catch (err) {
       Modal.alert("Erro", mensagemDeErro(err), "error");
@@ -851,7 +851,7 @@ export class AgendamentosView extends View {
 
   async alterarTarefa() {
     if (this.selectedId == null) return;
-    const data = this._readForm();
+    const data = this._lerFormulario();
     if (!data) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
@@ -860,7 +860,7 @@ export class AgendamentosView extends View {
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso("Tarefa atualizada.");
     } catch (err) {
       Modal.alert("Erro", mensagemDeErro(err), "error");
@@ -879,12 +879,12 @@ export class AgendamentosView extends View {
       await this.api.delete(`/agendamentos/${id}`);
       this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.desfazer(`Tarefa "${dadosAntes.tarefa}" excluída.`, async () => {
         try {
           await this.api.post("/agendamentos", dadosAntes);
           this._invalidar();
-          await this._reloadList();
+          await this._recarregarLista();
           avisoRapido.sucesso("Exclusão desfeita.");
         } catch {
           avisoRapido.erro("Não foi possível desfazer a exclusão.");
@@ -915,7 +915,7 @@ export class AgendamentosView extends View {
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso("Tarefa arquivada.");
     } catch (err) {
       Modal.alert("Erro", mensagemDeErro(err), "error");
@@ -965,7 +965,7 @@ export class AgendamentosView extends View {
     this.cache?.invalidar("agendamentos:");
   }
 
-  _onGlobalKeydown(e) {
+  _aoTeclarGlobal(e) {
     if (!this.visivel) return;
     if (ehCampoDeTexto(e.target)) return;
     if (e.key === "Delete" && this.selectedId != null) this.excluirTarefa();
@@ -979,7 +979,7 @@ export class AgendamentosView extends View {
         e.preventDefault();
         const row = this.rows?.find((item) => String(item.id) === card.dataset.id);
         if (row) {
-          this._loadIntoForm(row);
+          this._carregarNoFormulario(row);
           this.drawer.abrir({ foco: this.fields.tarefa });
         }
       }

@@ -68,7 +68,7 @@ function publicar(env, sistema, versao) {
  */
 function cadastro(env, sistema, versao) {
   return {
-    ...env.service._validate({ sistema, versao, pacotes: PACOTE }),
+    ...env.service._validar({ sistema, versao, pacotes: PACOTE }),
     criadoEm: new Date().toISOString(),
     criadoPor: ADMIN.nome,
   };
@@ -78,19 +78,19 @@ test("VersaoService - validação da versão publicada", async (t) => {
   const env = ambiente();
   try {
     await t.test("sistema é obrigatório", () => {
-      assert.throws(() => env.service._validate({ versao: "1.0", pacotes: PACOTE }), /Escolha a qual sistema/);
+      assert.throws(() => env.service._validar({ versao: "1.0", pacotes: PACOTE }), /Escolha a qual sistema/);
     });
 
     await t.test("aceita os formatos de versão usados de verdade", () => {
       for (const v of ["1.0", "1.0.0", "2026.08.10", "1.2.3.4", "1.0.0-beta.1"]) {
-        assert.doesNotThrow(() => env.service._validate({ sistema: "B_Vendas", versao: v, pacotes: PACOTE }), `"${v}"`);
+        assert.doesNotThrow(() => env.service._validar({ sistema: "B_Vendas", versao: v, pacotes: PACOTE }), `"${v}"`);
       }
     });
 
     await t.test("recusa o que não é versão", () => {
       for (const v of ["", "versao-nova", "1", "v1.0", "1.0.", "...."]) {
         assert.throws(
-          () => env.service._validate({ sistema: "B_Vendas", versao: v, pacotes: PACOTE }),
+          () => env.service._validar({ sistema: "B_Vendas", versao: v, pacotes: PACOTE }),
           /versão válida/,
           `"${v}" não deveria passar`
         );
@@ -98,14 +98,14 @@ test("VersaoService - validação da versão publicada", async (t) => {
     });
 
     await t.test("exige pelo menos um pacote", () => {
-      assert.throws(() => env.service._validate({ sistema: "B_Vendas", versao: "1.0", pacotes: [] }), /pelo menos um pacote/);
+      assert.throws(() => env.service._validar({ sistema: "B_Vendas", versao: "1.0", pacotes: [] }), /pelo menos um pacote/);
     });
 
     await t.test("grupo piloto exige códigos de clientes cadastrados", () => {
       env.db.clientes.insert("CLI-001", "Cliente piloto", "Recife", [], null);
-      assert.throws(() => env.service._validate({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto" }), /ao menos um cliente/);
-      assert.throws(() => env.service._validate({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto", codigosPiloto: '["INEXISTENTE"]' }), /não cadastrado/);
-      assert.deepEqual(JSON.parse(env.service._validate({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto", codigosPiloto: '["cli-001", "CLI-001"]' }).codigosClientesJson), ["CLI-001"]);
+      assert.throws(() => env.service._validar({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto" }), /ao menos um cliente/);
+      assert.throws(() => env.service._validar({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto", codigosPiloto: '["INEXISTENTE"]' }), /não cadastrado/);
+      assert.deepEqual(JSON.parse(env.service._validar({ sistema: "B_Vendas", versao: "1.0.0", pacotes: PACOTE, alcance: "piloto", codigosPiloto: '["cli-001", "CLI-001"]' }).codigosClientesJson), ["CLI-001"]);
     });
 
     await t.test("exige arquivo, URL e SHA-256 em CADA pacote", () => {
@@ -118,13 +118,13 @@ test("VersaoService - validação da versão publicada", async (t) => {
         [{ file: "f", url: "u" }],
       ];
       for (const pacotes of incompletos) {
-        assert.throws(() => env.service._validate({ sistema: "B_Vendas", versao: "1.0", pacotes }), /arquivo, URL e SHA-256/);
+        assert.throws(() => env.service._validar({ sistema: "B_Vendas", versao: "1.0", pacotes }), /arquivo, URL e SHA-256/);
       }
     });
 
     await t.test("JSON malformado nos pacotes vira erro explicado", () => {
       assert.throws(
-        () => env.service._validate({ sistema: "B_Vendas", versao: "1.0", pacotes: "{isso não é json" }),
+        () => env.service._validar({ sistema: "B_Vendas", versao: "1.0", pacotes: "{isso não é json" }),
         /JSON válido/
       );
     });

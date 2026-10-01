@@ -33,10 +33,10 @@ export class SistemasView extends View {
     this.atualizacaoAntesDe = salvo.atualizacaoAntesDe || salvo[CHAVE_ANTIGA_DATA] || "";
     this.versoes = [];
     this.rows = [];
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = `
       <div class="card">
         <div class="toolbar sistemas-toolbar">
@@ -135,23 +135,23 @@ export class SistemasView extends View {
       this.sistema = this.sistemaFilter.value;
       this._salvarFiltros();
       this._mostrarReferencia();
-      this._reloadList();
+      this._recarregarLista();
     });
     this.situacaoFilter.addEventListener("change", () => {
       this.situacao = this.situacaoFilter.value;
       this._salvarFiltros();
-      this._filtrarRows();
+      this._filtrarLinhas();
     });
     const buscar = aguardarPausa(() => {
       this.busca = this.buscaInput.value.trim();
       this._salvarFiltros();
-      this._filtrarRows();
+      this._filtrarLinhas();
     }, 180);
     this.buscaInput.addEventListener("input", buscar);
     const consultar = aguardarPausa(() => {
       this.atualizacaoAntesDe = this.dataInput.value.trim();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     }, 300);
     this.dataInput.addEventListener("input", () => {
       this.dataInput.value = mascaraDataBR(this.dataInput.value);
@@ -162,7 +162,7 @@ export class SistemasView extends View {
     this.container.querySelector('[data-action="limpar-data"]').addEventListener("click", () => {
       this._limparData();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
       this.dataInput.focus();
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
@@ -191,10 +191,10 @@ export class SistemasView extends View {
         this.sistema = this.sistemaFilter.value;
         this._salvarFiltros();
         this._mostrarReferencia();
-        this._renderOficiais();
+        this._desenharOficiais();
       }
     );
-    await this._reloadList();
+    await this._recarregarLista();
   }
 
   _mostrarReferencia() {
@@ -209,18 +209,18 @@ export class SistemasView extends View {
     const painel = this.container.querySelector(`#sis-${tipo}`);
     painel.hidden = !painel.hidden;
     botao.setAttribute("aria-expanded", String(!painel.hidden));
-    if (tipo === "oficiais" && !painel.hidden) this._renderOficiais();
+    if (tipo === "oficiais" && !painel.hidden) this._desenharOficiais();
     if (!painel.hidden) painel.querySelector("input, button")?.focus();
   }
 
   _fecharOficiais() {
     this.container.querySelector("#sis-oficiais").hidden = true;
     this.container.querySelector('[data-action="oficiais"]').setAttribute("aria-expanded", "false");
-    this._renderOficiais(); // descarta qualquer edição sem gravar
+    this._desenharOficiais(); // descarta qualquer edição sem gravar
     this.container.querySelector('[data-action="oficiais"]').focus();
   }
 
-  _renderOficiais() {
+  _desenharOficiais() {
     const lista = this.container.querySelector('[data-role="oficiais-lista"]');
     lista.innerHTML = this.versoes.map((s, i) => `
       <div class="sistemas-oficiais__row" data-index="${i}">
@@ -249,7 +249,7 @@ export class SistemasView extends View {
       campo.focus();
       return;
     }
-    if (botao.dataset.action === "cancelar") { this._renderOficiais(); return; }
+    if (botao.dataset.action === "cancelar") { this._desenharOficiais(); return; }
     if (botao.dataset.action !== "salvar") return;
     const data = mascaraDataBR(campo.value.trim());
     if (data && !dataBRValida(data)) {
@@ -273,10 +273,10 @@ export class SistemasView extends View {
     }
   }
 
-  async _reloadList() {
+  async _recarregarLista() {
     if (!this.sistema) {
       this.rows = [];
-      this._filtrarRows();
+      this._filtrarLinhas();
       return;
     }
     if (this.atualizacaoAntesDe && !dataBRValida(this.atualizacaoAntesDe)) return;
@@ -285,7 +285,7 @@ export class SistemasView extends View {
       await this.swr(
         `sistemas:lista:${this.sistema}|${this.atualizacaoAntesDe}`,
         () => this.api.get("/atualizacoes/por-sistema", { sistema: this.sistema, atualizacaoAntesDe: this.atualizacaoAntesDe }, { key: "sistemas:lista" }),
-        (rows) => { this.rows = rows; this._filtrarRows(); }
+        (rows) => { this.rows = rows; this._filtrarLinhas(); }
       );
     } catch (err) {
       // Falha de carga já aparece no aviso fixo da tela (View.swr); um modal
@@ -296,7 +296,7 @@ export class SistemasView extends View {
     }
   }
 
-  _filtrarRows() {
+  _filtrarLinhas() {
     const rows = filtrarClientesDoSistema(this.rows, this.situacao, this.busca);
     this.table.definirLinhas(rows);
     this.container.querySelector('[data-role="count"]').textContent = plural(rows.length, "cliente");
@@ -332,8 +332,8 @@ export class SistemasView extends View {
     this.busca = "";
     this.buscaInput.value = "";
     this._salvarFiltros();
-    if (recarregar) this._reloadList();
-    else this._filtrarRows();
+    if (recarregar) this._recarregarLista();
+    else this._filtrarLinhas();
     this.buscaInput.focus();
   }
 }

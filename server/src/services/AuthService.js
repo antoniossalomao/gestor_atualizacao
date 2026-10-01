@@ -26,7 +26,7 @@ class AuthService {
 
   /**
    * Injeta o store de sessões após a construção (o store só existe depois de
-   * _configureExpress, que roda após _buildServices -- mesmo padrão do
+   * _configurarExpress, que roda após _montarServicos -- mesmo padrão do
    * BackupService.definirArmazemDeSessao).
    * @param {import('../database/ArmazemDeSessaoSqlite').ArmazemDeSessaoSqlite} store
    */

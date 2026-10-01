@@ -66,20 +66,20 @@ export class AgenteDetalheModal {
     box.querySelectorAll("[data-filter]").forEach((button) => {
       button.addEventListener("click", () => {
         this.somenteErros = button.dataset.filter === "problemas";
-        this._renderLogs();
+        this._desenharRegistros();
       });
     });
     box.querySelector('[data-role="sistema"]').addEventListener("change", (event) => {
       this.sistema = event.target.value;
-      this._renderLogs();
+      this._desenharRegistros();
     });
 
     this.list = box.querySelector('[data-role="list"]');
     box.querySelector('[data-action="close"]').focus();
-    await this._reload();
+    await this._recarregar();
   }
 
-  async _reload() {
+  async _recarregar() {
     this.loading = true;
     this.logs = [];
     this.logsFiltrados = [];
@@ -101,7 +101,7 @@ export class AgenteDetalheModal {
           titulo: "Não foi possível carregar os retornos",
           descricao: err instanceof ErroApi ? err.message : "Erro inesperado.",
           icone: "distribuicao",
-          acao: { label: "Tentar novamente", onClick: () => this._reload() },
+          acao: { label: "Tentar novamente", onClick: () => this._recarregar() },
         })
       );
       return;
@@ -119,7 +119,7 @@ export class AgenteDetalheModal {
     const limite = this.box.querySelector('[data-role="limit"]');
     limite.hidden = logs.length < LIMITE_RETORNOS;
     limite.textContent = `Exibindo os ${LIMITE_RETORNOS} retornos mais recentes. Registros anteriores não estão incluídos neste relatório.`;
-    this._renderLogs();
+    this._desenharRegistros();
   }
 
   _atualizarFiltros() {
@@ -132,7 +132,7 @@ export class AgenteDetalheModal {
     this.box.querySelector('[data-role="sistema"]').disabled = this.loading;
   }
 
-  _renderLogs() {
+  _desenharRegistros() {
     this._atualizarFiltros();
     this.logsFiltrados = this.logs.filter((log) => {
       if (this.sistema && log.sistema !== this.sistema) return false;
@@ -159,7 +159,7 @@ export class AgenteDetalheModal {
             this.somenteErros = false;
             this.sistema = "";
             this.box.querySelector('[data-role="sistema"]').value = "";
-            this._renderLogs();
+            this._desenharRegistros();
           } } : undefined,
         })
       );

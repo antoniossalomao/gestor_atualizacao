@@ -625,7 +625,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar,
       descricao: "Versão e novidades, como usar cada tela, atalhos de teclado, como a situação é calculada e a quem pedir ajuda.",
       // Os textos que dependem do servidor (versão, prazo) são getters: as
       // definições nascem com o app, antes de o /auth/status de depois do
-      // login voltar (ver App._onAuthenticated), e o getter só é lido quando
+      // login voltar (ver App._aoAutenticar), e o getter só é lido quando
       // a aba é desenhada ou a busca roda.
       cartoes: [
         {

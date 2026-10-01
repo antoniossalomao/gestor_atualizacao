@@ -39,7 +39,7 @@ import { ConexaoBanner } from "../components/ConexaoBanner.js";
  * `requerAtualizador: true` marca as abas que só fazem sentido com o
  * Atualizador (agente C#) em uso -- somem da navegação, da paleta de
  * comandos e dos atalhos quando ele está desativado em Configurações (ver
- * `this.tabsAtivas`, calculado em `_onAuthenticated`).
+ * `this.tabsAtivas`, calculado em `_aoAutenticar`).
  *
  * `papel` restringe a aba a um papel (hoje só a Administração, "admin"). É só
  * a navegação: quem garante de verdade é o servidor, que responde 403 às
@@ -123,7 +123,7 @@ export class App {
     // Um 401 em QUALQUER chamada -- não só no carregamento de aba -- leva de
     // volta ao login. Antes, a sessão expirar durante um "Adicionar" só
     // produzia um "Ocorreu um erro inesperado".
-    this.api.onUnauthorized = () => this._showLoginAgain();
+    this.api.onUnauthorized = () => this._mostrarLoginDeNovo();
   }
 
   /** Decide a tela inicial olhando o status de autenticação no servidor. */
@@ -132,7 +132,7 @@ export class App {
     try {
       status = await this.api.get("/auth/status");
     } catch {
-      this._renderFalhaConexao();
+      this._desenharFalhaDeConexao();
       return;
     }
     // Vem do "/auth/status" (não de uma segunda chamada) porque é a
@@ -145,14 +145,14 @@ export class App {
     this.regras = status.regras || {};
     this.versao = status.versao || null;
     if (status.precisaConfigurar) {
-      new LoginView(this.root, this.api, "setup", (user) => this._onAuthenticated(user));
+      new LoginView(this.root, this.api, "setup", (user) => this._aoAutenticar(user));
       return;
     }
     if (!status.user) {
-      new LoginView(this.root, this.api, "login", (user) => this._onAuthenticated(user));
+      new LoginView(this.root, this.api, "login", (user) => this._aoAutenticar(user));
       return;
     }
-    this._onAuthenticated(status.user);
+    this._aoAutenticar(status.user);
   }
 
   /**
@@ -160,7 +160,7 @@ export class App {
    * mandando "recarregue a página" -- deixar o usuário executar a ação em vez
    * de instruí-lo a fazê-la manualmente é sempre melhor.
    */
-  _renderFalhaConexao() {
+  _desenharFalhaDeConexao() {
     this.root.innerHTML = `
       <div class="auth-screen">
         <div class="empty-state">
@@ -174,7 +174,7 @@ export class App {
     this.root.querySelector('[data-action="retry"]').addEventListener("click", () => this.start());
   }
 
-  _onAuthenticated(user) {
+  _aoAutenticar(user) {
     this.user = user;
     this.api.reiniciarNaoAutorizado();
     // Quem entrou pela tela de login chegou com o /auth/status de ANTES da
@@ -208,7 +208,7 @@ export class App {
       reaplicarAparencia();
     });
 
-    this._buildShell();
+    this._montarEsqueleto();
     this.router = new Roteador(
       this.tabsAtivas.map((t) => t.key),
       (rota) => this._mostrarAba(rota)
@@ -349,7 +349,7 @@ export class App {
     this._rolagemPorAba.clear();
   }
 
-  _buildShell() {
+  _montarEsqueleto() {
     const recolhida = duradouras.get("sidebarRecolhida", false);
     this.root.className = recolhida ? "is-sidebar-collapsed" : "";
     this.root.innerHTML = `
@@ -760,11 +760,11 @@ export class App {
    * dados da aba aberta, não a lista de abas que existem. Precisa disto
    * quando `atualizadorHabilitado` muda (ver AtualizadorAdmin): a
    * navegação inteira depende de `this.tabsAtivas`, calculado uma vez em
-   * `_onAuthenticated`.
+   * `_aoAutenticar`.
    *
    * Mesmo caminho de `_logout()` (desmontar + `start()`), só que sem de fato
    * encerrar a sessão -- o cookie continua válido, então `start()` volta
-   * direto para `_onAuthenticated`.
+   * direto para `_aoAutenticar`.
    */
   async recarregarApp() {
     this._desmontar();
@@ -1099,7 +1099,7 @@ export class App {
     });
   }
 
-  _showLoginAgain() {
+  _mostrarLoginDeNovo() {
     if (this.reauthenticating) return;
     this.reauthenticating = true;
     this.user = null;
@@ -1109,7 +1109,7 @@ export class App {
     avisoRapido.informar("Sua sessão expirou. Entre novamente.");
     new LoginView(this.root, this.api, "login", (user) => {
       this.reauthenticating = false;
-      this._onAuthenticated(user);
+      this._aoAutenticar(user);
     });
   }
 }

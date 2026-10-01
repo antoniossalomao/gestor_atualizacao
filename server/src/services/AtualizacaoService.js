@@ -47,7 +47,7 @@ class AtualizacaoService {
   }
 
   create(input, usuario) {
-    const data = this._validate(input);
+    const data = this._validar(input);
     const sistemas = this._versoesNovas(data, input);
     this.db.atualizacoes.insert(this._paraTabela(data), sistemas);
     this.historico.registrar(usuario, "criar", "atualizacao", `Atualização de "${data.cliente}" (${data.sistema || "sem sistema"})`);
@@ -65,7 +65,7 @@ class AtualizacaoService {
   // usando o app, isso e' rotina: alguem exclui o registro enquanto outra
   // pessoa esta com ele aberto. Mesma regra que ClienteService ja seguia.
   update(id, input, usuario) {
-    const data = this._validate(input);
+    const data = this._validar(input);
     const antes = this.db.atualizacoes.find(id);
     const lista = this._resolverSistemas(data);
     let sistemas;
@@ -351,7 +351,7 @@ class AtualizacaoService {
       .sort((a, b) => (a.sistema < b.sistema ? -1 : a.sistema > b.sistema ? 1 : 0));
   }
 
-  _validate(input) {
+  _validar(input) {
     const cliente = (input.cliente || "").trim();
     if (!cliente) throw new ErroDeValidacao("Campo 'Cliente' é obrigatório.");
     const data = (input.data || "").trim();

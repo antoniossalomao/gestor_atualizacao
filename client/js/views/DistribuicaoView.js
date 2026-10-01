@@ -45,10 +45,10 @@ export class DistribuicaoView extends View {
     this.filtroSistemaRetorno = "";
     this.buscaRetorno = "";
     this._timer = null;
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.classList.add("distribution-dashboard");
     this.container.innerHTML = `
       <div class="distribution-topbar">
@@ -151,35 +151,35 @@ export class DistribuicaoView extends View {
       catch { avisoRapido.erro("Não foi possível atualizar o painel. Tente novamente."); }
       finally { button.disabled = false; }
     });
-    this.container.querySelector('[data-action="copy-report"]').addEventListener("click", () => this._copyReport());
+    this.container.querySelector('[data-action="copy-report"]').addEventListener("click", () => this._copiarRelatorio());
     this.searchInput.addEventListener("input", () => {
       this.buscaAgente = this.searchInput.value.trim().toLowerCase();
-      this._renderAgents();
+      this._desenharAgentes();
     });
     this.situationFilter.addEventListener("change", () => {
       this.filtroSituacao = this.situationFilter.value;
-      this._renderAgents();
+      this._desenharAgentes();
     });
     this.systemFilter.addEventListener("change", () => {
       this.filtroSistema = this.systemFilter.value;
-      this._renderAgents();
+      this._desenharAgentes();
     });
     this.logSearch.addEventListener("input", () => {
       this.buscaRetorno = this.logSearch.value.trim().toLowerCase();
-      this._renderLogs();
+      this._desenharRegistros();
     });
     this.logStatus.addEventListener("change", () => {
       this.filtroRetorno = this.logStatus.value;
-      this._renderLogs();
+      this._desenharRegistros();
     });
     this.logSystem.addEventListener("change", () => {
       this.filtroSistemaRetorno = this.logSystem.value;
-      this._renderLogs();
+      this._desenharRegistros();
     });
 
     this.on(document, "visibilitychange", () => {
-      if (document.visibilityState === "visible" && this.visivel) this._startPolling();
-      else this._stopPolling();
+      if (document.visibilityState === "visible" && this.visivel) this._iniciarVerificacao();
+      else this._pararVerificacao();
     });
   }
 
@@ -198,14 +198,14 @@ export class DistribuicaoView extends View {
       if (this.searchInput) this.searchInput.value = params.busca;
     }
     if (this.painel) {
-      this._renderAgents();
+      this._desenharAgentes();
     }
   }
 
   async refresh(manual = false) {
     const systems = await this.swr("sistemas", () => this.api.get("/sistemas", null, { key: "dist:sistemas" }), (list) => {
       this.systems = list || [];
-      this._fillSystems();
+      this._preencherSistemasDoFormulario();
     });
     this.systems = systems || [];
 
@@ -215,8 +215,8 @@ export class DistribuicaoView extends View {
       (data, { doCache }) => {
         if (!doCache && this.painel) this._avisarRecuperados(this.painel.agentes || [], data.agentes || []);
         this.painel = data;
-        this._renderIndicators();
-        this._renderAgents();
+        this._desenharIndicadores();
+        this._desenharAgentes();
       }
     );
 
@@ -225,16 +225,16 @@ export class DistribuicaoView extends View {
       () => this.api.get("/versoes/logs", { limit: 300 }, { key: "dist:logs" }),
       (logs) => {
         this.logs = logs || [];
-        this._renderLogs();
+        this._desenharRegistros();
         notificacoes.sincronizar(this.logs);
       }
     );
 
-    this._startPolling();
+    this._iniciarVerificacao();
     if (manual) avisoRapido.informar("Painel atualizado.");
   }
 
-  _fillSystems() {
+  _preencherSistemasDoFormulario() {
     for (const select of [this.systemFilter, this.logSystem]) {
       const current = select.value;
       select.innerHTML = `<option value="">Todos</option>` + this.systems.map((s) => `<option value="${escaparAtributo(s)}">${escaparHtml(s)}</option>`).join("");
@@ -242,7 +242,7 @@ export class DistribuicaoView extends View {
     }
   }
 
-  _renderIndicators() {
+  _desenharIndicadores() {
     const agents = this.painel?.agentes || [];
     const attention = agents.filter((agent) => ["erro", "pendencias", "desatualizado", "aguardando_autorizacao", "aguardando_autorizacao_demorada"].includes(agent.situacao)).length;
     const aligned = agents.filter((agent) => agent.versaoAlvo && agent.ultimaVersao === agent.versaoAlvo).length;
@@ -260,7 +260,7 @@ export class DistribuicaoView extends View {
       </div>`).join("")}`;
   }
 
-  _filteredLogGroups() {
+  _gruposDeRegistroFiltrados() {
     const logs = this.filtroSistemaRetorno ? this.logs.filter((log) => log.sistema === this.filtroSistemaRetorno) : this.logs;
     return agruparRetornos(logs).filter((group) => {
       if (this.filtroRetorno !== "todos" && group.resultado.tipo !== this.filtroRetorno) return false;
@@ -270,9 +270,9 @@ export class DistribuicaoView extends View {
     });
   }
 
-  _renderLogs() {
+  _desenharRegistros() {
     const list = this.container.querySelector('[data-role="logs"]');
-    const groups = this._filteredLogGroups();
+    const groups = this._gruposDeRegistroFiltrados();
     list.replaceChildren();
     this.container.querySelector('[data-role="logs-count"]').textContent =
       plural(groups.length, "agente");
@@ -334,8 +334,8 @@ export class DistribuicaoView extends View {
     }
   }
 
-  async _copyReport() {
-    const logs = this._filteredLogGroups().flatMap((group) => group.logs);
+  async _copiarRelatorio() {
+    const logs = this._gruposDeRegistroFiltrados().flatMap((group) => group.logs);
     if (!logs.length) {
       avisoRapido.informar("Não há retornos nesse filtro para copiar.");
       return;
@@ -345,7 +345,7 @@ export class DistribuicaoView extends View {
     else avisoRapido.erro("Não foi possível copiar o relatório.");
   }
 
-  _renderAgents() {
+  _desenharAgentes() {
     const body = this.container.querySelector('[data-role="agents"]');
     const all = this.painel?.agentes || [];
     const filtered = all.filter((agent) => {
@@ -463,7 +463,7 @@ export class DistribuicaoView extends View {
       pause.className = "btn btn--small btn--ghost";
       pause.textContent = agent.pausado ? "Retomar" : "Pausar";
       pause.setAttribute("aria-label", `${agent.pausado ? "Retomar" : "Pausar"} agente ${agent.empresa}`);
-      pause.addEventListener("click", () => this._toggleAgentPause(agent, pause));
+      pause.addEventListener("click", () => this._alternarPausaDoAgente(agent, pause));
       actions.appendChild(pause);
 
       const remove = document.createElement("button");
@@ -471,13 +471,13 @@ export class DistribuicaoView extends View {
       remove.className = "btn btn--small btn--danger";
       remove.textContent = "Excluir";
       remove.setAttribute("aria-label", `Excluir agente ${agent.empresa}`);
-      remove.addEventListener("click", () => this._removeAgent(agent, remove));
+      remove.addEventListener("click", () => this._removerAgente(agent, remove));
       actions.appendChild(remove);
       body.appendChild(row);
     }
   }
 
-  async _removeAgent(agent, button) {
+  async _removerAgente(agent, button) {
     const confirmed = await Modal.confirm(
       "Excluir agente",
       `Excluir o agente ${agent.empresa}?\n\nTodo o histórico de retornos desse CNPJ será apagado. Se o agente voltar a se comunicar, ele aparecerá novamente no painel.`,
@@ -500,7 +500,7 @@ export class DistribuicaoView extends View {
     }
   }
 
-  async _toggleAgentPause(agent, button) {
+  async _alternarPausaDoAgente(agent, button) {
     const pausar = !agent.pausado;
     const confirmed = await Modal.confirm(
       pausar ? "Pausar agente" : "Retomar agente",
@@ -528,8 +528,8 @@ export class DistribuicaoView extends View {
     }
   }
 
-  _startPolling() {
-    this._stopPolling();
+  _iniciarVerificacao() {
+    this._pararVerificacao();
     const interval = aparencia.ritmoPainel();
     if (!interval) return;
     this._timer = setInterval(() => {
@@ -540,7 +540,7 @@ export class DistribuicaoView extends View {
     }, interval);
   }
 
-  _stopPolling() {
+  _pararVerificacao() {
     if (this._timer) clearInterval(this._timer);
     this._timer = null;
   }
@@ -553,7 +553,7 @@ export class DistribuicaoView extends View {
   }
 
   destroy() {
-    this._stopPolling();
+    this._pararVerificacao();
     super.destroy();
   }
 }

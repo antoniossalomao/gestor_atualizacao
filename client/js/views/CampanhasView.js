@@ -47,10 +47,10 @@ export class CampanhasView extends View {
     this.selecionadaId = salvo.selecionadaId ?? null;
     this.campanhas = [];
     this.detalhe = null;
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     const podeCriar = this.user?.role !== "consulta";
     this.container.innerHTML = String(html`
       <div class="card campanhas">

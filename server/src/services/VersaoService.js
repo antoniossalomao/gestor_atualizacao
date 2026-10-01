@@ -58,12 +58,12 @@ class VersaoService {
 
   /** Lista versões para o painel, convertendo o JSON persistido em array. */
   list() {
-    return this.db.versoes.list().map((item) => this._publicItem(item));
+    return this.db.versoes.list().map((item) => this._itemPublico(item));
   }
 
   /** O que está no ar agora, uma linha por sistema. */
   ativas() {
-    return this.db.versoes.publicadasPorSistema().map((item) => this._publicItem(item));
+    return this.db.versoes.publicadasPorSistema().map((item) => this._itemPublico(item));
   }
 
   /** Devolve os retornos dos agentes, com filtros opcionais. */
@@ -254,14 +254,14 @@ class VersaoService {
           ],
         };
       }
-      const data = this._validate(input);
+      const data = this._validar(input);
       const item = this.db.versoes.insert({
         ...data,
         criadoEm: new Date().toISOString(),
         criadoPor: usuario?.id || null,
       });
       this.historico.registrar(usuario, "criar", "versao", `Versão ${item.versao} de ${item.sistema} criada`);
-      return this._publicItem(item);
+      return this._itemPublico(item);
     } catch (err) {
       // Limpeza de arquivo órfão quando qualquer falha ocorre antes da persistência
       if (file?.path) {
@@ -280,9 +280,9 @@ class VersaoService {
     const atual = this.db.versoes.find(id);
     if (!atual) throw new ErroDeValidacao("Versão não encontrada.");
     if (atual.status === "publicada") throw new ErroDeValidacao("Uma versão publicada não pode ser alterada.");
-    const item = this.db.versoes.update(id, this._validate({ ...atual, ...input }));
-    this.historico.registrar(usuario, "atualizar", "versao", `Versão ${item.versao} de ${item.sistema} atualizada`, { antes: this._publicItem(atual), depois: this._publicItem(item) });
-    return this._publicItem(item);
+    const item = this.db.versoes.update(id, this._validar({ ...atual, ...input }));
+    this.historico.registrar(usuario, "atualizar", "versao", `Versão ${item.versao} de ${item.sistema} atualizada`, { antes: this._itemPublico(atual), depois: this._itemPublico(item) });
+    return this._itemPublico(item);
   }
 
   /**
@@ -315,7 +315,7 @@ class VersaoService {
     if (atual.alcance === "piloto") {
       const item = this.db.versoes.publicarPiloto(id, new Date().toISOString());
       this.historico.registrar(usuario, "publicar", "versao", `Versão piloto ${item.versao} de ${item.sistema} publicada para ${JSON.parse(item.codigosClientesJson || "[]").length} clientes`);
-      return { versao: this._publicItem(item), substituidas: [] };
+      return { versao: this._itemPublico(item), substituidas: [] };
     }
 
     const anteriores = this.db.versoes.publicadasDoSistemaExceto(atual.sistema, id);
@@ -335,7 +335,7 @@ class VersaoService {
         `Versão ${antiga.versao} de ${antiga.sistema} substituída pela ${item.versao}`
       );
     }
-    return { versao: this._publicItem(item), substituidas: anteriores.map((v) => this._publicItem(v)) };
+    return { versao: this._itemPublico(item), substituidas: anteriores.map((v) => this._itemPublico(v)) };
   }
 
   promover(id, usuario) {
@@ -345,7 +345,7 @@ class VersaoService {
     const anteriores = this.db.versoes.publicadasDoSistemaExceto(atual.sistema, id);
     const item = this.db.versoes.promoverPiloto(id, new Date().toISOString(), anteriores.map((v) => v.id));
     this.historico.registrar(usuario, "publicar", "versao", `Versão piloto ${item.versao} de ${item.sistema} promovida para produção geral`);
-    return { versao: this._publicItem(item), substituidas: anteriores.map((v) => this._publicItem(v)) };
+    return { versao: this._itemPublico(item), substituidas: anteriores.map((v) => this._itemPublico(v)) };
   }
 
   rollback(id, usuario) {
@@ -356,7 +356,7 @@ class VersaoService {
     if (!anterior) throw new ErroDeValidacao("Não há versão anterior disponível para rollback.");
     const restaurada = this.db.versoes.rollback(id, anterior.id, new Date().toISOString());
     this.historico.registrar(usuario, "atualizar", "versao", `Rollback de ${atual.sistema}: ${atual.versao} para ${anterior.versao}`);
-    return { versao: this._publicItem(restaurada), substituida: this._publicItem(atual) };
+    return { versao: this._itemPublico(restaurada), substituida: this._itemPublico(atual) };
   }
 
   /**
@@ -386,7 +386,7 @@ class VersaoService {
       "excluir",
       "versao",
       `Versão ${atual.versao} de ${atual.sistema} excluída${eraPublicada ? " (estava publicada -- sistema fica sem versão-alvo)" : ""}`,
-      { antes: this._publicItem(atual), depois: null }
+      { antes: this._itemPublico(atual), depois: null }
     );
     return { ok: true, eraPublicada };
   }
@@ -451,7 +451,7 @@ class VersaoService {
   }
 
   /** Normaliza e valida dados vindos do formulário ou de uma chamada interna. */
-  _validate(input = {}) {
+  _validar(input = {}) {
     const sistema = String(input.sistema || input.system || "").trim();
     if (!sistema) throw new ErroDeValidacao("Escolha a qual sistema esta versão pertence.");
 
@@ -523,7 +523,7 @@ class VersaoService {
     return path.join(this.pastaDosPacotes, safeName);
   }
 
-  _publicItem(item) {
+  _itemPublico(item) {
     const codigosClientes = JSON.parse(item.codigosClientesJson || "[]");
     const metricasPiloto = item.status === "piloto" ? this.db.versoes.adocaoPiloto(item.sistema, item.versao, codigosClientes) : null;
     return { ...item, pacotes: JSON.parse(item.pacotesJson || "[]"), codigosClientes, metricasPiloto };

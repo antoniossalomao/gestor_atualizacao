@@ -32,7 +32,7 @@ export class ClientesView extends View {
     this.busca = salvo.busca || "";
     this.sortBy = ORDEM_INICIAL.sortBy;
     this.sortDir = ORDEM_INICIAL.sortDir;
-    this._buildDom();
+    this._montarDom();
   }
 
   /**
@@ -54,7 +54,7 @@ export class ClientesView extends View {
     this.drawer?.abrir({ foco: this.fields.nome });
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       <form class="card" id="clientes-form" data-role="form-card" hidden novalidate>
         <div class="form-grid form-grid--3">
@@ -177,7 +177,7 @@ export class ClientesView extends View {
         { key: "maquinas", label: "Máquinas", type: "numeric", largura: "92px" },
         { key: "acoes", label: "Ações", largura: "140px", render: (row) => acoesCliente(row, this.user?.role) },
       ],
-      onSelect: (row) => this._loadIntoForm(row),
+      onSelect: (row) => this._carregarNoFormulario(row),
       // Seleção múltipla: marcar um sistema em vários clientes de uma vez
       // (ex.: "esses 8 agora têm NFCe") ou excluir vários era um ciclo de
       // "abrir, editar, salvar" por cliente -- mesma ideia já usada em
@@ -205,12 +205,12 @@ export class ClientesView extends View {
         this.sortDir = dir;
         this.page = 1;
         this._salvarFiltros();
-        this._reloadList();
+        this._recarregarLista();
       },
     });
     this.pagination = new Paginacao(this.container.querySelector('[data-role="pagination"]'), (page) => {
       this.page = page;
-      this._reloadList();
+      this._recarregarLista();
     });
     this.table.container.addEventListener("click", (e) => this._acaoRapida(e));
 
@@ -220,7 +220,7 @@ export class ClientesView extends View {
     const reload = aguardarPausa(() => {
       this.page = 1;
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     }, 200);
     this.searchInput.addEventListener("input", () => {
       this.busca = this.searchInput.value.trim();
@@ -233,7 +233,7 @@ export class ClientesView extends View {
       this.limparFormulario();
       this.drawer.abrir({ foco: this.fields.nome });
     });
-    this.formCard.querySelector('[data-action="toggle-novo-sistema"]').addEventListener("click", () => this._toggleNovoSistema());
+    this.formCard.querySelector('[data-action="toggle-novo-sistema"]').addEventListener("click", () => this._alternarNovoSistema());
     this.formCard.querySelector('[data-action="add-sistema"]').addEventListener("click", () => this.addSistema());
 
     this.addBtn = this.formCard.querySelector('[data-action="add"]');
@@ -260,12 +260,12 @@ export class ClientesView extends View {
 
     this.formCard.addEventListener("submit", (e) => {
       e.preventDefault();
-      this._submit();
+      this._enviar();
     });
     this.updateBtn?.addEventListener("click", () => this.alterarCliente());
     this.deleteBtn?.addEventListener("click", () => this.excluirCliente());
 
-    this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
+    this.on(document, "keydown", (e) => this._aoTeclarGlobal(e));
 
     if (this.user?.role === "consulta") {
       this.toggleFormBtn.hidden = true;
@@ -300,7 +300,7 @@ export class ClientesView extends View {
     const row = this.table.rows.find((item) => String(item.id) === botao.dataset.id);
     if (!row) return;
     if (botao.dataset.rowAction === "editar") {
-      this._loadIntoForm(row);
+      this._carregarNoFormulario(row);
       this.alternarFormulario(true);
     }
     if (botao.dataset.rowAction === "ficha") this.navigate("consulta", { cliente: row.nome });
@@ -309,7 +309,7 @@ export class ClientesView extends View {
     }
   }
 
-  _toggleNovoSistema() {
+  _alternarNovoSistema() {
     const visible = !this.novoSistemaRow.hidden;
     this.novoSistemaRow.hidden = visible;
     if (!visible) {
@@ -329,7 +329,7 @@ export class ClientesView extends View {
       await this._reloadSistemas();
       const cb = [...this.sistemasGrid.querySelectorAll("input[type=checkbox]")].find((el) => el.value === nome);
       if (cb) cb.checked = true;
-      this._toggleNovoSistema();
+      this._alternarNovoSistema();
       avisoRapido.sucesso(`Sistema "${nome}" adicionado.`);
     } catch (err) {
       Modal.alert("Validação", mensagemDeErro(err), "warning");
@@ -414,7 +414,7 @@ export class ClientesView extends View {
       this.cache?.invalidar("sistemas");
       this.cache?.invalidar("clientes:");
       await this._reloadSistemas();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso(
         resultado.clientesAfetados > 0
           ? `Sistema "${sistema}" excluído (desmarcado de ${plural(resultado.clientesAfetados, "cliente")}).`
@@ -427,7 +427,7 @@ export class ClientesView extends View {
 
   async refresh() {
     await this._reloadSistemas();
-    await this._reloadList();
+    await this._recarregarLista();
     await this.swr(
       "clientes:grupos",
       () => this.api.get("/clientes/grupos", null, { key: "clientes:grupos" }),
@@ -435,7 +435,7 @@ export class ClientesView extends View {
     );
   }
 
-  async _reloadList() {
+  async _recarregarLista() {
     this.table.definirRecarregando(true);
     try {
       const resposta = await this.swr(
@@ -455,7 +455,7 @@ export class ClientesView extends View {
 
       if (resposta && resposta.rows.length === 0 && this.page > 1 && resposta.total > 0) {
         this.page -= 1;
-        return this._reloadList();
+        return this._recarregarLista();
       }
     } finally {
       this.table.definirRecarregando(false);
@@ -468,14 +468,14 @@ export class ClientesView extends View {
     this.botaoLimparFiltros.hidden = true;
     this.page = 1;
     this._salvarFiltros();
-    this._reloadList();
+    this._recarregarLista();
   }
 
   _salvarFiltros() {
     prefs.set("clientes:filtros", { busca: this.busca });
   }
 
-  _loadIntoForm(row) {
+  _carregarNoFormulario(row) {
     this.selectedId = row.id;
     this.selectedRevision = row.revisao;
     this.fields.codigo.value = row.codigo || "";
@@ -517,7 +517,7 @@ export class ClientesView extends View {
     new AcessosModal(this.api, { id, nome }).open();
   }
 
-  _readForm() {
+  _lerFormulario() {
     const nome = this.fields.nome.value.trim();
     if (!nome) {
       Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning").then(() => this.fields.nome.focus());
@@ -534,13 +534,13 @@ export class ClientesView extends View {
     };
   }
 
-  _submit() {
+  _enviar() {
     if (this.selectedId == null) this.adicionarCliente();
     else this.alterarCliente();
   }
 
   async adicionarCliente() {
-    const data = this._readForm();
+    const data = this._lerFormulario();
     if (!data) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
@@ -549,7 +549,7 @@ export class ClientesView extends View {
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso("Cliente adicionado.");
     } catch (err) {
       Modal.alert("Validação", mensagemDeErro(err), "warning");
@@ -563,7 +563,7 @@ export class ClientesView extends View {
       Modal.alert("Seleção", "Selecione um cliente na tabela primeiro.", "warning");
       return;
     }
-    const data = this._readForm();
+    const data = this._lerFormulario();
     if (!data) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
@@ -572,7 +572,7 @@ export class ClientesView extends View {
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso("Cliente atualizado.");
     } catch (err) {
       Modal.alert("Validação", mensagemDeErro(err), "warning");
@@ -606,7 +606,7 @@ export class ClientesView extends View {
       await this.api.delete(`/clientes/${this.selectedId}`);
       this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso("Cliente excluído.");
     } catch (err) {
       Modal.alert("Erro", mensagemDeErro(err), "error");
@@ -639,7 +639,7 @@ export class ClientesView extends View {
       const { afetados, total } = await this.api.post("/clientes/adicionar-sistema-lote", { ids, sistema });
       this.table.limparMarcadas();
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso(
         afetados === 0
           ? `Todos os ${plural(total, "cliente selecionado", "clientes selecionados")} já tinham "${sistema}".`
@@ -678,7 +678,7 @@ export class ClientesView extends View {
       this.table.limparMarcadas();
       this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
       avisoRapido.sucesso(`${plural(excluidos, "cliente")} ${excluidos === 1 ? "excluído" : "excluídos"}.`);
     } catch (err) {
       Modal.alert("Erro", mensagemDeErro(err), "error");
@@ -742,7 +742,7 @@ export class ClientesView extends View {
     this.cache?.invalidar("consulta");
   }
 
-  _onGlobalKeydown(e) {
+  _aoTeclarGlobal(e) {
     if (!this.visivel) return;
     if (ehCampoDeTexto(e.target)) return;
     if (e.key === "Delete" && this.selectedId != null) this.excluirCliente();

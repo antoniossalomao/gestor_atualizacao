@@ -29,10 +29,10 @@ export class ResumoView extends View {
     super(container, api, ctx);
     /** Regra da equipe; o /resumo confirma o valor a cada carga (ver _render). */
     this.desatualizadoDias = ctx?.regras?.desatualizadoDias;
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       <div class="stat-tiles">
         ${blocoDeNumero("clientes", "clientes", "Clientes", "Ver clientes")}
@@ -167,10 +167,10 @@ export class ResumoView extends View {
   }
 
   _render(resumo) {
-    this._setStat("clientes", resumo.totalClientes);
-    this._setStat("atualizacoes", resumo.totalAtualizacoes);
-    this._setStat("mes", resumo.mesCount);
-    this._setStat("semAtualizacao", resumo.semAtualizacao.length);
+    this._definirNumero("clientes", resumo.totalClientes);
+    this._definirNumero("atualizacoes", resumo.totalAtualizacoes);
+    this._definirNumero("mes", resumo.mesCount);
+    this._definirNumero("semAtualizacao", resumo.semAtualizacao.length);
     // O limite é regra da equipe e pode ter mudado desde que a tela abriu: o
     // rótulo usa o número com que o servidor MONTOU esta lista, não o que a
     // tela tinha guardado -- os dois não podem se contradizer.
@@ -178,7 +178,7 @@ export class ResumoView extends View {
       this.container.querySelector('[data-stat="semAtualizacao"] [data-role="rotulo"]').textContent =
         rotuloSemAtualizacao(resumo.desatualizadoDias);
     }
-    this._setDelta("mes", tendenciaMensal(resumo.mesAtualComparavel, resumo.mesAnteriorComparavel));
+    this._definirVariacao("mes", tendenciaMensal(resumo.mesAtualComparavel, resumo.mesAnteriorComparavel));
 
     const semAtualizacaoTile = this.container.querySelector('[data-stat="semAtualizacao"]');
     semAtualizacaoTile.classList.toggle("is-alert", resumo.semAtualizacao.length > 0);
@@ -287,12 +287,12 @@ export class ResumoView extends View {
     return botao;
   }
 
-  _setStat(key, value) {
+  _definirNumero(key, value) {
     this.container.querySelector(`[data-stat="${key}"] .stat-tile__value`).textContent = String(value);
   }
 
   /** @param {{pct: number, tendencia: "alta"|"baixa"|"neutra"}|null} tendencia */
-  _setDelta(key, tendencia) {
+  _definirVariacao(key, tendencia) {
     const el = this.container.querySelector(`[data-stat="${key}"] [data-role="delta"]`);
     if (!tendencia) {
       el.hidden = true;

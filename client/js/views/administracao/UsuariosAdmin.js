@@ -29,10 +29,10 @@ import { legendaPapeis, linhaUsuario } from "../../templates/administracao.js";
 export class UsuariosAdmin extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       ${cabecalhoSecao({
         titulo: "Pessoas e permissões",
