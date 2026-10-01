@@ -31,11 +31,11 @@ function garantirListenerGlobal() {
  * existe na lista (o campo continua sendo texto livre) -- a lista é uma
  * sugestão para agilizar, nunca uma trava.
  *
- * Mudanças em relação à primeira versão:
+ * Comportamento:
  *
- *  - **só abre a partir de 1 caractere.** Antes, focar o campo despejava a
- *    lista inteira de clientes (cortada em 50). Com centenas de cadastros, era
- *    um menu enorme que não ajudava a escolher nada;
+ *  - **só abre a partir de 1 caractere.** Focar o campo despejaria a lista
+ *    inteira de clientes (cortada em 50): com centenas de cadastros, um menu
+ *    enorme que não ajuda a escolher nada;
  *  - **destaca o trecho que casou**, para ficar claro POR QUE cada sugestão
  *    está ali;
  *  - **prioriza quem começa com o que foi digitado** -- digitar "san" deve

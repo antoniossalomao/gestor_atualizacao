@@ -200,7 +200,7 @@ export class ConsultaView extends View {
     `;
     this.detailBox.querySelector(".consulta-detail__name").textContent = cliente.nome;
 
-    // Cabeçalho com código, cidade e grupo (quando preenchido). CNPJ removido da ficha (I15).
+    // Cabeçalho com código, cidade e grupo (quando preenchido). CNPJ removido da ficha.
     const subtitulos = [];
     if (cliente.codigo) subtitulos.push(`Código: ${cliente.codigo}`);
     if (cliente.cidade) subtitulos.push(`Cidade: ${cliente.cidade}`);
@@ -386,7 +386,7 @@ export class ConsultaView extends View {
       container.appendChild(secao);
     }
 
-    // 3. Telemetria de Agentes em bloco próprio (I15)
+    // 3. Telemetria de Agentes em bloco próprio
     const nomeNorm = (cliente.nome || "").trim().toLowerCase();
     const agentes = (painelVersoes?.agentes || []).filter((a) => {
       if (a.empresa && a.empresa.trim().toLowerCase() === nomeNorm) return true;

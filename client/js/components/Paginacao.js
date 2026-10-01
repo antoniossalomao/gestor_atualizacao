@@ -2,16 +2,12 @@
  * Controles de paginação (Primeira/Anterior/Próxima/Última + "Página X de Y"
  * + faixa de registros), reaproveitados pelas telas com listas grandes.
  *
- * A primeira versão refazia o `innerHTML` inteiro a cada mudança de página.
- * O efeito colateral era chato de um jeito difícil de nomear: o botão
- * "Próxima" que você acabou de clicar deixava de existir, então o foco caía no
- * `<body>` -- e paginar apertando `Enter` repetidamente (a forma natural de
- * varrer uma lista) simplesmente não funcionava, o segundo `Enter` não ia para
- * lugar nenhum.
- *
- * Agora os nós são criados uma vez e só os rótulos e o estado `disabled`
- * mudam. O botão continua sendo o mesmo elemento, então o foco fica onde
- * estava.
+ * Os nós são criados uma vez e só os rótulos e o estado `disabled` mudam.
+ * Refazer o `innerHTML` a cada página faria o botão "Próxima" clicado deixar
+ * de existir, e o foco cairia no `<body>`: paginar apertando `Enter`
+ * repetidamente (a forma natural de varrer uma lista) não funcionaria, porque
+ * o segundo `Enter` não iria para lugar nenhum. Com o mesmo elemento, o foco
+ * fica onde estava.
  */
 export class Paginacao {
   /** @param {HTMLElement} container @param {(page: number) => void} onChange */

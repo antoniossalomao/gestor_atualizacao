@@ -2,13 +2,12 @@
  * Protege um botão contra clique duplo E dá o retorno visual de que algo está
  * acontecendo.
  *
- * A primeira versão só fazia `button.disabled = true`. Isso resolvia a
- * duplicação (dois cliques em "Adicionar" criavam dois registros, porque a
- * primeira resposta ainda não tinha voltado), mas não resolvia a percepção:
- * numa exportação de três segundos, o botão apenas ficava cinza e parado, o
- * que se lê como "não funcionou" -- e a pessoa clica de novo, ou vai embora.
- *
- * Agora o botão também ganha um spinner. Dois detalhes de implementação que
+ * Só `button.disabled = true` resolve a duplicação (dois cliques em
+ * "Adicionar" criavam dois registros, porque a primeira resposta ainda não
+ * tinha voltado), mas não a percepção: numa exportação de três segundos, o
+ * botão apenas ficaria cinza e parado, o que se lê como "não funcionou" -- e
+ * a pessoa clica de novo, ou vai embora. Por isso o botão também ganha um
+ * spinner. Dois detalhes de implementação que
  * importam:
  *
  *  - a **largura é fixada** antes de trocar o conteúdo, senão o botão encolhe

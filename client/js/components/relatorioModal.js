@@ -5,7 +5,7 @@ import { avisoRapido } from "./AvisosRapidos.js";
 import { aparencia } from "../app/aparencia.js";
 
 /**
- * Janela de relatórios com abas curtas, prévia rolável e rodapé estável (I09).
+ * Janela de relatórios com abas curtas, prévia rolável e rodapé estável.
  * Prévia, cópia e impressão usam exatamente o mesmo conteúdo.
  */
 export function abrirRelatorio({ tipos, gerar, periodo = false }) {
@@ -21,7 +21,7 @@ export function abrirRelatorio({ tipos, gerar, periodo = false }) {
   const preferida = aparencia.relatorioAba();
   let tipoAtivo = tipos.some((t) => t.valor === preferida) ? preferida : tipos[0]?.valor || "atualizacao";
 
-  // Rótulos curtos recomendados no planejamento (I09)
+  // Rótulos curtos das abas
   const rotulosAba = {
     atualizacao: "Atualização",
     cliente: "Cliente",

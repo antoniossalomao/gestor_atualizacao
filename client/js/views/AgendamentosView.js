@@ -105,7 +105,7 @@ export class AgendamentosView extends View {
       </form>
 
       <div class="card agendamentos-board-card">
-        <!-- Toolbar: todos os controles na mesma barra (I10) -->
+        <!-- Toolbar: todos os controles na mesma barra -->
         <div class="toolbar">
           <div class="field">
             <label class="field__label" for="age-busca">Buscar</label>
@@ -138,7 +138,7 @@ export class AgendamentosView extends View {
           <button type="button" class="btn btn--accent btn--small" data-action="novo-agendamento">+ Novo Agendamento</button>
         </div>
 
-        <!-- Filtros rápidos discretos (I10) -->
+        <!-- Filtros rápidos discretos -->
         <div class="filtros-rapidos" data-role="filtros-rapidos" aria-label="Filtros rápidos">
           <button type="button" class="filtro-rapido" data-filtro-rapido="minhas">Minhas tarefas</button>
           <button type="button" class="filtro-rapido" data-filtro-rapido="hoje">Hoje</button>
@@ -203,7 +203,7 @@ export class AgendamentosView extends View {
 
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
-    // -- Filtros rápidos (I10) --
+    // -- Filtros rápidos --
     // Cada botão aplica um recorte semântico claro sem exigir que a pessoa
     // saiba qual campo ajustar. "Minhas tarefas" usa o nome do usuário logado;
     // "Hoje" / "Atrasadas" filtram pela data da tarefa. "Arquivadas" é um

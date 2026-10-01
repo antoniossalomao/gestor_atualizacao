@@ -11,18 +11,17 @@ const ATRASO_REFRESH_MS = 180;
  * "text" (padrão), "date" (dd/mm/aaaa) ou "numeric" -- controla como a coluna
  * é comparada ao clicar no cabeçalho.
  *
- * Três coisas foram reescritas em relação à primeira versão:
+ * Três decisões:
  *
- * **1. Render incremental.** Antes, clicar numa linha para selecioná-la
- * reconstruía o `<tbody>` inteiro -- 50 linhas × 9 colunas recriadas do zero
- * para trocar uma classe CSS. Isso custava um "pisca" visível e perdia a
- * posição de rolagem. Agora a seleção só liga/desliga a classe nas duas linhas
- * envolvidas, e `definirLinhas` reaproveita as `<tr>` existentes quando a
- * quantidade bate, atualizando só o texto que mudou.
+ * **1. Render incremental.** Reconstruir o `<tbody>` inteiro ao selecionar uma
+ * linha (50 linhas × 9 colunas só para trocar uma classe CSS) causaria um
+ * "pisca" visível e perderia a posição de rolagem. A seleção só liga/desliga a
+ * classe nas duas linhas envolvidas, e `definirLinhas` reaproveita as `<tr>`
+ * existentes quando a quantidade bate, atualizando só o texto que mudou.
  *
- * **2. Teclado.** As linhas eram `<tr>` com `onclick` -- invisíveis para quem
- * navega por teclado. Agora a tabela tem um "cursor" (`↑`/`↓`) e `Enter`
- * seleciona, no padrão de grade que leitores de tela reconhecem.
+ * **2. Teclado.** Linhas `<tr>` só com `onclick` são invisíveis para quem
+ * navega por teclado. A tabela tem um "cursor" (`↑`/`↓`) e `Enter` seleciona,
+ * no padrão de grade que leitores de tela reconhecem.
  *
  * **3. `aria-sort` e cabeçalhos como botão**, para o estado de ordenação ser
  * anunciado em vez de existir só como uma setinha desenhada.

@@ -27,16 +27,17 @@ import { chipsFiltroAtualizacoes, chipsHtml } from "../templates/filtros.js";
  * Aba Atualizações: histórico de atualizações de sistemas por cliente.
  * Cadastro, edição, busca, importação/exportação de planilha (.xlsx).
  *
- * O que mudou nesta revisão:
- *  - virou um `<form>` de verdade (submit nativo, validação do navegador);
- *  - `Escape` não destrói mais o que foi digitado sem volta: limpa e oferece
+ * Decisões de comportamento:
+ *  - o formulário é um `<form>` de verdade (submit nativo, validação do
+ *    navegador);
+ *  - `Escape` não destrói o que foi digitado sem volta: limpa e oferece
  *    "Desfazer" por alguns segundos;
  *  - excluir não pede confirmação modal -- exclui e oferece "Desfazer", que é
  *    a proteção que de fato protege (confirmação a gente clica no automático);
  *  - busca e filtro sobrevivem à troca de aba;
  *  - exportar respeita os filtros da tela;
  *  - o listener global de `Delete` é registrado por `this.on(...)` e some no
- *    `destroy()` -- antes vazava e podia excluir por uma tela fantasma.
+ *    `destroy()`; sem isso vazaria e poderia excluir por uma tela fantasma.
  */
 export class AtualizacoesView extends View {
   constructor(container, api, ctx) {
@@ -99,7 +100,7 @@ export class AtualizacoesView extends View {
           </div>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
-          <!-- Botão que abre/fecha o painel de filtros de data (I07) -->
+          <!-- Botão que abre/fecha o painel de filtros de data -->
           <button type="button" class="btn btn--ghost btn--small" data-action="toggle-filtros" aria-expanded="false" aria-controls="atu-filtros-painel">Filtros</button>
           <!-- Dropdown de relatórios -->
           <div class="menu-acoes" data-role="menu-relatorios">
@@ -109,7 +110,7 @@ export class AtualizacoesView extends View {
               <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio" disabled>${iconeHtml("copiar")} Relatório do cliente</button>
             </div>
           </div>
-          <!-- Mais ações: exportar e importar (I08) -->
+          <!-- Mais ações: exportar e importar -->
           <div class="menu-acoes" data-role="menu-acoes">
             <button type="button" class="btn btn--ghost btn--small" data-action="toggle-mais-acoes" aria-haspopup="menu" aria-expanded="false">Mais ações ▾</button>
             <div class="menu-acoes__lista" role="menu" hidden>
@@ -122,7 +123,7 @@ export class AtualizacoesView extends View {
           <button type="button" class="btn btn--accent btn--small" data-action="nova-atualizacao">+ Nova Atualização</button>
         </div>
 
-        <!-- Painel de filtros de data (recolhível — I07) -->
+        <!-- Painel de filtros de data (recolhível) -->
         <div class="filtros-painel" id="atu-filtros-painel" hidden>
           <div class="field field--periodo">
             <label class="field__label" for="atu-desde">De</label>
@@ -277,7 +278,7 @@ export class AtualizacoesView extends View {
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
-    // -- painel de filtros recolhível (I07) --
+    // -- painel de filtros recolhível --
     this.painelFiltros = this.container.querySelector("#atu-filtros-painel");
     this.btnFiltros = this.container.querySelector('[data-action="toggle-filtros"]');
     this.btnFiltros.addEventListener("click", () => this._togglePainelFiltros());
@@ -366,7 +367,7 @@ export class AtualizacoesView extends View {
     this.updateBtn?.addEventListener("click", () => this.alterarAtualizacao());
     this.deleteBtn?.addEventListener("click", () => this.excluirAtualizacao());
 
-    // -- menus dropdown (I08) --
+    // -- menus dropdown --
     this._configurarMenuDropdown(
       this.container.querySelector('[data-role="menu-relatorios"]'),
       (acao, fechar) => {

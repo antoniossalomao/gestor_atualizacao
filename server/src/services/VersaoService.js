@@ -18,12 +18,12 @@ const HORAS_ATE_PENDENTE_DEMORADO = 24;
  * publicada / substituída e monta o contrato consumido pelo Worker C#.
  * Nenhum controller ou view deve duplicar essas regras.
  *
- * Três mudanças estruturais em relação à primeira versão:
+ * Três decisões estruturais:
  *
- * **1. Toda versão pertence a um sistema.** Antes não havia esse campo, e
- * `check()` devolvia "a última publicada" sem olhar sistema nenhum -- o
- * agente do B_NFE podia baixar e instalar o pacote do B_VENDAS. Agora cada
- * sistema tem sua própria linha do tempo.
+ * **1. Toda versão pertence a um sistema.** Sem isso, `check()` devolveria "a
+ * última publicada" sem olhar sistema nenhum -- o agente do B_NFE poderia
+ * baixar e instalar o pacote do B_VENDAS. Cada sistema tem sua própria linha
+ * do tempo.
  *
  * **2. Publicar substitui a anterior do mesmo sistema.** Só existe uma versão
  * no ar por sistema, sempre. A anterior vira `substituida` (e não some do

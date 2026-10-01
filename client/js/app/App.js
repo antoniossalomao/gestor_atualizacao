@@ -91,14 +91,12 @@ const TABS = [
  * cada View viva (só escondida) para não perder o que o usuário estava
  * digitando ao dar uma olhada em outra tela.
  *
- * O que ela ganhou nesta revisão:
+ * O que ela cuida:
  *  - **rota na URL** (`#/clientes`), então recarregar mantém a tela e dá para
  *    mandar link de uma aba específica;
  *  - **cache compartilhado** entre as views (`CacheSwr`), que é o que faz a
  *    troca de aba ser instantânea;
- *  - **título de verdade** (`<h1>`) que muda conforme a aba -- antes o
- *    cabeçalho não tinha `h1` nenhum, e a regra de CSS que o estilizava
- *    apontava para um elemento que nunca era criado;
+ *  - **título de verdade** (`<h1>`) que muda conforme a aba;
  *  - **paleta de comandos**, **atalhos numerados** e **tema claro/escuro**;
  *  - **`destroy()` nas views**, para os listeners globais delas não vazarem
  *    quando a sessão expira.
@@ -394,11 +392,10 @@ export class App {
           <div class="app-header__actions">
             <!--
               A busca do cabeçalho não é um campo: é um botão com cara de
-              campo, e o que ele abre é a paleta de comandos. O Ctrl+K existe
-              desde a primeira versão e não aparecia em lugar nenhum da tela --
-              atalho que não aparece é atalho que só quem escreveu o código
-              usa. O estilo dele já estava no CSS há tempos, inclusive o que
-              ele vira no tablet (".app-header__search"); faltava o botão.
+              campo, e o que ele abre é a paleta de comandos. Mostrar o Ctrl+K
+              aqui é o que o torna descobrível: atalho que não aparece é atalho
+              que só quem escreveu o código usa. No tablet o estilo dele muda
+              (".app-header__search").
             -->
             <button type="button" class="btn btn--small app-header__search" data-action="buscar"
                     aria-label="Buscar telas, clientes e ações (Ctrl+K)">

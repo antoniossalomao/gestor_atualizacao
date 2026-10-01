@@ -1773,7 +1773,7 @@ select {
   background: rgba(0, 0, 0, 0.15);
 }
 
-/* Painel de filtros recolhível (I07 — datas e presets ficam aqui) */
+/* Painel de filtros recolhível (datas e presets ficam aqui) */
 .filtros-painel {
   display: flex;
   align-items: flex-end;
@@ -1788,7 +1788,7 @@ select {
   width: 132px;
 }
 
-/* Menu dropdown de ações (I08 — "Mais ações") */
+/* Menu dropdown de ações ("Mais ações") */
 .menu-acoes {
   position: relative;
   display: inline-flex;
@@ -1837,7 +1837,7 @@ select {
   opacity: 0.75;
 }
 
-/* Filtros rápidos discretos (I10 — Agendamentos) */
+/* Filtros rápidos discretos (Agendamentos) */
 .filtros-rapidos {
   display: flex;
   align-items: center;

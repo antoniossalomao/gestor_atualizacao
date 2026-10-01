@@ -3,9 +3,8 @@ import { Modal } from "../components/Modal.js";
 /**
  * Lista de atalhos de teclado, aberta com `?`.
  *
- * O app já tinha atalhos (`Delete` exclui o selecionado, `Enter` salva,
- * `Escape` limpa) desde a primeira versão -- mas em lugar nenhum eles eram
- * mencionados. Um atalho que ninguém descobre é código morto: ou aparece numa
+ * O app tem atalhos (`Delete` exclui o selecionado, `Enter` salva, `Escape`
+ * limpa), e um atalho que ninguém descobre é código morto: ou aparece numa
  * lista, ou não existe na prática.
  */
 /**

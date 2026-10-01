@@ -20,7 +20,7 @@ const ICONES = { success: "check", error: "alerta", info: "relogio" };
  * Avisos rápidos no canto da tela ("Registro salvo.", etc.), sem travar a
  * interação.
  *
- * O que mudou em relação à primeira versão, e por quê:
+ * Decisões de comportamento, e por quê:
  *
  *  - **Fecha com animação** em vez de sumir do DOM de uma vez. Um elemento que
  *    desaparece instantaneamente é lido como "piscou/bugou"; deslizar para
