@@ -36,7 +36,7 @@ import { avisoRapido } from "../../components/AvisosRapidos.js";
  *  6. Sobre e ajuda: Versão e novidades, como usar cada tela, atalhos, como a situação é calculada e suporte.
  *
  * @param {{
- *   abasDoMenu: Array<{key: string, label: string}>,
+ *   abasDoMenu: Array<{key: string, label: string, icone?: any, descricao?: string}>,
  *   regras?: {prazoVersaoDias?: number},
  *   versao?: () => string | null,
  *   atualizadorHabilitado: boolean,

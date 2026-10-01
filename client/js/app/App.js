@@ -587,7 +587,7 @@ export class App {
         // Só as Configurações usam estes -- são as partes do shell que ela
         // mexe (o menu lateral, o cabeçalho com o nome) sem sair procurando
         // elementos pela tela e adivinhando como cada um se comporta.
-        abasDoMenu: this.tabsNoMenu.map((t) => ({ key: t.key, label: t.label })),
+        abasDoMenu: this.tabsNoMenu.map((t) => ({ key: t.key, label: t.label, icone: t.icon, descricao: t.descricao })),
         definirSidebar: (recolhida) => this._definirSidebar(recolhida),
         sincronizarPreferencias: () => this._sincronizarComPreferencias(),
         aoMudarNome: (nome) => this._aoMudarNome(nome),

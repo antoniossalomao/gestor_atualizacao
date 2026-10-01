@@ -14,6 +14,7 @@ import { definirAbas, chavesDaAba } from "./configuracoes/ajustes.js";
 import { SecaoAjustes } from "./configuracoes/SecaoAjustes.js";
 import { ContaConfig } from "./configuracoes/ContaConfig.js";
 import { RegrasEquipeConfig } from "./configuracoes/RegrasEquipeConfig.js";
+import { SobreAjuda } from "./configuracoes/SobreAjuda.js";
 
 /**
  * Tela Configurações -- as preferências de quem está usando.
@@ -196,10 +197,21 @@ export class ConfiguracoesView extends View {
         navigate: this.navigate,
       });
     }
-    return new SecaoAjustes(painel, aba, {
+    const acoes = {
       aoAplicarPerfil: (valor) => this._aplicarPerfil(valor),
       aoRestaurarSecao: (a) => this._restaurarSecao(a),
-    });
+    };
+    if (key === "ajuda") {
+      return new SobreAjuda(painel, aba, {
+        usuario: this.user,
+        navigate: this.navigate,
+        abasDoMenu: this.ctx.abasDoMenu || [],
+        regras: this.ctx.regras || {},
+        versao: this.ctx.versao || (() => null),
+        acoes,
+      });
+    }
+    return new SecaoAjustes(painel, aba, acoes);
   }
 
 

@@ -3511,6 +3511,466 @@ table.data-table {
   background: var(--cor-superficie-hover);
 }
 
+/* -- Configurações > Sobre e ajuda --
+   Desenho próprio, e não o das linhas de ajuste: ajuda é para ler, e
+   quarenta blocos de "título + texto cinza" de mesmo peso viravam uma
+   parede (o porquê inteiro está em js/templates/sobre.js). */
+
+.sobre {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: var(--sp-5);
+  align-items: start;
+}
+.sobre__conteudo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+/* Rolar até uma seção não pode esconder o título dela atrás do cabeçalho
+   fixo do app. */
+.sobre__conteudo > section {
+  scroll-margin-top: 88px;
+}
+.sobre__conteudo > section:focus {
+  outline: none;
+}
+
+.sobre__indice {
+  position: sticky;
+  top: 88px;
+  padding-left: var(--sp-3);
+  border-left: 1px solid var(--cor-borda);
+}
+.sobre__indice-titulo {
+  display: block;
+  margin-bottom: var(--sp-2);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-forte);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sobre__indice ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sobre__indice button {
+  position: relative;
+  width: 100%;
+  padding: 5px var(--sp-2);
+  border: 0;
+  border-radius: var(--raio-pequeno);
+  background: none;
+  color: var(--cor-texto-sub);
+  font: inherit;
+  font-size: var(--txt-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.sobre__indice button:hover {
+  background: var(--cor-superficie-hover);
+  color: var(--cor-texto);
+}
+/* A marca da seção atual fica em cima da linha do índice, como um cursor. */
+.sobre__indice button.is-atual {
+  color: var(--cor-accent);
+  font-weight: var(--peso-forte);
+}
+.sobre__indice button.is-atual::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: calc(-1 * var(--sp-3) - 1px);
+  width: 2px;
+  border-radius: 2px;
+  background: var(--cor-accent);
+}
+
+/* O alvo da busca acende como as linhas de ajuste. */
+.sobre [data-ajuste].is-destacado {
+  border-radius: var(--raio-pequeno);
+  animation: cfg-linha-destaque 2s ease-out;
+}
+
+/* Cartão do topo: o que é, e que versão. */
+.sobre-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  padding: var(--sp-5) var(--sp-6);
+  background:
+    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--cor-accent) 10%, transparent), transparent 60%),
+    var(--card-gradiente);
+}
+.sobre-hero:focus {
+  outline: none;
+}
+.sobre-hero__marca {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--cor-accent) 30%, transparent);
+}
+.sobre-hero__marca svg {
+  width: 36px;
+  height: 36px;
+}
+.sobre-hero__texto {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.sobre-hero__texto h3 {
+  margin: 0;
+  font: var(--peso-extra) var(--txt-xl) / 1.2 var(--fonte-display);
+  letter-spacing: -0.02em;
+}
+.sobre-hero__texto p {
+  margin: var(--sp-1) 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+.sobre-hero__fatos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  font-size: var(--txt-sm);
+}
+.sobre-hero__acoes {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sp-2);
+}
+.sobre-hero__acoes .btn svg,
+.sobre-tela__corpo .btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sobre-secao {
+  padding-bottom: var(--sp-5);
+}
+
+/* Novidades: uma linha do tempo, a data na coluna da esquerda e uma só vez. */
+.sobre-tempo {
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sobre-tempo__grupo {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--sp-4);
+}
+.sobre-tempo__data {
+  padding-top: 1px;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--peso-forte);
+}
+.sobre-tempo__itens {
+  margin: 0;
+  padding: 0 0 0 var(--sp-4);
+  border-left: 2px solid var(--cor-borda);
+  list-style: none;
+}
+.sobre-tempo__item {
+  position: relative;
+  padding-bottom: var(--sp-4);
+}
+.sobre-tempo__item::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: calc(-1 * var(--sp-4) - 6px);
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--cor-superficie);
+  border-radius: 50%;
+  background: var(--cor-accent);
+}
+.sobre-tempo__item strong {
+  display: block;
+  font-size: var(--txt-base);
+}
+.sobre-tempo__item p {
+  margin: 2px 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  line-height: 1.5;
+}
+.sobre-tempo__mais {
+  margin-left: calc(96px + var(--sp-4));
+}
+
+/* Telas: uma grade de cartões que abrem no lugar. */
+.sobre-telas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  align-items: start;
+}
+.sobre-tela {
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+  transition: border-color var(--transicao), box-shadow var(--transicao);
+}
+.sobre-tela:hover,
+.sobre-tela[open] {
+  border-color: var(--card-borda-hover);
+}
+.sobre-tela[open] {
+  box-shadow: var(--sombra-card);
+}
+.sobre-tela summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--raio);
+  cursor: pointer;
+  list-style: none;
+}
+.sobre-tela summary::-webkit-details-marker {
+  display: none;
+}
+.sobre-tela summary:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: 2px;
+}
+.sobre-tela__icone {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+.sobre-tela__icone svg {
+  width: 18px;
+  height: 18px;
+}
+.sobre-tela__textos {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sobre-tela__textos strong {
+  font-size: var(--txt-base);
+}
+.sobre-tela__textos span {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  line-height: 1.45;
+}
+.sobre-tela__seta {
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--cor-texto-fraco);
+  transition: transform var(--transicao);
+}
+.sobre-tela__seta svg {
+  width: 14px;
+  height: 14px;
+}
+.sobre-tela[open] .sobre-tela__seta {
+  transform: rotate(90deg);
+}
+.sobre-tela__corpo {
+  padding: 0 var(--sp-3) var(--sp-3) calc(32px + 2 * var(--sp-3));
+}
+.sobre-tela__corpo p {
+  margin: 0 0 var(--sp-3);
+  color: var(--cor-texto);
+  font-size: var(--txt-sm);
+  line-height: 1.55;
+}
+
+/* Situações: a mesma bolinha colorida do Resumo, e as regras embaixo. */
+.sobre-situacoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--sp-3);
+  margin: var(--sp-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sobre-situacao {
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+}
+.sobre-situacao__nome {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: var(--peso-forte);
+}
+.sobre-situacao p,
+.sobre-regra p {
+  margin: var(--sp-1) 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  line-height: 1.5;
+}
+/* Fora da conta (sem versão oficial, componente fixo): um anel, e não uma
+   bolinha cheia -- não é uma situação boa nem ruim, é "não se aplica". */
+.situacao__marca.is-fora {
+  border: 2px solid var(--cor-texto-fraco);
+  background: transparent;
+}
+.sobre-regras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--raio);
+  background: var(--cor-fundo-alt);
+}
+.sobre-regra strong {
+  font-size: var(--txt-sm);
+}
+
+/* Atalhos: um bloco por grupo, em colunas de jornal. Numa grade, o grupo
+   comprido (Tabelas) ia para baixo do primeiro e deixava um buraco ao lado;
+   em colunas, os grupos se acomodam e as duas terminam quase na mesma altura. */
+.sobre-atalhos {
+  columns: 2 380px;
+  column-gap: var(--sp-6);
+  margin-top: var(--sp-2);
+}
+.sobre-atalhos__grupo {
+  break-inside: avoid;
+  padding-top: var(--sp-3);
+}
+.sobre-atalhos__grupo h4 {
+  margin: 0 0 var(--sp-1);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-2xs);
+  font-weight: var(--peso-forte);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sobre-atalhos .cfg-atalhos {
+  grid-template-columns: minmax(0, 1fr);
+}
+.sobre-atalhos .cfg-atalhos__linha dt {
+  flex: 0 0 120px;
+}
+
+/* Suporte: dois caminhos, lado a lado. */
+.sobre-suporte {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+.sobre-suporte__item {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+}
+.sobre-suporte__item strong {
+  font-size: var(--txt-base);
+}
+.sobre-suporte__item p {
+  margin: var(--sp-1) 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  line-height: 1.5;
+}
+.sobre-suporte__icone {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-sub);
+}
+.sobre-suporte__icone svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Sem espaço para o índice ao lado, ele vira uma fileira de atalhos em cima. */
+@media (max-width: 1100px) {
+  .sobre {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sobre__indice {
+    position: static;
+    order: -1;
+    padding-left: 0;
+    border-left: 0;
+  }
+  .sobre__indice-titulo {
+    display: none;
+  }
+  .sobre__indice ul {
+    flex-direction: row;
+    gap: var(--sp-2);
+    overflow-x: auto;
+  }
+  .sobre__indice button {
+    width: auto;
+    padding: 5px var(--sp-3);
+    border: 1px solid var(--cor-borda);
+    border-radius: var(--raio-pilula);
+    white-space: nowrap;
+  }
+  .sobre__indice button.is-atual::before {
+    content: none;
+  }
+}
+@media (max-width: 760px) {
+  .sobre-hero {
+    flex-wrap: wrap;
+    padding: var(--sp-4);
+  }
+  .sobre-hero__acoes {
+    justify-content: flex-start;
+  }
+  .sobre-tempo__grupo {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-2);
+  }
+  .sobre-tempo__mais {
+    margin-left: 0;
+  }
+  .sobre-atalhos {
+    columns: 1;
+  }
+}
+
 /* Numa tela estreita a prévia desce para baixo dos ajustes, e cada linha
    empilha o rótulo em cima do controle: rótulo e controle lado a lado num
    celular deixam os dois espremidos. */

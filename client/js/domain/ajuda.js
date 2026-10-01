@@ -81,10 +81,34 @@ export const NOVIDADES = [
 ];
 
 /**
+ * As novidades agrupadas por data, na ordem em que estão na lista (a mais
+ * nova primeiro). A aba Sobre mostra uma linha do tempo: seis itens com a
+ * mesma data repetida seis vezes era ruído que escondia o que importa, o
+ * título de cada um.
+ * @param {Array<{data: string, titulo: string, texto: string}>} novidades
+ * @returns {Array<{data: string, itens: Array<{data: string, titulo: string, texto: string, indice: number}>}>}
+ */
+export function agruparNovidades(novidades) {
+  /** @type {Array<{data: string, itens: Array<{data: string, titulo: string, texto: string, indice: number}>}>} */
+  const grupos = [];
+  novidades.forEach((n, indice) => {
+    const ultimo = grupos[grupos.length - 1];
+    if (ultimo && ultimo.data === n.data) ultimo.itens.push({ ...n, indice });
+    else grupos.push({ data: n.data, itens: [{ ...n, indice }] });
+  });
+  return grupos;
+}
+
+/**
  * A regra de situação (ADR-0013, services/situacaoVersao.js no servidor) em
  * palavras, com o prazo que a equipe usa hoje.
+ *
+ * `tom` é a cor com que a situação aparece no resto do app (a bolinha do
+ * Resumo, o selo da ficha): a legenda da ajuda precisa ter a MESMA cor, ou
+ * ensina a ler uma tela que não existe. As duas últimas entradas não são
+ * situações, são regras de como elas se combinam -- por isso `tom: null`.
  * @param {number | null | undefined} prazoDias `prazoVersaoDias` das regras públicas
- * @returns {Array<{titulo: string, texto: string}>}
+ * @returns {Array<{titulo: string, texto: string, tom: "boa"|"neutra"|"alta"|"fora"|null}>}
  */
 export function explicacaoSituacoes(prazoDias) {
   const n = Number.isInteger(prazoDias) && /** @type {number} */ (prazoDias) >= 0 ? /** @type {number} */ (prazoDias) : PRAZO_PADRAO;
@@ -92,32 +116,39 @@ export function explicacaoSituacoes(prazoDias) {
   return [
     {
       titulo: "Em dia",
+      tom: "boa",
       texto: "A última atualização do cliente no sistema é da data da versão oficial ou posterior.",
     },
     {
       titulo: "Aguardando atualização",
+      tom: "neutra",
       texto: n === 0
         ? "Não acontece com o prazo atual (0 dias): quem não está em dia já é desatualizado."
         : `A última atualização é de menos de ${dias} antes da versão oficial, e a oficial saiu há menos de ${dias}. É o tempo que a equipe tem para chegar ao cliente.`,
     },
     {
       titulo: "Desatualizado",
+      tom: "alta",
       texto: `Passaram ${dias} da versão oficial sem o cliente receber, ou a última atualização é de ${dias} ou mais antes da oficial, ou o cliente nunca foi atualizado no sistema.`,
     },
     {
       titulo: "Sem versão oficial",
+      tom: "fora",
       texto: "O sistema não tem versão oficial cadastrada (Sistemas › Versões oficiais) e não conta contra ninguém.",
     },
     {
       titulo: "Componente fixo",
+      tom: "fora",
       texto: "Sistema marcado como Fixo em Administração › Operação: não tem versão para acompanhar e fica fora da conta.",
     },
     {
       titulo: "Situação do cliente",
+      tom: null,
       texto: "Quem tem B_Vendas é julgado pelo B_Vendas. Sem ele, basta um sistema desatualizado para o cliente ser desatualizado; em dia, só com todos em dia.",
     },
     {
       titulo: "Sistemas que vão junto com o B_Vendas",
+      tom: null,
       texto: "NFCe e Consignado M2 (e o que mais estiver marcado em Administração › Operação) usam a data da última atualização do B_Vendas do cliente.",
     },
   ];

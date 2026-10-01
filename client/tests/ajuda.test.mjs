@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { COMO_USAR_TELAS, NOVIDADES, explicacaoSituacoes } from "../js/domain/ajuda.js";
+import { COMO_USAR_TELAS, NOVIDADES, agruparNovidades, explicacaoSituacoes } from "../js/domain/ajuda.js";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -53,5 +53,28 @@ test("Sobre e ajuda", async (t) => {
   await t.test("novidades curtas, com data dd/mm/aaaa", () => {
     assert.ok(NOVIDADES.length > 0 && NOVIDADES.length <= 8, "a lista é um resumo: o histórico inteiro é o CHANGELOG");
     for (const n of NOVIDADES) assert.match(n.data, /^\d{2}\/\d{2}\/\d{4}$/, n.titulo);
+  });
+
+  await t.test("a legenda usa as cores do app: em dia boa, aguardando neutra, desatualizado alta", () => {
+    const tom = Object.fromEntries(explicacaoSituacoes(60).map((i) => [i.titulo, i.tom]));
+    assert.equal(tom["Em dia"], "boa");
+    assert.equal(tom["Aguardando atualização"], "neutra");
+    assert.equal(tom["Desatualizado"], "alta");
+    assert.equal(tom["Sem versão oficial"], "fora");
+    assert.equal(tom["Componente fixo"], "fora");
+    // As regras de combinação não são uma situação: sem bolinha de cor.
+    assert.equal(tom["Situação do cliente"], null);
+  });
+
+  await t.test("novidades agrupadas por data, sem perder ordem nem item", () => {
+    const grupos = agruparNovidades([
+      { data: "02/10/2026", titulo: "a", texto: "" },
+      { data: "02/10/2026", titulo: "b", texto: "" },
+      { data: "30/09/2026", titulo: "c", texto: "" },
+      { data: "02/10/2026", titulo: "d", texto: "" },
+    ]);
+    assert.deepEqual(grupos.map((g) => g.data), ["02/10/2026", "30/09/2026", "02/10/2026"]);
+    assert.deepEqual(grupos.flatMap((g) => g.itens.map((i) => `${i.titulo}${i.indice}`)), ["a0", "b1", "c2", "d3"]);
+    assert.deepEqual(agruparNovidades([]), []);
   });
 });
