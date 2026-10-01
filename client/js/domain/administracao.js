@@ -79,3 +79,65 @@ export function papelNormalizado(role) {
   if (role === "admin" || role === "consulta") return role;
   return "operador";
 }
+
+/** Cópia mais velha que isto já pede atenção: o servidor faz uma a cada início. */
+export const DIAS_BACKUP_ANTIGO = 7;
+
+/**
+ * O resumo do Diagnóstico: o que precisa de atenção, do mais grave ao menos.
+ *
+ * Antes a frase do topo vinha só de `statusGeral` do servidor (banco íntegro
+ * e nenhum agente com erro), e dizia "Tudo em ordem" logo acima de um bloco
+ * "Nenhuma cópia" amarelo e com a chave dos agentes ainda no valor de
+ * exemplo. Frase e blocos se contradiziam; agora a frase é o pior bloco.
+ *
+ * @param {any} dados resposta de /api/saude
+ * @param {{atualizadorHabilitado: boolean, chaveAgentes?: {situacao: string}|null, agora?: number}} opcoes
+ * @returns {{tom: "ok"|"alerta"|"perigo", titulo: string, pendencias: Array<{texto: string, tom: "alerta"|"perigo", aba: string}>}}
+ */
+export function situacaoDiagnostico(dados, { atualizadorHabilitado, chaveAgentes = null, agora = Date.now() }) {
+  /** @type {Array<{texto: string, tom: "alerta"|"perigo", aba: string}>} */
+  const pendencias = [];
+  if (dados?.banco?.integridade !== "ok") {
+    pendencias.push({ texto: "O banco de dados falhou na verificação de integridade.", tom: "perigo", aba: "backups" });
+  }
+  const totalCopias = dados?.backups?.total ?? 0;
+  if (totalCopias === 0) {
+    pendencias.push({ texto: "Nenhuma cópia de segurança ainda.", tom: "alerta", aba: "backups" });
+  } else {
+    const ultima = Date.parse(dados?.backups?.ultimo ?? "");
+    const dias = Number.isFinite(ultima) ? Math.floor((agora - ultima) / 86400000) : null;
+    if (dias !== null && dias >= DIAS_BACKUP_ANTIGO) {
+      pendencias.push({ texto: `A cópia de segurança mais recente é de ${dias} dias atrás.`, tom: "alerta", aba: "backups" });
+    }
+  }
+  if (atualizadorHabilitado) {
+    const comErro = dados?.agentes?.erro ?? 0;
+    if (comErro > 0) {
+      pendencias.push({ texto: comErro === 1 ? "1 agente com erro." : `${comErro} agentes com erro.`, tom: "alerta", aba: "integracoes" });
+    }
+    if (chaveAgentes?.situacao === "exemplo") {
+      pendencias.push({ texto: "A chave dos agentes ainda é o valor de exemplo, que é público.", tom: "perigo", aba: "integracoes" });
+    } else if (chaveAgentes?.situacao === "ausente") {
+      pendencias.push({ texto: "A chave dos agentes não está configurada.", tom: "alerta", aba: "integracoes" });
+    }
+  }
+  pendencias.sort((a, b) => (a.tom === b.tom ? 0 : a.tom === "perigo" ? -1 : 1));
+  if (pendencias.length === 0) return { tom: "ok", titulo: "Tudo em ordem.", pendencias };
+  return {
+    tom: pendencias[0].tom,
+    titulo: pendencias.length === 1 ? "1 ponto precisa de atenção." : `${pendencias.length} pontos precisam de atenção.`,
+    pendencias,
+  };
+}
+
+/**
+ * Quantas contas há de cada papel -- o resumo em cima da tabela de pessoas.
+ * @param {Array<{role?: string}>} usuarios
+ * @returns {{admin: number, operador: number, consulta: number}}
+ */
+export function contarPapeis(usuarios) {
+  const contagem = { admin: 0, operador: 0, consulta: 0 };
+  for (const u of usuarios || []) contagem[papelNormalizado(u.role)] += 1;
+  return contagem;
+}

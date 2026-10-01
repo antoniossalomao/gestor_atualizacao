@@ -4,7 +4,8 @@ import { html } from "../../utils/html.js";
 import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao } from "../../templates/secao.js";
-import { blocosSaude } from "../../templates/administracao.js";
+import { blocosSaude, resumoDiagnostico } from "../../templates/administracao.js";
+import { situacaoDiagnostico } from "../../domain/administracao.js";
 import { mensagem } from "./FormularioRegras.js";
 
 /**
@@ -26,6 +27,11 @@ export class SaudeAdmin extends View {
       <div data-role="blocos"></div>`;
     this.situacao = this.container.querySelector('[data-role="situacao"]');
     this.blocos = this.container.querySelector('[data-role="blocos"]');
+    // Cada pendência leva à aba onde ela se resolve.
+    this.situacao.addEventListener("click", (e) => {
+      const alvo = /** @type {HTMLElement} */ (e.target).closest("[data-ir-aba]");
+      if (alvo instanceof HTMLElement) this.navigate("administracao", { aba: alvo.dataset.irAba });
+    });
     const botao = this.container.querySelector('[data-action="atualizar"]');
     botao.addEventListener("click", async () => {
       const liberar = marcarOcupado(botao);
@@ -39,19 +45,25 @@ export class SaudeAdmin extends View {
 
   async refresh() {
     let dados;
+    let completa;
     try {
-      dados = await this.api.get("/saude");
+      // A chave dos agentes não vem na Saúde (é regra da equipe, não do
+      // processo), mas uma chave de exemplo é o problema mais grave que um
+      // Diagnóstico pode apontar -- então ela entra na conta do resumo.
+      [dados, completa] = await Promise.all([
+        this.api.get("/saude"),
+        this.api.get("/configuracao-sistema/completa").catch(() => null),
+      ]);
     } catch (err) {
       if (err?.cancelled) return;
       avisoRapido.erro(mensagem(err));
       return;
     }
-    const saudavel = dados.statusGeral === "saudavel";
-    this.situacao.innerHTML = html`
-      <p class="admin-situacao ${saudavel ? "is-ok" : "is-alerta"}">
-        <span class="admin-situacao__ponto" aria-hidden="true"></span>
-        ${saudavel ? "Tudo em ordem." : "Algo precisa de atenção -- veja os blocos marcados abaixo."}
-      </p>`;
+    const situacao = situacaoDiagnostico(dados, {
+      atualizadorHabilitado: this.atualizadorHabilitado,
+      chaveAgentes: completa?.chaveAgentes ?? null,
+    });
+    this.situacao.innerHTML = resumoDiagnostico(situacao, new Date()).toString();
     this.blocos.innerHTML = blocosSaude(dados, { atualizadorHabilitado: this.atualizadorHabilitado });
   }
 }

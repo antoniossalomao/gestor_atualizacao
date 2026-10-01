@@ -4150,8 +4150,12 @@ table.data-table {
   }
 }
 @media (max-width: 760px) {
-  .cfg-busca {
+  .cfg-busca,
+  .admin-pessoas__busca {
     width: 100%;
+  }
+  .admin-diagnostico__cabeca {
+    flex-wrap: wrap;
   }
   .cfg-resultado__caminho {
     display: none;
@@ -7471,8 +7475,87 @@ h1, h2, h3, strong {
 }
 .admin-pessoa {
   display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.admin-pessoa__texto {
+  display: flex;
   flex-direction: column;
   gap: 1px;
+  min-width: 0;
+}
+/* A cor do avatar é a do papel: numa lista de quinze, os administradores se
+   acham pela cor antes de se ler a coluna Papel. */
+.admin-pessoa__avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-extra);
+}
+.admin-pessoa__avatar--admin {
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+.admin-pessoa__avatar--operador {
+  background: var(--status-ok-bg);
+  color: var(--status-ok-texto);
+}
+.admin-pessoa__avatar--ponto {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: var(--sp-1);
+  border: 1px solid var(--cor-borda-forte);
+  vertical-align: -1px;
+}
+.admin-pessoa__avatar--ponto.admin-pessoa__avatar--admin {
+  border-color: var(--cor-accent);
+}
+.admin-pessoa__avatar--ponto.admin-pessoa__avatar--operador {
+  border-color: var(--status-ok-solido);
+}
+
+.admin-pessoas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.admin-pessoas__barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.admin-pessoas__busca {
+  width: 280px;
+}
+.admin-pessoas__vazio {
+  margin: 0;
+  padding: var(--sp-5);
+  text-align: center;
+}
+.admin-resumo-papeis {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+.admin-resumo-papeis strong {
+  color: var(--cor-texto);
+}
+.admin-resumo-papeis__total {
+  padding-right: var(--sp-4);
+  border-right: 1px solid var(--cor-borda);
 }
 .admin-papel {
   width: auto;
@@ -7564,6 +7647,150 @@ h1, h2, h3, strong {
 .admin-form.is-sujo .admin-form__estado {
   color: var(--cor-accent);
   font-weight: var(--peso-forte);
+}
+
+/* Integrações: dois cartões e um Salvar só. A barra fica presa no pé da
+   tela enquanto há o que rolar: num formulário alto, o botão no fim do
+   segundo cartão ficava fora de vista justamente quando havia o que salvar. */
+.admin-form--cartoes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: 0;
+}
+.admin-form--cartoes > .secao-card {
+  padding-bottom: var(--sp-2);
+}
+.admin-form__barra {
+  position: sticky;
+  bottom: var(--sp-4);
+  z-index: 1;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: var(--sombra-flutuante);
+}
+.admin-form__barra .admin-form__rodape {
+  margin: 0;
+  border-top: 0;
+}
+/* Sem nada para salvar, a barra fica no lugar dela, no fim: presa no pé da
+   tela ela só cobriria o formulário com dois botões desligados. */
+.admin-form--cartoes:not(.is-sujo) .admin-form__barra {
+  position: static;
+  box-shadow: var(--sombra-card);
+}
+.admin-form--cartoes > .secao-card > .cfg-group:last-child {
+  border-bottom: 0;
+}
+
+/* Aviso em bloco (a chave dos agentes): texto inteiro, sinal e cor do tom. */
+.admin-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-left-width: 3px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  font-size: var(--txt-sm);
+}
+.admin-aviso svg {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+.admin-aviso--alerta {
+  border-left-color: var(--cor-amarelo);
+}
+.admin-aviso--alerta svg {
+  color: var(--cor-amarelo);
+}
+.admin-aviso--perigo {
+  border-left-color: var(--cor-vermelho);
+  background: var(--status-erro-bg);
+}
+.admin-aviso--perigo svg {
+  color: var(--cor-vermelho);
+}
+
+/* Topo do Diagnóstico: a frase é o pior bloco, e cada pendência leva à aba
+   onde se resolve. */
+.admin-diagnostico {
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  border: 1px solid var(--cor-borda);
+  border-left: 4px solid var(--severidade-boa);
+  border-radius: var(--raio);
+  background: var(--card-gradiente);
+  box-shadow: var(--sombra-card);
+}
+.admin-diagnostico.is-alerta {
+  border-left-color: var(--cor-amarelo);
+}
+.admin-diagnostico.is-perigo {
+  border-left-color: var(--cor-vermelho);
+}
+.admin-diagnostico__cabeca {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.admin-diagnostico__cabeca strong {
+  font-size: var(--txt-md);
+}
+.admin-diagnostico__icone {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--status-ok-bg);
+  color: var(--severidade-boa);
+}
+.admin-diagnostico.is-alerta .admin-diagnostico__icone {
+  background: var(--cor-amarelo-fraco);
+  color: var(--cor-amarelo);
+}
+.admin-diagnostico.is-perigo .admin-diagnostico__icone {
+  background: var(--status-erro-bg);
+  color: var(--cor-vermelho);
+}
+.admin-diagnostico__icone svg {
+  width: 15px;
+  height: 15px;
+}
+.admin-diagnostico__hora {
+  margin-left: auto;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+  font-variant-numeric: tabular-nums;
+}
+.admin-diagnostico__lista {
+  display: flex;
+  flex-direction: column;
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-diagnostico__lista li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0 var(--sp-2) calc(26px + var(--sp-2));
+  border-top: 1px solid var(--cor-borda);
+  font-size: var(--txt-sm);
+}
+.admin-diagnostico__lista li.is-perigo span {
+  color: var(--cor-vermelho);
+  font-weight: var(--peso-forte);
+}
+.admin-diagnostico__lista .btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* -- saúde do servidor -- */

@@ -383,3 +383,51 @@ test("Relatório usa cópia recebida e versão anterior do mesmo sistema", () =>
   assert.match(texto, /^B_Vendas: 09\/09\/2026$/m);
   assert.doesNotMatch(texto, /Motivo:|Código:|Cidade:|ATUALIZAÇÃO #/);
 });
+
+test("Administração - situação do Diagnóstico e contagem de papéis", async (t) => {
+  const { situacaoDiagnostico, contarPapeis } = await import("../js/domain/administracao.js");
+  const AGORA = Date.parse("2026-10-01T12:00:00Z");
+  const saudavel = {
+    banco: { integridade: "ok" },
+    backups: { total: 3, ultimo: "2026-09-30T12:00:00Z" },
+    agentes: { erro: 0 },
+  };
+
+  await t.test("tudo certo: tom ok e nenhuma pendência", () => {
+    const r = situacaoDiagnostico(saudavel, { atualizadorHabilitado: true, chaveAgentes: { situacao: "configurada" }, agora: AGORA });
+    assert.equal(r.tom, "ok");
+    assert.deepEqual(r.pendencias, []);
+  });
+
+  await t.test("sem nenhuma cópia não é \"Tudo em ordem\" (era a contradição da tela)", () => {
+    const r = situacaoDiagnostico({ ...saudavel, backups: { total: 0, ultimo: null } }, { atualizadorHabilitado: false, agora: AGORA });
+    assert.equal(r.tom, "alerta");
+    assert.match(r.pendencias[0].texto, /Nenhuma cópia/);
+  });
+
+  await t.test("cópia velha avisa; cópia de ontem não", () => {
+    const velha = situacaoDiagnostico({ ...saudavel, backups: { total: 1, ultimo: "2026-09-20T12:00:00Z" } }, { atualizadorHabilitado: false, agora: AGORA });
+    assert.match(velha.pendencias[0].texto, /11 dias/);
+    assert.equal(situacaoDiagnostico(saudavel, { atualizadorHabilitado: false, agora: AGORA }).pendencias.length, 0);
+  });
+
+  await t.test("banco corrompido e chave de exemplo vêm primeiro, como perigo", () => {
+    const r = situacaoDiagnostico(
+      { banco: { integridade: "erro" }, backups: { total: 0 }, agentes: { erro: 2 } },
+      { atualizadorHabilitado: true, chaveAgentes: { situacao: "exemplo" }, agora: AGORA }
+    );
+    assert.equal(r.tom, "perigo");
+    assert.deepEqual(r.pendencias.map((p) => p.tom), ["perigo", "perigo", "alerta", "alerta"]);
+    assert.match(r.titulo, /4 pontos/);
+  });
+
+  await t.test("com o Atualizador desligado, agentes e chave não contam", () => {
+    const r = situacaoDiagnostico({ ...saudavel, agentes: { erro: 5 } }, { atualizadorHabilitado: false, chaveAgentes: { situacao: "ausente" }, agora: AGORA });
+    assert.equal(r.tom, "ok");
+  });
+
+  await t.test("papéis contados, e conta antiga \"user\" conta como operador", () => {
+    assert.deepEqual(contarPapeis([{ role: "admin" }, { role: "user" }, { role: "operador" }, { role: "consulta" }]), { admin: 1, operador: 2, consulta: 1 });
+    assert.deepEqual(contarPapeis([]), { admin: 0, operador: 0, consulta: 0 });
+  });
+});

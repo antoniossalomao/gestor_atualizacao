@@ -8,7 +8,9 @@ import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { rotuloPapel } from "../../domain/pessoa.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
-import { legendaPapeis, linhaUsuario } from "../../templates/administracao.js";
+import { legendaPapeis, linhaUsuario, resumoPapeis } from "../../templates/administracao.js";
+import { contarPapeis } from "../../domain/administracao.js";
+import { filtrarPorBusca } from "../../utils/busca.js";
 
 /**
  * Aba Usuários da Administração: quem entra no sistema e com que papel.
@@ -40,11 +42,22 @@ export class UsuariosAdmin extends View {
         acoes: html`<button type="button" class="btn btn--accent" data-action="nova">${iconeHtml("plus")} Nova conta</button>`,
       })}
       <div class="admin-grade">
+        <div class="admin-pessoas">
+          <div class="admin-pessoas__barra">
+            <div data-role="resumo"></div>
+            <label class="cfg-busca admin-pessoas__busca">
+              <span class="cfg-busca__icone" aria-hidden="true">${iconeHtml("busca")}</span>
+              <input type="search" class="input" data-role="busca-pessoas" placeholder="Buscar por nome ou usuário…"
+                     aria-label="Buscar pessoa" autocomplete="off" spellcheck="false" />
+            </label>
+          </div>
         <div class="card secao-card">
           <table class="data-table admin-tabela">
             <thead><tr><th scope="col">Pessoa</th><th scope="col">Papel</th><th scope="col">Último acesso</th><th scope="col"><span class="sr-only">Ações</span></th></tr></thead>
             <tbody data-role="lista"></tbody>
           </table>
+          <p class="admin-pessoas__vazio text-muted" data-role="vazio" hidden></p>
+        </div>
         </div>
         <aside class="card secao-card secao-card--lateral">
           ${tituloCartao({ titulo: "O que cada papel pode" })}
@@ -72,6 +85,15 @@ export class UsuariosAdmin extends View {
       </form>`;
 
     this.lista = this.container.querySelector('[data-role="lista"]');
+    this.busca = /** @type {HTMLInputElement} */ (this.container.querySelector('[data-role="busca-pessoas"]'));
+    this.busca.addEventListener("input", () => this._desenhar());
+    this.busca.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this.busca.value) {
+        e.stopPropagation();
+        this.busca.value = "";
+        this._desenhar();
+      }
+    });
     this.form = this.container.querySelector('[data-role="form-nova"]');
     this.drawer = new Gaveta(this.form, { titulo: "Nova conta", descricao: "A pessoa entra com o usuário e a senha definidos aqui." });
 
@@ -106,8 +128,16 @@ export class UsuariosAdmin extends View {
   }
 
   _desenhar() {
+    this.container.querySelector('[data-role="resumo"]').innerHTML = resumoPapeis(contarPapeis(this.usuarios)).toString();
+    const termo = this.busca.value.trim();
+    const visiveis = termo
+      ? filtrarPorBusca(this.usuarios, termo, (u) => ({ titulo: u.nome || "", resto: `${u.usuario} ${rotuloPapel(u.role)}` }))
+      : this.usuarios;
+    const vazio = /** @type {HTMLElement} */ (this.container.querySelector('[data-role="vazio"]'));
+    vazio.hidden = visiveis.length > 0;
+    vazio.textContent = visiveis.length > 0 ? "" : `Ninguém com "${termo}" no nome ou no usuário.`;
     this.lista.replaceChildren(
-      ...this.usuarios.map((u) => {
+      ...visiveis.map((u) => {
         const tr = document.createElement("tr");
         tr.className = "is-readonly";
         tr.innerHTML = linhaUsuario(u, { ehVoce: u.id === this.user?.id });

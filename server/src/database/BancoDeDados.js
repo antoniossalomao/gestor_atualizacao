@@ -764,6 +764,10 @@ class BancoDeDados {
       return {
         arquivo,
         label: formatarCarimbo(stamp) || arquivo,
+        // A Saúde lia `data` daqui desde que nasceu, mas o campo não existia:
+        // "Última cópia" dizia "Nenhuma ainda" com dez cópias no disco (o
+        // teste da Saúde usava um dublê que já trazia `data`, e não pegou).
+        data: dataDoCarimbo(stamp),
         integro: verificacoes[arquivo] ?? null,
         tamanhoBytes,
       };
@@ -828,6 +832,20 @@ function formatarCarimbo(stamp) {
   if (!m) return null;
   const [, ano, mes, dia, h, min, s, n] = m;
   return `${dia}/${mes}/${ano} ${h}:${min}:${s}${n ? ` (${n})` : ""}`;
+}
+
+/**
+ * O carimbo do nome do arquivo ("20260918_143012") como data ISO, ou `null`
+ * se o nome não seguir o padrão. O carimbo é a hora LOCAL do servidor (ver
+ * `timestamp`), então é lido como hora local.
+ * @param {string} stamp
+ */
+function dataDoCarimbo(stamp) {
+  const m = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})(?:_\d+)?$/.exec(stamp);
+  if (!m) return null;
+  const [, ano, mes, dia, h, min, s] = m.map(Number);
+  const d = new Date(ano, mes - 1, dia, h, min, s);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
 /**

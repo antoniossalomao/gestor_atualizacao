@@ -15,6 +15,13 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Administração, visual — V3 (01/10/2026):**
+  - **Diagnóstico:** a frase do topo passa a ser o pior bloco. Antes dizia "Tudo em ordem" logo acima de "Nenhuma cópia" e com a chave dos agentes no valor de exemplo. Cada pendência aparece listada com um botão que leva à aba onde se resolve, e a hora da conferência fica à vista, então "Conferir de novo" mostra que fez algo. A regra fica em `situacaoDiagnostico`, com teste: banco corrompido e chave de exemplo são perigo; nenhuma cópia, cópia de 7 dias ou mais, agentes com erro e chave ausente são alerta.
+  - **Integrações:** Discord e Atualizador em dois cartões, com um Salvar só. A barra de salvar fica presa no pé da tela enquanto há alteração. O aviso da chave dos agentes virou um bloco com o texto inteiro, em vez de um selo espremido.
+  - **Pessoas e permissões:** avatar com iniciais na cor do papel, contagem por papel em cima da tabela e busca por nome, usuário ou papel.
+  - **Backups:** cada cópia mostra há quanto tempo foi feita.
+- **Correção — Diagnóstico mostrava "Última cópia: Nenhuma ainda" com cópias no disco (01/10/2026):** a Saúde lia `data` de cada backup, mas `listarBackups` nunca devolveu esse campo. O teste da Saúde usava um dublê que já trazia `data` e por isso não pegou. Agora `listarBackups` devolve `data` (ISO, a partir do carimbo do nome do arquivo), e um teste novo usa o `BackupService` de verdade.
+
 - **Configurações, visual — V2 (01/10/2026):**
   - **Interface e acessibilidade:** o "Perfil rápido" abre a aba (antes ficava no fim de "Personalização avançada", achado só por quem já tinha mexido em tudo). A prévia ganhou texto com link, selos de situação, campo e botões, porque a cor de destaque, o contraste e o tamanho do texto aparecem muito mais nessas peças do que numa tabela. Os textos de ajuda longos foram encurtados.
   - **Regras da equipe:** a aba mostra os valores de agora em blocos (prazo depois da versão oficial, dias sem atualização, arquivamento de tarefas e Atualizador). Antes eram dois parágrafos e um link para a Administração, onde quem não é admin nem entra. O administrador ganha em cada bloco o botão "Mudar na Administração", que abre a aba certa. Embaixo, "Só para você" e "Para toda a equipe" ficam lado a lado. A busca das Configurações acha cada regra.

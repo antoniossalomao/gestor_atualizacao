@@ -1,7 +1,7 @@
 import { html, confiavel } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
 import { formatarBytes, formatarDataHora, tempoRelativo } from "../utils/data.js";
-import { rotuloPapel, descricaoPapel } from "../domain/pessoa.js";
+import { iniciais, rotuloPapel, descricaoPapel } from "../domain/pessoa.js";
 import { formatarTempoAtivo, papelNormalizado } from "../domain/administracao.js";
 
 /**
@@ -53,6 +53,23 @@ export function legendaPapeis() {
 }
 
 /**
+ * A fileira de contagem em cima da tabela de pessoas ("2 Administradores ·
+ * 5 Operadores"). Com uma equipe de quinze, "quantos admins existem?" é a
+ * pergunta que se faz antes de tirar o papel de alguém.
+ * @param {{admin: number, operador: number, consulta: number}} contagem
+ */
+export function resumoPapeis(contagem) {
+  const total = contagem.admin + contagem.operador + contagem.consulta;
+  return html`
+    <div class="admin-resumo-papeis">
+      <span class="admin-resumo-papeis__total"><strong>${total}</strong> ${total === 1 ? "conta" : "contas"}</span>
+      ${["admin", "operador", "consulta"].map(
+        (p) => html`<span class="admin-resumo-papeis__item"><span class="admin-pessoa__avatar admin-pessoa__avatar--${p} admin-pessoa__avatar--ponto" aria-hidden="true"></span>${rotuloPapel(p)} <strong>${contagem[p]}</strong></span>`
+      )}
+    </div>`;
+}
+
+/**
  * Conteúdo de uma `<tr>` da tabela de usuários.
  * @param {{id: number, nome: string, usuario: string, role?: string, ultimo_login?: string|null}} u
  * @param {{ehVoce: boolean}} opcoes quem está logado não muda o próprio papel nem se remove por aqui
@@ -60,13 +77,16 @@ export function legendaPapeis() {
 export function linhaUsuario(u, { ehVoce }) {
   const papel = papelNormalizado(u.role);
   const acesso = u.ultimo_login
-    ? html`<span title="${formatarDataHora(u.ultimo_login)}">${tempoRelativo(u.ultimo_login).replace(/^./, (letra) => letra.toLocaleUpperCase("pt-BR"))}</span>`
+    ? html`<span title="${formatarDataHora(u.ultimo_login)}">${primeiraMaiuscula(tempoRelativo(u.ultimo_login))}</span>`
     : html`<span class="text-muted">Nunca entrou</span>`;
   return html`
     <td data-label="Pessoa">
       <div class="admin-pessoa">
-        <span><strong>${u.nome}</strong>${ehVoce && html` <span class="text-muted">(você)</span>`}</span>
-        <span class="text-muted">@${u.usuario}</span>
+        <span class="admin-pessoa__avatar admin-pessoa__avatar--${papel}" aria-hidden="true">${iniciais(u.nome || u.usuario)}</span>
+        <div class="admin-pessoa__texto">
+          <span><strong>${u.nome}</strong>${ehVoce && html` <span class="text-muted">(você)</span>`}</span>
+          <span class="text-muted">@${u.usuario}</span>
+        </div>
       </div>
     </td>
     <td data-label="Papel">${
@@ -85,11 +105,16 @@ export function linhaUsuario(u, { ehVoce }) {
 
 /**
  * Conteúdo de uma `<tr>` da tabela de backups.
- * @param {{arquivo: string, label: string, tamanhoBytes?: number, integro?: boolean}} b
+ * @param {{arquivo: string, label: string, data?: string|null, tamanhoBytes?: number, integro?: boolean}} b
  */
 export function linhaBackup(b) {
   return html`
-    <td data-label="Cópia"><strong>${b.label}</strong></td>
+    <td data-label="Cópia">
+      <div class="admin-pessoa__texto">
+        <strong>${b.label}</strong>
+        ${b.data && html`<span class="text-muted">${primeiraMaiuscula(tempoRelativo(b.data))}</span>`}
+      </div>
+    </td>
     <td data-label="Tamanho">${b.tamanhoBytes ? formatarBytes(b.tamanhoBytes) : "—"}</td>
     <td data-label="Verificação">${
       b.integro === false
@@ -103,6 +128,48 @@ export function linhaBackup(b) {
       <button type="button" class="btn btn--small btn--danger" data-action="restaurar" data-arquivo="${b.arquivo}"
               ${b.integro === false && confiavel('disabled title="Cópia corrompida não pode ser restaurada."')}>Restaurar</button>
     </td>`;
+}
+
+/**
+ * O topo do Diagnóstico: a frase que resume, a lista do que precisa de
+ * atenção (cada item leva à aba onde se resolve) e a hora da conferência --
+ * sem ela, "Conferir de novo" não dava sinal de ter feito alguma coisa.
+ * @param {ReturnType<typeof import("../domain/administracao.js").situacaoDiagnostico>} situacao
+ * @param {Date} conferidoEm
+ */
+export function resumoDiagnostico(situacao, conferidoEm) {
+  const hora = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(conferidoEm);
+  const ABAS = { backups: "Backups", integracoes: "Integrações" };
+  return html`
+    <section class="admin-diagnostico is-${situacao.tom}" role="status">
+      <div class="admin-diagnostico__cabeca">
+        <span class="admin-diagnostico__icone" aria-hidden="true">${iconeHtml(situacao.tom === "ok" ? "check" : "alerta")}</span>
+        <strong>${situacao.titulo}</strong>
+        <span class="admin-diagnostico__hora">Conferido às ${hora}</span>
+      </div>
+      ${
+        situacao.pendencias.length > 0 &&
+        html`<ul class="admin-diagnostico__lista">
+          ${situacao.pendencias.map(
+            (p) => html`<li class="is-${p.tom}">
+              <span>${p.texto}</span>
+              <button type="button" class="btn btn--small btn--ghost" data-ir-aba="${p.aba}">Abrir ${ABAS[p.aba] || p.aba} ${iconeHtml("seta")}</button>
+            </li>`
+          )}
+        </ul>`
+      }
+    </section>`;
+}
+
+/**
+ * Aviso da chave dos agentes, em bloco e com o texto inteiro: num selo
+ * arredondado, "Ainda é o valor de exemplo do .env.example..." quebrava em
+ * três linhas espremidas na ponta direita da linha.
+ * @param {{texto: string, tom: "ok"|"alerta"|"perigo"}} chave
+ */
+export function avisoChave(chave) {
+  if (chave.tom === "ok") return html`<span class="badge badge--success">${chave.texto}</span>`;
+  return html`<p class="admin-aviso admin-aviso--${chave.tom}" role="note">${iconeHtml("alerta")}<span>${chave.texto}</span></p>`;
 }
 
 /**
@@ -140,8 +207,11 @@ export function blocosSaude(dados, { atualizadorHabilitado }) {
       ${blocoSaude({
         icone: "backups",
         titulo: "Backups",
-        selo: dados.backups?.total ? [`${dados.backups.total} cópias`, "muted"] : ["Nenhuma cópia", "warning"],
-        linhas: [["Última cópia", dados.backups?.ultimo ? formatarDataHora(dados.backups.ultimo) : "Nenhuma ainda"]],
+        selo: dados.backups?.total ? [`${dados.backups.total} ${dados.backups.total === 1 ? "cópia" : "cópias"}`, "muted"] : ["Nenhuma cópia", "warning"],
+        linhas: [
+          ["Última cópia", dados.backups?.ultimo ? formatarDataHora(dados.backups.ultimo) : "Nenhuma ainda"],
+          ...(dados.backups?.ultimo ? [/** @type {[string, unknown]} */ (["Feita", tempoRelativo(dados.backups.ultimo)])] : []),
+        ],
       })}
       ${
         atualizadorHabilitado
@@ -162,6 +232,11 @@ export function blocosSaude(dados, { atualizadorHabilitado }) {
             })
       }
     </div>`;
+}
+
+/** "há 3 dias" -> "Há 3 dias", no começo de uma célula. */
+function primeiraMaiuscula(texto) {
+  return texto.replace(/^./, (letra) => letra.toLocaleUpperCase("pt-BR"));
 }
 
 /** "3 (120 MB)", ou "Nenhum" -- "0 (—)" parecia dado faltando, não pasta vazia. */
