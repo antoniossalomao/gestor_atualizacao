@@ -43,7 +43,7 @@ class BancoDeDados {
 
   /**
    * Abre a conexao, ativa os pragmas, roda a migracao e (re)cria os
-   * repositorios. Separado do constructor porque restoreFrom() precisa
+   * repositorios. Separado do constructor porque restaurarDe() precisa
    * repetir exatamente estes passos depois de trocar o arquivo do banco.
    */
   _open() {
@@ -513,7 +513,7 @@ class BancoDeDados {
    * deixa no maximo uma publicada por sistema.
    *
    * Sem isto, as versoes antigas ficariam com sistema vazio: elas continuariam
-   * marcadas como "publicada", mas `latestPublished(sistema)` nunca as
+   * marcadas como "publicada", mas `ultimaPublicada(sistema)` nunca as
    * encontraria, e todo agente passaria a receber "nao ha atualizacao" sem
    * nenhum erro aparente -- o pior tipo de falha, a silenciosa.
    *
@@ -644,15 +644,15 @@ class BancoDeDados {
       // O carimbo tem resolucao de SEGUNDOS, entao duas copias no mesmo segundo
       // gerariam o mesmo nome -- e `copyFileSync` sobrescreve sem avisar. Na
       // pratica isso acontece no caminho mais delicado que existe aqui:
-      // `restoreFrom` faz uma copia de seguranca do estado atual logo antes de
+      // `restaurarDe` faz uma copia de seguranca do estado atual logo antes de
       // restaurar, e essa copia pode cair no mesmo segundo de um backup que ja
       // existia, apagando-o. Perder um backup em silencio e' exatamente o tipo
       // de falha que so se descobre no dia em que ele faz falta.
       //
       // Subir o carimbo para milissegundos mudaria o formato do nome de todos
       // os backups ja existentes; acrescentar um sufixo so no caso de colisao
-      // mantem o nome de sempre no caso normal. `formatStamp` nao reconhece o
-      // sufixo e devolve null, e `listBackups` ja cai no proprio nome do
+      // mantem o nome de sempre no caso normal. `formatarCarimbo` nao reconhece o
+      // sufixo e devolve null, e `listarBackups` ja cai no proprio nome do
       // arquivo como rotulo nesse caso -- degrada sozinho, sem quebrar a tela.
       const arquivoBackup = nomeLivre(dir, name, timestamp(), ext);
       const destino = path.join(dir, arquivoBackup);
@@ -723,7 +723,7 @@ class BancoDeDados {
     }
   }
 
-  /** Mapa { nome-do-arquivo: true|false }, lido de backups/verificacoes.json (ver listBackups). */
+  /** Mapa { nome-do-arquivo: true|false }, lido de backups/verificacoes.json (ver listarBackups). */
   _lerVerificacoesBackup(dir) {
     try {
       return JSON.parse(fs.readFileSync(path.join(dir, "verificacoes.json"), "utf8"));
@@ -748,7 +748,7 @@ class BancoDeDados {
    * verificacao existir (nunca foram checados, nao e o mesmo que "checado e
    * corrompido").
    */
-  listBackups() {
+  listarBackups() {
     const dir = path.join(path.dirname(this.path), "backups");
     if (!fs.existsSync(dir)) return [];
     const { name, ext } = path.parse(this.path);
@@ -766,7 +766,7 @@ class BancoDeDados {
       } catch {}
       return {
         arquivo,
-        label: formatStamp(stamp) || arquivo,
+        label: formatarCarimbo(stamp) || arquivo,
         integro: verificacoes[arquivo] ?? null,
         tamanhoBytes,
       };
@@ -777,27 +777,27 @@ class BancoDeDados {
    * Caminho completo de um backup validado, evitando brechas de traversal.
    * @param {string} arquivo
    */
-  getBackupPath(arquivo) {
-    const valido = this.listBackups().some((b) => b.arquivo === arquivo);
+  caminhoDoBackup(arquivo) {
+    const valido = this.listarBackups().some((b) => b.arquivo === arquivo);
     if (!valido) throw new Error("Backup não encontrado.");
     const dir = path.join(path.dirname(this.path), "backups");
     return path.join(dir, arquivo);
   }
 
   /** Caminho do banco principal ativo no momento. */
-  getCurrentDbPath() {
+  caminhoDoBancoAtual() {
     return this.path;
   }
 
   /**
    * Restaura o banco a partir de um dos arquivos de backups/. `arquivo`
-   * precisa ser exatamente um nome devolvido por listBackups() -- nunca um
+   * precisa ser exatamente um nome devolvido por listarBackups() -- nunca um
    * caminho vindo direto do cliente HTTP, para nao abrir brecha de "path
    * traversal" (ex.: alguem mandando "../../windows/system32/algo").
    * Faz um backup do estado atual antes de sobrescrever, por seguranca.
    */
-  restoreFrom(arquivo) {
-    const valido = this.listBackups().some((b) => b.arquivo === arquivo);
+  restaurarDe(arquivo) {
+    const valido = this.listarBackups().some((b) => b.arquivo === arquivo);
     if (!valido) throw new Error("Backup não encontrado.");
     const dir = path.join(path.dirname(this.path), "backups");
     const origem = path.join(dir, arquivo);
@@ -823,7 +823,7 @@ class BancoDeDados {
 }
 
 /** "20260817_143000" -> "17/08/2026 14:30:00" (ou null se o formato nao bater). */
-function formatStamp(stamp) {
+function formatarCarimbo(stamp) {
   // O "_N" final e' opcional: aparece so quando duas copias cairam no mesmo
   // segundo (ver nomeLivre). Sem reconhece-lo aqui, essas entradas apareceriam
   // na tela com o nome cru do arquivo no lugar da data.

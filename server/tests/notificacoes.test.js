@@ -53,8 +53,8 @@ test("NotificacaoService - sem webhook configurado", async (t) => {
   await t.test("não faz requisição nenhuma", async () => {
     await comFetchFalso(async (chamadas) => {
       const s = new NotificacaoService({});
-      await s.notifyAtualizacao({ cliente: "X" });
-      await s.notifyAgenteSituacao({ empresa: "X", situacao: "erro" });
+      await s.avisarAtualizacao({ cliente: "X" });
+      await s.avisarSituacaoDoAgente({ empresa: "X", situacao: "erro" });
       assert.equal(chamadas.length, 0, "integração opcional é opcional de verdade");
     });
   });
@@ -62,7 +62,7 @@ test("NotificacaoService - sem webhook configurado", async (t) => {
   await t.test("string vazia conta como não configurado", async () => {
     await comFetchFalso(async (chamadas) => {
       const s = new NotificacaoService({ discordWebhookUrl: "" });
-      await s.notifyAtualizacao({ cliente: "X" });
+      await s.avisarAtualizacao({ cliente: "X" });
       assert.equal(chamadas.length, 0);
     });
   });
@@ -72,7 +72,7 @@ test("NotificacaoService - aviso de atualização", async (t) => {
   await t.test("monta a mensagem com o que foi preenchido", async () => {
     await comFetchFalso(async (chamadas) => {
       const s = new NotificacaoService({ discordWebhookUrl: WEBHOOK });
-      await s.notifyAtualizacao({
+      await s.avisarAtualizacao({
         cliente: "Mercado Central",
         sistema: "B_Vendas",
         versao: "2.1",
@@ -98,7 +98,7 @@ test("NotificacaoService - aviso de atualização", async (t) => {
     // tipo de detalhe que faz o aviso perder credibilidade.
     await comFetchFalso(async (chamadas) => {
       const s = new NotificacaoService({ discordWebhookUrl: WEBHOOK });
-      await s.notifyAtualizacao({ cliente: "Padaria do Zé" });
+      await s.avisarAtualizacao({ cliente: "Padaria do Zé" });
       const texto = conteudo(chamadas);
       assert.match(texto, /Padaria do Zé/);
       assert.doesNotMatch(texto, /undefined|null/);
@@ -118,7 +118,7 @@ test("NotificacaoService - aviso de situação do agente", async (t) => {
     await t.test(`"${situacao}" produz uma mensagem própria`, async () => {
       await comFetchFalso(async (chamadas) => {
         const s = new NotificacaoService({ discordWebhookUrl: WEBHOOK });
-        await s.notifyAgenteSituacao({ empresa: "Acme", situacao });
+        await s.avisarSituacaoDoAgente({ empresa: "Acme", situacao });
         const texto = conteudo(chamadas);
         assert.match(texto, /Acme/);
         assert.match(texto, esperado);
@@ -133,7 +133,7 @@ test("NotificacaoService - aviso de situação do agente", async (t) => {
     // falhou" -- a segunda já diz por onde começar.
     await comFetchFalso(async (chamadas) => {
       const s = new NotificacaoService({ discordWebhookUrl: WEBHOOK });
-      await s.notifyAgenteSituacao({ empresa: "Acme", situacao: "erro", detalhe: "script 042 falhou" });
+      await s.avisarSituacaoDoAgente({ empresa: "Acme", situacao: "erro", detalhe: "script 042 falhou" });
       assert.match(conteudo(chamadas), /script 042 falhou/);
     });
   });
@@ -141,7 +141,7 @@ test("NotificacaoService - aviso de situação do agente", async (t) => {
   await t.test("sem detalhe, a frase termina com ponto, não com dois-pontos", async () => {
     await comFetchFalso(async (chamadas) => {
       const s = new NotificacaoService({ discordWebhookUrl: WEBHOOK });
-      await s.notifyAgenteSituacao({ empresa: "Acme", situacao: "erro" });
+      await s.avisarSituacaoDoAgente({ empresa: "Acme", situacao: "erro" });
       assert.match(conteudo(chamadas), /\.$/);
     });
   });
@@ -151,7 +151,7 @@ test("NotificacaoService - aviso de situação do agente", async (t) => {
     // de um estado ruim -- então o caso geral aqui é o "voltou ao normal".
     await comFetchFalso(async (chamadas) => {
       const s = new NotificacaoService({ discordWebhookUrl: WEBHOOK });
-      await s.notifyAgenteSituacao({ empresa: "Acme", situacao: "ok" });
+      await s.avisarSituacaoDoAgente({ empresa: "Acme", situacao: "ok" });
       assert.match(conteudo(chamadas), /normalizou/);
     });
   });
@@ -162,7 +162,7 @@ test("NotificacaoService - nunca derruba quem chamou", async (t) => {
     await comFetchFalso(
       async (chamadas, avisos) => {
         const s = new NotificacaoService({ discordWebhookUrl: WEBHOOK });
-        await assert.doesNotReject(() => s.notifyAtualizacao({ cliente: "X" }));
+        await assert.doesNotReject(() => s.avisarAtualizacao({ cliente: "X" }));
         assert.ok(
           avisos.some((a) => /Falha ao notificar Discord/.test(a)),
           "mas registra, para não falhar em silêncio total"
@@ -178,7 +178,7 @@ test("NotificacaoService - nunca derruba quem chamou", async (t) => {
     await comFetchFalso(
       async (chamadas, avisos) => {
         const s = new NotificacaoService({ discordWebhookUrl: WEBHOOK });
-        await assert.doesNotReject(() => s.notifyAgenteSituacao({ empresa: "X", situacao: "erro" }));
+        await assert.doesNotReject(() => s.avisarSituacaoDoAgente({ empresa: "X", situacao: "erro" }));
         assert.ok(avisos.some((a) => /HTTP 404/.test(a)), "e o código do erro aparece no aviso");
       },
       { ok: false, status: 404 }
@@ -191,7 +191,7 @@ test("NotificacaoService - nunca derruba quem chamou", async (t) => {
     await comFetchFalso(
       async (chamadas, avisos) => {
         const s = new NotificacaoService({ discordWebhookUrl: WEBHOOK });
-        await assert.doesNotReject(() => s.notifyAtualizacao({ cliente: "X" }));
+        await assert.doesNotReject(() => s.avisarAtualizacao({ cliente: "X" }));
         assert.ok(avisos.some((a) => /HTTP 401/.test(a)));
       },
       { ok: false, status: 401 }

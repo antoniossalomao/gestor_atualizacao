@@ -243,7 +243,7 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
   await t.test("Resumo: o limite de 'desatualizado' muda quem entra na lista", () => {
     const env = ambiente();
     try {
-      const atualizacoes = new AtualizacaoService(env.db, env.historico, { notifyAtualizacao: async () => {} }, env.regras);
+      const atualizacoes = new AtualizacaoService(env.db, env.historico, { avisarAtualizacao: async () => {} }, env.regras);
       env.db.conn.prepare("INSERT INTO clientes (codigo, nome) VALUES ('C1', 'Mercado X')").run();
       const quarentaDiasAtras = new Date(Date.now() - 40 * 86400000);
       const data = `${String(quarentaDiasAtras.getDate()).padStart(2, "0")}/${String(quarentaDiasAtras.getMonth() + 1).padStart(2, "0")}/${quarentaDiasAtras.getFullYear()}`;
@@ -265,7 +265,7 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
   await t.test("Resumo: o prazo depois da versão oficial muda as contagens do card (A07)", () => {
     const env = ambiente();
     try {
-      const atualizacoes = new AtualizacaoService(env.db, env.historico, { notifyAtualizacao: async () => {} }, env.regras);
+      const atualizacoes = new AtualizacaoService(env.db, env.historico, { avisarAtualizacao: async () => {} }, env.regras);
       atualizacoes.create({ cliente: "Mercado X", sistema: "B_Vendas", data: "01/09/2026" }, null);
       // Cadastrado com o B_Vendas: a aba Sistemas lista só quem tem o sistema no cadastro.
       env.db.clientes.insert("C1", "Mercado X", "", [env.db.sistemas.resolver("B_Vendas").id], "");

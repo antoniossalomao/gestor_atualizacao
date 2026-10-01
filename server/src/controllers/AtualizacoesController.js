@@ -1,5 +1,5 @@
 const { ErroDeValidacao } = require("../shared/erros");
-const { parsePaginacao } = require("./paginacao");
+const { lerPaginacao } = require("./paginacao");
 
 /**
  * Le o intervalo de datas da query string. Nao valida o formato aqui de
@@ -45,15 +45,15 @@ class AtualizacoesController {
 
   list = (req, res) => {
     const { search = "", responsavel = "Todos" } = req.query;
-    res.json(this.atualizacaoService.list(search, responsavel, { ...parsePaginacao(req.query), ...periodo(req.query) }));
+    res.json(this.atualizacaoService.list(search, responsavel, { ...lerPaginacao(req.query), ...periodo(req.query) }));
   };
 
-  distinctResponsaveis = (req, res) => {
-    res.json(this.atualizacaoService.distinctResponsaveis());
+  responsaveisDistintos = (req, res) => {
+    res.json(this.atualizacaoService.responsaveisDistintos());
   };
 
   recentForClient = (req, res) => {
-    res.json(this.atualizacaoService.recentUpdatesForClient(req.params.nome, req.query.limit));
+    res.json(this.atualizacaoService.atualizacoesRecentesDoCliente(req.params.nome, req.query.limit));
   };
 
   porSistema = (req, res, next) => {
@@ -103,18 +103,18 @@ class AtualizacoesController {
       if (ids.length > LOTE_MAXIMO) {
         throw new ErroDeValidacao(`Só é possível excluir até ${LOTE_MAXIMO} registros de uma vez.`);
       }
-      res.json(this.atualizacaoService.deleteMany(ids, req.session.user));
+      res.json(this.atualizacaoService.excluirVarios(ids, req.session.user));
     } catch (err) {
       next(err);
     }
   };
 
-  importXlsx = async (req, res, next) => {
+  importarXlsx = async (req, res, next) => {
     try {
       if (!req.file) throw new ErroDeValidacao("Selecione um arquivo .xlsx para importar.");
       // "pularDuplicadas" chega como texto no multipart ("1"/"0").
       const pularDuplicadas = String(req.body?.pularDuplicadas ?? "") === "1";
-      res.json(await this.atualizacaoService.importXlsx(req.file.buffer, req.session.user, { pularDuplicadas }));
+      res.json(await this.atualizacaoService.importarXlsx(req.file.buffer, req.session.user, { pularDuplicadas }));
     } catch (err) {
       next(err);
     }
@@ -129,12 +129,12 @@ class AtualizacoesController {
     }
   };
 
-  exportXlsx = async (req, res, next) => {
+  exportarXlsx = async (req, res, next) => {
     try {
       const search = String(req.query.search || "");
       const responsavel = String(req.query.responsavel || "Todos");
       const intervalo = periodo(req.query);
-      const buffer = await this.atualizacaoService.exportXlsxBuffer(search, responsavel, intervalo);
+      const buffer = await this.atualizacaoService.exportarXlsxEmMemoria(search, responsavel, intervalo);
       const filtrado = search || responsavel !== "Todos" || intervalo.desde || intervalo.ate;
       res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       res.setHeader("Content-Disposition", `attachment; filename="atualizacoes${filtrado ? "-filtrado" : ""}.xlsx"`);

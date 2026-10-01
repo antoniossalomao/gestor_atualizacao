@@ -1,4 +1,4 @@
-const { parseData } = require("./validacao");
+const { lerData } = require("./validacao");
 
 /**
  * A regra de "este cliente está em dia?" -- uma só, usada pelo Resumo, pela
@@ -54,9 +54,9 @@ const DIA_MS = 24 * 60 * 60 * 1000;
  */
 function situacaoDoSistema(registro, oficial, { prazoDias = null, hoje = new Date() } = {}) {
   if (!registro) return { situacao: "Nunca atualizado" };
-  const dataOficial = parseData(oficial || "");
+  const dataOficial = lerData(oficial || "");
   if (!dataOficial) return { situacao: "Sem referência" };
-  const dataAtualizacao = parseData(registro.data || "");
+  const dataAtualizacao = lerData(registro.data || "");
   if (!dataAtualizacao) return { situacao: "Sem informação" };
   if (dataAtualizacao >= dataOficial) return { situacao: "Em dia" };
   if (prazoDias == null) return { situacao: "Desatualizado" };

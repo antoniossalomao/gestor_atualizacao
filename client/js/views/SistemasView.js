@@ -7,7 +7,7 @@ import { formatarDataHora, dataBRValida, mascaraDataBR } from "../utils/data.js"
 import { ErroApi } from "../api/ApiPainel.js";
 import { Modal } from "../components/Modal.js";
 import { estadoVazio } from "../components/estadoVazio.js";
-import { escapeHtml, plural } from "../utils/html.js";
+import { escaparHtml, plural } from "../utils/html.js";
 import { prefs } from "../app/preferencias.js";
 import { filtrarClientesDoSistema } from "../domain/filtrosSistemas.js";
 
@@ -186,7 +186,7 @@ export class SistemasView extends View {
       () => this.api.get("/sistemas/versoes", null, { key: "sistemas:versoes" }),
       (versoes) => {
         this.versoes = versoes;
-        this.sistemaFilter.innerHTML = this.versoes.map((s) => `<option value="${escapeHtml(s.nome)}">${escapeHtml(s.nome)}</option>`).join("");
+        this.sistemaFilter.innerHTML = this.versoes.map((s) => `<option value="${escaparHtml(s.nome)}">${escaparHtml(s.nome)}</option>`).join("");
         if (this.versoes.some((s) => s.nome === this.sistema)) this.sistemaFilter.value = this.sistema;
         this.sistema = this.sistemaFilter.value;
         this._salvarFiltros();
@@ -224,10 +224,10 @@ export class SistemasView extends View {
     const lista = this.container.querySelector('[data-role="oficiais-lista"]');
     lista.innerHTML = this.versoes.map((s, i) => `
       <div class="sistemas-oficiais__row" data-index="${i}">
-        <div><strong>${escapeHtml(s.nome)}</strong><span data-role="valor">${escapeHtml(s.data || "Sem referência")}</span>
-          <small>${s.alteradaEm ? `Alterada por ${escapeHtml(s.autor || "não informado")} em ${escapeHtml(formatarDataHora(s.alteradaEm))}` : "Autor e data não registrados"}</small></div>
+        <div><strong>${escaparHtml(s.nome)}</strong><span data-role="valor">${escaparHtml(s.data || "Sem referência")}</span>
+          <small>${s.alteradaEm ? `Alterada por ${escaparHtml(s.autor || "não informado")} em ${escaparHtml(formatarDataHora(s.alteradaEm))}` : "Autor e data não registrados"}</small></div>
         <div class="sistemas-oficiais__acoes">
-          <input class="input" data-role="edicao" aria-label="Versão oficial de ${escapeHtml(s.nome)}" placeholder="dd/mm/aaaa" inputmode="numeric" hidden />
+          <input class="input" data-role="edicao" aria-label="Versão oficial de ${escaparHtml(s.nome)}" placeholder="dd/mm/aaaa" inputmode="numeric" hidden />
           <button type="button" class="btn" data-action="editar" ${this.user?.role === "consulta" ? "hidden" : ""}>Editar</button>
           <button type="button" class="btn btn--accent" data-action="salvar" hidden>Salvar</button>
           <button type="button" class="btn" data-action="cancelar" hidden>Cancelar</button>
@@ -267,7 +267,7 @@ export class SistemasView extends View {
         this.cache?.invalidar();
         try { await this.refresh(); } catch { /* a mensagem de conflito continua sendo a informação principal */ }
       }
-      Modal.alert("Não foi possível salvar", errorMessage(err), "error");
+      Modal.alert("Não foi possível salvar", mensagemDeErro(err), "error");
     } finally {
       botao.disabled = false;
     }
@@ -280,7 +280,7 @@ export class SistemasView extends View {
       return;
     }
     if (this.atualizacaoAntesDe && !dataBRValida(this.atualizacaoAntesDe)) return;
-    this.table.setRefreshing(true);
+    this.table.definirRecarregando(true);
     try {
       await this.swr(
         `sistemas:lista:${this.sistema}|${this.atualizacaoAntesDe}`,
@@ -290,15 +290,15 @@ export class SistemasView extends View {
     } catch (err) {
       // Falha de carga já aparece no aviso fixo da tela (View.swr); um modal
       // em cima dele era o mesmo recado duas vezes.
-      if (!err?.cancelled && !err?.avisadoNaTela) Modal.alert("Erro", errorMessage(err), "error");
+      if (!err?.cancelled && !err?.avisadoNaTela) Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
-      this.table.setRefreshing(false);
+      this.table.definirRecarregando(false);
     }
   }
 
   _filtrarRows() {
     const rows = filtrarClientesDoSistema(this.rows, this.situacao, this.busca);
-    this.table.setRows(rows);
+    this.table.definirLinhas(rows);
     this.container.querySelector('[data-role="count"]').textContent = plural(rows.length, "cliente");
   }
 
@@ -346,6 +346,6 @@ function severidadeCor(situacao, index) {
   return base;
 }
 
-function errorMessage(err) {
+function mensagemDeErro(err) {
   return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

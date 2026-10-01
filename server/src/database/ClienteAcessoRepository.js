@@ -10,7 +10,7 @@ class ClienteAcessoRepository extends BaseRepository {
     return "cliente_acessos";
   }
 
-  listByCliente(clienteId) {
+  listarPorCliente(clienteId) {
     return this.conn
       .prepare(
         `SELECT id, cliente_id AS clienteId, maquina, anydesk, suporte_bredas AS suporteBredas, observacoes
@@ -21,7 +21,7 @@ class ClienteAcessoRepository extends BaseRepository {
       .all(clienteId);
   }
 
-  getById(id) {
+  obterPorId(id) {
     return (
       this.conn
         .prepare(

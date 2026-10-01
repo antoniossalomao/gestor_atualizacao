@@ -207,11 +207,11 @@ class Servidor {
 
     this.app.use(express.json({ limit: "1mb" }));
     this.sessionStore = new ArmazemDeSessaoSqlite({ filePath: path.join(dbDir, "sessions.sqlite") });
-    this.services.backups.setSessionStore(this.sessionStore);
-    // Permite que AuthService.changePassword invalide as sessões ativas do
+    this.services.backups.definirArmazemDeSessao(this.sessionStore);
+    // Permite que AuthService.trocarSenha invalide as sessões ativas do
     // usuário após a troca de senha -- mesmo padrão de injeção pós-construção
     // usado por BackupService acima (o store só existe aqui, depois de _buildServices).
-    this.services.auth.setSessionStore(this.sessionStore);
+    this.services.auth.definirArmazemDeSessao(this.sessionStore);
     this.app.use(
       session({
         store: this.sessionStore,

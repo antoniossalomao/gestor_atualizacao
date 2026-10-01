@@ -6,7 +6,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { dataValida, parseData, horaValida } = require("../src/services/validacao");
+const { dataValida, lerData, horaValida } = require("../src/services/validacao");
 
 test("validacao - datas", async (t) => {
   await t.test("aceita vazio: nem toda data é conhecida na hora de gravar", () => {
@@ -39,15 +39,15 @@ test("validacao - datas", async (t) => {
     }
   });
 
-  await t.test("parseData devolve Date correto, ou null", () => {
-    const d = parseData("15/03/2026");
+  await t.test("lerData devolve Date correto, ou null", () => {
+    const d = lerData("15/03/2026");
     assert.ok(d instanceof Date);
     assert.equal(d.getFullYear(), 2026);
     assert.equal(d.getMonth(), 2, "março é mês 2 (base zero)");
     assert.equal(d.getDate(), 15);
 
-    assert.equal(parseData(""), null);
-    assert.equal(parseData("31/02/2026"), null, "data inválida não vira Date torto");
+    assert.equal(lerData(""), null);
+    assert.equal(lerData("31/02/2026"), null, "data inválida não vira Date torto");
   });
 });
 

@@ -1,4 +1,4 @@
-const { parsePaginacao } = require("./paginacao");
+const { lerPaginacao } = require("./paginacao");
 
 /** Rotas da agenda de tarefas internas (aba Agendamentos). */
 class AgendamentosController {
@@ -9,7 +9,7 @@ class AgendamentosController {
 
   list = (req, res) => {
     const { search = "", status = "Todos", prioridade, quando } = req.query;
-    res.json(this.agendamentoService.list(search, status, { ...parsePaginacao(req.query), prioridade, quando }));
+    res.json(this.agendamentoService.list(search, status, { ...lerPaginacao(req.query), prioridade, quando }));
   };
 
   lembretes = (req, res) => {
@@ -41,9 +41,9 @@ class AgendamentosController {
     }
   };
 
-  markDone = (req, res, next) => {
+  marcarConcluida = (req, res, next) => {
     try {
-      this.agendamentoService.markDone(Number(req.params.id), req.session.user);
+      this.agendamentoService.marcarConcluida(Number(req.params.id), req.session.user);
       res.status(204).end();
     } catch (err) {
       next(err);

@@ -25,7 +25,7 @@ class ClienteService {
     // de cada cliente, lida da atualização mais recente dele -- ver
     // AtualizacaoRepository.maquinasPorCliente.
     const maquinasPorCliente = this.db.atualizacoes.maquinasPorCliente();
-    return { rows: rows.map((row) => toClienteDTO(row, maquinasPorCliente.get(row.id) ?? 0)), total, page, pageSize };
+    return { rows: rows.map((row) => paraClienteDto(row, maquinasPorCliente.get(row.id) ?? 0)), total, page, pageSize };
   }
 
   names() {
@@ -45,16 +45,16 @@ class ClienteService {
     return this.db.clientes.cidades();
   }
 
-  getById(id) {
-    const row = this.db.clientes.getById(id);
+  obterPorId(id) {
+    const row = this.db.clientes.obterPorId(id);
     if (!row) throw new ErroNaoEncontrado("Cliente não encontrado.");
-    return toClienteDTO(row, this.db.atualizacoes.maquinasDoCliente(row.id));
+    return paraClienteDto(row, this.db.atualizacoes.maquinasDoCliente(row.id));
   }
 
-  getByNome(nome) {
-    const row = this.db.clientes.getByNome(nome);
+  obterPorNome(nome) {
+    const row = this.db.clientes.obterPorNome(nome);
     if (!row) return null;
-    return toClienteDTO(row, this.db.atualizacoes.maquinasDoCliente(row.id));
+    return paraClienteDto(row, this.db.atualizacoes.maquinasDoCliente(row.id));
   }
 
   /**
@@ -66,34 +66,34 @@ class ClienteService {
     // Bloqueia nome duplicado ANTES de inserir: dois clientes com o mesmo
     // nome seriam indistinguiveis nas telas que listam por nome, e o vinculo
     // de uma atualização digitada pelo nome escolheria um deles as cegas.
-    if (this.db.clientes.nameExists(nome)) {
+    if (this.db.clientes.nomeExiste(nome)) {
       throw new ErroDeValidacao(`Já existe um cliente chamado '${nome}'.`);
     }
     const id = this.db.clientes.insert(codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo, regimeTributario);
     this.historico.registrar(usuario, "criar", "cliente", `Cliente "${nome}"`);
-    return toClienteDTO(this.db.clientes.getById(id), this.db.atualizacoes.maquinasDoCliente(id));
+    return paraClienteDto(this.db.clientes.obterPorId(id), this.db.atualizacoes.maquinasDoCliente(id));
   }
 
   update(id, input, usuario) {
-    const existente = this.db.clientes.getById(id);
+    const existente = this.db.clientes.obterPorId(id);
     if (!existente) throw new ErroNaoEncontrado("Cliente não encontrado.");
     const { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validate(input);
-    if (this.db.clientes.nameExists(nome, id)) {
+    if (this.db.clientes.nomeExiste(nome, id)) {
       throw new ErroDeValidacao(`Já existe um cliente chamado '${nome}'.`);
     }
     // O nome copiado nas atualizações/agendamentos ligados acompanha o
     // rename dentro de ClienteRepository.update.
     const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
     if (this.db.clientes.update(id, codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo, revisaoEsperada, usuario?.nome || "", regimeTributario) === 0) {
-      const agora = this.db.clientes.getById(id);
-      if (agora && revisaoEsperada != null) throw new ErroDeConflito(`Este cliente foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, toClienteDTO(agora));
+      const agora = this.db.clientes.obterPorId(id);
+      if (agora && revisaoEsperada != null) throw new ErroDeConflito(`Este cliente foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, paraClienteDto(agora));
       throw new ErroNaoEncontrado("Cliente não encontrado.");
     }
     const descricao =
       existente.nome !== nome ? `Cliente "${existente.nome}" renomeado para "${nome}"` : `Cliente "${nome}"`;
-    const depois = this.db.clientes.getById(id);
-    this.historico.registrar(usuario, "atualizar", "cliente", descricao, { antes: toClienteDTO(existente), depois: toClienteDTO(depois) });
-    return toClienteDTO(this.db.clientes.getById(id), this.db.atualizacoes.maquinasDoCliente(id));
+    const depois = this.db.clientes.obterPorId(id);
+    this.historico.registrar(usuario, "atualizar", "cliente", descricao, { antes: paraClienteDto(existente), depois: paraClienteDto(depois) });
+    return paraClienteDto(this.db.clientes.obterPorId(id), this.db.atualizacoes.maquinasDoCliente(id));
   }
 
   /** Ids dos sistemas marcados, na ordem -- ver SistemaRepository.resolverOuCriar. */
@@ -102,10 +102,10 @@ class ClienteService {
   }
 
   delete(id, usuario) {
-    const existente = this.db.clientes.getById(id);
+    const existente = this.db.clientes.obterPorId(id);
     if (!existente) throw new ErroNaoEncontrado("Cliente não encontrado.");
     this.db.clientes.delete(id);
-    this.historico.registrar(usuario, "excluir", "cliente", `Cliente "${existente.nome}"`, { antes: toClienteDTO(existente), depois: null });
+    this.historico.registrar(usuario, "excluir", "cliente", `Cliente "${existente.nome}"`, { antes: paraClienteDto(existente), depois: null });
   }
 
   /**
@@ -118,12 +118,12 @@ class ClienteService {
    * acesso, seria pior que não ter Desfazer nenhum. Por isso a tela usa
    * confirmação antes, igual já fazia para excluir um cliente só.
    */
-  deleteMany(ids, usuario) {
-    const registros = this.db.clientes.findByIds(ids);
+  excluirVarios(ids, usuario) {
+    const registros = this.db.clientes.buscarPorIds(ids);
     if (registros.length === 0) {
       throw new ErroNaoEncontrado("Nenhum dos clientes selecionados existe mais. A lista pode estar desatualizada.");
     }
-    const excluidos = this.db.clientes.deleteMany(registros.map((r) => r.id));
+    const excluidos = this.db.clientes.excluirVarios(registros.map((r) => r.id));
     const nomes = registros.slice(0, 3).map((r) => r.nome).join(", ") + (registros.length > 3 ? ` e mais ${registros.length - 3}` : "");
     this.historico.registrar(usuario, "excluir", "cliente", `${excluidos} clientes excluídos de uma vez (${nomes})`);
     return { excluidos };
@@ -134,15 +134,15 @@ class ClienteService {
    * agora têm NFCe"), em vez de abrir o cadastro de cada um e marcar o
    * checkbox individualmente.
    */
-  addSistemaMany(ids, nomeSistema, usuario) {
+  adicionarSistemaEmLote(ids, nomeSistema, usuario) {
     const limpo = (nomeSistema || "").trim();
     if (!limpo) throw new ErroDeValidacao("Escolha um sistema.");
-    const registros = this.db.clientes.findByIds(ids);
+    const registros = this.db.clientes.buscarPorIds(ids);
     if (registros.length === 0) {
       throw new ErroNaoEncontrado("Nenhum dos clientes selecionados existe mais. A lista pode estar desatualizada.");
     }
     const [sistema] = this.db.sistemas.resolverOuCriar([limpo]);
-    const afetados = this.db.clientes.addSistemaToMany(registros.map((r) => r.id), sistema.id);
+    const afetados = this.db.clientes.adicionarSistemaALotes(registros.map((r) => r.id), sistema.id);
     if (afetados > 0) {
       const nomes = registros.slice(0, 3).map((r) => r.nome).join(", ") + (registros.length > 3 ? ` e mais ${registros.length - 3}` : "");
       this.historico.registrar(usuario, "atualizar", "cliente", `Sistema "${limpo}" adicionado a ${afetados} cliente(s) de uma vez (${nomes})`);
@@ -177,7 +177,7 @@ class ClienteService {
     if (atualizaComPrincipal !== undefined && typeof atualizaComPrincipal !== "boolean") {
       throw new ErroDeValidacao(`Informe se o sistema atualiza junto com o ${SISTEMA_PRINCIPAL}.`);
     }
-    const sistema = this.db.sistemas.getById(Number(id));
+    const sistema = this.db.sistemas.obterPorId(Number(id));
     if (!sistema?.ativo) throw new ErroNaoEncontrado("Sistema não encontrado no catálogo ativo.");
     if (atualizaComPrincipal && sistema.nome.toLowerCase() === SISTEMA_PRINCIPAL.toLowerCase()) {
       throw new ErroDeValidacao(`O ${SISTEMA_PRINCIPAL} não pode depender dele mesmo.`);
@@ -187,7 +187,7 @@ class ClienteService {
     if (!mudaClasse && !mudaDependencia) return sistema;
     if (mudaClasse) this.db.sistemas.classificar(sistema.id, controlaVersao);
     if (mudaDependencia) this.db.sistemas.marcarDependente(sistema.id, atualizaComPrincipal);
-    const depois = this.db.sistemas.getById(sistema.id);
+    const depois = this.db.sistemas.obterPorId(sistema.id);
     const partes = [];
     if (mudaClasse) partes.push(`classificado como ${controlaVersao ? "atualizável" : "componente fixo"}`);
     if (mudaDependencia) partes.push(atualizaComPrincipal ? `marcado como atualizado junto com o ${SISTEMA_PRINCIPAL}` : `desmarcado de atualizar junto com o ${SISTEMA_PRINCIPAL}`);
@@ -195,7 +195,7 @@ class ClienteService {
     return depois;
   }
 
-  listSistemas() {
+  listarSistemas() {
     return this.db.sistemas.list();
   }
 
@@ -224,7 +224,7 @@ class ClienteService {
    *
    * @returns {{removed: true, clientesAfetados: number}}
    */
-  removeSistema(nome, usuario) {
+  removerSistema(nome, usuario) {
     const limpo = (nome || "").trim();
     if (!limpo) throw new ErroDeValidacao("Informe o nome do sistema.");
     const removido = this.db.sistemas.remove(limpo);
@@ -254,36 +254,36 @@ class ClienteService {
   }
 
   /** Acessos remotos (AnyDesk / Suporte Bredas) das máquinas de um cliente -- aba Clientes, botão "Acessos". */
-  listAcessos(clienteId) {
-    const cliente = this.db.clientes.getById(clienteId);
+  listarAcessos(clienteId) {
+    const cliente = this.db.clientes.obterPorId(clienteId);
     if (!cliente) throw new ErroNaoEncontrado("Cliente não encontrado.");
-    return this.db.clienteAcessos.listByCliente(clienteId);
+    return this.db.clienteAcessos.listarPorCliente(clienteId);
   }
 
-  addAcesso(clienteId, input, usuario) {
-    const cliente = this.db.clientes.getById(clienteId);
+  adicionarAcesso(clienteId, input, usuario) {
+    const cliente = this.db.clientes.obterPorId(clienteId);
     if (!cliente) throw new ErroNaoEncontrado("Cliente não encontrado.");
     const { maquina, anydesk, suporteBredas, observacoes } = this._validateAcesso(input);
     const id = this.db.clienteAcessos.insert(clienteId, maquina, anydesk, suporteBredas, observacoes);
     this.historico.registrar(usuario, "criar", "acesso", `Acesso "${maquina}" de "${cliente.nome}"`);
-    return this.db.clienteAcessos.getById(id);
+    return this.db.clienteAcessos.obterPorId(id);
   }
 
-  updateAcesso(id, input, usuario) {
-    const existente = this.db.clienteAcessos.getById(id);
+  alterarAcesso(id, input, usuario) {
+    const existente = this.db.clienteAcessos.obterPorId(id);
     if (!existente) throw new ErroNaoEncontrado("Acesso não encontrado.");
     const { maquina, anydesk, suporteBredas, observacoes } = this._validateAcesso(input);
     this.db.clienteAcessos.update(id, maquina, anydesk, suporteBredas, observacoes);
-    const cliente = this.db.clientes.getById(existente.clienteId);
+    const cliente = this.db.clientes.obterPorId(existente.clienteId);
     this.historico.registrar(usuario, "atualizar", "acesso", `Acesso "${maquina}" de "${cliente ? cliente.nome : existente.clienteId}"`);
-    return this.db.clienteAcessos.getById(id);
+    return this.db.clienteAcessos.obterPorId(id);
   }
 
-  removeAcesso(id, usuario) {
-    const existente = this.db.clienteAcessos.getById(id);
+  removerAcesso(id, usuario) {
+    const existente = this.db.clienteAcessos.obterPorId(id);
     if (!existente) throw new ErroNaoEncontrado("Acesso não encontrado.");
     this.db.clienteAcessos.delete(id);
-    const cliente = this.db.clientes.getById(existente.clienteId);
+    const cliente = this.db.clientes.obterPorId(existente.clienteId);
     this.historico.registrar(
       usuario,
       "excluir",
@@ -308,7 +308,7 @@ class ClienteService {
  * clientes -- vem calculada à parte (ver AtualizacaoRepository.
  * maquinasPorCliente/maquinasDoCliente) e é só anexada aqui.
  */
-function toClienteDTO(row, maquinas = 0) {
+function paraClienteDto(row, maquinas = 0) {
   if (!row) return null;
   return {
     id: row.id,

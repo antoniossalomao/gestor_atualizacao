@@ -7,7 +7,7 @@ import { html, plural } from "../utils/html.js";
 import { hojeBR } from "../utils/data.js";
 import { formatarMes, primeiroDiaDoMes, tendenciaMensal, barrasPorSistema, variacaoMesAnterior } from "../domain/resumo.js";
 import { GRUPOS_SITUACAO, totaisSituacao, sistemasQueExplicam } from "../domain/situacao.js";
-import { statTile, deltaTendencia, corpoSituacao } from "../templates/resumo.js";
+import { blocoDeNumero, deltaTendencia, corpoSituacao } from "../templates/resumo.js";
 
 /**
  * Aba Resumo: indicadores gerais. Equivalente de gestor/views/resumo.py -- a
@@ -36,10 +36,10 @@ export class ResumoView extends View {
   _buildDom() {
     this.container.innerHTML = html`
       <div class="stat-tiles">
-        ${statTile("clientes", "clientes", "Clientes", "Ver clientes")}
-        ${statTile("atualizacoes", "atualizacoes", "Atualizações", "Ver histórico")}
-        ${statTile("mes", "calendario", "Atualizações Este Mês", "Ver o mês")}
-        ${statTile("semAtualizacao", "alerta", rotuloSemAtualizacao(this.desatualizadoDias), "Ver a lista")}
+        ${blocoDeNumero("clientes", "clientes", "Clientes", "Ver clientes")}
+        ${blocoDeNumero("atualizacoes", "atualizacoes", "Atualizações", "Ver histórico")}
+        ${blocoDeNumero("mes", "calendario", "Atualizações Este Mês", "Ver o mês")}
+        ${blocoDeNumero("semAtualizacao", "alerta", rotuloSemAtualizacao(this.desatualizadoDias), "Ver a lista")}
       </div>
 
       <!--
@@ -187,7 +187,7 @@ export class ResumoView extends View {
     this.resumo = resumo;
     this.situacaoEl.innerHTML = corpoSituacao(totaisSituacao(resumo.situacaoClientes), resumo.situacaoClientes.sistemasMaisAtrasados, resumo.prazoVersaoDias ?? null);
 
-    this.respTable.setRows(resumo.porResponsavel);
+    this.respTable.definirLinhas(resumo.porResponsavel);
     const barras = barrasPorSistema(resumo.atualizadosMesPorSistema);
     this.sistemaChart.render(
       // Zerado este mês, com atualização só no mês anterior: não vale uma
@@ -270,7 +270,7 @@ export class ResumoView extends View {
     const alvo = document.createElement("div");
     this.gavetaTabela.replaceChildren(alvo);
     const tabela = new TabelaOrdenavel(alvo, { columns: colunas, rowKey: chave, emptyMessage: vazio, selectable: false });
-    tabela.setRows(linhas);
+    tabela.definirLinhas(linhas);
     this.gavetaAjuda.textContent = ajuda;
     this.gaveta.setTitulo(titulo);
     this.gaveta.abrir();

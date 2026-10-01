@@ -1,6 +1,6 @@
 import { Modal } from "./Modal.js";
 import { html } from "../utils/html.js";
-import { copyToClipboard } from "./areaDeTransferencia.js";
+import { copiarParaAreaDeTransferencia } from "./areaDeTransferencia.js";
 import { avisoRapido } from "./AvisosRapidos.js";
 import { aparencia } from "../app/aparencia.js";
 
@@ -122,7 +122,7 @@ export function abrirRelatorio({ tipos, gerar, periodo = false }) {
   box.querySelector('[data-action="fechar-x"]')?.addEventListener("click", () => close());
 
   box.querySelector('[data-action="copiar"]').addEventListener("click", async () => {
-    if (await copyToClipboard(texto)) {
+    if (await copiarParaAreaDeTransferencia(texto)) {
       avisoRapido.sucesso("Relatório copiado.");
       if (aparencia.relatorioFecharAoCopiar()) close();
     } else {

@@ -2,7 +2,7 @@ import { View } from "../app/View.js";
 import { avisoRapido } from "../components/AvisosRapidos.js";
 import { iconeSvg } from "../utils/icones.js";
 import { estadoVazio } from "../components/estadoVazio.js";
-import { escapeAttr, escapeHtml, plural } from "../utils/html.js";
+import { escaparAtributo, escaparHtml, plural } from "../utils/html.js";
 import { formatarDataHora, tempoRelativo, formatarBytes } from "../utils/data.js";
 import { Modal } from "../components/Modal.js";
 import { ErroApi } from "../api/ApiPainel.js";
@@ -272,7 +272,7 @@ export class VersoesView extends View {
         ${plural(semPublicacao.length, "sistema")} sem publicação ativa:
       </div>
       <div class="version-coverage__systems">
-        ${semPublicacao.map((s) => `<span class="badge badge--warning">${escapeHtml(s)}</span>`).join("")}
+        ${semPublicacao.map((s) => `<span class="badge badge--warning">${escaparHtml(s)}</span>`).join("")}
       </div>
     `;
     coverage.appendChild(box);
@@ -300,8 +300,8 @@ export class VersoesView extends View {
       article.innerHTML = `
         <div class="published-release__header">
           <div class="published-release__identity">
-            <span class="published-release__version">${escapeHtml(item.versao)}</span>
-            <strong class="published-release__system">${escapeHtml(item.sistema || "Sistema não informado")}</strong>
+            <span class="published-release__version">${escaparHtml(item.versao)}</span>
+            <strong class="published-release__system">${escaparHtml(item.sistema || "Sistema não informado")}</strong>
           </div>
           <span class="badge ${item.status === "piloto" ? "badge--info" : "badge--success"}">${item.status === "piloto" ? "Piloto" : "No ar"}</span>
         </div>
@@ -337,7 +337,7 @@ export class VersoesView extends View {
         meta.textContent += ` · ${item.metricasPiloto.rodando} rodando · ${item.metricasPiloto.semErros} sem erros`;
       }
       meta.title = `Publicada ${tempoRelativo(item.publicadoEm)}`;
-      article.querySelector('[data-role="changelog"]').appendChild(renderChangelog(item.observacoes));
+      article.querySelector('[data-role="changelog"]').appendChild(desenharNovidades(item.observacoes));
       list.appendChild(article);
     }
   }
@@ -386,13 +386,13 @@ export class VersoesView extends View {
       const row = document.createElement("tr");
       row.className = "is-readonly";
       row.innerHTML = `
-        <td><strong>${escapeHtml(item.sistema || "—")}</strong></td>
-        <td><span class="version-chip">${escapeHtml(item.versao)}</span></td>
+        <td><strong>${escaparHtml(item.sistema || "—")}</strong></td>
+        <td><span class="version-chip">${escaparHtml(item.versao)}</span></td>
         <td><span class="badge ${status.classe}">${status.texto}</span></td>
-        <td>${item.publicadoEm ? escapeHtml(formatarDataHora(item.publicadoEm)) : "—"}</td>
-        <td class="versions-table__package" title="${escapeAttr(nomesPacotes)}">${escapeHtml(nomesPacotes || "—")}</td>
+        <td>${item.publicadoEm ? escaparHtml(formatarDataHora(item.publicadoEm)) : "—"}</td>
+        <td class="versions-table__package" title="${escaparAtributo(nomesPacotes)}">${escaparHtml(nomesPacotes || "—")}</td>
         <td>${formatarBytes(item.tamanhoBytes)}</td>
-        <td class="versions-table__notes" title="${escapeAttr(observacoes)}">${escapeHtml(observacoes || "Sem notas")}</td>
+        <td class="versions-table__notes" title="${escaparAtributo(observacoes)}">${escaparHtml(observacoes || "Sem notas")}</td>
         <td class="table-actions" data-role="actions"></td>
       `;
       const actions = row.querySelector('[data-role="actions"]');
@@ -451,7 +451,7 @@ export class VersoesView extends View {
     const current = this.systemSelect.value;
     this.systemSelect.innerHTML =
       `<option value="">Selecione o sistema…</option>` +
-      this.systems.map((system) => `<option value="${escapeAttr(system)}">${escapeHtml(system)}</option>`).join("");
+      this.systems.map((system) => `<option value="${escaparAtributo(system)}">${escaparHtml(system)}</option>`).join("");
     if (this.systems.includes(current)) this.systemSelect.value = current;
     this.container.querySelector('[data-role="system-help"]').textContent = this.systems.length
       ? "Vem do cadastro da aba Sistemas."
@@ -490,7 +490,7 @@ export class VersoesView extends View {
       const cliente = this.clients.find((item) => item.codigo === codigo);
       const chip = document.createElement("span");
       chip.className = "pilot-chip";
-      chip.innerHTML = `<strong>${escapeHtml(codigo)}</strong><span>${escapeHtml(cliente?.nome || "Cliente")}</span>`;
+      chip.innerHTML = `<strong>${escaparHtml(codigo)}</strong><span>${escaparHtml(cliente?.nome || "Cliente")}</span>`;
       const remove = document.createElement("button");
       remove.type = "button";
       remove.setAttribute("aria-label", `Remover ${cliente?.nome || codigo} do grupo piloto`);
@@ -520,7 +520,7 @@ export class VersoesView extends View {
       const option = document.createElement("button");
       option.type = "button";
       option.className = "pilot-picker__option";
-      option.innerHTML = `<span><strong>${escapeHtml(cliente.codigo)}</strong><small>${escapeHtml(cliente.nome)}</small></span>${cliente.cidade ? `<em>${escapeHtml(cliente.cidade)}</em>` : ""}<b aria-hidden="true">+</b>`;
+      option.innerHTML = `<span><strong>${escaparHtml(cliente.codigo)}</strong><small>${escaparHtml(cliente.nome)}</small></span>${cliente.cidade ? `<em>${escaparHtml(cliente.cidade)}</em>` : ""}<b aria-hidden="true">+</b>`;
       option.addEventListener("click", () => {
         this.pilotCodes.add(cliente.codigo);
         this.pilotSearch.value = "";
@@ -589,7 +589,7 @@ export class VersoesView extends View {
     button.disabled = true;
     this._showProgress(0);
     try {
-      await this.api.postForm("/versoes", formData, { onProgress: (percent) => this._showProgress(percent) });
+      await this.api.enviarFormulario("/versoes", formData, { onProgress: (percent) => this._showProgress(percent) });
       this.form.reset();
       this.pilotCodes.clear();
       this.pilotSearch.value = "";
@@ -722,7 +722,7 @@ function resumoObservacoes(observacoes) {
     .join(" · ");
 }
 
-function renderChangelog(observacoes) {
+function desenharNovidades(observacoes) {
   const linhas = String(observacoes || "")
     .split("\n")
     .map((linha) => linha.trim())

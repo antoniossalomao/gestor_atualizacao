@@ -39,7 +39,7 @@ class VersaoRepository extends BaseRepository {
    * o pacote do B_VENDAS. O parametro nao e opcional de proposito: obrigar a
    * dizer o sistema impede que a chamada errada volte a existir por descuido.
    */
-  latestPublished(sistema) {
+  ultimaPublicada(sistema) {
     return this.conn
       .prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'publicada' AND sistema = ? ORDER BY id DESC LIMIT 1`)
       .get(sistema);
@@ -286,7 +286,7 @@ class VersaoRepository extends BaseRepository {
       .all({ desde: desde || null });
   }
 
-  addLog(data) {
+  adicionarRegistro(data) {
     this.conn
       .prepare(
         `INSERT INTO atualizador_logs (cnpj, hwid, maquina, sistema, versao, versao_anterior, duracao_ms, fase, status, detalhes, criado_em)

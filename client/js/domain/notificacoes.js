@@ -14,7 +14,7 @@ import { ehResponsavel } from "./pessoa.js";
  * Não toca no DOM de propósito (ver ADR-0005), e é aqui que mora a conta que
  * erra em silêncio. O card "Agendamento atrasado" do Resumo, por exemplo,
  * passou a vida inteira invisível: a tela lia `lembretes.atrasados` e o
- * servidor devolve um ARRAY puro (ver AgendamentoRepository.dueSoon). Nada
+ * servidor devolve um ARRAY puro (ver AgendamentoRepository.venceEmBreve). Nada
  * quebrava, nenhum erro aparecia -- o card simplesmente nunca existia. Com a
  * contagem fora da tela, o teste pega.
  */

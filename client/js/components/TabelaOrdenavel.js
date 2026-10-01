@@ -1,6 +1,6 @@
 import { ocuparAlturaDisponivel } from "./alturaDisponivel.js";
 
-/** Espera antes de escurecer a tabela numa atualização (ver setRefreshing). */
+/** Espera antes de escurecer a tabela numa atualização (ver definirRecarregando). */
 const ATRASO_REFRESH_MS = 180;
 
 /**
@@ -18,7 +18,7 @@ const ATRASO_REFRESH_MS = 180;
  * reconstruía o `<tbody>` inteiro -- 50 linhas × 9 colunas recriadas do zero
  * para trocar uma classe CSS. Isso custava um "pisca" visível e perdia a
  * posição de rolagem. Agora a seleção só liga/desliga a classe nas duas linhas
- * envolvidas, e `setRows` reaproveita as `<tr>` existentes quando a
+ * envolvidas, e `definirLinhas` reaproveita as `<tr>` existentes quando a
  * quantidade bate, atualizando só o texto que mudou.
  *
  * **2. Teclado.** As linhas eram `<tr>` com `onclick` -- invisíveis para quem
@@ -149,7 +149,7 @@ export class TabelaOrdenavel {
   }
 
   /** Substitui os dados exibidos, mantendo ordenação/seleção quando possível. */
-  setRows(rows) {
+  definirLinhas(rows) {
     this.loading = false;
     this.rows = rows;
     if (this.sortState.key && !this.serverSort) this._applySort();
@@ -171,7 +171,7 @@ export class TabelaOrdenavel {
    * demais para ser lido como "carregando" -- só dava a impressão de que a
    * tabela pisca enquanto se digita. Quando a espera é real, o aviso aparece.
    */
-  setRefreshing(ligado) {
+  definirRecarregando(ligado) {
     clearTimeout(this._timerRefresh);
     this._timerRefresh = null;
     if (!ligado) {
@@ -184,7 +184,7 @@ export class TabelaOrdenavel {
     }, ATRASO_REFRESH_MS);
   }
 
-  clearSelection() {
+  limparSelecao() {
     this._marcarSelecionada(null);
   }
 
@@ -298,7 +298,7 @@ export class TabelaOrdenavel {
       return;
     }
     this._applySort();
-    // Mesmo motivo do reset em `setRows`: a ordem das linhas mudou, e a âncora
+    // Mesmo motivo do reset em `definirLinhas`: a ordem das linhas mudou, e a âncora
     // é um índice nessa ordem. Nenhuma tabela com `multiSelect` usa ordenação
     // no cliente hoje (todas são `serverSort: true`, que devolve por aqui bem
     // antes desta linha) -- isto é só para não deixar uma pegadinha pronta
@@ -311,7 +311,7 @@ export class TabelaOrdenavel {
     const col = this.columns.find((c) => c.key === this.sortState.key);
     if (!col) return;
     const factor = this.sortState.reverse ? -1 : 1;
-    this.rows = [...this.rows].sort((a, b) => factor * compareValues(a[col.key], b[col.key], col.type));
+    this.rows = [...this.rows].sort((a, b) => factor * compararValores(a[col.key], b[col.key], col.type));
   }
 
   _renderBody() {
@@ -546,13 +546,13 @@ export class TabelaOrdenavel {
   }
 }
 
-function compareValues(a, b, type) {
-  if (type === "date") return compareDates(a, b);
-  if (type === "numeric") return compareNumeric(a, b);
+function compararValores(a, b, type) {
+  if (type === "date") return compararDatas(a, b);
+  if (type === "numeric") return compararNumeros(a, b);
   return String(a ?? "").trim().toLowerCase().localeCompare(String(b ?? "").trim().toLowerCase(), "pt-BR");
 }
 
-function compareDates(a, b) {
+function compararDatas(a, b) {
   const da = parseDataBR(a);
   const db = parseDataBR(b);
   if (!da && !db) return 0;
@@ -568,11 +568,11 @@ function parseDataBR(texto) {
   return new Date(Number(ano), Number(mes) - 1, Number(dia)).getTime();
 }
 
-function compareNumeric(a, b) {
-  return toNumeric(a) - toNumeric(b);
+function compararNumeros(a, b) {
+  return paraNumero(a) - paraNumero(b);
 }
 
-function toNumeric(value) {
+function paraNumero(value) {
   const texto = String(value ?? "").trim().toLowerCase();
   if (texto === "nunca") return Infinity;
   const n = parseFloat(texto);

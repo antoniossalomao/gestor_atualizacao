@@ -45,7 +45,7 @@ export function marcarOcupado(button) {
  * @param {HTMLButtonElement} button
  * @param {(...args: any[]) => Promise<any>} action
  */
-export function withBusyButton(button, action) {
+export function comBotaoOcupado(button, action) {
   return async (...args) => {
     if (button.disabled) return;
     const liberar = marcarOcupado(button);

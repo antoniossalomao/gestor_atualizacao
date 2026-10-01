@@ -2,7 +2,7 @@ import { View } from "../app/View.js";
 import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { estadoVazio } from "../components/estadoVazio.js";
 import { plural, html } from "../utils/html.js";
-import { copyToClipboard } from "../components/areaDeTransferencia.js";
+import { copiarParaAreaDeTransferencia } from "../components/areaDeTransferencia.js";
 import { avisoRapido } from "../components/AvisosRapidos.js";
 import { iconeHtml } from "../utils/icones.js";
 import { relatorioDeAtualizacao, haQuantoTempo } from "../domain/relatorio.js";
@@ -232,13 +232,13 @@ export class ConsultaView extends View {
     const cadastro = document.createElement("div");
     cadastro.className = "info-grid";
     cadastro.append(
-      infoItem("Código", cliente.codigo),
-      infoItem("Grupo / Rede", cliente.grupo),
-      infoItem("Cidade", cliente.cidade),
+      itemDeInformacao("Código", cliente.codigo),
+      itemDeInformacao("Grupo / Rede", cliente.grupo),
+      itemDeInformacao("Cidade", cliente.cidade),
       // O regime é gravado pelo cadastro desde a migração 5, mas a ficha não o
       // mostrava: quem precisava dele tinha que abrir o formulário do cliente.
-      infoItem("Regime tributário", cliente.regimeTributario),
-      infoItem("Sistemas contratados", (cliente.sistemas || []).join(", "), true)
+      itemDeInformacao("Regime tributário", cliente.regimeTributario),
+      itemDeInformacao("Sistemas contratados", (cliente.sistemas || []).join(", "), true)
     );
     resumoPanel.appendChild(cadastro);
 
@@ -252,7 +252,7 @@ export class ConsultaView extends View {
         const tipo = e.target.closest("[data-copy]")?.dataset.copy;
         if (!tipo) return;
         const valor = tipo === "anydesk" ? acesso.anydesk : (acesso.suporte_bredas || acesso.suporteBredas);
-        if (valor && await copyToClipboard(valor)) avisoRapido.sucesso("Acesso copiado.");
+        if (valor && await copiarParaAreaDeTransferencia(valor)) avisoRapido.sucesso("Acesso copiado.");
       });
       acessosBox.appendChild(card);
     }
@@ -300,13 +300,13 @@ export class ConsultaView extends View {
       `;
       grid.appendChild(topoLinha);
 
-      grid.appendChild(infoItem("Data", registro.data));
-      grid.appendChild(infoItem("Sistema", registro.sistema));
-      grid.appendChild(infoItem("Versão", registro.versao));
-      grid.appendChild(infoItem("Atualizado por", registro.responsavel));
-      grid.appendChild(infoItem("Máquinas", registro.maquinas));
-      grid.appendChild(infoItem("Motivo", registro.motivo, true));
-      if (registro.obs) grid.appendChild(infoItem("Obs", registro.obs, true));
+      grid.appendChild(itemDeInformacao("Data", registro.data));
+      grid.appendChild(itemDeInformacao("Sistema", registro.sistema));
+      grid.appendChild(itemDeInformacao("Versão", registro.versao));
+      grid.appendChild(itemDeInformacao("Atualizado por", registro.responsavel));
+      grid.appendChild(itemDeInformacao("Máquinas", registro.maquinas));
+      grid.appendChild(itemDeInformacao("Motivo", registro.motivo, true));
+      if (registro.obs) grid.appendChild(itemDeInformacao("Obs", registro.obs, true));
       caixa.appendChild(grid);
     });
 
@@ -318,7 +318,7 @@ export class ConsultaView extends View {
       if (!reg) return;
       const anterior = historico[idx + 1] || null;
       const textoChamado = relatorioDeAtualizacao(reg, { cliente, anterior });
-      if (await copyToClipboard(textoChamado)) {
+      if (await copiarParaAreaDeTransferencia(textoChamado)) {
         avisoRapido.sucesso("Chamado copiado para a área de transferência.");
       }
     });
@@ -430,7 +430,7 @@ export class ConsultaView extends View {
   }
 }
 
-function infoItem(label, value, wide = false) {
+function itemDeInformacao(label, value, wide = false) {
   const div = document.createElement("div");
   div.className = "info-grid__item" + (wide ? " info-grid__item--wide" : "");
   const l = document.createElement("div");

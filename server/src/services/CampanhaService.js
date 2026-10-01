@@ -3,7 +3,7 @@ const ExcelJS = require("exceljs");
 const { OPCOES_STATUS } = require("../config/constantes");
 const { dataValida } = require("./validacao");
 const { ErroDeValidacao, ErroNaoEncontrado } = require("../shared/erros");
-const { splitSystems } = require("../shared/normalizacao");
+const { separarSistemas } = require("../shared/normalizacao");
 const { acharSistema } = require("../database/SistemaRepository");
 const { situacaoDoSistema, contaParaVersao } = require("./situacaoVersao");
 
@@ -169,7 +169,7 @@ class CampanhaService {
     /** @type {Map<number, Array<{id:number, tarefa:string, data:string, responsavel:string, sistemas:Set<number>}>>} */
     const porCliente = new Map();
     for (const t of this.db.agendamentos.abertasComCliente(STATUS_ENCERRADOS)) {
-      const sistemas = new Set(splitSystems(t.sistema).map((nome) => acharSistema(catalogo, nome)?.id).filter(Boolean));
+      const sistemas = new Set(separarSistemas(t.sistema).map((nome) => acharSistema(catalogo, nome)?.id).filter(Boolean));
       if (sistemas.size === 0) continue;
       if (!porCliente.has(t.clienteId)) porCliente.set(t.clienteId, []);
       porCliente.get(t.clienteId).push({ id: t.id, tarefa: t.tarefa, data: t.data, responsavel: t.responsavel, sistemas });

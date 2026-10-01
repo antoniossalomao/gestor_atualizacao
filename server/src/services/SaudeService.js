@@ -64,7 +64,7 @@ class SaudeService {
     let totalPacotes = 0;
     let tamanhoPacotesBytes = 0;
     try {
-      const pkgDir = this.versoes.packagesDir;
+      const pkgDir = this.versoes.pastaDosPacotes;
       if (fs.existsSync(pkgDir)) {
         const files = fs.readdirSync(pkgDir);
         totalPacotes = files.length;

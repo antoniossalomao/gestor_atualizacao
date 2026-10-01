@@ -97,7 +97,7 @@ export class ApiPainel {
    * @param {{key?: string}} [options] `key` cancela a requisição anterior de mesma chave
    */
   get(path, params, options = {}) {
-    const query = params ? `?${new URLSearchParams(cleanParams(params))}` : "";
+    const query = params ? `?${new URLSearchParams(limparParametros(params))}` : "";
     return this._request(`${path}${query}`, { method: "GET" }, options);
   }
 
@@ -118,10 +118,10 @@ export class ApiPainel {
   }
 
   /** Envia um arquivo (multipart/form-data) -- usado pela importação de planilha. */
-  postFile(path, file, fieldName = "arquivo") {
+  enviarArquivo(path, file, fieldName = "arquivo") {
     const form = new FormData();
     form.append(fieldName, file);
-    return this.postForm(path, form);
+    return this.enviarFormulario(path, form);
   }
 
   /**
@@ -135,7 +135,7 @@ export class ApiPainel {
    * @param {FormData} form
    * @param {{onProgress?: (pct: number|null) => void}} [options]
    */
-  async postForm(path, form, { onProgress } = {}) {
+  async enviarFormulario(path, form, { onProgress } = {}) {
     try {
       return await this._enviarForm(path, form, onProgress);
     } catch (error) {
@@ -179,7 +179,7 @@ export class ApiPainel {
           }
         }
         if (xhr.status === 401) this._notifyUnauthorized();
-        const { mensagem, codigo } = extractXhrError(xhr);
+        const { mensagem, codigo } = extrairErroXhr(xhr);
         reject(new ErroApi(mensagem, xhr.status, codigo));
       });
       xhr.addEventListener("error", () => reject(new ErroApi("Não foi possível conectar ao servidor.", 0)));
@@ -192,7 +192,7 @@ export class ApiPainel {
 
   /** Baixa um arquivo binário (usado pela exportação de planilha) e devolve um Blob. */
   async getFile(path, params) {
-    const query = params ? `?${new URLSearchParams(cleanParams(params))}` : "";
+    const query = params ? `?${new URLSearchParams(limparParametros(params))}` : "";
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_UPLOAD_MS);
     try {
@@ -225,7 +225,7 @@ export class ApiPainel {
   }
 
   /** Depois de um login bem-sucedido, volta a permitir o aviso de sessão expirada. */
-  resetUnauthorized() {
+  reiniciarNaoAutorizado() {
     this._unauthorizedNotified = false;
   }
 
@@ -385,7 +385,7 @@ function lerErro(data) {
   return { mensagem: data?.error || ERRO_GENERICO, codigo: typeof data?.codigo === "string" ? data.codigo : undefined };
 }
 
-function extractXhrError(xhr) {
+function extrairErroXhr(xhr) {
   try {
     return lerErro(JSON.parse(xhr.responseText));
   } catch {
@@ -394,7 +394,7 @@ function extractXhrError(xhr) {
 }
 
 /** Remove chaves com valor vazio/undefined antes de montar a query string. */
-function cleanParams(params) {
+function limparParametros(params) {
   const out = {};
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && value !== "") out[key] = value;

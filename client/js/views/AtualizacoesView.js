@@ -15,13 +15,13 @@ import { abrirRelatorio } from "../components/relatorioModal.js";
 import { relatorioDeAtualizacao, relatorioDoCliente, relatorioSituacao, relatorioDoPeriodo, versaoRegistrada } from "../domain/relatorio.js";
 import { splitSistemas } from "../domain/matrizVersoes.js";
 import { estadoVazio } from "../components/estadoVazio.js";
-import { withBusyButton, marcarOcupado } from "../components/botaoOcupado.js";
+import { comBotaoOcupado, marcarOcupado } from "../components/botaoOcupado.js";
 import { baixarBlob } from "../components/arquivos.js";
 import { prefs } from "../app/preferencias.js";
 import { aparencia } from "../app/aparencia.js";
 import { Gaveta } from "../components/Gaveta.js";
 import { montarPresets, intervaloPreset } from "../components/presetsDeData.js";
-import { chipsFiltroAtualizacoes, htmlChips } from "../templates/filtros.js";
+import { chipsFiltroAtualizacoes, chipsHtml } from "../templates/filtros.js";
 
 /**
  * Aba Atualizações: histórico de atualizações de sistemas por cliente.
@@ -251,7 +251,7 @@ export class AtualizacoesView extends View {
       descricao: "Registre uma atualização sem perder a lista de vista.",
     });
     this.container.querySelector('[data-action="nova-atualizacao"]').addEventListener("click", () => {
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.abrir({ foco: this.fields.cliente });
     });
     this.searchInput = this.container.querySelector('[data-role="search"]');
@@ -354,7 +354,7 @@ export class AtualizacoesView extends View {
       this.modalDeleteBtn.addEventListener("click", async () => {
         this.drawer.marcarLimpa();
         await this.drawer.fechar({ forcar: true });
-        this.deleteRecord();
+        this.excluirAtualizacao();
       });
     }
 
@@ -364,8 +364,8 @@ export class AtualizacoesView extends View {
       e.preventDefault();
       this._submit();
     });
-    this.updateBtn?.addEventListener("click", () => this.updateRecord());
-    this.deleteBtn?.addEventListener("click", () => this.deleteRecord());
+    this.updateBtn?.addEventListener("click", () => this.alterarAtualizacao());
+    this.deleteBtn?.addEventListener("click", () => this.excluirAtualizacao());
 
     // -- menus dropdown (I08) --
     this._configurarMenuDropdown(
@@ -378,7 +378,7 @@ export class AtualizacoesView extends View {
     const menuAcoes = this.container.querySelector('[data-role="menu-acoes"]');
     const exportBtn = menuAcoes.querySelector('[data-action="export"]');
     this._configurarMenuDropdown(menuAcoes, (acao, fechar) => {
-      if (acao === "export") { fechar(); withBusyButton(exportBtn, () => this.exportXlsx())(); }
+      if (acao === "export") { fechar(); comBotaoOcupado(exportBtn, () => this.exportarXlsx())(); }
       if (acao === "import") { fechar(); this.abrirImportacao(); }
     });
 
@@ -397,7 +397,7 @@ export class AtualizacoesView extends View {
     }
 
     this._pintarLimparFiltros();
-    this.clearForm();
+    this.limparFormulario();
   }
 
   /**
@@ -497,7 +497,7 @@ export class AtualizacoesView extends View {
       wrap.appendChild(field);
 
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") this.clearForm({ comDesfazer: true });
+        if (e.key === "Escape") this.limparFormulario({ comDesfazer: true });
       });
       if (col.key === "data") {
         input.setAttribute("aria-describedby", hint.id);
@@ -528,8 +528,8 @@ export class AtualizacoesView extends View {
         return { nomes, responsaveis };
       },
       ({ nomes, responsaveis }) => {
-        this.clienteAutocomplete.setValues(nomes);
-        this.responsavelAutocomplete.setValues(responsaveis);
+        this.clienteAutocomplete.definirValores(nomes);
+        this.responsavelAutocomplete.definirValores(responsaveis);
         const opcoes = ["Todos", ...responsaveis];
         this.responsavelFilter.innerHTML = html`${opcoes.map((r) => html`<option>${r}</option>`)}`;
         this.responsavelFilter.value = opcoes.includes(this.responsavel) ? this.responsavel : "Todos";
@@ -544,7 +544,7 @@ export class AtualizacoesView extends View {
   }
 
   async _reloadList() {
-    this.table.setRefreshing(true);
+    this.table.definirRecarregando(true);
     try {
       const resposta = await this.swr(
         this._chaveLista(),
@@ -580,12 +580,12 @@ export class AtualizacoesView extends View {
         return this._reloadList();
       }
     } finally {
-      this.table.setRefreshing(false);
+      this.table.definirRecarregando(false);
     }
   }
 
   _pintarLista(resposta) {
-    this.table.setRows(resposta.rows);
+    this.table.definirLinhas(resposta.rows);
     this.pagination.update(resposta);
     this.container.querySelector('[data-role="count"]').textContent = plural(resposta.total, "registro");
   }
@@ -670,7 +670,7 @@ export class AtualizacoesView extends View {
     };
 
     chipsEl.hidden = false;
-    chipsEl.innerHTML = htmlChips(chips);
+    chipsEl.innerHTML = chipsHtml(chips);
     chipsEl.querySelectorAll(".filter-chip__remove").forEach((btn) => {
       btn.addEventListener("click", () => limpar[btn.dataset.chip]?.());
     });
@@ -721,7 +721,7 @@ export class AtualizacoesView extends View {
       return;
     }
     if (novo) {
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.abrir({ foco: this.fields.cliente });
       return;
     }
@@ -769,17 +769,17 @@ export class AtualizacoesView extends View {
   }
 
   _submit() {
-    if (this.selectedId == null) this.addRecord();
-    else this.updateRecord();
+    if (this.selectedId == null) this.adicionarAtualizacao();
+    else this.alterarAtualizacao();
   }
 
-  async addRecord() {
+  async adicionarAtualizacao() {
     const data = this._readForm();
     if (!data) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
       await this.api.post("/atualizacoes", data);
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       // Volta pra 1ª página: com a ordenação padrão (mais recente primeiro),
@@ -789,13 +789,13 @@ export class AtualizacoesView extends View {
       await this._reloadList();
       avisoRapido.sucesso("Registro adicionado.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
   }
 
-  async updateRecord() {
+  async alterarAtualizacao() {
     if (this.selectedId == null) {
       Modal.alert("Seleção", "Selecione um registro na tabela primeiro.", "warning");
       return;
@@ -805,14 +805,14 @@ export class AtualizacoesView extends View {
     const liberar = marcarOcupado(this.updateBtn);
     try {
       await this.api.put(`/atualizacoes/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
       avisoRapido.sucesso("Registro atualizado.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -827,7 +827,7 @@ export class AtualizacoesView extends View {
    * nenhuma. Desfazer custa zero quando você quis mesmo excluir, e resolve o
    * problema de verdade quando não quis.
    */
-  async deleteRecord() {
+  async excluirAtualizacao() {
     if (this.selectedId == null) {
       Modal.alert("Seleção", "Selecione um registro na tabela primeiro.", "warning");
       return;
@@ -838,7 +838,7 @@ export class AtualizacoesView extends View {
     const liberar = marcarOcupado(this.deleteBtn);
     try {
       await this.api.delete(`/atualizacoes/${id}`);
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
       await this._reloadList();
       avisoRapido.desfazer(`Registro de ${dadosAntes.cliente || "cliente"} excluído.`, async () => {
@@ -852,7 +852,7 @@ export class AtualizacoesView extends View {
         }
       });
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -875,7 +875,7 @@ export class AtualizacoesView extends View {
    * Exclui todos os marcados de uma vez.
    *
    * Aqui a confirmação VOLTA, ao contrário da exclusão de um registro só (ver
-   * o comentário em `deleteRecord` sobre por que "Desfazer" protege melhor que
+   * o comentário em `excluirAtualizacao` sobre por que "Desfazer" protege melhor que
    * "Confirmar"). O argumento se inverte quando o número cresce: um clique
    * errado em "Excluir selecionados" com quarenta linhas marcadas não é o
    * mesmo engano que apagar uma linha, e a confirmação aqui é rara o bastante
@@ -902,7 +902,7 @@ export class AtualizacoesView extends View {
       // necessariamente os dados completos de cada uma.
       const { excluidos, registros } = await this.api.post("/atualizacoes/excluir-lote", { ids });
       this.table.limparMarcadas();
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
       await this._reloadList();
 
@@ -925,7 +925,7 @@ export class AtualizacoesView extends View {
         }
       });
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -935,7 +935,7 @@ export class AtualizacoesView extends View {
    * @param {{comDesfazer?: boolean}} [opts] quando `true`, oferece restaurar
    *   o que estava digitado. `Escape` limpava oito campos sem volta.
    */
-  clearForm({ comDesfazer = false } = {}) {
+  limparFormulario({ comDesfazer = false } = {}) {
     const antes = {};
     let tinhaConteudo = false;
     if (this.fields) {
@@ -948,7 +948,7 @@ export class AtualizacoesView extends View {
     this.selectedId = null;
     this.selectedRow = null;
     this.selectedRevision = null;
-    this.table?.clearSelection();
+    this.table?.limparSelecao();
     for (const col of COLUNAS_ATUALIZACOES) this.fields[col.key].value = "";
     this.fields.data.value = hojeBR();
     // Melhoria em relação ao app original: já vem preenchido com quem está
@@ -987,7 +987,7 @@ export class AtualizacoesView extends View {
    * inteira: filtrar 12 registros na tela e receber um arquivo com 4.000 é
    * exatamente o oposto do que a pessoa pediu ao filtrar.
    */
-  async exportXlsx() {
+  async exportarXlsx() {
     let blob;
     try {
       blob = await this.api.getFile("/atualizacoes/export", {
@@ -1002,7 +1002,7 @@ export class AtualizacoesView extends View {
       // linhas, período inválido) ou falha de rede não mostrava NADA -- o
       // botão voltava ao normal e o arquivo simplesmente não vinha (P05).
       if (err?.status === 401) return; // já tratado pelo ApiPainel (login)
-      Modal.alert("Não foi possível exportar", errorMessage(err), "warning");
+      Modal.alert("Não foi possível exportar", mensagemDeErro(err), "warning");
       return;
     }
     // Nome identifica o recorte: com período fica "atualizacoes_01-09-2026_25-09-2026.xlsx"
@@ -1048,7 +1048,7 @@ export class AtualizacoesView extends View {
       this._modalRelatorio(registro, cliente, historico, situacao);
     } catch (err) {
       if (err?.cancelled) return;
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -1058,7 +1058,7 @@ export class AtualizacoesView extends View {
     try {
       const resumo = await this.api.get("/atualizacoes/relatorio", { search: this.busca, responsavel: this.responsavel, sistema: this.sistema, desde: this.desde, ate: this.ate });
       abrirRelatorio({ tipos: [{ valor: "periodo", nome: "Resumo do período filtrado" }], gerar: () => relatorioDoPeriodo(resumo) });
-    } catch (err) { Modal.alert("Erro", errorMessage(err), "error"); }
+    } catch (err) { Modal.alert("Erro", mensagemDeErro(err), "error"); }
   }
 
   _modalRelatorio(registro, cliente, historico, situacao) {
@@ -1097,8 +1097,8 @@ export class AtualizacoesView extends View {
 
   _onGlobalKeydown(e) {
     if (!this.visivel) return;
-    if (isTypingTarget(e.target)) return;
-    if (e.key === "Delete" && this.selectedId != null) this.deleteRecord();
+    if (ehCampoDeTexto(e.target)) return;
+    if (e.key === "Delete" && this.selectedId != null) this.excluirAtualizacao();
     else if (e.key.toLowerCase() === "n") this.container.querySelector('[data-action="nova-atualizacao"]')?.click();
     else if (e.key === "/") { e.preventDefault(); this.searchInput.focus(); }
     else if (e.key.toLowerCase() === "j") this.table.moverCursor(1);
@@ -1156,10 +1156,10 @@ function acoesAtualizacao(row, role) {
   return wrap;
 }
 
-function isTypingTarget(el) {
+function ehCampoDeTexto(el) {
   return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 }
 
-function errorMessage(err) {
+function mensagemDeErro(err) {
   return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

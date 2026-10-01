@@ -8,7 +8,7 @@ import { tempoRelativo, formatarDataHora } from "../utils/data.js";
 import { prefs } from "../app/preferencias.js";
 import { aparencia } from "../app/aparencia.js";
 import { Modal } from "../components/Modal.js";
-import { escapeHtml } from "../utils/html.js";
+import { escaparHtml } from "../utils/html.js";
 
 const ACAO_LABEL = {
   criar: "Criou",
@@ -152,7 +152,7 @@ export class HistoricoView extends View {
   }
 
   async _reloadList() {
-    this.table.setRefreshing(true);
+    this.table.definirRecarregando(true);
     try {
       await this.swr(
         `historico:lista:${this.busca}|${this.entidade}|${this.page}|${this.sortBy}|${this.sortDir}`,
@@ -179,13 +179,13 @@ export class HistoricoView extends View {
             acaoLabel: ACAO_LABEL[r.acao] || r.acao,
             entidadeLabel: ENTIDADE_LABEL[r.entidade] || r.entidade,
           }));
-          this.table.setRows(linhas);
+          this.table.definirLinhas(linhas);
           this.pagination.update(resposta);
           this.container.querySelector('[data-role="count"]').textContent = plural(resposta.total, "registro");
         }
       );
     } finally {
-      this.table.setRefreshing(false);
+      this.table.definirRecarregando(false);
     }
   }
 
@@ -226,8 +226,8 @@ export class HistoricoView extends View {
     const chaves = [...new Set([...Object.keys(antes), ...Object.keys(depois)])].filter((chave) => !["id", "criadoEm", "atualizadoEm", "revisao"].includes(chave));
     const linhas = chaves.filter((chave) => JSON.stringify(antes[chave] ?? null) !== JSON.stringify(depois[chave] ?? null));
     const { box, close } = Modal.abrirCaixa({ largura: 680 });
-    box.innerHTML = `<h3 class="modal-box__title">Antes × Depois</h3><p class="modal-box__message">${escapeHtml(row.descricao)}</p>
-      <div class="audit-diff">${linhas.length ? linhas.map((chave) => `<div class="audit-diff__row"><strong>${escapeHtml(rotuloCampo(chave))}</strong><del>${escapeHtml(valorDiff(antes[chave]))}</del><span aria-hidden="true">→</span><ins>${escapeHtml(valorDiff(depois[chave]))}</ins></div>`).join("") : "<p>Nenhum campo comparável foi alterado.</p>"}</div>
+    box.innerHTML = `<h3 class="modal-box__title">Antes × Depois</h3><p class="modal-box__message">${escaparHtml(row.descricao)}</p>
+      <div class="audit-diff">${linhas.length ? linhas.map((chave) => `<div class="audit-diff__row"><strong>${escaparHtml(rotuloCampo(chave))}</strong><del>${escaparHtml(valorDiff(antes[chave]))}</del><span aria-hidden="true">→</span><ins>${escaparHtml(valorDiff(depois[chave]))}</ins></div>`).join("") : "<p>Nenhum campo comparável foi alterado.</p>"}</div>
       <div class="modal-box__actions"><button type="button" class="btn btn--accent" data-action="fechar">Fechar</button></div>`;
     box.querySelector('[data-action="fechar"]').addEventListener("click", close);
   }

@@ -16,22 +16,22 @@ class BackupService {
     this.sessionStore = sessionStore;
   }
 
-  setSessionStore(sessionStore) {
+  definirArmazemDeSessao(sessionStore) {
     this.sessionStore = sessionStore;
   }
 
   list() {
-    return this.db.listBackups();
+    return this.db.listarBackups();
   }
 
-  getBackupPath(arquivo) {
+  caminhoDoBackup(arquivo) {
     const existe = this.list().some((b) => b.arquivo === arquivo);
     if (!existe) throw new ErroNaoEncontrado("Backup não encontrado.");
-    return this.db.getBackupPath(arquivo);
+    return this.db.caminhoDoBackup(arquivo);
   }
 
-  getCurrentDbPath() {
-    return this.db.getCurrentDbPath();
+  caminhoDoBancoAtual() {
+    return this.db.caminhoDoBancoAtual();
   }
 
   /**
@@ -57,7 +57,7 @@ class BackupService {
       throw new ErroDeValidacao("Informe sua senha atual de administrador para autorizar a restauração.");
     }
 
-    const usuarioBanco = this.db.usuarios.findByUsuario(usuario.usuario);
+    const usuarioBanco = this.db.usuarios.buscarPorUsuario(usuario.usuario);
     if (!usuarioBanco || !bcrypt.compareSync(senha, usuarioBanco.senha_hash)) {
       throw new ErroDeValidacao("Senha de administrador incorreta.");
     }
@@ -65,7 +65,7 @@ class BackupService {
     const existe = this.list().some((b) => b.arquivo === arquivo);
     if (!existe) throw new ErroNaoEncontrado("Backup não encontrado.");
 
-    this.db.restoreFrom(arquivo);
+    this.db.restaurarDe(arquivo);
 
     // Invalida sessões ativas para evitar incompatibilidade com dados do banco restaurado
     if (this.sessionStore && typeof this.sessionStore.clearAll === "function") {

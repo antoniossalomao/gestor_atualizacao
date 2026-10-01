@@ -46,7 +46,7 @@ class CampanhasController {
     } catch (err) { next(err); }
   };
 
-  exportXlsx = async (req, res, next) => {
+  exportarXlsx = async (req, res, next) => {
     try {
       const { buffer, campanha } = await this.campanhaService.exportarPendentesXlsx(req.params.id);
       // Nome de arquivo identificável e só com caracteres seguros no cabeçalho.

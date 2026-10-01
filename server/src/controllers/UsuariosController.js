@@ -6,12 +6,12 @@ class UsuariosController {
   }
 
   list = (req, res) => {
-    res.json(this.authService.listUsers());
+    res.json(this.authService.listarUsuarios());
   };
 
   create = (req, res, next) => {
     try {
-      const usuario = this.authService.createUser(req.body || {}, req.session.user);
+      const usuario = this.authService.criarUsuario(req.body || {}, req.session.user);
       res.status(201).json(usuario);
     } catch (err) {
       next(err);
@@ -20,7 +20,7 @@ class UsuariosController {
 
   update = (req, res, next) => {
     try {
-      const usuario = this.authService.updateUser(Number(req.params.id), req.body || {}, req.session.user);
+      const usuario = this.authService.alterarUsuario(Number(req.params.id), req.body || {}, req.session.user);
       res.json(usuario);
     } catch (err) {
       next(err);
@@ -29,7 +29,7 @@ class UsuariosController {
 
   remove = (req, res, next) => {
     try {
-      this.authService.deleteUser(Number(req.params.id), req.session.user);
+      this.authService.excluirUsuario(Number(req.params.id), req.session.user);
       res.status(204).end();
     } catch (err) {
       next(err);
@@ -39,7 +39,7 @@ class UsuariosController {
   changeOwnPassword = (req, res, next) => {
     try {
       const { senhaAtual, senhaNova } = req.body || {};
-      this.authService.changePassword(req.session.user, senhaAtual, senhaNova);
+      this.authService.trocarSenha(req.session.user, senhaAtual, senhaNova);
       res.status(204).end();
     } catch (err) {
       next(err);

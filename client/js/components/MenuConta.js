@@ -1,5 +1,5 @@
 import { iconeSvg } from "../utils/icones.js";
-import { escapeHtml } from "../utils/html.js";
+import { escaparHtml } from "../utils/html.js";
 import { temaApp } from "../app/tema.js";
 import { iniciais, rotuloPapel } from "../domain/pessoa.js";
 
@@ -42,20 +42,20 @@ export class MenuConta {
     this.container.innerHTML = `
       <button type="button" class="app-account__trigger" data-role="gatilho"
               aria-haspopup="true" aria-expanded="false" aria-controls="menu-conta">
-        <span class="app-account__avatar" aria-hidden="true">${escapeHtml(iniciais(nome || usuario))}</span>
+        <span class="app-account__avatar" aria-hidden="true">${escaparHtml(iniciais(nome || usuario))}</span>
         <span class="app-account__nome">
-          <strong>${escapeHtml(nome || usuario)}</strong>
-          <span>@${escapeHtml(usuario)}</span>
+          <strong>${escaparHtml(nome || usuario)}</strong>
+          <span>@${escaparHtml(usuario)}</span>
         </span>
         <span class="app-account__chevron" aria-hidden="true">${iconeSvg("seta")}</span>
       </button>
 
       <div class="app-menu" id="menu-conta" role="menu" data-role="menu" hidden>
         <div class="app-menu__conta">
-          <span class="app-menu__avatar" aria-hidden="true">${escapeHtml(iniciais(nome || usuario))}</span>
+          <span class="app-menu__avatar" aria-hidden="true">${escaparHtml(iniciais(nome || usuario))}</span>
           <span class="app-menu__conta-texto">
-            <strong>${escapeHtml(nome || usuario)}</strong>
-            <span>@${escapeHtml(usuario)} — ${escapeHtml(rotuloPapel(role))}</span>
+            <strong>${escaparHtml(nome || usuario)}</strong>
+            <span>@${escaparHtml(usuario)} — ${escaparHtml(rotuloPapel(role))}</span>
           </span>
         </div>
 

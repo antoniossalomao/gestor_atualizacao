@@ -26,7 +26,7 @@ class SistemasController {
   };
 
   list = (req, res) => {
-    res.json(this.clienteService.listSistemas());
+    res.json(this.clienteService.listarSistemas());
   };
 
   create = (req, res, next) => {
@@ -40,7 +40,7 @@ class SistemasController {
 
   remove = (req, res, next) => {
     try {
-      res.json(this.clienteService.removeSistema(req.params.nome, req.session.user));
+      res.json(this.clienteService.removerSistema(req.params.nome, req.session.user));
     } catch (err) {
       next(err);
     }

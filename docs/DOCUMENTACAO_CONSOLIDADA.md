@@ -471,7 +471,7 @@ faltava.
 | 5 | Publicar versão sem `try/catch` nem trava de botão | `views/DistribuicaoView.js` | Tratamento de erro, botão travado, mensagem do servidor exibida |
 | 6 | `Escape` num campo apagava os 8 campos do formulário, sem volta | Formulários | Limpa e oferece **Restaurar** num toast |
 | 7 | `Enter` amarrado campo a campo, sem `<form>` | Formulários | `<form>` de verdade com `submit` |
-| 8 | **Exportar ignorava os filtros** — filtrar 12 registros e receber um `.xlsx` com 4.000 | `AtualizacoesController`/repositório | `exportAll(search, responsavel)` usa as mesmas cláusulas de `list()` |
+| 8 | **Exportar ignorava os filtros** — filtrar 12 registros e receber um `.xlsx` com 4.000 | `AtualizacoesController`/repositório | `exportarTudo(search, responsavel)` usa as mesmas cláusulas de `list()` |
 | 9 | "Último log" de cada agente era `MAX(id)`, não o mais recente por data | `VersaoRepository.agentes()` | `ROW_NUMBER() OVER (PARTITION BY cnpj ORDER BY criado_em DESC, id DESC)` |
 
 **Exclusão reversível em vez de confirmação:** Atualizações e Agendamentos não pedem mais
@@ -540,7 +540,7 @@ Renderização incremental: `TabelaOrdenavel` reaproveita `<tr>` existentes em v
 `innerHTML` (que antes derrubava o foco pro `body` a cada página); `Autocomplete` passou de um
 listener global por instância (nunca removido) para um único compartilhado com `destroy()`.
 
-Upload com progresso: `postForm` usa `XMLHttpRequest` em vez de `fetch` (só o XHR expõe
+Upload com progresso: `enviarFormulario` usa `XMLHttpRequest` em vez de `fetch` (só o XHR expõe
 `upload.onprogress`) — pacotes têm dezenas de MB. Timeout de 10 min para upload, 15s para o resto.
 
 #### Navegação
@@ -1445,7 +1445,7 @@ não era cumprido. Duas correções:
   tudo.
 - `utils/`, `domain/` e `templates/` passaram a **não tocar no DOM de fato**. Cinco arquivos tocavam:
   `utils/arquivo.js` (baixar e escolher arquivo), `utils/guard.js` (botão ocupado), `utils/html.js`
-  (`el()` e `copyToClipboard`), `utils/cor.js` (`tokenHex`) e `domain/agenteReport.js`
+  (`el()` e `copiarParaAreaDeTransferencia`), `utils/cor.js` (`tokenHex`) e `domain/agenteReport.js`
   (`criarDetalhesRetorno`). Foram para `components/` (`arquivos`, `botaoOcupado`, `elemento`,
   `areaDeTransferencia`, `detalhesRetorno`) e `app/tema.js`, sem mudar comportamento. O que garante
   daqui em diante é o `npm run check` ([ADR-0006](#adr-0006)) e um teste textual em
@@ -1563,7 +1563,7 @@ O custo aparecia de três formas:
 
 1. **Toda leitura reinterpretava texto.** Quebrar a lista por vírgula e
    comparar nomes "sem caixa, acento nem prefixo `B_`" estava espalhado em seis
-   arquivos (`splitSystems`, `sameSystem`, `versaoDoRegistro`, `splitSistemas`,
+   arquivos (`separarSistemas`, `sameSystem`, `versaoDoRegistro`, `splitSistemas`,
    `versaoRegistrada`…). Cada tela nova precisava lembrar de todas as regras.
 2. **O catálogo não garantia nada.** `B_NFCe` (100 usos), `B_Sped` (53), `CTe`,
    `B_Rat` e outros apareciam no histórico sem existir na tabela `sistemas`, e
@@ -2969,7 +2969,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 | Configurações | `ConfiguracoesView.js`, `views/configuracoes/ajustes.js`, `ContaConfig.js`, `app/aparencia.js` |
 | Regras/banco | `server/src/config/regrasEquipe.js`, `ConfiguracaoSistemaService.js`, `BancoDeDados.js`, migrações atuais |
 | Campanhas | `CampanhasView.js`, `templates/campanhas.js`, `domain/campanhas.js`, `CampanhaService.js`, `CampanhaRepository.js`, migração 4 |
-| Importação | `components/ImportacaoModal.js`, `templates/importacao.js`, `AtualizacaoService.previaImportacao/importXlsx` |
+| Importação | `components/ImportacaoModal.js`, `templates/importacao.js`, `AtualizacaoService.previaImportacao/importarXlsx` |
 | Testes | `client/tests/`, `server/tests/` e navegador com dados descartáveis |
 
 Colunas e contratos devem seguir a normalização atual. Este mapa aponta investigação; não autoriza substituir mudanças recentes por arquivos de versões anteriores.

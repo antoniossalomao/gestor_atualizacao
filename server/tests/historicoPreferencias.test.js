@@ -126,7 +126,7 @@ test("PreferenciaService - identificação da conta", async (t) => {
 test("PreferenciaService - o que pode ser guardado", async (t) => {
   const env = ambiente();
   try {
-    const usuario = env.auth.setupAdmin({
+    const usuario = env.auth.configurarAdmin({
       nome: "Admin",
       usuario: "admin",
       senha: "senha-de-teste-123",
@@ -210,7 +210,7 @@ test("PreferenciaService - o que pode ser guardado", async (t) => {
     });
 
     await t.test("conta sem preferências devolve vazio, não erro", () => {
-      const outro = env.auth.createUser(
+      const outro = env.auth.criarUsuario(
         { nome: "Outro", usuario: "outro", senha: "senha-de-teste-123", role: "operador" },
         { ...usuario, role: "admin" }
       );
@@ -218,7 +218,7 @@ test("PreferenciaService - o que pode ser guardado", async (t) => {
     });
 
     await t.test("as preferências de uma conta não vazam para outra", () => {
-      const outro = env.db.usuarios.findByUsuario("outro");
+      const outro = env.db.usuarios.buscarPorUsuario("outro");
       env.prefs.salvar({ id: outro.id }, { tema: "escuro" });
       assert.deepEqual(env.prefs.ler(usuario), { x: "a".repeat(200) }, "a do admin continua a dele");
     });

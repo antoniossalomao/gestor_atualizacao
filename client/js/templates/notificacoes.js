@@ -18,7 +18,7 @@ export function listaNotificacoes(notificacoes) {
 
 /**
  * `data-params` carrega o filtro que o clique aplica na tela de destino, como
- * JSON -- que é feito de aspas duplas. Com o escape errado (o `escapeHtml`
+ * JSON -- que é feito de aspas duplas. Com o escape errado (o `escaparHtml`
  * antigo não escapava aspas), o atributo fecharia no primeiro `"` e o resto
  * do JSON viraria atributo solto no botão. Nada quebraria visivelmente: só o
  * clique passaria a levar para a tela sem filtro nenhum. A tag `html` escapa

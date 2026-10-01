@@ -13,7 +13,7 @@
  * @param {string} fallback ORDER BY completo usado quando sortBy é inválido/ausente
  * @returns {string} cláusula ORDER BY completa (sem a palavra "ORDER BY")
  */
-function buildOrderBy(sortMap, sortBy, sortDir, fallback) {
+function montarOrdenacao(sortMap, sortBy, sortDir, fallback) {
   // `Object.hasOwn` + checagem de tipo, e nao `sortMap[sortBy]` direto: o acesso
   // por indice a um objeto literal tambem alcanca o que ele HERDA de Object
   // ("constructor", "toString", "valueOf", "hasOwnProperty", "__proto__"). Todos
@@ -32,4 +32,4 @@ function buildOrderBy(sortMap, sortBy, sortDir, fallback) {
   return `${expr} ${dir}, id DESC`;
 }
 
-module.exports = { buildOrderBy };
+module.exports = { montarOrdenacao };

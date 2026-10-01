@@ -1,7 +1,7 @@
 import { Modal } from "./Modal.js";
 import { ErroApi } from "../api/ApiPainel.js";
 import { escolherArquivo } from "./arquivos.js";
-import { withBusyButton } from "./botaoOcupado.js";
+import { comBotaoOcupado } from "./botaoOcupado.js";
 import { orientacaoImportacao, previaImportacao, resultadoImportacao } from "../templates/importacao.js";
 
 /**
@@ -57,15 +57,15 @@ export class ImportacaoModal {
     const acao = botao.dataset.action;
     if (acao === "fechar") return this.close();
     if (acao === "escolher") return this._escolher(botao);
-    if (acao === "importar") return withBusyButton(botao, () => this._importar())();
+    if (acao === "importar") return comBotaoOcupado(botao, () => this._importar())();
   }
 
   async _escolher(botao) {
     const arquivo = await escolherArquivo({ accept: ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     if (!arquivo) return;
-    await withBusyButton(botao, async () => {
+    await comBotaoOcupado(botao, async () => {
       try {
-        this.previa = await this.api.postFile("/atualizacoes/import/previa", arquivo);
+        this.previa = await this.api.enviarArquivo("/atualizacoes/import/previa", arquivo);
         this.arquivo = arquivo;
         this._mostrar(previaImportacao(this.previa, arquivo.name, this.pularDuplicadas));
       } catch (err) {
@@ -79,7 +79,7 @@ export class ImportacaoModal {
     form.append("arquivo", this.arquivo);
     form.append("pularDuplicadas", this.pularDuplicadas ? "1" : "0");
     try {
-      const resultado = await this.api.postForm("/atualizacoes/import", form);
+      const resultado = await this.api.enviarFormulario("/atualizacoes/import", form);
       this._mostrar(resultadoImportacao(resultado));
       this.aoImportar(resultado);
     } catch (err) {

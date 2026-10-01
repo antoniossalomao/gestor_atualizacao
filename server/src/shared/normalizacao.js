@@ -194,7 +194,7 @@ function canonizarResponsaveis(ocorrencias) {
 }
 
 /** "a, b, c" -> ["a", "b", "c"] -- o texto de sistemas que a visão monta. */
-function splitSystems(text) {
+function separarSistemas(text) {
   return String(text || "")
     .split(",")
     .map((item) => item.trim())
@@ -202,14 +202,14 @@ function splitSystems(text) {
 }
 
 /** "camila silva" -> "Camila Silva" (equivalente simples de str.title() do Python). */
-function titleCase(text) {
+function primeiraMaiuscula(text) {
   return text.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
 }
 
 module.exports = {
   chave,
-  splitSystems,
-  titleCase,
+  separarSistemas,
+  primeiraMaiuscula,
   normalizarSistemas,
   normalizarResponsavel,
   canonizarResponsaveis,

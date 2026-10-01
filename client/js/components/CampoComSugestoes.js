@@ -1,4 +1,4 @@
-import { escapeHtml } from "../utils/html.js";
+import { escaparHtml } from "../utils/html.js";
 
 const MAX_SUGESTOES = 30;
 
@@ -81,7 +81,7 @@ export class CampoComSugestoes {
   }
 
   /** Atualiza a lista completa de sugestões (ex.: depois de cadastrar um cliente novo). */
-  setValues(values) {
+  definirValores(values) {
     this.values = values || [];
   }
 
@@ -208,10 +208,10 @@ export class CampoComSugestoes {
 /** Envolve em `<mark>` o trecho do valor que casou com o termo digitado. */
 function destacar(valor, termo) {
   const pos = valor.toLowerCase().indexOf(termo);
-  if (pos < 0 || !termo) return escapeHtml(valor);
+  if (pos < 0 || !termo) return escaparHtml(valor);
   return (
-    escapeHtml(valor.slice(0, pos)) +
-    `<mark>${escapeHtml(valor.slice(pos, pos + termo.length))}</mark>` +
-    escapeHtml(valor.slice(pos + termo.length))
+    escaparHtml(valor.slice(0, pos)) +
+    `<mark>${escaparHtml(valor.slice(pos, pos + termo.length))}</mark>` +
+    escaparHtml(valor.slice(pos + termo.length))
   );
 }

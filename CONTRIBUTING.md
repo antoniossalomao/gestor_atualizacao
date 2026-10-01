@@ -128,7 +128,7 @@ A divisão das pastas segue uma regra só, e três delas **não tocam no DOM**: 
 `npm run check` confere (a `lib` do TypeScript não tem `dom`) e um teste procura
 `document` e `window` por texto.
 
-- **`utils/`** — genérico, não conhece o negócio. `formatarData`, `escapeHtml`, `aguardarPausa`.
+- **`utils/`** — genérico, não conhece o negócio. `formatarData`, `escaparHtml`, `aguardarPausa`.
 - **`domain/`** — conhece o negócio. É o que dá para testar no Node sem
   navegador — e por isso é onde a lógica difícil deve morar.
 - **`templates/`** — marcação montada com a tag `html` (que escapa tudo); a view
@@ -170,7 +170,7 @@ Três coisas quebram silenciosamente e caro:
 2. **Uma rota nova sem `exigirLogin`/`exigirPapel`.** O padrão é fechado: as
    proteções são montadas sobre a subárvore inteira em `routes/index.js`.
    Confira lá ao acrescentar rota.
-3. **HTML montado com dado do usuário sem `escapeHtml`.** A CSP em `Servidor.js`
+3. **HTML montado com dado do usuário sem `escaparHtml`.** A CSP em `Servidor.js`
    já recusa script inline, mas isso é a segunda linha de defesa, não a
    primeira.
 

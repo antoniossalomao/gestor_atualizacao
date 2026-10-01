@@ -8,7 +8,7 @@
  * em todo navegador relevante e não depende de contexto seguro.
  * @returns {Promise<boolean>} true se copiou
  */
-export async function copyToClipboard(texto) {
+export async function copiarParaAreaDeTransferencia(texto) {
   if (navigator.clipboard && window.isSecureContext) {
     try {
       await navigator.clipboard.writeText(texto);

@@ -11,7 +11,7 @@ const PAGE_SIZE_MAXIMO = 200;
  * database/ordenacao.js), então um valor desconhecido simplesmente cai
  * na ordenação padrão, sem risco de virar SQL.
  */
-function parsePaginacao(query) {
+function lerPaginacao(query) {
   const page = Math.max(1, parseInt(query.page, 10) || 1);
   const pageSize = Math.min(PAGE_SIZE_MAXIMO, Math.max(1, parseInt(query.pageSize, 10) || PAGE_SIZE_PADRAO));
   const sortBy = typeof query.sortBy === "string" ? query.sortBy : undefined;
@@ -19,4 +19,4 @@ function parsePaginacao(query) {
   return { page, pageSize, sortBy, sortDir };
 }
 
-module.exports = { parsePaginacao };
+module.exports = { lerPaginacao };

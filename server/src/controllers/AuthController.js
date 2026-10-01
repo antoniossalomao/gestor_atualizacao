@@ -29,7 +29,7 @@ class AuthController {
   status = (req, res) => {
     const logado = Boolean(req.session.user);
     res.json({
-      needsSetup: this.authService.needsSetup(),
+      precisaConfigurar: this.authService.precisaConfigurar(),
       user: req.session.user || null,
       atualizadorHabilitado: this.configuracaoSistemaService.atualizadorHabilitado(),
       // As regras públicas da equipe (ver config/regrasEquipe.js) vão junto
@@ -42,9 +42,9 @@ class AuthController {
     });
   };
 
-  setupAdmin = (req, res, next) => {
+  configurarAdmin = (req, res, next) => {
     try {
-      const user = this.authService.setupAdmin(req.body || {});
+      const user = this.authService.configurarAdmin(req.body || {});
       this._iniciarSessao(req, res, user, next, () => res.status(201).json({ user }));
     } catch (err) {
       next(err);

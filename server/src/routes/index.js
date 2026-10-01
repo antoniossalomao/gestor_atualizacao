@@ -73,7 +73,7 @@ class ApiRouter {
   _registerAuthRoutes() {
     const { auth } = this.controllers;
     this.router.get("/auth/status", auth.status);
-    this.router.post("/auth/setup", this.loginLimiter.middleware, auth.setupAdmin);
+    this.router.post("/auth/setup", this.loginLimiter.middleware, auth.configurarAdmin);
     this.router.post("/auth/login", this.loginLimiter.middleware, auth.login);
     this.router.post("/auth/logout", auth.logout);
 
@@ -131,18 +131,18 @@ class ApiRouter {
     api.get("/clientes/opcoes-por-codigo", clientes.opcoesPorCodigo);
     api.get("/clientes/grupos", clientes.grupos);
     api.get("/clientes/cidades", clientes.cidades);
-    api.get("/clientes/by-nome/:nome", clientes.getByNome);
+    api.get("/clientes/by-nome/:nome", clientes.obterPorNome);
     api.post("/clientes", exigirPapel("operador", "admin"), clientes.create);
     api.put("/clientes/:id", exigirPapel("operador", "admin"), clientes.update);
     api.delete("/clientes/:id", exigirPapel("operador", "admin"), clientes.remove);
 
-    api.get("/clientes/:id/acessos", clientes.listAcessos);
-    api.post("/clientes/:id/acessos", exigirPapel("operador", "admin"), clientes.addAcesso);
-    api.put("/clientes/acessos/:acessoId", exigirPapel("operador", "admin"), clientes.updateAcesso);
-    api.delete("/clientes/acessos/:acessoId", exigirPapel("operador", "admin"), clientes.removeAcesso);
+    api.get("/clientes/:id/acessos", clientes.listarAcessos);
+    api.post("/clientes/:id/acessos", exigirPapel("operador", "admin"), clientes.adicionarAcesso);
+    api.put("/clientes/acessos/:acessoId", exigirPapel("operador", "admin"), clientes.alterarAcesso);
+    api.delete("/clientes/acessos/:acessoId", exigirPapel("operador", "admin"), clientes.removerAcesso);
 
     api.post("/clientes/excluir-lote", exigirPapel("admin"), clientes.removeMany);
-    api.post("/clientes/adicionar-sistema-lote", exigirPapel("operador", "admin"), clientes.addSistemaMany);
+    api.post("/clientes/adicionar-sistema-lote", exigirPapel("operador", "admin"), clientes.adicionarSistemaEmLote);
 
     // Sistemas
     api.get("/sistemas", sistemas.list);
@@ -157,14 +157,14 @@ class ApiRouter {
     api.get("/atualizacoes", atualizacoes.list);
     api.get("/atualizacoes/relatorio", atualizacoes.relatorio);
     api.get("/atualizacoes/situacao-cliente/:nome", atualizacoes.situacaoCliente);
-    api.get("/atualizacoes/responsaveis", atualizacoes.distinctResponsaveis);
+    api.get("/atualizacoes/responsaveis", atualizacoes.responsaveisDistintos);
     api.get("/atualizacoes/recent-by-client/:nome", atualizacoes.recentForClient);
     api.get("/atualizacoes/por-sistema", atualizacoes.porSistema);
-    api.get("/atualizacoes/export", atualizacoes.exportXlsx);
+    api.get("/atualizacoes/export", atualizacoes.exportarXlsx);
     // Prévia antes de importar: só lê, mas com o mesmo papel da importação --
     // quem não pode importar não tem por que conferir.
     api.post("/atualizacoes/import/previa", exigirPapel("operador", "admin"), upload.single("arquivo"), atualizacoes.previaImport);
-    api.post("/atualizacoes/import", exigirPapel("operador", "admin"), upload.single("arquivo"), atualizacoes.importXlsx);
+    api.post("/atualizacoes/import", exigirPapel("operador", "admin"), upload.single("arquivo"), atualizacoes.importarXlsx);
     api.post("/atualizacoes/excluir-lote", exigirPapel("admin"), atualizacoes.removeMany);
     api.post("/atualizacoes", exigirPapel("operador", "admin"), atualizacoes.create);
     api.put("/atualizacoes/:id", exigirPapel("operador", "admin"), atualizacoes.update);
@@ -175,7 +175,7 @@ class ApiRouter {
     api.get("/agendamentos/lembretes", agendamentos.lembretes);
     api.post("/agendamentos", exigirPapel("operador", "admin"), agendamentos.create);
     api.put("/agendamentos/:id", exigirPapel("operador", "admin"), agendamentos.update);
-    api.patch("/agendamentos/:id/done", exigirPapel("operador", "admin"), agendamentos.markDone);
+    api.patch("/agendamentos/:id/done", exigirPapel("operador", "admin"), agendamentos.marcarConcluida);
     api.patch("/agendamentos/:id/reabrir", exigirPapel("operador", "admin"), agendamentos.reabrir);
     api.patch("/agendamentos/:id/arquivar", exigirPapel("operador", "admin"), agendamentos.arquivar);
     api.delete("/agendamentos/:id", exigirPapel("operador", "admin"), agendamentos.remove);
@@ -184,7 +184,7 @@ class ApiRouter {
     // registra atualizações; excluir só Admin (apaga a meta e o placar).
     api.get("/campanhas", campanhas.list);
     api.get("/campanhas/:id", campanhas.get);
-    api.get("/campanhas/:id/export", campanhas.exportXlsx);
+    api.get("/campanhas/:id/export", campanhas.exportarXlsx);
     api.post("/campanhas", exigirPapel("operador", "admin"), campanhas.create);
     api.put("/campanhas/:id", exigirPapel("operador", "admin"), campanhas.update);
     api.patch("/campanhas/:id/encerrar", exigirPapel("operador", "admin"), campanhas.encerrar);

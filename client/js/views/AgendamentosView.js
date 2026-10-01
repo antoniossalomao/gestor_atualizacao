@@ -163,7 +163,7 @@ export class AgendamentosView extends View {
     this.kanban = this.container.querySelector('[data-role="kanban"]');
     ocuparAlturaDisponivel(this.kanban);
     this.container.querySelector('[data-action="novo-agendamento"]').addEventListener("click", () => {
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.abrir({ foco: this.fields.tarefa });
     });
 
@@ -251,7 +251,7 @@ export class AgendamentosView extends View {
       this.modalDeleteBtn.addEventListener("click", async () => {
         this.drawer.marcarLimpa();
         await this.drawer.fechar({ forcar: true });
-        this.deleteTask();
+        this.excluirTarefa();
       });
     }
 
@@ -260,7 +260,7 @@ export class AgendamentosView extends View {
     if (this.modalDoneBtn) {
       this.modalDoneBtn.addEventListener("click", async () => {
         this.drawer.fechar({ forcar: true });
-        await this.markDone();
+        await this.marcarConcluida();
       });
     }
 
@@ -275,7 +275,7 @@ export class AgendamentosView extends View {
       e.preventDefault();
       this._submit();
     });
-    this.updateBtn?.addEventListener("click", () => this.updateTask());
+    this.updateBtn?.addEventListener("click", () => this.alterarTarefa());
 
     // Ações rápidas e drag-and-drop no quadro Kanban
     this.kanban.addEventListener("click", (e) => this._acaoRapida(e));
@@ -290,7 +290,7 @@ export class AgendamentosView extends View {
 
     this._pintarLimparFiltros();
     this._pintarFiltrosRapidos();
-    this.clearForm();
+    this.limparFormulario();
   }
 
   /**
@@ -351,7 +351,7 @@ export class AgendamentosView extends View {
       wrap.appendChild(field);
 
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") this.clearForm({ comDesfazer: true });
+        if (e.key === "Escape") this.limparFormulario({ comDesfazer: true });
       });
       if (col.key === "data") {
         input.setAttribute("aria-describedby", hint.id);
@@ -493,9 +493,9 @@ export class AgendamentosView extends View {
         return { nomes, responsaveis, sistemas };
       },
       ({ nomes, responsaveis, sistemas }) => {
-        this.clienteAutocomplete.setValues(nomes);
-        this.responsavelAutocomplete.setValues(responsaveis);
-        this.sistemaAutocomplete?.setValues(sistemas || []);
+        this.clienteAutocomplete.definirValores(nomes);
+        this.responsavelAutocomplete.definirValores(responsaveis);
+        this.sistemaAutocomplete?.definirValores(sistemas || []);
       }
     );
     await this._reloadList();
@@ -601,7 +601,7 @@ export class AgendamentosView extends View {
             acao: {
               label: "+ Novo Agendamento",
               onClick: () => {
-                this.clearForm();
+                this.limparFormulario();
                 this.drawer.abrir({ foco: this.fields.tarefa });
               },
             },
@@ -641,7 +641,7 @@ export class AgendamentosView extends View {
     } catch (err) {
       row.status = statusAnterior;
       this._renderKanban(this.rows);
-      Modal.alert("Erro ao mover tarefa", errorMessage(err), "error");
+      Modal.alert("Erro ao mover tarefa", mensagemDeErro(err), "error");
       // Num conflito de verdade (outra pessoa mexeu na tarefa), a linha local
       // está velha e continuaria recusada em toda tentativa até um F5. Recarregar
       // traz a revisão atual e o quadro volta a aceitar a mudança.
@@ -777,12 +777,12 @@ export class AgendamentosView extends View {
     const liberar = marcarOcupado(this.modalReabrirBtn);
     try {
       const tarefa = await this.api.patch(`/agendamentos/${this.selectedId}/reabrir`);
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
       await this._reloadList();
       avisoRapido.sucesso(`"${tarefa.tarefa}" voltou para a lista como "${OPCOES_STATUS[0]}".`);
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -800,10 +800,10 @@ export class AgendamentosView extends View {
       this._reloadList();
     }
     if (novo) {
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.abrir({ foco: this.fields.cliente });
     } else if (cliente) {
-      this.clearForm();
+      this.limparFormulario();
       if (this.fields.cliente) {
         this.fields.cliente.value = cliente;
         this.drawer.abrir({ foco: this.fields.tarefa });
@@ -826,50 +826,50 @@ export class AgendamentosView extends View {
   }
 
   _submit() {
-    if (this.selectedId == null) this.addTask();
-    else this.updateTask();
+    if (this.selectedId == null) this.adicionarTarefa();
+    else this.alterarTarefa();
   }
 
-  async addTask() {
+  async adicionarTarefa() {
     const data = this._readForm();
     if (!data) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
       await this.api.post("/agendamentos", data);
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
       avisoRapido.sucesso("Tarefa adicionada.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
   }
 
-  async updateTask() {
+  async alterarTarefa() {
     if (this.selectedId == null) return;
     const data = this._readForm();
     if (!data) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
       await this.api.put(`/agendamentos/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
       avisoRapido.sucesso("Tarefa atualizada.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
   }
 
-  async deleteTask() {
+  async excluirTarefa() {
     if (this.selectedId == null) return;
     const id = this.selectedId;
     const dadosAntes = {};
@@ -877,7 +877,7 @@ export class AgendamentosView extends View {
 
     try {
       await this.api.delete(`/agendamentos/${id}`);
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
       await this._reloadList();
       avisoRapido.desfazer(`Tarefa "${dadosAntes.tarefa}" excluída.`, async () => {
@@ -891,11 +891,11 @@ export class AgendamentosView extends View {
         }
       });
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     }
   }
 
-  async markDone() {
+  async marcarConcluida() {
     if (this.selectedId == null) return;
     await this._moverCard(this.selectedId, STATUS_CONCLUIDO);
   }
@@ -911,20 +911,20 @@ export class AgendamentosView extends View {
     const liberar = marcarOcupado(botao);
     try {
       await this.api.patch(`/agendamentos/${this.selectedId}/arquivar`);
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
       avisoRapido.sucesso("Tarefa arquivada.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
   }
 
-  clearForm({ comDesfazer = false } = {}) {
+  limparFormulario({ comDesfazer = false } = {}) {
     const antes = {};
     let tinhaConteudo = false;
     if (this.fields) {
@@ -967,8 +967,8 @@ export class AgendamentosView extends View {
 
   _onGlobalKeydown(e) {
     if (!this.visivel) return;
-    if (isTypingTarget(e.target)) return;
-    if (e.key === "Delete" && this.selectedId != null) this.deleteTask();
+    if (ehCampoDeTexto(e.target)) return;
+    if (e.key === "Delete" && this.selectedId != null) this.excluirTarefa();
     else if (e.key.toLowerCase() === "n") this.container.querySelector('[data-action="novo-agendamento"]')?.click();
     else if (e.key === "/") {
       e.preventDefault();
@@ -995,10 +995,10 @@ export class AgendamentosView extends View {
   }
 }
 
-function isTypingTarget(el) {
+function ehCampoDeTexto(el) {
   return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 }
 
-function errorMessage(err) {
+function mensagemDeErro(err) {
   return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

@@ -91,7 +91,7 @@ test("Migração 1 - esquema", async (t) => {
     });
 
     await t.test("guarda uma cópia do banco de ANTES da migração, íntegra", () => {
-      const backups = env.db.listBackups();
+      const backups = env.db.listarBackups();
       assert.ok(backups.length >= 1);
       const copia = new Sqlite3(path.join(env.tmpDir, "backups", backups[backups.length - 1].arquivo), { readonly: true });
       try {
@@ -133,9 +133,9 @@ test("Migração 1 - sistemas", async (t) => {
     });
 
     await t.test("os sistemas do cadastro do cliente viram linhas de cliente_sistemas", () => {
-      assert.equal(env.db.clientes.getById(1).sistemas, "B_Vendas, B_NFe");
-      assert.equal(env.db.clientes.getById(2).sistemas, "B_Vendas, B_Replicador");
-      assert.equal(env.db.clientes.getById(3).sistemas, "");
+      assert.equal(env.db.clientes.obterPorId(1).sistemas, "B_Vendas, B_NFe");
+      assert.equal(env.db.clientes.obterPorId(2).sistemas, "B_Vendas, B_Replicador");
+      assert.equal(env.db.clientes.obterPorId(3).sistemas, "");
     });
   } finally {
     env.cleanup();

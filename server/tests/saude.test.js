@@ -35,7 +35,7 @@ test("Saúde Operacional do Sistema - SaudeService", async (t) => {
   const saude = new SaudeService({
     db: env.db,
     backups: { list: () => [{ arquivo: "backup-test.sqlite", data: "2026-09-18T10:00:00.000Z" }] },
-    versoes: { painel: () => ({ agentes: [] }), packagesDir: path.join(env.tmpDir, "packages") },
+    versoes: { painel: () => ({ agentes: [] }), pastaDosPacotes: path.join(env.tmpDir, "packages") },
   });
 
   try {
@@ -48,19 +48,19 @@ test("Saúde Operacional do Sistema - SaudeService", async (t) => {
       assert.equal(typeof diag.agentes.total, "number");
     });
 
-    await t.test("o VersaoService REAL expõe packagesDir", () => {
-      // Regressão: o SaudeService sempre leu `this.versoes.packagesDir`, mas a
+    await t.test("o VersaoService REAL expõe pastaDosPacotes", () => {
+      // Regressão: o SaudeService sempre leu `this.versoes.pastaDosPacotes`, mas a
       // classe VersaoService não tinha essa propriedade. Como
       // `fs.existsSync(undefined)` devolve false em vez de lançar, o painel de
       // Saúde reportava "0 pacotes, 0 bytes" para sempre, em silêncio.
       //
       // O teste acima não pegava porque o objeto `versoes` dali é um DUBLÊ, e o
-      // dublê declarava `packagesDir` -- ou seja, o teste afirmava uma interface
+      // dublê declarava `pastaDosPacotes` -- ou seja, o teste afirmava uma interface
       // que o objeto real não implementava. Por isso esta asserção é contra a
       // CLASSE DE VERDADE, e não contra o dublê.
-      assert.equal(typeof env.versoes.packagesDir, "string");
-      assert.equal(path.basename(env.versoes.packagesDir), "packages");
-      assert.equal(path.dirname(env.versoes.packagesDir), path.dirname(env.dbPath));
+      assert.equal(typeof env.versoes.pastaDosPacotes, "string");
+      assert.equal(path.basename(env.versoes.pastaDosPacotes), "packages");
+      assert.equal(path.dirname(env.versoes.pastaDosPacotes), path.dirname(env.dbPath));
     });
 
     await t.test("conta e mede os pacotes de verdade que existem em disco", () => {
@@ -73,9 +73,9 @@ test("Saúde Operacional do Sistema - SaudeService", async (t) => {
       // Sem a pasta, o diagnóstico não quebra: reporta zero.
       assert.equal(comReal.obterDiagnostico().pacotes.total, 0);
 
-      fs.mkdirSync(env.versoes.packagesDir, { recursive: true });
-      fs.writeFileSync(path.join(env.versoes.packagesDir, "a.zip"), "12345");
-      fs.writeFileSync(path.join(env.versoes.packagesDir, "b.zip"), "123");
+      fs.mkdirSync(env.versoes.pastaDosPacotes, { recursive: true });
+      fs.writeFileSync(path.join(env.versoes.pastaDosPacotes, "a.zip"), "12345");
+      fs.writeFileSync(path.join(env.versoes.pastaDosPacotes, "b.zip"), "123");
 
       const diag = comReal.obterDiagnostico();
       assert.equal(diag.pacotes.total, 2, "deveria enxergar os dois pacotes gravados");

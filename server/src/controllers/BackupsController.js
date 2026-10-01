@@ -12,7 +12,7 @@ class BackupsController {
   download = (req, res, next) => {
     try {
       const arquivo = req.params.arquivo;
-      const caminho = this.backupService.getBackupPath(arquivo);
+      const caminho = this.backupService.caminhoDoBackup(arquivo);
       res.download(caminho, arquivo);
     } catch (err) {
       next(err);
@@ -21,7 +21,7 @@ class BackupsController {
 
   downloadCurrent = (_req, res, next) => {
     try {
-      const caminho = this.backupService.getCurrentDbPath();
+      const caminho = this.backupService.caminhoDoBancoAtual();
       const filename = `gestao_atual_${new Date().toISOString().replace(/[:.]/g, "-")}.db`;
       res.download(caminho, filename);
     } catch (err) {

@@ -1,5 +1,5 @@
 const { ErroDeValidacao } = require("../shared/erros");
-const { parsePaginacao } = require("./paginacao");
+const { lerPaginacao } = require("./paginacao");
 
 /** Rotas de CRUD de clientes (aba Clientes) + lista de nomes p/ autocompletar. */
 class ClientesController {
@@ -9,7 +9,7 @@ class ClientesController {
   }
 
   list = (req, res) => {
-    res.json(this.clienteService.list(req.query.search || "", parsePaginacao(req.query)));
+    res.json(this.clienteService.list(req.query.search || "", lerPaginacao(req.query)));
   };
 
   names = (req, res) => {
@@ -28,8 +28,8 @@ class ClientesController {
     res.json(this.clienteService.cidades());
   };
 
-  getByNome = (req, res) => {
-    res.json(this.clienteService.getByNome(req.params.nome));
+  obterPorNome = (req, res) => {
+    res.json(this.clienteService.obterPorNome(req.params.nome));
   };
 
   create = (req, res, next) => {
@@ -57,33 +57,33 @@ class ClientesController {
     }
   };
 
-  listAcessos = (req, res, next) => {
+  listarAcessos = (req, res, next) => {
     try {
-      res.json(this.clienteService.listAcessos(Number(req.params.id)));
+      res.json(this.clienteService.listarAcessos(Number(req.params.id)));
     } catch (err) {
       next(err);
     }
   };
 
-  addAcesso = (req, res, next) => {
+  adicionarAcesso = (req, res, next) => {
     try {
-      res.status(201).json(this.clienteService.addAcesso(Number(req.params.id), req.body || {}, req.session.user));
+      res.status(201).json(this.clienteService.adicionarAcesso(Number(req.params.id), req.body || {}, req.session.user));
     } catch (err) {
       next(err);
     }
   };
 
-  updateAcesso = (req, res, next) => {
+  alterarAcesso = (req, res, next) => {
     try {
-      res.json(this.clienteService.updateAcesso(Number(req.params.acessoId), req.body || {}, req.session.user));
+      res.json(this.clienteService.alterarAcesso(Number(req.params.acessoId), req.body || {}, req.session.user));
     } catch (err) {
       next(err);
     }
   };
 
-  removeAcesso = (req, res, next) => {
+  removerAcesso = (req, res, next) => {
     try {
-      this.clienteService.removeAcesso(Number(req.params.acessoId), req.session.user);
+      this.clienteService.removerAcesso(Number(req.params.acessoId), req.session.user);
       res.status(204).end();
     } catch (err) {
       next(err);
@@ -94,17 +94,17 @@ class ClientesController {
     try {
       const ids = Array.isArray(req.body?.ids) ? req.body.ids : null;
       if (!ids || ids.length === 0) throw new ErroDeValidacao("Selecione ao menos um cliente para excluir.");
-      res.json(this.clienteService.deleteMany(ids, req.session.user));
+      res.json(this.clienteService.excluirVarios(ids, req.session.user));
     } catch (err) {
       next(err);
     }
   };
 
-  addSistemaMany = (req, res, next) => {
+  adicionarSistemaEmLote = (req, res, next) => {
     try {
       const ids = Array.isArray(req.body?.ids) ? req.body.ids : null;
       if (!ids || ids.length === 0) throw new ErroDeValidacao("Selecione ao menos um cliente.");
-      res.json(this.clienteService.addSistemaMany(ids, req.body?.sistema, req.session.user));
+      res.json(this.clienteService.adicionarSistemaEmLote(ids, req.body?.sistema, req.session.user));
     } catch (err) {
       next(err);
     }

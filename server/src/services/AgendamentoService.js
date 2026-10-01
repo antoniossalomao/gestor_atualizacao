@@ -88,7 +88,7 @@ class AgendamentoService {
 
   /** Tarefas pendentes vencidas/vencendo hoje, para o banner de lembrete. */
   lembretes() {
-    return this.db.agendamentos.dueSoon();
+    return this.db.agendamentos.venceEmBreve();
   }
 
   create(input, usuario) {
@@ -138,8 +138,8 @@ class AgendamentoService {
   }
 
   /** Atalho: marca a tarefa com o ultimo status da lista ("Concluído"). */
-  markDone(id, usuario) {
-    if (this.db.agendamentos.markDone(id, OPCOES_STATUS[OPCOES_STATUS.length - 1]) === 0) {
+  marcarConcluida(id, usuario) {
+    if (this.db.agendamentos.marcarConcluida(id, OPCOES_STATUS[OPCOES_STATUS.length - 1]) === 0) {
       throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
     }
     this.historico.registrar(usuario, "marcar_concluida", "agendamento", `Tarefa #${id} concluída`);
@@ -162,7 +162,7 @@ class AgendamentoService {
       // a mesma equipe, e é lá que está o volume que define qual grafia vale
       // ("Camila", não "CAMILA"). Sem isto, o campo Responsável de uma aba
       // divergia do da outra -- foi assim que "Marcos/lennon" nasceu aqui.
-      responsavel: normalizarResponsavel(input.responsavel, this.db.atualizacoes.distinctResponsaveis()),
+      responsavel: normalizarResponsavel(input.responsavel, this.db.atualizacoes.responsaveisDistintos()),
       prioridade,
       data,
       horario,

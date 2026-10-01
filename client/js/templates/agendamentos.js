@@ -11,7 +11,7 @@ import { STATUS_CONCLUIDO, estaAtrasada } from "../domain/agendamento.js";
  * O título da tarefa e o nome do cliente são texto livre digitado por
  * qualquer operador, e aparecem aqui em três contextos (conteúdo, `title=` e
  * `aria-label=`). Antes cada um dependia de lembrar a função de escape certa,
- * e o `aria-label` usava a errada -- ver `escapeHtml` em utils/html.js.
+ * e o `aria-label` usava a errada -- ver `escaparHtml` em utils/html.js.
  */
 
 /**

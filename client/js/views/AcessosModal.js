@@ -2,8 +2,8 @@ import { ErroApi } from "../api/ApiPainel.js";
 import { Modal } from "../components/Modal.js";
 import { avisoRapido } from "../components/AvisosRapidos.js";
 import { iconeSvg } from "../utils/icones.js";
-import { escapeHtml } from "../utils/html.js";
-import { copyToClipboard } from "../components/areaDeTransferencia.js";
+import { escaparHtml } from "../utils/html.js";
+import { copiarParaAreaDeTransferencia } from "../components/areaDeTransferencia.js";
 import { marcarOcupado } from "../components/botaoOcupado.js";
 import { estadoVazio } from "../components/estadoVazio.js";
 
@@ -28,7 +28,7 @@ export class AcessosModal {
     this.close = close;
 
     box.innerHTML = `
-      <h3 class="modal-box__title" id="acessos-titulo">Acessos — ${escapeHtml(this.cliente.nome)}</h3>
+      <h3 class="modal-box__title" id="acessos-titulo">Acessos — ${escaparHtml(this.cliente.nome)}</h3>
       <p class="modal-box__message">AnyDesk e Suporte Bredas de cada máquina deste cliente.</p>
       <div class="users-list" data-role="list"></div>
       <button type="button" class="btn btn--small" data-action="toggle-form" aria-expanded="false" aria-controls="nova-maquina">
@@ -153,7 +153,7 @@ export class AcessosModal {
     copiar.setAttribute("aria-label", `Copiar ${rotulo}`);
     copiar.title = `Copiar ${rotulo}`;
     copiar.addEventListener("click", async () => {
-      const ok = await copyToClipboard(valor);
+      const ok = await copiarParaAreaDeTransferencia(valor);
       avisoRapido[ok ? "sucesso" : "erro"](ok ? `${rotulo} copiado.` : "Não foi possível copiar.");
     });
     linha.appendChild(copiar);
@@ -223,7 +223,7 @@ export class AcessosModal {
       this._resetForm();
       await this._reload();
     } catch (err) {
-      Modal.alert("Validação", errorMessage(err), "warning");
+      Modal.alert("Validação", mensagemDeErro(err), "warning");
     } finally {
       liberar();
     }
@@ -244,11 +244,11 @@ export class AcessosModal {
       avisoRapido.sucesso(`Máquina "${acesso.maquina}" removida.`);
     } catch (err) {
       liberar();
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     }
   }
 }
 
-function errorMessage(err) {
+function mensagemDeErro(err) {
   return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

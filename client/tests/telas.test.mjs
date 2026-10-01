@@ -16,11 +16,11 @@ import assert from "node:assert/strict";
 
 import { STATUS_CONCLUIDO, estaAtrasada } from "../js/domain/agendamento.js";
 import { cartaoKanban, colunasKanban, slugStatus } from "../js/templates/agendamentos.js";
-import { chipsFiltroAtualizacoes, htmlChips } from "../js/templates/filtros.js";
+import { chipsFiltroAtualizacoes, chipsHtml } from "../js/templates/filtros.js";
 import { splitSistemas, montarMatrizVersoes } from "../js/domain/matrizVersoes.js";
 import { cartaoAcesso, linhaMatrizVersoes } from "../js/templates/consulta.js";
 import { formatarMes, primeiroDiaDoMes, tendenciaMensal, barrasPorSistema, variacaoMesAnterior } from "../js/domain/resumo.js";
-import { statTile, deltaTendencia, corpoSituacao } from "../js/templates/resumo.js";
+import { blocoDeNumero, deltaTendencia, corpoSituacao } from "../js/templates/resumo.js";
 import { listaNotificacoes, itemNotificacao } from "../js/templates/notificacoes.js";
 import { alteracoesRegras, descreverChaveAgentes, formatarTempoAtivo, papelNormalizado } from "../js/domain/administracao.js";
 import { linhaUsuario, linhaBackup, blocosSaude, linhaRegraNumero } from "../js/templates/administracao.js";
@@ -106,7 +106,7 @@ test("Agendamentos - cartão do kanban", async (t) => {
   await t.test("título e cliente digitados não viram HTML, em nenhum dos três lugares", () => {
     const html = texto(cartaoKanban({ ...base, tarefa: MALICIOSO, cliente: MALICIOSO }, "operador", { agora: AGORA }));
     semInjecao(html);
-    // O aria-label era o lugar vulnerável: escapeHtml antigo, sem aspas.
+    // O aria-label era o lugar vulnerável: escaparHtml antigo, sem aspas.
     assert.equal(atributo(html, "aria-label"), `Tarefa ${MALICIOSO}`);
     assert.equal(atributo(html, "title"), MALICIOSO);
   });
@@ -213,7 +213,7 @@ test("Atualizações - chips de filtro ativo", async (t) => {
   await t.test("o termo buscado aparece escapado no chip", () => {
     // A busca é repetida na tela literalmente -- é o texto livre mais fácil de
     // esquecer que passa por um innerHTML.
-    const html = texto(htmlChips(chipsFiltroAtualizacoes({ busca: MALICIOSO })));
+    const html = texto(chipsHtml(chipsFiltroAtualizacoes({ busca: MALICIOSO })));
     semInjecao(html);
     assert.match(html, /data-chip="busca"/);
   });
@@ -465,7 +465,7 @@ test("Resumo - datas e indicadores", async (t) => {
   });
 
   await t.test("indicador é um <button> com o destino por escrito", () => {
-    const html = texto(statTile("mes", "calendario", "Atualizações Este Mês", "Ver o mês"));
+    const html = texto(blocoDeNumero("mes", "calendario", "Atualizações Este Mês", "Ver o mês"));
     assert.match(html, /^\s*<button type="button" class="card stat-tile" data-stat="mes"/);
     assert.match(html, /Ver o mês <svg/);
   });

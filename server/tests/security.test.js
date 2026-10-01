@@ -122,31 +122,31 @@ test("Segurança de Usuários - AuthService", async (t) => {
   const env = criarAmbienteTeste();
   t.after(() => env.cleanup());
 
-  const admin = env.auth.setupAdmin({ nome: "Admin Chefe", usuario: "adminchefe", senha: "senhaValida123" });
+  const admin = env.auth.configurarAdmin({ nome: "Admin Chefe", usuario: "adminchefe", senha: "senhaValida123" });
   assert.equal(admin.role, "admin");
 
   await t.test("não-administrador não pode criar novas contas", () => {
-    const operador = env.auth.createUser(
+    const operador = env.auth.criarUsuario(
       { nome: "Operador 1", usuario: "op1", senha: "senhaOperador123", role: "operador" },
       admin
     );
 
     assert.throws(
       () => {
-        env.auth.createUser({ nome: "Novo", usuario: "novo", senha: "senhaNova123" }, operador);
+        env.auth.criarUsuario({ nome: "Novo", usuario: "novo", senha: "senhaNova123" }, operador);
       },
       /Apenas administradores podem criar novos usuários/
     );
   });
 
   await t.test("administrador pode criar conta 'consulta', 'operador' e 'admin'", () => {
-    const consulta = env.auth.createUser(
+    const consulta = env.auth.criarUsuario(
       { nome: "Leitor", usuario: "leitor", senha: "senhaLeitor123", role: "consulta" },
       admin
     );
     assert.equal(consulta.role, "consulta");
 
-    const outroOp = env.auth.createUser(
+    const outroOp = env.auth.criarUsuario(
       { nome: "Op 2", usuario: "op2", senha: "senhaOp2_123", role: "operador" },
       admin
     );
@@ -156,14 +156,14 @@ test("Segurança de Usuários - AuthService", async (t) => {
   await t.test("não permite rebaixar ou excluir o único administrador", () => {
     assert.throws(
       () => {
-        env.auth.updateUser(admin.id, { role: "operador" }, admin);
+        env.auth.alterarUsuario(admin.id, { role: "operador" }, admin);
       },
       /Não é possível rebaixar o único administrador ativo/
     );
 
     assert.throws(
       () => {
-        env.auth.deleteUser(admin.id, admin);
+        env.auth.excluirUsuario(admin.id, admin);
       },
       /Você não pode excluir a própria conta/
     );
@@ -174,8 +174,8 @@ test("Blindagem de Backups - BackupService", async (t) => {
   const env = criarAmbienteTeste();
   t.after(() => env.cleanup());
 
-  const admin = env.auth.setupAdmin({ nome: "Admin", usuario: "admin", senha: "senhaSegura123" });
-  const operador = env.auth.createUser({ nome: "Operador", usuario: "operador", senha: "senhaOp123" }, admin, "operador");
+  const admin = env.auth.configurarAdmin({ nome: "Admin", usuario: "admin", senha: "senhaSegura123" });
+  const operador = env.auth.criarUsuario({ nome: "Operador", usuario: "operador", senha: "senhaOp123" }, admin, "operador");
 
   // Cria um arquivo de backup falso na pasta de backups do banco temporário
   const dirBackups = path.join(path.dirname(env.dbPath), "backups");
@@ -190,7 +190,7 @@ test("Blindagem de Backups - BackupService", async (t) => {
       sessaoLimpada = true;
     },
   };
-  env.backups.setSessionStore(mockSessionStore);
+  env.backups.definirArmazemDeSessao(mockSessionStore);
 
   await t.test("operador não tem autorização para restaurar backup", () => {
     assert.throws(
@@ -229,8 +229,8 @@ test("Controle de Versões e Stream de Upload - VersaoService", async (t) => {
   const env = criarAmbienteTeste();
   t.after(() => env.cleanup());
 
-  const admin = env.auth.setupAdmin({ nome: "Admin", usuario: "admin", senha: "senhaSegura123" });
-  const operador = env.auth.createUser({ nome: "Operador", usuario: "operador", senha: "senhaOp123" }, admin, "operador");
+  const admin = env.auth.configurarAdmin({ nome: "Admin", usuario: "admin", senha: "senhaSegura123" });
+  const operador = env.auth.criarUsuario({ nome: "Operador", usuario: "operador", senha: "senhaOp123" }, admin, "operador");
 
   // Cria um arquivo de pacote temporário
   const pacotePath = path.join(env.tmpDir, "pacote-teste.zip");
@@ -280,9 +280,9 @@ test("Controle de Versões e Stream de Upload - VersaoService", async (t) => {
 
   await t.test("admin publica com sucesso em transação atômica quando arquivo existe", () => {
     // Garante que o arquivo exista no destino do download
-    const packagesDir = path.join(env.tmpDir, "packages");
-    fs.mkdirSync(packagesDir, { recursive: true });
-    const targetPath = path.join(packagesDir, "pacote-teste.zip");
+    const pastaDosPacotes = path.join(env.tmpDir, "packages");
+    fs.mkdirSync(pastaDosPacotes, { recursive: true });
+    const targetPath = path.join(pastaDosPacotes, "pacote-teste.zip");
     fs.copyFileSync(pacotePath, targetPath);
 
     try {

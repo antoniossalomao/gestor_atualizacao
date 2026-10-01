@@ -1,4 +1,4 @@
-const { buildOrderBy } = require("./ordenacao");
+const { montarOrdenacao } = require("./ordenacao");
 
 /** Colunas que a tela pode pedir para ordenar, e a expressao SQL segura correspondente. */
 const SORT_MAP = {
@@ -60,7 +60,7 @@ class HistoricoRepository {
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM historico ${where}`).get(params).total;
 
     const offset = Math.max(0, (page - 1) * pageSize);
-    const orderBy = buildOrderBy(SORT_MAP, sortBy, sortDir, "id DESC");
+    const orderBy = montarOrdenacao(SORT_MAP, sortBy, sortDir, "id DESC");
     const rows = this.conn
       .prepare(`SELECT * FROM historico ${where} ORDER BY ${orderBy} LIMIT @limit OFFSET @offset`)
       .all({ ...params, limit: pageSize, offset });

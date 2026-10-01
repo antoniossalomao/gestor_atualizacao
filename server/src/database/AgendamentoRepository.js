@@ -1,7 +1,7 @@
 const { BaseRepository } = require("./BaseRepository");
 const { DATE_SORT_EXPR } = require("./AtualizacaoRepository");
-const { titleCase } = require("../shared/normalizacao");
-const { buildOrderBy } = require("./ordenacao");
+const { primeiraMaiuscula } = require("../shared/normalizacao");
+const { montarOrdenacao } = require("./ordenacao");
 const { FILTRO_ARQUIVADAS, OPCOES_STATUS } = require("../config/constantes");
 
 const STATUS_CONCLUIDO = OPCOES_STATUS[OPCOES_STATUS.length - 1];
@@ -111,7 +111,7 @@ class AgendamentoRepository extends BaseRepository {
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table} ${where}`).get(params).total;
 
     const offset = Math.max(0, (page - 1) * pageSize);
-    const orderBy = buildOrderBy(
+    const orderBy = montarOrdenacao(
       SORT_MAP,
       sortBy,
       sortDir,
@@ -155,7 +155,7 @@ class AgendamentoRepository extends BaseRepository {
   }
 
   /** Atalho para marcar rapidamente uma tarefa como concluida agora. */
-  markDone(id, doneLabel) {
+  marcarConcluida(id, doneLabel) {
     return this.conn
       .prepare(`UPDATE ${this.table} SET status = @status, concluido_em = @concluidoEm WHERE id = @id`)
       .run({ id, status: doneLabel, concluidoEm: new Date().toISOString() }).changes;
@@ -166,7 +166,7 @@ class AgendamentoRepository extends BaseRepository {
    * responsavel -- so entra no calculo quem tem as duas datas (tarefas
    * criadas antes desta coluna existir ficam de fora, em vez de contar com
    * uma data inventada). Agrupa ignorando maiusculas/espacos, mesma regra
-   * de AtualizacaoRepository.countsByResponsavel, e combina a media das
+   * de AtualizacaoRepository.contagemPorResponsavel, e combina a media das
    * variações de nome ponderada pela quantidade de cada uma.
    */
   tempoMedioResolucaoPorResponsavel() {
@@ -184,7 +184,7 @@ class AgendamentoRepository extends BaseRepository {
     for (const { responsavel, dias, total } of raw) {
       const key = responsavel.trim().toLowerCase();
       const atual = merged.get(key);
-      const label = atual ? atual.label : titleCase(responsavel.trim());
+      const label = atual ? atual.label : primeiraMaiuscula(responsavel.trim());
       const totalNovo = (atual ? atual.total : 0) + total;
       const diasNovo = ((atual ? atual.dias * atual.total : 0) + dias * total) / totalNovo;
       merged.set(key, { label, total: totalNovo, dias: diasNovo });
@@ -256,7 +256,7 @@ class AgendamentoRepository extends BaseRepository {
    * das Campanhas. Em aberto = não arquivada e fora dos status encerrados
    * que quem chama informa ("Concluído" e "Sem resposta": uma tarefa em que
    * não se conseguiu falar com o cliente não o encaminha, e ele precisa
-   * continuar na lista de pendentes -- a mesma leitura de `dueSoon`).
+   * continuar na lista de pendentes -- a mesma leitura de `venceEmBreve`).
    * O sistema vem como texto (o campo da tarefa é livre); quem chama resolve
    * no catálogo.
    * @param {string[]} statusEncerrados
@@ -277,7 +277,7 @@ class AgendamentoRepository extends BaseRepository {
    * Tarefas pendentes (nem "Concluído" nem "Sem resposta") com data de hoje
    * ou anterior -- usadas pelo banner de lembrete que aparece ao abrir o app.
    */
-  dueSoon() {
+  venceEmBreve() {
     const cutoff = hojeOrdenavel();
     const sql = `
       SELECT id, ${COLUNAS_ATUALIZACOES.join(", ")} FROM ${this.table}

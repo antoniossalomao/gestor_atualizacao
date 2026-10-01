@@ -46,7 +46,7 @@ function linhasValidas(n) {
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-limites-"));
   const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
-  const servico = new AtualizacaoService(db, new HistoricoService(db), { notifyAtualizacao: async () => {} });
+  const servico = new AtualizacaoService(db, new HistoricoService(db), { avisarAtualizacao: async () => {} });
   db.clientes.insert("", "Mercado Central", "Araxá", [db.sistemas.resolver("B_NFe").id], "");
   const cleanup = () => {
     db.conn.close();
@@ -86,12 +86,12 @@ test("Importação - limite de linhas", async (t) => {
     const buffer = await planilha([CABECALHO, ...linhasValidas(LIMITE_LINHAS_IMPORTACAO + 1)]);
     const esperado = /mais de 5\.000 linhas.*Divida o arquivo.*Nada foi gravado/s;
     await assert.rejects(env.servico.previaImportacao(buffer), esperado);
-    await assert.rejects(env.servico.importXlsx(buffer, USUARIO), esperado);
+    await assert.rejects(env.servico.importarXlsx(buffer, USUARIO), esperado);
     assert.equal(env.db.atualizacoes.count(), 0);
   });
 
   await t.test(`exatamente ${LIMITE_LINHAS_IMPORTACAO} linhas: entra tudo`, async () => {
-    const r = await env.servico.importXlsx(await planilha([CABECALHO, ...linhasValidas(LIMITE_LINHAS_IMPORTACAO)]), USUARIO);
+    const r = await env.servico.importarXlsx(await planilha([CABECALHO, ...linhasValidas(LIMITE_LINHAS_IMPORTACAO)]), USUARIO);
     assert.equal(r.inserted, LIMITE_LINHAS_IMPORTACAO);
     assert.equal(env.db.atualizacoes.count(), LIMITE_LINHAS_IMPORTACAO);
   });
@@ -107,7 +107,7 @@ test("Importação - célula formatada, fórmula e link viram o texto que a pess
       ])
     );
     assert.equal(p.validas, 1, JSON.stringify(p.ocorrencias));
-    const r = await env.servico.importXlsx(
+    const r = await env.servico.importarXlsx(
       await planilha([CABECALHO, [{ richText: [{ text: "Mercado " }, { text: "Central" }] }, "B_NFe", "", "", "10/08/2026", "", "", ""]]),
       USUARIO
     );
@@ -135,11 +135,11 @@ test("Exportação - limite de linhas e filtros", async (t) => {
   })();
 
   await t.test(`acima de ${LIMITE_LINHAS_EXPORTACAO} linhas: recusa dizendo quantas e como filtrar`, async () => {
-    await assert.rejects(env.servico.exportXlsxBuffer(), /10\.001 linhas; o limite é 10\.000.*Filtre por período/s);
+    await assert.rejects(env.servico.exportarXlsxEmMemoria(), /10\.001 linhas; o limite é 10\.000.*Filtre por período/s);
   });
 
   await t.test("com filtro abaixo do limite, exporta exatamente as linhas filtradas, com a aba Resumo", async () => {
-    const buffer = await env.servico.exportXlsxBuffer("", "Todos", { desde: "01/01/2026", ate: "31/12/2026" });
+    const buffer = await env.servico.exportarXlsxEmMemoria("", "Todos", { desde: "01/01/2026", ate: "31/12/2026" });
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buffer);
     const dados = wb.getWorksheet("Atualizações");
@@ -151,7 +151,7 @@ test("Exportação - limite de linhas e filtros", async (t) => {
   });
 
   await t.test("período inválido continua recusado na exportação", async () => {
-    await assert.rejects(env.servico.exportXlsxBuffer("", "Todos", { desde: "31/02/2026" }), /Período inválido/);
+    await assert.rejects(env.servico.exportarXlsxEmMemoria("", "Todos", { desde: "31/02/2026" }), /Período inválido/);
   });
 });
 

@@ -54,8 +54,8 @@ const PACOTE = [{ file: "app.zip", url: "http://x/app.zip", sha256: "a".repeat(6
  * o erro só apareceria no cliente.
  */
 function publicar(env, sistema, versao) {
-  fs.mkdirSync(env.service.packagesDir, { recursive: true });
-  fs.writeFileSync(path.join(env.service.packagesDir, PACOTE[0].file), "conteudo de teste");
+  fs.mkdirSync(env.service.pastaDosPacotes, { recursive: true });
+  fs.writeFileSync(path.join(env.service.pastaDosPacotes, PACOTE[0].file), "conteudo de teste");
   const inserida = env.db.versoes.insert(cadastro(env, sistema, versao));
   env.service.publish(inserida.id, ADMIN);
   return inserida.id;
@@ -253,13 +253,13 @@ test("VersaoService - pausa do agente", async (t) => {
 test("VersaoService - download não sai da pasta de pacotes", async (t) => {
   const env = ambiente();
   try {
-    fs.mkdirSync(env.service.packagesDir, { recursive: true });
-    fs.writeFileSync(path.join(env.service.packagesDir, "app.zip"), "conteudo");
+    fs.mkdirSync(env.service.pastaDosPacotes, { recursive: true });
+    fs.writeFileSync(path.join(env.service.pastaDosPacotes, "app.zip"), "conteudo");
     // Um arquivo sensível FORA da pasta de pacotes, ao lado do banco.
     fs.writeFileSync(path.join(env.tmpDir, "gestao.db-segredo"), "nao deveria sair daqui");
 
     await t.test("pacote existente é servido", () => {
-      assert.equal(env.service.download("app.zip"), path.join(env.service.packagesDir, "app.zip"));
+      assert.equal(env.service.download("app.zip"), path.join(env.service.pastaDosPacotes, "app.zip"));
     });
 
     await t.test("travessia de caminho é barrada", () => {

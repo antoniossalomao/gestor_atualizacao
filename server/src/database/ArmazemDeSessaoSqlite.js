@@ -89,9 +89,9 @@ class ArmazemDeSessaoSqlite extends session.Store {
    * do JSON de cada sessão -- mais cirúrgico que `clearAll` (que derruba
    * todos os usuários) e correto porque a estrutura do JSON é controlada por
    * nós (ver `set` acima e `AuthController._iniciarSessao`).
-   * Chamado por `AuthService.changePassword` para revogar sessões abertas em
+   * Chamado por `AuthService.trocarSenha` para revogar sessões abertas em
    * outros navegadores/dispositivos após uma troca de senha, e por
-   * `updateUser`/`deleteUser` quando o papel muda ou a conta some -- o papel
+   * `alterarUsuario`/`excluirUsuario` quando o papel muda ou a conta some -- o papel
    * que as rotas conferem é o copiado para a sessão no login.
    *
    * `userId` tem que chegar como NÚMERO: `json_extract` devolve inteiro, e
@@ -99,7 +99,7 @@ class ArmazemDeSessaoSqlite extends session.Store {
    * Com um id em texto, a exclusão não casaria nada e nenhum erro apareceria.
    * @param {number} userId
    */
-  clearByUserId(userId) {
+  limparPorUsuario(userId) {
     try {
       this.conn.prepare("DELETE FROM sessoes WHERE json_extract(dados, '$.user.id') = ?").run(userId);
     } catch {
@@ -110,12 +110,12 @@ class ArmazemDeSessaoSqlite extends session.Store {
 
   /**
    * As sessões ainda válidas de um usuário, para Configurações > Conta mostrar
-   * em que aparelhos a conta está aberta. Mesmo cuidado de `clearByUserId`
+   * em que aparelhos a conta está aberta. Mesmo cuidado de `limparPorUsuario`
    * com o tipo do id: tem que chegar como número.
    * @param {number} userId
    * @returns {Array<{sid: string, dados: any, expiraEm: number}>}
    */
-  listByUserId(userId) {
+  listarPorUsuario(userId) {
     return this.conn
       .prepare("SELECT sid, dados, expira_em FROM sessoes WHERE json_extract(dados, '$.user.id') = ? AND expira_em >= ?")
       .all(userId, Date.now())

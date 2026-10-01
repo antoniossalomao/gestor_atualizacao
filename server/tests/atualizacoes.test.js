@@ -137,7 +137,7 @@ test("AtualizacaoService - 'zero linhas' vira 404", async (t) => {
     });
 
     await t.test("exclusão em lote sem nenhum id válido dá 404 explicativo", () => {
-      assert.throws(() => env.service.deleteMany([999998, 999999], USUARIO), /lista pode estar desatualizada/);
+      assert.throws(() => env.service.excluirVarios([999998, 999999], USUARIO), /lista pode estar desatualizada/);
     });
   } finally {
     env.cleanup();
@@ -153,7 +153,7 @@ test("AtualizacaoService - exclusão em lote", async (t) => {
     const id2 = ultimoId(env.db);
 
     await t.test("devolve os registros de antes, para o 'Desfazer' da tela", () => {
-      const r = env.service.deleteMany([id1, id2], USUARIO);
+      const r = env.service.excluirVarios([id1, id2], USUARIO);
       assert.equal(r.excluidos, 2);
       assert.equal(r.registros.length, 2);
       assert.ok(r.registros.every((x) => x.cliente), "sem os dados não dá para recriar nada");
@@ -185,7 +185,7 @@ test("AtualizacaoService - 'Suporte Bredas' detectado na observação", async (t
         { cliente: "Com Suporte", data: "01/01/2026", obs: "Adicionado o Suporte Bredas na máquina do caixa" },
         USUARIO
       );
-      const cliente = env.db.clientes.getByNome("Com Suporte");
+      const cliente = env.db.clientes.obterPorNome("Com Suporte");
       assert.ok(cliente.sistemas.includes("Suporte Bredas"));
     });
 
@@ -195,7 +195,7 @@ test("AtualizacaoService - 'Suporte Bredas' detectado na observação", async (t
         { cliente: "Outro Com Suporte", data: "01/01/2026", obs: "ADICIONADO O SUPORTE BREDAS" },
         USUARIO
       );
-      assert.ok(env.db.clientes.getByNome("Outro Com Suporte").sistemas.includes("Suporte Bredas"));
+      assert.ok(env.db.clientes.obterPorNome("Outro Com Suporte").sistemas.includes("Suporte Bredas"));
     });
 
     await t.test("é idempotente: não suja o histórico na segunda vez", () => {
@@ -212,7 +212,7 @@ test("AtualizacaoService - 'Suporte Bredas' detectado na observação", async (t
     await t.test("observação comum não marca nada", () => {
       env.clientes.create({ nome: "Sem Suporte" }, USUARIO);
       env.service.create({ cliente: "Sem Suporte", data: "01/01/2026", obs: "Reiniciado o servidor" }, USUARIO);
-      assert.ok(!env.db.clientes.getByNome("Sem Suporte").sistemas.includes("Suporte Bredas"));
+      assert.ok(!env.db.clientes.obterPorNome("Sem Suporte").sistemas.includes("Suporte Bredas"));
     });
   } finally {
     env.cleanup();
@@ -349,7 +349,7 @@ test("Versões recebidas permanecem após nova oficial, edição e desfazer", ()
     assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").instalada, "22/09/2026");
     service.update(id, { ...criado, obs: "Corrigida" }, USUARIO);
     assert.equal(db.atualizacoes.find(id).versoes_sistemas, criado.versoes_sistemas);
-    const { registros } = service.deleteMany([id], USUARIO);
+    const { registros } = service.excluirVarios([id], USUARIO);
     service.create({ ...registros[0], restaurarVersoes: true }, USUARIO);
     assert.equal(service.situacaoCliente("Loja").find((s) => s.sistema === "B_NFe").instalada, "22/09/2026");
     service.create({ cliente: "Loja", sistema: "B_NFe", data: "25/09/2026" }, USUARIO);
@@ -418,8 +418,8 @@ test("Tendência mensal retorna 12 meses consecutivos, zeros e nenhuma atualiza�
     assert.deepEqual(serie[9], { mes: "2026-07", total: 1 });
     assert.deepEqual(serie[10], { mes: "2026-08", total: 0 });
     assert.deepEqual(serie[11], { mes: "2026-09", total: 1 });
-    assert.equal(db.atualizacoes.countForMonth("09/2026", "25/09/2026"), 1);
-    assert.equal(db.atualizacoes.countForMonth("09/2026", "26/09/2026"), 2);
+    assert.equal(db.atualizacoes.contarDoMes("09/2026", "25/09/2026"), 1);
+    assert.equal(db.atualizacoes.contarDoMes("09/2026", "26/09/2026"), 2);
     assert.equal(db.atualizacoes.count(), 6, "registros futuros permanecem no histórico para correção");
   } finally { cleanup(); }
 });
@@ -453,7 +453,7 @@ test("Relatório por período e Excel respeitam filtros e contam clientes distin
     assert.throws(() => service.relatorioPeriodo("", "Todos", { desde: "30/09/2026", ate: "01/09/2026" }));
     const ExcelJS = require("exceljs");
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(await service.exportXlsxBuffer("", "Ana", periodo));
+    await workbook.xlsx.load(await service.exportarXlsxEmMemoria("", "Ana", periodo));
     assert.equal(workbook.worksheets[0].rowCount, 3);
     assert.ok(workbook.worksheets[0].autoFilter);
     assert.equal(workbook.getWorksheet("Resumo").getCell("B6").value, 2);

@@ -1,5 +1,5 @@
 import { formatarDataHora, formatarDuracao } from "../utils/data.js";
-import { faseLabel } from "./agenteLabels.js";
+import { rotuloDaFase } from "./agenteLabels.js";
 
 const RE_SCRIPT = /^Falha ao aplicar script de atualização '([^']+)' \((\d+)\/(\d+) do pacote; (\d+) scripts? já estavam aplicados antes deste lote\)\.\s*Verificação prévia:\s*([\s\S]*?)\s*Erro retornado pelo isql:\s*([\s\S]*)$/i;
 
@@ -61,7 +61,7 @@ export function relatorioRetornosTexto(logs, { titulo = "RELATÓRIO DE RETORNOS 
       log.empresa || log.cnpj,
       log.sistema,
       log.versaoAnterior && log.versao ? `${log.versaoAnterior} -> ${log.versao}` : log.versao,
-      faseLabel(log.fase),
+      rotuloDaFase(log.fase),
       formatarDuracao(log.duracaoMs) !== "—" ? formatarDuracao(log.duracaoMs) : null,
     ].filter(Boolean);
     if (contexto.length) linhas.push(contexto.join(" · "));

@@ -45,7 +45,7 @@ class AlertaAgenteService {
 
         if (SITUACOES_RUINS.has(atual)) {
           if (atual !== estadoAnterior) {
-            await this.notifications.notifyAgenteSituacao({
+            await this.notifications.avisarSituacaoDoAgente({
               empresa: agente.empresa,
               situacao: atual,
               detalhe: agente.ultimoDetalhe,
@@ -57,7 +57,7 @@ class AlertaAgenteService {
           // Estava em alerta e saiu dele (nao precisa ter chegado a "ok" --
           // sair de offline/erro pra "pendente"/"desatualizado" ja e' o
           // suficiente pra avisar que o agente voltou a se comunicar).
-          await this.notifications.notifyAgenteSituacao({ empresa: agente.empresa, situacao: atual });
+          await this.notifications.avisarSituacaoDoAgente({ empresa: agente.empresa, situacao: atual });
           this.db.versoes.limparSituacaoAlertada(agente.cnpj);
         }
       }

@@ -200,7 +200,7 @@ test("ApiPainel - token CSRF no envio de arquivo (XHR)", async (t) => {
     try {
       const api = new ApiPainel();
       await api.get("/auth/status");
-      const r = await api.postForm("/atualizacoes/import", new FormData());
+      const r = await api.enviarFormulario("/atualizacoes/import", new FormData());
       assert.deepEqual(r, { inserted: 1 });
       assert.deepEqual(
         xhr.pedidos.map((p) => p.token),

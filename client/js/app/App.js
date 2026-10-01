@@ -144,7 +144,7 @@ export class App {
     // as telas explicarem o que mostram. Só vêm com sessão.
     this.regras = status.regras || {};
     this.versao = status.versao || null;
-    if (status.needsSetup) {
+    if (status.precisaConfigurar) {
       new LoginView(this.root, this.api, "setup", (user) => this._onAuthenticated(user));
       return;
     }
@@ -176,7 +176,7 @@ export class App {
 
   _onAuthenticated(user) {
     this.user = user;
-    this.api.resetUnauthorized();
+    this.api.reiniciarNaoAutorizado();
     // Quem entrou pela tela de login chegou com o /auth/status de ANTES da
     // sessão, que não traz regras nem versão (ver AuthController.status) --
     // e a aba Sobre e ajuda explicaria a situação sem o prazo da equipe.
@@ -439,7 +439,7 @@ export class App {
         this._naoVistasAntes = 0;
         this._atualizarTitulo();
       },
-      aoIr: (destino, params) => this.switchTab(destino, params || undefined),
+      aoIr: (destino, params) => this.trocarAba(destino, params || undefined),
     });
     this._cleanups.push(() => this.menuNotificacoes.destroy());
     this._cleanups.push(this._ligarRitmoDasNotificacoes());
@@ -559,7 +559,7 @@ export class App {
 
     tabsNav.addEventListener("click", (event) => {
       const button = event.target.closest(".tab-button");
-      if (button) this.switchTab(button.dataset.tab);
+      if (button) this.trocarAba(button.dataset.tab);
     });
     // Setas percorrem as abas sem sair do teclado, como manda o padrão ARIA
     // de tablist -- antes, Tab passava por cada uma das nove abas.
@@ -582,7 +582,7 @@ export class App {
       instance: new tab.View(container, this.api, {
         user: this.user,
         cache: this.cache,
-        navigate: (destino, opcoes) => this.switchTab(destino, opcoes),
+        navigate: (destino, opcoes) => this.trocarAba(destino, opcoes),
         atualizadorHabilitado: this.atualizadorHabilitado,
         regras: this.regras,
         versao: () => this.versao,
@@ -615,7 +615,7 @@ export class App {
       const botao = e.target.closest("[data-tab]");
       if (!botao) return;
       close();
-      this.switchTab(botao.dataset.tab, { novo: true });
+      this.trocarAba(botao.dataset.tab, { novo: true });
     });
     box.querySelector("button:not([disabled])")?.focus();
   }
@@ -640,7 +640,7 @@ export class App {
     if (e.key === "Home") alvo = 0;
     else if (e.key === "End") alvo = this.tabsNoMenu.length - 1;
     else alvo = (indiceAtual + passo + this.tabsNoMenu.length) % this.tabsNoMenu.length;
-    this.switchTab(this.tabsNoMenu[alvo].key);
+    this.trocarAba(this.tabsNoMenu[alvo].key);
     this.root.querySelector(`#aba-${this.tabsNoMenu[alvo].key}`)?.focus();
   }
 
@@ -654,7 +654,7 @@ export class App {
       const indice = e.key === "0" ? 9 : Number(e.key) - 1;
       if (indice >= this.tabsNoMenu.length) return;
       e.preventDefault();
-      this.switchTab(this.tabsNoMenu[indice].key);
+      this.trocarAba(this.tabsNoMenu[indice].key);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -780,7 +780,7 @@ export class App {
         subtitulo: tab.descricao,
         grupo: "Telas",
         icone: tab.icon,
-        executar: () => this.switchTab(tab.key),
+        executar: () => this.trocarAba(tab.key),
       })),
       // Atalhos direto para cada aba da Administração. Cada um leva à tela, e
       // não a um modal solto como antes -- dá para voltar, e o "Fechar" não
@@ -800,7 +800,7 @@ export class App {
             subtitulo,
             grupo: "Administração",
             icone,
-            executar: () => this.switchTab("administracao", { aba }),
+            executar: () => this.trocarAba("administracao", { aba }),
           }))
         : []),
       ...(["operador", "admin"].includes(this.user?.role)
@@ -811,7 +811,7 @@ export class App {
               subtitulo: "Registrar atualização de cliente",
               grupo: "Ações",
               icone: "atualizacoes",
-              executar: () => this.switchTab("atualizacoes", { novo: true }),
+              executar: () => this.trocarAba("atualizacoes", { novo: true }),
             },
             {
               id: "acao:novo-agendamento",
@@ -819,7 +819,7 @@ export class App {
               subtitulo: "Criar agendamento de tarefa ou atualização",
               grupo: "Ações",
               icone: "agendamentos",
-              executar: () => this.switchTab("agendamentos", { novo: true }),
+              executar: () => this.trocarAba("agendamentos", { novo: true }),
             },
           ]
         : []),
@@ -831,7 +831,7 @@ export class App {
               subtitulo: "Filtrar agentes com erros, pendências ou sem contato",
               grupo: "Ações",
               icone: "alerta",
-              executar: () => this.switchTab("distribuicao", { situacao: "erro" }),
+              executar: () => this.trocarAba("distribuicao", { situacao: "erro" }),
             },
           ]
         : []),
@@ -908,7 +908,7 @@ export class App {
             subtitulo: "Abrir a ficha e comparação de versões do cliente",
             grupo: "Clientes",
             icone: "clientes",
-            executar: () => this.switchTab("consulta", { cliente: nome }),
+            executar: () => this.trocarAba("consulta", { cliente: nome }),
           });
         }
       }
@@ -921,7 +921,7 @@ export class App {
             subtitulo: "Versão publicada · Filtrar na Distribuição",
             grupo: "Versões Publicadas",
             icone: "versoes",
-            executar: () => this.switchTab("distribuicao", { sistema: v.sistema }),
+            executar: () => this.trocarAba("distribuicao", { sistema: v.sistema }),
           });
         }
       }
@@ -945,7 +945,7 @@ export class App {
             subtitulo: `${ag.ultimoSistema || "Sistema"} · Última: ${ag.ultimaVersao || "—"} · Abrir na Distribuição`,
             grupo: "Incidentes em Agentes",
             icone: "alerta",
-            executar: () => this.switchTab("distribuicao", { busca: ag.empresa || ag.cnpj }),
+            executar: () => this.trocarAba("distribuicao", { busca: ag.empresa || ag.cnpj }),
           });
         }
       }
@@ -964,7 +964,7 @@ export class App {
    *   e opcionalmente acende um ajuste dela
    */
   _abrirConfiguracoes(params) {
-    this.switchTab("configuracoes", params);
+    this.trocarAba("configuracoes", params);
   }
 
   /** Recolhe ou abre o menu. Vem de Configurações e do Ctrl + B. */
@@ -1002,7 +1002,7 @@ export class App {
    * @param {string} key
    * @param {object} [params] repassado à view (ex.: qual cliente abrir)
    */
-  switchTab(key, params) {
+  trocarAba(key, params) {
     this._paramsPendentes = params || null;
     if (this.router?.atual() === key) {
       this._mostrarAba(key);

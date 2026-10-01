@@ -987,7 +987,7 @@ kbd {
   }
 }
 
-/* Agora é um <button> (ver ResumoView.statTile): zera o visual nativo sem
+/* Agora é um <button> (ver ResumoView.blocoDeNumero): zera o visual nativo sem
    perder o comportamento, do mesmo jeito que .consulta-matches__item faz. */
 .stat-tile {
   position: relative;

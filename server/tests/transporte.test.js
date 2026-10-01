@@ -112,7 +112,7 @@ test("Servidor com HTTPS ligado (SESSION_SECURE=true)", async (t) => {
     assert.deepEqual(r.headers.getSetCookie(), []);
 
     const status = await (await fetch(`${base}/api/auth/status`, { headers: PELO_PROXY })).json();
-    assert.equal(status.needsSetup, true, "a conta não pode ter sido criada");
+    assert.equal(status.precisaConfigurar, true, "a conta não pode ter sido criada");
   });
 
   await t.test("a tela também não é servida por HTTP", async () => {

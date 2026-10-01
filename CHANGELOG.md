@@ -17,7 +17,7 @@ Para o agente C#, o equivalente é
 
 - **Auditoria da documentação — A17 (30/09/2026):** README, CONTRIBUTING, SECURITY, CLAUDE.md, o runbook e a documentação consolidada foram conferidos contra o código (links e âncoras, caminhos citados, scripts do npm, variáveis do `.env`, rotas, nomes de tela). Corrigido o que estava falso: o card do Resumo e os filtros de Sistemas ainda citavam "Verificação pendente" e "Nunca atualizado" como grupos; "Administração → Atualizador" e "→ Saúde do servidor" eram abas que hoje se chamam Integrações e Diagnóstico; o runbook mandava consultar uma rota do agente que não existe (`/agente/status`, a real é `/update/status/:cnpj`); o CONTRIBUTING e o CLAUDE.md mandavam rodar um script de testes de navegador que saiu do repositório; a SECURITY dizia que o histórico de dependências estava no CHANGELOG (está no README); e havia contagens de testes e um gráfico de pizza que já não existem. Os 30 links para o `MELHORIAS.md` removido (e para âncoras escritas à mão que quebravam) foram tirados, e os comentários de código que citavam os itens do plano passaram a citar o ADR. Na documentação consolidada entram o ADR-0014 ("atualização" como termo único) e as revisões dos ADRs 0005 e 0006 (as pastas sem DOM) e 0012 (a suíte de navegador foi revogada), além da seção 7.3 sobre o fim do `MELHORIAS.md`.
 
-- **Organização — A16 (30/09/2026):** cada arquivo na pasta que a regra do projeto manda. No front-end, cinco arquivos de `utils/` e `domain/` tocavam o documento (download de arquivo, botão ocupado, `el()`, copiar para a área de transferência, leitura de variável CSS e o bloco visual de retorno do agente) e foram para `components/` e `app/tema.js`; o portão "sem DOM" só parecia existir (o `tsconfig` tinha `dom` nas libs e o teste só olhava `templates/` e `domain/`), e agora o `tsc` roda sem `dom` e o teste cobre `utils/` também. No servidor, `shared/` ficou com `errors` e `normalizacao`, os dois que têm consumidores em camadas diferentes: paginação, ordenação e validação tinham uma camada só e foram morar nela; `splitSystems` e `titleCase` subiram para a normalização; e os serviços deixaram de usar a conexão direto (`BancoDeDados` ganhou `transacao`, `verificarIntegridade` e `modoDeGravacao`). Sem mudança de comportamento. Os testes seguiram: um arquivo por regra (validação, paginação, ordenação, saúde). Sete arquivos com nome fora do padrão (classe em camelCase, função em PascalCase) e `UsuariosController` e `NotificacaoService` foram renomeados.
+- **Organização — A16 (30/09/2026):** cada arquivo na pasta que a regra do projeto manda. No front-end, cinco arquivos de `utils/` e `domain/` tocavam o documento (download de arquivo, botão ocupado, `el()`, copiar para a área de transferência, leitura de variável CSS e o bloco visual de retorno do agente) e foram para `components/` e `app/tema.js`; o portão "sem DOM" só parecia existir (o `tsconfig` tinha `dom` nas libs e o teste só olhava `templates/` e `domain/`), e agora o `tsc` roda sem `dom` e o teste cobre `utils/` também. No servidor, `shared/` ficou com `errors` e `normalizacao`, os dois que têm consumidores em camadas diferentes: paginação, ordenação e validação tinham uma camada só e foram morar nela; `separarSistemas` e `primeiraMaiuscula` subiram para a normalização; e os serviços deixaram de usar a conexão direto (`BancoDeDados` ganhou `transacao`, `verificarIntegridade` e `modoDeGravacao`). Sem mudança de comportamento. Os testes seguiram: um arquivo por regra (validação, paginação, ordenação, saúde). Sete arquivos com nome fora do padrão (classe em camelCase, função em PascalCase) e `UsuariosController` e `NotificacaoService` foram renomeados.
 
 - **Limpeza — A15 (30/09/2026):** varredura do repositório atrás de tudo o que não tinha uso. Saíram cinco rotas da API que nem o cliente, nem o Atualizador, nem os testes chamavam: em Atualizações, `last-by-client` e `versoes-por-sistema`; em Agendamentos, `excluir-lote`, `concluir-lote` e `gerar-lote` (sobra de quando a tela era uma tabela, o quadro Kanban não tem seleção múltipla), com o código e os testes que só elas usavam. Saíram também métodos de repositório sem chamador, código do front-end, 12 classes e 10 variáveis de CSS sem uso. `--raio-md` era usada em 4 lugares sem nunca ter sido definida, então os menus "Relatórios" e "Mais ações" de Atualizações, o painel de versões oficiais, a linha do "Antes × Depois" e o tooltip do gráfico de barras ficavam de canto reto; passam a usar `--raio`. O servidor deixou de depender do próprio repositório (`"gestor-de-atualizacoes": "file:.."`, que entrou por engano em 18/09): o Dockerfile ficou mais simples e o atalho circular que essa dependência criava em `server/node_modules` deixou de existir. No CI, o passo de testes de navegador saiu, junto com o script `test:navegador`: a pasta `navegador/` já não está no repositório, então o passo não testava nada.
 - **Tela de login — A12 (30/09/2026):** em tela larga, a tela se divide em duas metades: a marca num painel tingido com a cor de destaque e o formulário na outra. O logo e o nome apareciam duas vezes, porque a regra que escondia os do cartão perdia para a regra base no CSS. No celular fica só o formulário, com o logo e o nome em cima. Ao entrar, o botão diz "Entrando…" e os campos travam até a resposta. O erro ganhou espaço, borda e sinal de alerta, marca os campos em vermelho (e para o leitor de tela) e some ao começar a corrigir. Antes de o app carregar, a página mostra "Carregando o Gestor…" em vez de ficar em branco. Mostrar senha e aviso de Caps Lock continuam; tudo revisto no tema claro e no escuro, sem biblioteca nova.
@@ -434,8 +434,8 @@ Para o agente C#, o equivalente é
   o `server/.env`, o servidor subia com o segredo de exemplo. Agora o
   container não sobe, e o motivo aparece em `docker compose logs`.
 - **Tag `html` para montar HTML (`utils/html.js`).** Ela escapa todo valor
-  interpolado. O que antes dependia de lembrar do `escapeHtml` em cada
-  interpolação passa a ser o padrão. O próprio `escapeHtml` não escapava
+  interpolado. O que antes dependia de lembrar do `escaparHtml` em cada
+  interpolação passa a ser o padrão. O próprio `escaparHtml` não escapava
   aspas, e o `aria-label` do cartão do kanban quebrava com uma tarefa que
   tivesse `"` no título.
   - Já foram migrados: Agendamentos, Atualizações, Clientes, Consultar
@@ -485,7 +485,7 @@ Para o agente C#, o equivalente é
   resto do que roda no PC. Quatro coisas tiveram que ser resolvidas, e todas
   as quatro falhariam **em silêncio** se tivessem sido ignoradas:
 
-  - **Fuso.** O container roda em UTC por padrão, e `AgendamentoRepository.dueSoon`
+  - **Fuso.** O container roda em UTC por padrão, e `AgendamentoRepository.venceEmBreve`
     monta "hoje" com `getFullYear/getMonth/getDate` — relógio **local**. Das
     21h à meia-noite, horário de Brasília, o servidor já estaria no dia
     seguinte e os agendamentos de amanhã apareceriam como atrasados no sino
@@ -560,7 +560,7 @@ Para o agente C#, o equivalente é
 
 - **O card "Agendamento atrasado" do Resumo nunca apareceu.** `ResumoView` lia
   `lembretes.atrasados`, mas `/agendamentos/lembretes` devolve um **array**
-  puro (ver `AgendamentoRepository.dueSoon`). `undefined || []` virava lista
+  puro (ver `AgendamentoRepository.venceEmBreve`). `undefined || []` virava lista
   vazia, o card não era montado, e nada disso produzia erro no console: um
   aviso que não avisava, desde que foi escrito. A contagem saiu da tela e foi
   para `domain/notificacoes.js`, que não toca no DOM e por isso tem teste —
@@ -611,13 +611,13 @@ Para o agente C#, o equivalente é
   "18/09/2026 13:16:25 (2)".
 
 - **O painel de Saúde reportava "0 pacotes, 0 bytes" — sempre.**
-  `SaudeService` lia `this.versoes.packagesDir`, propriedade que `VersaoService`
+  `SaudeService` lia `this.versoes.pastaDosPacotes`, propriedade que `VersaoService`
   **nunca teve**. Como `fs.existsSync(undefined)` devolve `false` em vez de
   lançar, a métrica ficava zerada em silêncio, sem nada no log. O teste que
-  existia não pegava: o dublê de `versoes` declarava `packagesDir`, ou seja, o
+  existia não pegava: o dublê de `versoes` declarava `pastaDosPacotes`, ou seja, o
   teste afirmava uma interface que o objeto real não implementava — e ninguém
   desconfiaria olhando a tela, porque zero é um número plausível demais.
-  Corrigido com um getter `packagesDir` de verdade (que `_caminhoPacote` passou
+  Corrigido com um getter `pastaDosPacotes` de verdade (que `_caminhoPacote` passou
   a reaproveitar), mais um teste que faz a asserção contra a **classe real**, e
   não contra o dublê. Encontrado por verificação estática de tipos.
 
@@ -711,7 +711,7 @@ Para o agente C#, o equivalente é
   seleciona tudo entre elas): em Agendamentos dá para concluir ou excluir
   várias tarefas de uma vez (com "Desfazer"); em Clientes dá para marcar
   um sistema em vários de uma vez ou excluir vários (sem "Desfazer" aqui
-  — ver comentário em `ClienteService.deleteMany`, a exclusão em lote de
+  — ver comentário em `ClienteService.excluirVarios`, a exclusão em lote de
   cliente também apaga os acessos remotos cadastrados neles).
 - **Changelog em itens na Distribuição**: o campo "Observações" ao
   preparar uma versão virou uma lista de itens (adicionar/remover linha),
@@ -747,7 +747,7 @@ Para o agente C#, o equivalente é
   (todas as atualizações daquele cliente, da mais recente para a mais
   antiga). O botão "Copiar" leva o texto para a área de transferência e
   fecha; se o navegador não deixar copiar (HTTP puro, ver
-  `copyToClipboard` em `client/js/utils/html.js`), o modal fica aberto
+  `copiarParaAreaDeTransferencia` em `client/js/utils/html.js`), o modal fica aberto
   com o texto selecionado em vez de sumir com ele.
 
   Não exigiu campo novo nenhum: o relatório usa só o que já está gravado

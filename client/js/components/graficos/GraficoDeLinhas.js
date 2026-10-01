@@ -58,7 +58,7 @@ export class GraficoDeLinhas {
     const L = 37, R = 18, T = 23, B = 32;
     const plotW = W - L - R, plotH = H - T - B;
     const maximo = Math.max(0, ...pontos.map((p) => p.total));
-    const teto = niceMax(maximo * 1.12);
+    const teto = maximoRedondo(maximo * 1.12);
     const xAt = (i) => pontos.length > 1 ? L + i * plotW / (pontos.length - 1) : L + plotW / 2;
     const yAt = (v) => T + plotH - v * plotH / teto;
     const coords = pontos.map((p, i) => ({ x: xAt(i), y: yAt(p.total) }));
@@ -170,7 +170,7 @@ function indicesRotulo(n, limite) {
   return [...new Set(Array.from({ length: limite }, (_, i) => Math.round(i * (n - 1) / (limite - 1))))];
 }
 
-function niceMax(valor) {
+function maximoRedondo(valor) {
   if (valor <= 0) return 1;
   const magnitude = 10 ** Math.floor(Math.log10(valor));
   const residual = valor / magnitude;

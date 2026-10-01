@@ -51,7 +51,7 @@ class SistemaRepository extends BaseRepository {
     return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, atualiza_com_principal AS atualizaComPrincipal, ultima_versao AS ultimaVersao FROM sistemas ORDER BY nome").all();
   }
 
-  getById(id) {
+  obterPorId(id) {
     return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, atualiza_com_principal AS atualizaComPrincipal, ultima_versao AS ultimaVersao FROM sistemas WHERE id = ?").get(id);
   }
 

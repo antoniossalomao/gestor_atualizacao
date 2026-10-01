@@ -89,7 +89,7 @@ class ConfiguracaoSistemaService {
       depois[nome] = REGRAS[nome].sensivel ? "(alterado)" : novos[nome];
     }
 
-    this.db.configuracoesSistema.setVarias(mudou.map((nome) => [REGRAS[nome].chave, String(novos[nome])]));
+    this.db.configuracoesSistema.gravarVarias(mudou.map((nome) => [REGRAS[nome].chave, String(novos[nome])]));
     this.historico?.registrar(
       usuarioLogado,
       "atualizar",

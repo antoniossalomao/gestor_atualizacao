@@ -139,7 +139,7 @@ test("Proteção CSRF", async (t) => {
     assert.equal(del.status, 403);
     const patch = await pedir("/sistemas/1/classificacao", { metodo: "PATCH", cookie: admin.cookie, corpo: {} });
     assert.equal(patch.status, 403);
-    assert.equal(server.db.clientes.getById(idCliente)?.nome, "Mercado", "nada mudou");
+    assert.equal(server.db.clientes.obterPorId(idCliente)?.nome, "Mercado", "nada mudou");
   });
 
   await t.test("upload (multipart) sem token é recusado antes de ser lido; com token, importa", async () => {

@@ -29,7 +29,7 @@ export function chipsFiltroAtualizacoes({ busca, responsavel, sistema = "", desd
 }
 
 /** @param {Array<{id: string, label: string}>} chips */
-export function htmlChips(chips) {
+export function chipsHtml(chips) {
   return html`${chips.map(
     (c) =>
       html`<span class="filter-chip"><span>${c.label}</span><button type="button" class="filter-chip__remove" data-chip="${c.id}" aria-label="Remover filtro">✕</button></span>`

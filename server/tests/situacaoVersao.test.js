@@ -116,7 +116,7 @@ test("situacaoDoCliente", async (t) => {
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-situacao-"));
   const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
-  const servico = new AtualizacaoService(db, new HistoricoService(db), { notifyAtualizacao: async () => {} });
+  const servico = new AtualizacaoService(db, new HistoricoService(db), { avisarAtualizacao: async () => {} });
   const id = (nome) => db.sistemas.resolver(nome).id;
   const cliente = (nome, sistemas) => db.clientes.insert("", nome, "Marília", sistemas.map(id), "");
   const atender = (nome, sistema, data) => servico.create({ cliente: nome, sistema, data }, null);

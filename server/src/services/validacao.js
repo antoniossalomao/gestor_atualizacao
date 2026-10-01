@@ -27,7 +27,7 @@ function dataValida(texto) {
 }
 
 /** Converte "dd/mm/aaaa" num objeto Date; devolve null se invalido/vazio. */
-function parseData(texto) {
+function lerData(texto) {
   if (!dataValida(texto) || !texto) return null;
   const [dia, mes, ano] = texto.split("/").map(Number);
   return new Date(ano, mes - 1, dia);
@@ -44,4 +44,4 @@ function horaValida(texto) {
   return HORA_REGEX.test(texto);
 }
 
-module.exports = { dataValida, parseData, horaValida };
+module.exports = { dataValida, lerData, horaValida };

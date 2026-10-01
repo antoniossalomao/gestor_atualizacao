@@ -77,7 +77,7 @@ class BaseRepository {
    * interpolados no texto do SQL: e' o mesmo cuidado do resto dos
    * repositorios, e aqui a lista vem direto do que o navegador mandou.
    */
-  deleteMany(ids) {
+  excluirVarios(ids) {
     const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
     if (limpos.length === 0) return 0;
     const marcadores = limpos.map(() => "?").join(", ");

@@ -16,7 +16,7 @@ import { iconeHtml } from "../utils/icones.js";
  * @param {string} rotulo
  * @param {string} destino
  */
-export function statTile(chave, nomeIcone, rotulo, destino) {
+export function blocoDeNumero(chave, nomeIcone, rotulo, destino) {
   return html`
     <button type="button" class="card stat-tile" data-stat="${chave}" data-destino="${destino}">
       <div class="stat-tile__label">

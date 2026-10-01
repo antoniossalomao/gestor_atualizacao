@@ -18,6 +18,6 @@ export const FASES = {
 };
 
 /** @param {string|null|undefined} fase @returns {string|null} */
-export function faseLabel(fase) {
+export function rotuloDaFase(fase) {
   return fase ? FASES[fase] || fase : null;
 }

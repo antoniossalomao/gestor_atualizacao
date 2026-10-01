@@ -80,11 +80,11 @@ test("ClienteService - cadastro", async (t) => {
       assert.equal(env.service.update(criado.id, { nome: criado.nome, regimeTributario: "", revisao: alterado.revisao }, USUARIO).regimeTributario, "");
     });
 
-    await t.test("a ficha do cliente (getByNome) traz o regime tributário (A03)", () => {
+    await t.test("a ficha do cliente (obterPorNome) traz o regime tributário (A03)", () => {
       env.service.create({ nome: "Cliente da Ficha", regimeTributario: "Lucro Real" }, USUARIO);
-      assert.equal(env.service.getByNome("Cliente da Ficha").regimeTributario, "Lucro Real");
+      assert.equal(env.service.obterPorNome("Cliente da Ficha").regimeTributario, "Lucro Real");
       env.service.create({ nome: "Ficha Sem Regime" }, USUARIO);
-      assert.equal(env.service.getByNome("Ficha Sem Regime").regimeTributario, "", "vazio, e não undefined: a tela mostra \"—\"");
+      assert.equal(env.service.obterPorNome("Ficha Sem Regime").regimeTributario, "", "vazio, e não undefined: a tela mostra \"—\"");
     });
 
     await t.test("ordenado por ID crescente, a primeira página vem 1, 2, 3… (A04)", () => {
@@ -187,11 +187,11 @@ test("ClienteService - catálogo de sistemas", async (t) => {
       env.service.create({ nome: "Cliente A", sistemas: ["B_Teste", "B_Vendas"] }, USUARIO);
       env.service.create({ nome: "Cliente B", sistemas: ["B_Teste"] }, USUARIO);
 
-      const r = env.service.removeSistema("B_Teste", USUARIO);
+      const r = env.service.removerSistema("B_Teste", USUARIO);
       assert.equal(r.removed, true);
       assert.equal(r.clientesAfetados, 2);
 
-      const a = env.db.clientes.getByNome("Cliente A");
+      const a = env.db.clientes.obterPorNome("Cliente A");
       assert.ok(!a.sistemas.includes("B_Teste"), "saiu da lista do cliente");
       assert.ok(a.sistemas.includes("B_Vendas"), "os outros continuam");
     });
@@ -212,14 +212,14 @@ test("ClienteService - catálogo de sistemas", async (t) => {
         obs: "",
       }, env.db.sistemas.resolverOuCriar(["B_Extinto"]));
 
-      env.service.removeSistema("B_Extinto", USUARIO);
+      env.service.removerSistema("B_Extinto", USUARIO);
 
       const restou = env.db.conn
         .prepare("SELECT COUNT(*) AS n FROM atualizacoes_v WHERE sistema = 'B_Extinto'")
         .get().n;
       assert.equal(restou, 1, "o registro do que JÁ aconteceu não pode ser reescrito");
       // O sistema continua existindo, inativo: some do catálogo, não do histórico.
-      assert.ok(!env.service.listSistemas().includes("B_Extinto"), "saiu do catálogo");
+      assert.ok(!env.service.listarSistemas().includes("B_Extinto"), "saiu do catálogo");
       assert.equal(env.db.sistemas.resolver("B_Extinto").ativo, 0);
     });
 
@@ -227,26 +227,26 @@ test("ClienteService - catálogo de sistemas", async (t) => {
       const antes = env.db.sistemas.resolver("B_Extinto").id;
       env.service.addSistema("B_Extinto", USUARIO);
       assert.equal(env.db.sistemas.resolver("B_Extinto").id, antes, "mesmo id: as atualizações antigas voltam a aparecer");
-      assert.ok(env.service.listSistemas().includes("B_Extinto"));
+      assert.ok(env.service.listarSistemas().includes("B_Extinto"));
     });
 
     await t.test("remover sistema inexistente dá 404", () => {
-      assert.throws(() => env.service.removeSistema("Nunca Existiu", USUARIO), /não está cadastrado/);
+      assert.throws(() => env.service.removerSistema("Nunca Existiu", USUARIO), /não está cadastrado/);
     });
 
-    await t.test("addSistemaMany marca vários de uma vez", () => {
+    await t.test("adicionarSistemaEmLote marca vários de uma vez", () => {
       env.service.addSistema("B_NFCe", USUARIO);
-      const a = env.db.clientes.getByNome("Cliente A");
-      const b = env.db.clientes.getByNome("Cliente B");
+      const a = env.db.clientes.obterPorNome("Cliente A");
+      const b = env.db.clientes.obterPorNome("Cliente B");
 
-      const r = env.service.addSistemaMany([a.id, b.id], "B_NFCe", USUARIO);
+      const r = env.service.adicionarSistemaEmLote([a.id, b.id], "B_NFCe", USUARIO);
       assert.equal(r.total, 2);
-      assert.ok(env.db.clientes.getById(a.id).sistemas.includes("B_NFCe"));
-      assert.ok(env.db.clientes.getById(b.id).sistemas.includes("B_NFCe"));
+      assert.ok(env.db.clientes.obterPorId(a.id).sistemas.includes("B_NFCe"));
+      assert.ok(env.db.clientes.obterPorId(b.id).sistemas.includes("B_NFCe"));
     });
 
-    await t.test("addSistemaMany com ids que não existem dá 404 explicativo", () => {
-      assert.throws(() => env.service.addSistemaMany([999998], "B_NFCe", USUARIO), /lista pode estar desatualizada/);
+    await t.test("adicionarSistemaEmLote com ids que não existem dá 404 explicativo", () => {
+      assert.throws(() => env.service.adicionarSistemaEmLote([999998], "B_NFCe", USUARIO), /lista pode estar desatualizada/);
     });
   } finally {
     env.cleanup();
@@ -259,22 +259,22 @@ test("ClienteService - acessos remotos", async (t) => {
     const cliente = env.service.create({ nome: "Com Acessos" }, USUARIO);
 
     await t.test("máquina é obrigatória", () => {
-      assert.throws(() => env.service.addAcesso(cliente.id, { maquina: " " }, USUARIO), /Máquina/);
+      assert.throws(() => env.service.adicionarAcesso(cliente.id, { maquina: " " }, USUARIO), /Máquina/);
     });
 
     await t.test("grava e devolve o acesso", () => {
-      const a = env.service.addAcesso(
+      const a = env.service.adicionarAcesso(
         cliente.id,
         { maquina: "Caixa 1", anydesk: "123 456 789", suporteBredas: "SB-42", observacoes: "" },
         USUARIO
       );
       assert.equal(a.maquina, "Caixa 1");
       assert.equal(a.anydesk, "123 456 789");
-      assert.equal(env.service.listAcessos(cliente.id).length, 1);
+      assert.equal(env.service.listarAcessos(cliente.id).length, 1);
     });
 
     await t.test("acesso em cliente inexistente dá 404", () => {
-      assert.throws(() => env.service.addAcesso(999999, { maquina: "X" }, USUARIO), /não encontrado/i);
+      assert.throws(() => env.service.adicionarAcesso(999999, { maquina: "X" }, USUARIO), /não encontrado/i);
     });
 
     await t.test("excluir o cliente leva os acessos junto (ON DELETE CASCADE)", () => {
@@ -292,8 +292,8 @@ test("ClienteService - acessos remotos", async (t) => {
     });
 
     await t.test("mexer em acesso inexistente dá 404", () => {
-      assert.throws(() => env.service.updateAcesso(999999, { maquina: "X" }, USUARIO), /não encontrado/i);
-      assert.throws(() => env.service.removeAcesso(999999, USUARIO), /não encontrado/i);
+      assert.throws(() => env.service.alterarAcesso(999999, { maquina: "X" }, USUARIO), /não encontrado/i);
+      assert.throws(() => env.service.removerAcesso(999999, USUARIO), /não encontrado/i);
     });
   } finally {
     env.cleanup();

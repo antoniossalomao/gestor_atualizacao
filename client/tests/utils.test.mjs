@@ -1,9 +1,9 @@
 /*
  * Testes de js/utils/ -- as utilidades genéricas, que não conhecem o negócio.
  *
- * Só entram aqui as funções que NÃO tocam no DOM: `el` e `copyToClipboard`
+ * Só entram aqui as funções que NÃO tocam no DOM: `el` e `copiarParaAreaDeTransferencia`
  * usam `document`, que não existe no Node, e ficam de fora por construção.
- * (`escapeHtml` também usava, e por isso não era testada -- deixou de usar
+ * (`escaparHtml` também usava, e por isso não era testada -- deixou de usar
  * justamente para poder ser, ver utils/html.js.) Essa é
  * exatamente a linha que a divisão de pastas desenhou (ver ADR-0005) -- o que
  * é testável fora do navegador fica separado do que não é.
@@ -20,7 +20,7 @@ import {
   formatarDuracao,
   mascaraDataBR,
 } from "../js/utils/data.js";
-import { escapeAttr, escapeHtml, html, confiavel, HtmlSeguro, plural } from "../js/utils/html.js";
+import { escaparAtributo, escaparHtml, html, confiavel, HtmlSeguro, plural } from "../js/utils/html.js";
 import { iconeSvg, iconeHtml } from "../js/utils/icones.js";
 import { misturarHex } from "../js/utils/cor.js";
 
@@ -135,47 +135,47 @@ test("utils/date - formatarDuracao", async (t) => {
   });
 });
 
-test("utils/html - escapeAttr", async (t) => {
+test("utils/html - escaparAtributo", async (t) => {
   await t.test("neutraliza o que fecharia o atributo ou a tag", () => {
     // O ponto: um nome de cliente com aspas dentro de um `title="..."` fecha o
     // atributo e o resto do texto vira HTML. É a porta de XSS armazenado mais
     // fácil de esquecer, porque o campo parece inofensivo.
-    assert.equal(escapeAttr('aspas " aqui'), "aspas &quot; aqui");
-    assert.equal(escapeAttr("<script>"), "&lt;script&gt;");
-    assert.equal(escapeAttr("a & b"), "a &amp; b");
+    assert.equal(escaparAtributo('aspas " aqui'), "aspas &quot; aqui");
+    assert.equal(escaparAtributo("<script>"), "&lt;script&gt;");
+    assert.equal(escaparAtributo("a & b"), "a &amp; b");
   });
 
   await t.test("escapa o & primeiro, senão as entidades saem corrompidas", () => {
     // Se "&" fosse substituído por último, o "&" de "&quot;" seria escapado de
     // novo e o resultado sairia "&amp;quot;", que aparece literalmente na tela.
-    assert.equal(escapeAttr('&"'), "&amp;&quot;");
+    assert.equal(escaparAtributo('&"'), "&amp;&quot;");
   });
 
   await t.test("nulo e indefinido viram string vazia", () => {
-    assert.equal(escapeAttr(null), "");
-    assert.equal(escapeAttr(undefined), "");
+    assert.equal(escaparAtributo(null), "");
+    assert.equal(escaparAtributo(undefined), "");
   });
 });
 
-test("utils/html - escapeHtml", async (t) => {
+test("utils/html - escaparHtml", async (t) => {
   await t.test("serve também DENTRO de atributo: escapa aspas duplas e simples", () => {
     // A versão antiga (textContent -> innerHTML do navegador) não escapava
     // aspas. O cartão do kanban a usava em `aria-label="Tarefa ${...}"`, e uma
     // tarefa com `"` no título fechava o atributo antes da hora.
-    assert.equal(escapeHtml('diz "oi"'), "diz &quot;oi&quot;");
-    assert.equal(escapeHtml("d'água"), "d&#39;água");
+    assert.equal(escaparHtml('diz "oi"'), "diz &quot;oi&quot;");
+    assert.equal(escaparHtml("d'água"), "d&#39;água");
   });
 
   await t.test("escapa o que abriria uma tag, e o & primeiro", () => {
-    assert.equal(escapeHtml("<img src=x onerror=alert(1)>"), "&lt;img src=x onerror=alert(1)&gt;");
-    assert.equal(escapeHtml('&"'), "&amp;&quot;");
-    assert.equal(escapeHtml("&amp;"), "&amp;amp;", "texto que PARECE entidade continua sendo texto");
+    assert.equal(escaparHtml("<img src=x onerror=alert(1)>"), "&lt;img src=x onerror=alert(1)&gt;");
+    assert.equal(escaparHtml('&"'), "&amp;&quot;");
+    assert.equal(escaparHtml("&amp;"), "&amp;amp;", "texto que PARECE entidade continua sendo texto");
   });
 
   await t.test("nulo e indefinido viram vazio; número vira texto", () => {
-    assert.equal(escapeHtml(null), "");
-    assert.equal(escapeHtml(undefined), "");
-    assert.equal(escapeHtml(0), "0");
+    assert.equal(escaparHtml(null), "");
+    assert.equal(escaparHtml(undefined), "");
+    assert.equal(escaparHtml(0), "0");
   });
 });
 

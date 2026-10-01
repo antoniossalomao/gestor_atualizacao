@@ -36,7 +36,7 @@ function ambiente(situacaoInicial = "ok") {
   const avisos = [];
   const notifications = {
     webhookUrl: "https://discord.example/webhook",
-    notifyAgenteSituacao: async (payload) => void avisos.push(payload),
+    avisarSituacaoDoAgente: async (payload) => void avisos.push(payload),
   };
 
   const configuracaoSistema = new ConfiguracaoSistemaService(db);
@@ -139,7 +139,7 @@ test("AlertaAgenteService - resistência a falha", async (t) => {
     // ar tiraria o painel do ar junto.
     const env = ambiente("erro");
     try {
-      env.notifications.notifyAgenteSituacao = async () => {
+      env.notifications.avisarSituacaoDoAgente = async () => {
         throw new Error("Discord fora do ar");
       };
       await assert.doesNotReject(() => env.service.verificar());

@@ -3,12 +3,12 @@ import { iconeSvg } from "../utils/icones.js";
 import { avisoRapido } from "../components/AvisosRapidos.js";
 import { Modal } from "../components/Modal.js";
 import { estadoVazio } from "../components/estadoVazio.js";
-import { escapeAttr, escapeHtml, plural } from "../utils/html.js";
-import { copyToClipboard } from "../components/areaDeTransferencia.js";
+import { escaparAtributo, escaparHtml, plural } from "../utils/html.js";
+import { copiarParaAreaDeTransferencia } from "../components/areaDeTransferencia.js";
 import { formatarDataHora, tempoRelativo } from "../utils/data.js";
 import { notificacoes } from "../app/notificacoesDoSistema.js";
 import { aparencia } from "../app/aparencia.js";
-import { faseLabel } from "../domain/agenteLabels.js";
+import { rotuloDaFase } from "../domain/agenteLabels.js";
 import { relatorioRetornosTexto } from "../domain/agenteReport.js";
 import { classificarRetorno, agruparRetornos } from "../domain/agenteStatus.js";
 import { AgenteDetalheModal } from "./AgenteDetalheModal.js";
@@ -237,7 +237,7 @@ export class DistribuicaoView extends View {
   _fillSystems() {
     for (const select of [this.systemFilter, this.logSystem]) {
       const current = select.value;
-      select.innerHTML = `<option value="">Todos</option>` + this.systems.map((s) => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join("");
+      select.innerHTML = `<option value="">Todos</option>` + this.systems.map((s) => `<option value="${escaparAtributo(s)}">${escaparHtml(s)}</option>`).join("");
       select.value = this.systems.includes(current) ? current : "";
     }
   }
@@ -307,16 +307,16 @@ export class DistribuicaoView extends View {
         : result.tipo === "sucesso" ? "Última atualização concluída sem pendências informadas."
         : result.tipo === "aguardando" ? "A atualização aguarda autorização para continuar."
         : result.tipo === "desconhecido" ? "O agente enviou um retorno sem resultado reconhecido."
-        : `Atualização em andamento${log.fase ? ` · ${faseLabel(log.fase)}` : ""}.`;
+        : `Atualização em andamento${log.fase ? ` · ${rotuloDaFase(log.fase)}` : ""}.`;
       item.innerHTML = `
         <div class="distribution-return__icon">${iconeSvg(result.tipo === "sucesso" ? "check" : ["erro", "pendencias"].includes(result.tipo) ? "alerta" : "relogio")}</div>
         <div class="distribution-return__body">
           <div class="distribution-return__heading">
-            <h3>${escapeHtml(log.empresa || log.cnpj)}</h3>
-            <span class="badge ${RESULTADOS[result.tipo] || "badge--muted"}">${escapeHtml(result.label)}</span>
+            <h3>${escaparHtml(log.empresa || log.cnpj)}</h3>
+            <span class="badge ${RESULTADOS[result.tipo] || "badge--muted"}">${escaparHtml(result.label)}</span>
           </div>
-          <p class="distribution-return__context">Último retorno${context ? ` · ${escapeHtml(context)}` : ""}</p>
-          <p class="distribution-return__summary">${escapeHtml(summary)}</p>
+          <p class="distribution-return__context">Último retorno${context ? ` · ${escaparHtml(context)}` : ""}</p>
+          <p class="distribution-return__summary">${escaparHtml(summary)}</p>
           <p class="distribution-return__history">${plural(group.logs.length, "mensagem", "mensagens")}${group.erros.length ? ` · ${plural(group.erros.length, "registro")} de erro no histórico recente` : ""}${group.sistemas.length > 1 ? ` · ${plural(group.sistemas.length, "sistema")}` : ""}</p>
         </div>
         <div class="distribution-return__actions">
@@ -341,7 +341,7 @@ export class DistribuicaoView extends View {
       return;
     }
     const classificados = logs.map((log) => ({ ...log, status: classificarRetorno(log).label }));
-    if (await copyToClipboard(relatorioRetornosTexto(classificados))) avisoRapido.sucesso("Relatório copiado.");
+    if (await copiarParaAreaDeTransferencia(relatorioRetornosTexto(classificados))) avisoRapido.sucesso("Relatório copiado.");
     else avisoRapido.erro("Não foi possível copiar o relatório.");
   }
 
@@ -410,17 +410,17 @@ export class DistribuicaoView extends View {
       const isAlerta = agent.situacao === "offline" || agent.situacao === "pendencias";
       row.className = `is-readonly ${isErro ? "row--incident-erro" : isAlerta ? "row--incident-alerta" : ""}`;
       row.innerHTML = `
-        <td data-label="Empresa"><div class="distribution-agent-identity"><strong>${escapeHtml(agent.empresa)}</strong><small class="table-subtext">${escapeHtml(agent.cnpj)}${agent.maquina ? ` · ${escapeHtml(agent.maquina)}` : ""}</small></div></td>
+        <td data-label="Empresa"><div class="distribution-agent-identity"><strong>${escaparHtml(agent.empresa)}</strong><small class="table-subtext">${escaparHtml(agent.cnpj)}${agent.maquina ? ` · ${escaparHtml(agent.maquina)}` : ""}</small></div></td>
         <td data-label="Situação"><span class="badge ${situation.badge}">${situation.label}</span></td>
-        <td data-label="Sistema">${escapeHtml(agent.ultimoSistema || "—")}</td>
-        <td data-label="Versão informada">${agent.ultimaVersao ? `<span class="version-chip">${escapeHtml(agent.ultimaVersao)}</span>` : "—"}</td>
-        <td data-label="Publicada">${escapeHtml(agent.versaoAlvo || "—")}</td>
+        <td data-label="Sistema">${escaparHtml(agent.ultimoSistema || "—")}</td>
+        <td data-label="Versão informada">${agent.ultimaVersao ? `<span class="version-chip">${escaparHtml(agent.ultimaVersao)}</span>` : "—"}</td>
+        <td data-label="Publicada">${escaparHtml(agent.versaoAlvo || "—")}</td>
         <td data-label="Último contato" data-role="contact"></td>
         <td data-label="Ações"><div class="distribution-row-actions" data-role="actions"></div></td>
       `;
       const contact = row.querySelector('[data-role="contact"]');
       contact.textContent = tempoRelativo(agent.ultimaComunicacao);
-      const phase = faseLabel(agent.ultimaFase);
+      const phase = rotuloDaFase(agent.ultimaFase);
       contact.title = `${formatarDataHora(agent.ultimaComunicacao)}${phase ? `\nFase: ${phase}` : ""}`;
 
       const details = document.createElement("button");
@@ -450,7 +450,7 @@ export class DistribuicaoView extends View {
           .filter(Boolean)
           .join("\n");
 
-        if (await copyToClipboard(textoDiag)) {
+        if (await copiarParaAreaDeTransferencia(textoDiag)) {
           avisoRapido.sucesso(`Diagnóstico de ${agent.empresa} copiado.`);
         } else {
           avisoRapido.erro("Não foi possível copiar o diagnóstico.");

@@ -51,7 +51,7 @@ export class ClientesView extends View {
 
   aplicarParams({ novo } = {}) {
     if (!novo || this.user?.role === "consulta") return;
-    this.clearForm();
+    this.limparFormulario();
     this.drawer?.abrir({ foco: this.fields.nome });
   }
 
@@ -138,7 +138,7 @@ export class ClientesView extends View {
     };
     for (const input of Object.values(this.fields)) {
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") this.clearForm({ comDesfazer: true });
+        if (e.key === "Escape") this.limparFormulario({ comDesfazer: true });
       });
     }
     this.grupoAutocomplete = new CampoComSugestoes(this.fields.grupo, { values: [] });
@@ -198,7 +198,7 @@ export class ClientesView extends View {
               titulo: "Nenhum cliente cadastrado",
               descricao: "Cadastre o primeiro cliente para começar a registrar atualizações.",
               icone: "clientes",
-              acao: { label: "Novo cliente", onClick: () => { this.clearForm(); this.drawer.abrir({ foco: this.fields.nome }); } },
+              acao: { label: "Novo cliente", onClick: () => { this.limparFormulario(); this.drawer.abrir({ foco: this.fields.nome }); } },
             }),
       serverSort: true,
       onSortChange: (key, dir) => {
@@ -231,7 +231,7 @@ export class ClientesView extends View {
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
     this.toggleFormBtn.addEventListener("click", () => {
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.abrir({ foco: this.fields.nome });
     });
     this.formCard.querySelector('[data-action="toggle-novo-sistema"]').addEventListener("click", () => this._toggleNovoSistema());
@@ -244,7 +244,7 @@ export class ClientesView extends View {
       this.modalDeleteBtn.addEventListener("click", async () => {
         this.drawer.marcarLimpa();
         await this.drawer.fechar({ forcar: true });
-        this.deleteClient();
+        this.excluirCliente();
       });
     }
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
@@ -263,8 +263,8 @@ export class ClientesView extends View {
       e.preventDefault();
       this._submit();
     });
-    this.updateBtn?.addEventListener("click", () => this.updateClient());
-    this.deleteBtn?.addEventListener("click", () => this.deleteClient());
+    this.updateBtn?.addEventListener("click", () => this.alterarCliente());
+    this.deleteBtn?.addEventListener("click", () => this.excluirCliente());
 
     this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
 
@@ -278,11 +278,11 @@ export class ClientesView extends View {
     }
 
     this.botaoLimparFiltros.hidden = !this.busca;
-    this.clearForm();
+    this.limparFormulario();
   }
 
   /** @param {boolean} [forcarAberto] */
-  toggleForm(forcarAberto) {
+  alternarFormulario(forcarAberto) {
     if (forcarAberto === true) {
       this.drawer.abrir({ foco: this.fields.nome });
     } else if (forcarAberto === false) {
@@ -302,7 +302,7 @@ export class ClientesView extends View {
     if (!row) return;
     if (botao.dataset.rowAction === "editar") {
       this._loadIntoForm(row);
-      this.toggleForm(true);
+      this.alternarFormulario(true);
     }
     if (botao.dataset.rowAction === "ficha") this.navigate("consulta", { cliente: row.nome });
     if (botao.dataset.rowAction === "gerenciar-acesso") {
@@ -333,7 +333,7 @@ export class ClientesView extends View {
       this._toggleNovoSistema();
       avisoRapido.sucesso(`Sistema "${nome}" adicionado.`);
     } catch (err) {
-      Modal.alert("Validação", errorMessage(err), "warning");
+      Modal.alert("Validação", mensagemDeErro(err), "warning");
     }
   }
 
@@ -422,7 +422,7 @@ export class ClientesView extends View {
           : `Sistema "${sistema}" excluído.`
       );
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     }
   }
 
@@ -432,12 +432,12 @@ export class ClientesView extends View {
     await this.swr(
       "clientes:grupos",
       () => this.api.get("/clientes/grupos", null, { key: "clientes:grupos" }),
-      (grupos) => this.grupoAutocomplete.setValues(grupos)
+      (grupos) => this.grupoAutocomplete.definirValores(grupos)
     );
   }
 
   async _reloadList() {
-    this.table.setRefreshing(true);
+    this.table.definirRecarregando(true);
     try {
       const resposta = await this.swr(
         `clientes:lista:${this.busca}|${this.page}|${this.sortBy}|${this.sortDir}`,
@@ -448,7 +448,7 @@ export class ClientesView extends View {
             { key: "clientes:lista" }
           ),
         (resposta) => {
-          this.table.setRows(resposta.rows.map((r) => ({ ...r, sistemasTexto: r.sistemas.join(", ") })));
+          this.table.definirLinhas(resposta.rows.map((r) => ({ ...r, sistemasTexto: r.sistemas.join(", ") })));
           this.pagination.update(resposta);
           this.container.querySelector('[data-role="count"]').textContent = plural(resposta.total, "cliente");
         }
@@ -459,7 +459,7 @@ export class ClientesView extends View {
         return this._reloadList();
       }
     } finally {
-      this.table.setRefreshing(false);
+      this.table.definirRecarregando(false);
     }
   }
 
@@ -536,30 +536,30 @@ export class ClientesView extends View {
   }
 
   _submit() {
-    if (this.selectedId == null) this.addClient();
-    else this.updateClient();
+    if (this.selectedId == null) this.adicionarCliente();
+    else this.alterarCliente();
   }
 
-  async addClient() {
+  async adicionarCliente() {
     const data = this._readForm();
     if (!data) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
       await this.api.post("/clientes", data);
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
       avisoRapido.sucesso("Cliente adicionado.");
     } catch (err) {
-      Modal.alert("Validação", errorMessage(err), "warning");
+      Modal.alert("Validação", mensagemDeErro(err), "warning");
     } finally {
       liberar();
     }
   }
 
-  async updateClient() {
+  async alterarCliente() {
     if (this.selectedId == null) {
       Modal.alert("Seleção", "Selecione um cliente na tabela primeiro.", "warning");
       return;
@@ -569,14 +569,14 @@ export class ClientesView extends View {
     const liberar = marcarOcupado(this.updateBtn);
     try {
       await this.api.put(`/clientes/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
       avisoRapido.sucesso("Cliente atualizado.");
     } catch (err) {
-      Modal.alert("Validação", errorMessage(err), "warning");
+      Modal.alert("Validação", mensagemDeErro(err), "warning");
     } finally {
       liberar();
     }
@@ -589,7 +589,7 @@ export class ClientesView extends View {
    * afeta o Resumo e a Consulta inteiros. "Desfazer" recriaria o cadastro com
    * um id novo, o que não é o mesmo que nunca ter excluído.
    */
-  async deleteClient() {
+  async excluirCliente() {
     if (this.selectedId == null) {
       Modal.alert("Seleção", "Selecione um cliente na tabela primeiro.", "warning");
       return;
@@ -605,12 +605,12 @@ export class ClientesView extends View {
     const liberar = marcarOcupado(this.deleteBtn);
     try {
       await this.api.delete(`/clientes/${this.selectedId}`);
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
       await this._reloadList();
       avisoRapido.sucesso("Cliente excluído.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -647,7 +647,7 @@ export class ClientesView extends View {
           : `"${sistema}" adicionado a ${plural(afetados, "cliente")}${afetados < total ? ` (${total - afetados} já tinha${total - afetados === 1 ? "" : "m"})` : ""}.`
       );
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -655,7 +655,7 @@ export class ClientesView extends View {
 
   /**
    * Exclui todos os clientes marcados de uma vez. Sem "Desfazer", diferente
-   * de Atualizações/Agendamentos -- ver o comentário em deleteClient() sobre
+   * de Atualizações/Agendamentos -- ver o comentário em excluirCliente() sobre
    * por que a exclusão de cliente já pedia confirmação: recriar perde o id
    * antigo e, agora, também os acessos remotos (AnyDesk/Suporte Bredas)
    * cadastrados, apagados junto por causa da chave estrangeira. Numa
@@ -677,18 +677,18 @@ export class ClientesView extends View {
     try {
       const { excluidos } = await this.api.post("/clientes/excluir-lote", { ids });
       this.table.limparMarcadas();
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
       await this._reloadList();
       avisoRapido.sucesso(`${plural(excluidos, "cliente")} ${excluidos === 1 ? "excluído" : "excluídos"}.`);
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
   }
 
-  clearForm({ comDesfazer = false } = {}) {
+  limparFormulario({ comDesfazer = false } = {}) {
     const antes = {
       codigo: this.fields?.codigo?.value || "",
       nome: this.fields?.nome?.value || "",
@@ -701,7 +701,7 @@ export class ClientesView extends View {
 
     this.selectedId = null;
     this.selectedRevision = null;
-    this.table?.clearSelection();
+    this.table?.limparSelecao();
     if (this.fields) {
       this.fields.codigo.value = "";
       this.fields.nome.value = "";
@@ -745,9 +745,9 @@ export class ClientesView extends View {
 
   _onGlobalKeydown(e) {
     if (!this.visivel) return;
-    if (isTypingTarget(e.target)) return;
-    if (e.key === "Delete" && this.selectedId != null) this.deleteClient();
-    else if (e.key.toLowerCase() === "n") { this.clearForm(); this.drawer.abrir({ foco: this.fields.nome }); }
+    if (ehCampoDeTexto(e.target)) return;
+    if (e.key === "Delete" && this.selectedId != null) this.excluirCliente();
+    else if (e.key.toLowerCase() === "n") { this.limparFormulario(); this.drawer.abrir({ foco: this.fields.nome }); }
     else if (e.key === "/") { e.preventDefault(); this.searchInput.focus(); }
     else if (e.key.toLowerCase() === "j") this.table.moverCursor(1);
     else if (e.key.toLowerCase() === "k") this.table.moverCursor(-1);
@@ -781,10 +781,10 @@ function acoesCliente(row, role) {
   return wrap;
 }
 
-function isTypingTarget(el) {
+function ehCampoDeTexto(el) {
   return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 }
 
-function errorMessage(err) {
+function mensagemDeErro(err) {
   return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

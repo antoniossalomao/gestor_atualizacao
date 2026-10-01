@@ -6,7 +6,7 @@
  * painel de Configurações. A alternativa era um dos dois importar do outro
  * (dizendo que o menu é "dono" da regra, o que não é verdade) ou cada um ter a
  * sua cópia, e duas cópias da mesma regra acabam divergindo: foi assim que
- * `escapeHtml` chegou a existir em sete arquivos (ver html.js).
+ * `escaparHtml` chegou a existir em sete arquivos (ver html.js).
  */
 
 /** "Antonio Salomão" -> "AS". Duas letras bastam para um avatar de 32px. */

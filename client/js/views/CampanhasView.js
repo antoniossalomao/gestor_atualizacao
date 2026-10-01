@@ -10,7 +10,7 @@ import { dataBRValida, mascaraDataBR, hojeBR } from "../utils/data.js";
 import { baixarBlob } from "../components/arquivos.js";
 import { html } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
-import { withBusyButton } from "../components/botaoOcupado.js";
+import { comBotaoOcupado } from "../components/botaoOcupado.js";
 import { filtrarClientesCampanha, tarefaDaCampanha } from "../domain/campanhas.js";
 import {
   listaCampanhas,
@@ -185,7 +185,7 @@ export class CampanhasView extends View {
       return;
     }
     const id = this.selecionadaId;
-    this.table.setRefreshing(true);
+    this.table.definirRecarregando(true);
     try {
       await this.swr(`campanhas:detalhe:${id}`, () => this.api.get(`/campanhas/${id}`, null, { key: "campanhas:detalhe" }), (d) => {
         if (d.id !== this.selecionadaId) return;
@@ -203,7 +203,7 @@ export class CampanhasView extends View {
       }
       if (!err?.cancelled && !err?.avisadoNaTela) Modal.alert("Erro", mensagem(err), "error");
     } finally {
-      this.table.setRefreshing(false);
+      this.table.definirRecarregando(false);
     }
   }
 
@@ -214,7 +214,7 @@ export class CampanhasView extends View {
     for (const c of clientes) contagens[c.situacao] = (contagens[c.situacao] || 0) + 1;
     this.filtrosEl.innerHTML = String(filtrosCampanha(this.filtro, contagens));
     const linhas = filtrarClientesCampanha(clientes, this.filtro, this.busca);
-    this.table.setRows(linhas);
+    this.table.definirLinhas(linhas);
     this.container.querySelector('[data-role="count"]').textContent = contagemClientes(linhas.length);
   }
 
@@ -223,7 +223,7 @@ export class CampanhasView extends View {
     if (!botao || !this.detalhe) return;
     const c = this.detalhe;
     const acao = botao.dataset.action;
-    if (acao === "exportar") return withBusyButton(botao, () => this._exportar())();
+    if (acao === "exportar") return comBotaoOcupado(botao, () => this._exportar())();
     if (acao === "editar") return this._abrirFormulario(c);
     if (acao === "encerrar") {
       const ok = await Modal.confirm("Encerrar campanha", `Encerrar "${c.titulo}"?\n\nO placar de hoje (${c.atendidos} de ${c.totalClientes} atualizados) fica registrado. As atualizações continuam sendo registradas normalmente, e dá para reabrir depois.`, { confirmLabel: "Encerrar", danger: false });
@@ -273,7 +273,7 @@ export class CampanhasView extends View {
       // Cria a tarefa direto, sem abrir o formulário: é o "botão rápido" da
       // campanha. A tarefa leva o sistema da campanha -- é isso que a faz
       // aparecer como "já agendado" aqui (ver CampanhaService).
-      await withBusyButton(botao, async () => {
+      await comBotaoOcupado(botao, async () => {
         try {
           await this.api.post("/agendamentos", {
             tarefa: tarefaDaCampanha(c),
@@ -355,7 +355,7 @@ export class CampanhasView extends View {
         return;
       }
       const salvar = /** @type {HTMLButtonElement} */ (form.querySelector('[data-action="salvar"]'));
-      await withBusyButton(salvar, async () => {
+      await comBotaoOcupado(salvar, async () => {
         try {
           const salva = campanha ? await this.api.put(`/campanhas/${campanha.id}`, dados) : await this.api.post("/campanhas", dados);
           close();

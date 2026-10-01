@@ -16,7 +16,7 @@ import { versaoRegistrada } from "./relatorio.js";
  * string inteira como se fosse um "sistema" só, e cada sistema individual
  * (ex.: "B_Vendas" sozinho) nunca batia com o registro combinado -- mesmo
  * instalado, aparecia como "Não instalado". Mesmo critério de split usado no
- * backend (ver splitSystems em AtualizacaoRepository.js).
+ * backend (ver separarSistemas em AtualizacaoRepository.js).
  * @param {string|null|undefined} texto
  * @returns {string[]}
  */

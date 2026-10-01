@@ -156,7 +156,7 @@ test("AtualizacaoRepository - busca e filtro por responsável", async (t) => {
     });
 
     await t.test("a lista de responsáveis distintos agrupa e ordena", () => {
-      const nomes = env.db.atualizacoes.distinctResponsaveis();
+      const nomes = env.db.atualizacoes.responsaveisDistintos();
       assert.deepEqual(nomes, ["Camila", "Marcos"], "uma entrada por pessoa, em ordem");
     });
   } finally {

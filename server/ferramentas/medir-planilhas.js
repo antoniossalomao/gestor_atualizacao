@@ -45,7 +45,7 @@ async function planilha(n, arquivo) {
 
 function abrir(dir) {
   const db = new BancoDeDados(path.join(dir, "gestao.db"));
-  const servico = new AtualizacaoService(db, new HistoricoService(db), { notifyAtualizacao: async () => {} });
+  const servico = new AtualizacaoService(db, new HistoricoService(db), { avisarAtualizacao: async () => {} });
   return { db, servico };
 }
 
@@ -99,13 +99,13 @@ async function cenario([tipo, nStr, dir]) {
     const buffer = fs.readFileSync(path.join(dir, `import-${n}.xlsx`));
     // Acima do limite, o que se mede é o custo da RECUSA.
     const m = await medir(() =>
-      (tipo === "previa" ? servico.previaImportacao(buffer) : servico.importXlsx(buffer, USUARIO)).catch((e) => ({ recusada: e.message }))
+      (tipo === "previa" ? servico.previaImportacao(buffer) : servico.importarXlsx(buffer, USUARIO)).catch((e) => ({ recusada: e.message }))
     );
     db.conn.close();
     return { ms: m.ms, picoMb: m.picoMb, recusada: Boolean(m.resultado.recusada) };
   }
   if (tipo === "exportar") {
-    const m = await medir(() => servico.exportXlsxBuffer().catch((e) => ({ recusada: e.message })));
+    const m = await medir(() => servico.exportarXlsxEmMemoria().catch((e) => ({ recusada: e.message })));
     db.conn.close();
     return { ms: m.ms, picoMb: m.picoMb, kb: m.resultado.recusada ? "recusada" : Math.round(m.resultado.byteLength / 1024) };
   }

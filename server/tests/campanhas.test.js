@@ -27,7 +27,7 @@ function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-campanhas-"));
   const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const historico = new HistoricoService(db);
-  const atualizacoes = new AtualizacaoService(db, historico, { notifyAtualizacao: async () => {} });
+  const atualizacoes = new AtualizacaoService(db, historico, { avisarAtualizacao: async () => {} });
   const agenda = new AgendamentoService(db, historico);
   const campanhas = new CampanhaService(db, historico);
   const id = (nome) => db.sistemas.resolver(nome).id;
@@ -123,7 +123,7 @@ test("Campanhas - meta, baixa automática e placar", async (t) => {
 
     await t.test("tarefa concluída não conta como agendada", () => {
       const { id } = env.db.conn.prepare("SELECT id FROM agendamentos WHERE cliente = 'Loja Agendada'").get();
-      env.agenda.markDone(id, USUARIO);
+      env.agenda.marcarConcluida(id, USUARIO);
       assert.equal(env.situacao(campanha.id, "Loja Agendada"), "pendente");
     });
 

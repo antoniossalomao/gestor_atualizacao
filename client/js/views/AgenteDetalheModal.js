@@ -1,9 +1,9 @@
 import { Modal } from "../components/Modal.js";
-import { escapeHtml } from "../utils/html.js";
-import { copyToClipboard } from "../components/areaDeTransferencia.js";
+import { escaparHtml } from "../utils/html.js";
+import { copiarParaAreaDeTransferencia } from "../components/areaDeTransferencia.js";
 import { formatarDataHora, tempoRelativo, formatarDuracao } from "../utils/data.js";
 import { estadoVazio } from "../components/estadoVazio.js";
-import { faseLabel } from "../domain/agenteLabels.js";
+import { rotuloDaFase } from "../domain/agenteLabels.js";
 import { ErroApi } from "../api/ApiPainel.js";
 import { avisoRapido } from "../components/AvisosRapidos.js";
 import { relatorioRetornosTexto } from "../domain/agenteReport.js";
@@ -39,8 +39,8 @@ export class AgenteDetalheModal {
     box.innerHTML = `
       <div class="agente-detalhe__header">
         <p class="agente-detalhe__eyebrow">Retornos do agente</p>
-        <h3 class="modal-box__title" id="agente-detalhe-titulo">${escapeHtml(this.agente.empresa || this.agente.cnpj)}</h3>
-        <p class="modal-box__message agente-detalhe__identity">${escapeHtml(this.agente.cnpj)}${this.agente.maquina ? ` · ${escapeHtml(this.agente.maquina)}` : ""}</p>
+        <h3 class="modal-box__title" id="agente-detalhe-titulo">${escaparHtml(this.agente.empresa || this.agente.cnpj)}</h3>
+        <p class="modal-box__message agente-detalhe__identity">${escaparHtml(this.agente.cnpj)}${this.agente.maquina ? ` · ${escaparHtml(this.agente.maquina)}` : ""}</p>
       </div>
       <div class="agente-detalhe__toolbar">
         <div class="agente-detalhe__filters" role="group" aria-label="Filtrar mensagens">
@@ -181,7 +181,7 @@ export class AgenteDetalheModal {
       log.sistema,
       log.versaoAnterior && log.versao ? `${log.versaoAnterior} → ${log.versao}` : log.versao ? `Versão ${log.versao}` : null,
       formatarDuracao(log.duracaoMs) !== "—" ? formatarDuracao(log.duracaoMs) : null,
-      faseLabel(log.fase),
+      rotuloDaFase(log.fase),
     ]
       .filter(Boolean)
       .join(" · ");
@@ -190,10 +190,10 @@ export class AgenteDetalheModal {
       <div class="agent-log__dot${tipo === "erro" ? " is-error" : tipo === "sucesso" ? "" : " is-pending"}" aria-hidden="true"></div>
       <div class="agente-detalhe__body">
         <div class="agente-detalhe__head">
-          <strong class="agente-detalhe__status agente-detalhe__status--${tipo}">${escapeHtml(label)}</strong>
+          <strong class="agente-detalhe__status agente-detalhe__status--${tipo}">${escaparHtml(label)}</strong>
           <time class="agente-detalhe__time" data-role="quando"></time>
         </div>
-        ${contexto ? `<p class="agent-log__ctx">${escapeHtml(contexto)}</p>` : ""}
+        ${contexto ? `<p class="agent-log__ctx">${escaparHtml(contexto)}</p>` : ""}
         <div data-role="relatorio"></div>
       </div>
     `;
@@ -216,7 +216,7 @@ export class AgenteDetalheModal {
       titulo: `${this.somenteErros ? "ERROS E PENDÊNCIAS" : "RETORNOS DO AGENTE"} — ${this.agente.empresa || this.agente.cnpj}${this.sistema ? ` · ${this.sistema}` : ""}`,
     });
     if (this.logs.length >= LIMITE_RETORNOS) texto += `\n\nConsulta limitada aos ${LIMITE_RETORNOS} retornos mais recentes do agente.`;
-    if (await copyToClipboard(texto)) avisoRapido.sucesso("Relatório copiado.");
+    if (await copiarParaAreaDeTransferencia(texto)) avisoRapido.sucesso("Relatório copiado.");
     else avisoRapido.erro("Não foi possível copiar o relatório.");
   }
 }

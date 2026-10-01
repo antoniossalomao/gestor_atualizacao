@@ -46,13 +46,13 @@ class VersaoService {
    *
    * Existe como propriedade publica porque o SaudeService precisa dela para
    * contar os pacotes e somar o tamanho em disco -- e ja tentava le-la como
-   * `this.versoes.packagesDir`, que NAO EXISTIA. `fs.existsSync(undefined)`
+   * `this.versoes.pastaDosPacotes`, que NAO EXISTIA. `fs.existsSync(undefined)`
    * devolve false em vez de lancar, entao o painel de Saude reportava
    * "0 pacotes, 0 bytes" para sempre, sem erro nenhum no log. Encontrado por
    * verificacao estatica de tipos, nao por alguem olhando a tela: o numero
    * zero e' plausivel demais para chamar atencao.
    */
-  get packagesDir() {
+  get pastaDosPacotes() {
     return path.join(path.dirname(this.db.path), "packages");
   }
 
@@ -240,7 +240,7 @@ class VersaoService {
   async create(input, usuario, file, baseUrl) {
     try {
       if (file) {
-        const hash = await sha256Stream(file.path);
+        const hash = await hashSha256DoArquivo(file.path);
         input = {
           ...input,
           tamanhoBytes: file.size,
@@ -415,8 +415,8 @@ class VersaoService {
     const piloto = this.db.versoes.pilotosDoSistema(alvo).find((item) =>
       JSON.parse(item.codigosClientesJson || "[]").some((valor) => normalizarCodigoCliente(valor) === normalizado)
     );
-    const latest = piloto || this.db.versoes.latestPublished(alvo);
-    if (!latest || compareVersions(latest.versao, versaoAtual || "0.0.0") <= 0) {
+    const latest = piloto || this.db.versoes.ultimaPublicada(alvo);
+    if (!latest || compararVersoes(latest.versao, versaoAtual || "0.0.0") <= 0) {
       return { update_available: false, sistema: alvo };
     }
     return {
@@ -434,7 +434,7 @@ class VersaoService {
     const cnpj = String(input.cnpj || "").trim();
     const status = String(input.status || "").trim().toUpperCase();
     if (!cnpj || !status) throw new ErroDeValidacao("CNPJ e status são obrigatórios.");
-    this.db.versoes.addLog({
+    this.db.versoes.adicionarRegistro({
       cnpj,
       hwid: String(input.hwid || "").trim(),
       maquina: String(input.maquina || input.machine || "").trim(),
@@ -520,7 +520,7 @@ class VersaoService {
   _caminhoPacote(filename) {
     const safeName = path.basename(String(filename || ""));
     if (!safeName || safeName === "." || safeName === "..") return null;
-    return path.join(this.packagesDir, safeName);
+    return path.join(this.pastaDosPacotes, safeName);
   }
 
   _publicItem(item) {
@@ -562,7 +562,7 @@ function derivarSituacao({ pausado, online, status, ultimaVersao, alvo, horasSem
 }
 
 /** Calcula o digest do pacote via stream assíncrono para não travar o Event Loop do Node.js. */
-function sha256Stream(filePath) {
+function hashSha256DoArquivo(filePath) {
   return new Promise((resolve, reject) => {
     const hash = crypto.createHash("sha256");
     const stream = fs.createReadStream(filePath);
@@ -574,7 +574,7 @@ function sha256Stream(filePath) {
 }
 
 /** Compara versões numéricas sem depender da ordem lexicográfica das strings. */
-function compareVersions(left, right) {
+function compararVersoes(left, right) {
   const a = String(left).split(/[.-]/).map((part) => Number(part) || 0);
   const b = String(right || "0.0.0").split(/[.-]/).map((part) => Number(part) || 0);
   for (let index = 0; index < Math.max(a.length, b.length); index += 1) {

@@ -1,7 +1,7 @@
 /*
  * Utilidades de texto/DOM compartilhadas.
  *
- * Antes, `escapeHtml` estava copiado em sete arquivos diferentes (App,
+ * Antes, `escaparHtml` estava copiado em sete arquivos diferentes (App,
  * AtualizacoesView, ClientesView, SistemasView, UsersPanel, GraficoDeBarras,
  * DistribuicaoView...). Sete cópias da mesma função é sete lugares para
  * esquecer de corrigir quando uma delas estiver errada -- agora existe uma só.
@@ -17,13 +17,13 @@ const ENTIDADES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": 
  * argumento de "não divergir do browser". Mas esse caminho só escapa `&`, `<`
  * e `>`, e NÃO escapa aspas: serve para conteúdo, e quebra dentro de
  * atributo. O cartão do kanban fazia exatamente isso
- * (`aria-label="Tarefa ${escapeHtml(row.tarefa)}"`), e uma tarefa com `"` no
+ * (`aria-label="Tarefa ${escaparHtml(row.tarefa)}"`), e uma tarefa com `"` no
  * título fechava o atributo antes da hora. A CSP (sem 'unsafe-inline')
  * barrava um `onmouseover` injetado, mas o HTML saía corrompido do mesmo
  * jeito. A tabela na mão cobre os dois contextos, e de quebra tira o DOM de
  * utils/ -- agora dá para testar no Node.
  */
-export function escapeHtml(text) {
+export function escaparHtml(text) {
   return String(text ?? "").replace(/[&<>"']/g, (c) => ENTIDADES[c]);
 }
 
@@ -52,7 +52,7 @@ export class HtmlSeguro {
  *
  *     el.innerHTML = html`<p title="${row.cliente}">${row.tarefa}</p>`;
  *
- * Por que existe: com `escapeHtml` na mão, a segurança dependia de lembrar de
+ * Por que existe: com `escaparHtml` na mão, a segurança dependia de lembrar de
  * chamar a função em CADA interpolação de CADA template, e um esquecimento não
  * quebra nada visível até o dia em que um cliente se chama `<b>`. Com a tag, o
  * padrão é seguro e o perigoso é o que precisa ser escrito: `confiavel(...)`.
@@ -86,7 +86,7 @@ function interpolar(valor) {
   if (valor == null || valor === false) return "";
   if (valor instanceof HtmlSeguro) return valor.marcacao;
   if (Array.isArray(valor)) return valor.map(interpolar).join("");
-  return escapeHtml(valor);
+  return escaparHtml(valor);
 }
 
 /**
@@ -104,7 +104,7 @@ export function confiavel(marcacao) {
 }
 
 /** Escapa texto que vai dentro de um atributo entre aspas duplas. */
-export function escapeAttr(text) {
+export function escaparAtributo(text) {
   return String(text ?? "")
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")

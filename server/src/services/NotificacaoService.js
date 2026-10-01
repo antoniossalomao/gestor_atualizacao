@@ -52,7 +52,7 @@ class NotificacaoService {
    * da atualização (chamado sem `await` por quem usa este método).
    * @param {{cliente:string, sistema?:string, versao?:string, responsavel?:string}} atualizacao
    */
-  async notifyAtualizacao({ cliente, sistema, versao, responsavel }) {
+  async avisarAtualizacao({ cliente, sistema, versao, responsavel }) {
     if (!this.webhookUrl) return;
     const partes = [`**${cliente}**`, "foi atualizado"];
     if (sistema) partes.push(`— ${sistema}`);
@@ -67,7 +67,7 @@ class NotificacaoService {
    * isso (só na transição, não a cada verificação).
    * @param {{empresa:string, situacao:"offline"|"erro"|string, detalhe?:string}} info
    */
-  async notifyAgenteSituacao({ empresa, situacao, detalhe }) {
+  async avisarSituacaoDoAgente({ empresa, situacao, detalhe }) {
     if (!this.webhookUrl) return;
     let texto;
     if (situacao === "offline") {

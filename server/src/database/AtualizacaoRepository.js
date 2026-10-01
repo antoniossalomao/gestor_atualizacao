@@ -1,6 +1,6 @@
 const { BaseRepository } = require("./BaseRepository");
-const { buildOrderBy } = require("./ordenacao");
-const { titleCase } = require("../shared/normalizacao");
+const { montarOrdenacao } = require("./ordenacao");
+const { primeiraMaiuscula } = require("../shared/normalizacao");
 
 // Datas sao guardadas como texto "dd/mm/aaaa"; esta expressao SQL as
 // converte para "aaaammdd" para permitir ordenacao cronologica (ordenar o
@@ -80,16 +80,16 @@ class AtualizacaoRepository extends BaseRepository {
    */
   list(search = "", responsavel = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, desde, ate, sistema } = {}) {
     // As clausulas vivem em `_filtros` porque a exportacao precisa exatamente
-    // das mesmas -- ver o comentario em `exportAll`. A comparacao de
+    // das mesmas -- ver o comentario em `exportarTudo`. A comparacao de
     // responsavel ignora maiusculas/minusculas e espacos nas pontas: o filtro
-    // mostra nomes ja normalizados (ver distinctResponsaveis), entao "Camila"
+    // mostra nomes ja normalizados (ver responsaveisDistintos), entao "Camila"
     // escolhido ali precisa achar tambem os salvos como "CAMILA" ou " camila ".
     const { where, params } = this._filtros(search, responsavel, { desde, ate, sistema });
 
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM atualizacoes_v ${where}`).get(params).total;
 
     const offset = Math.max(0, (page - 1) * pageSize);
-    const orderBy = buildOrderBy(SORT_MAP, sortBy, sortDir, `${DATE_SORT_EXPR} DESC, id DESC`);
+    const orderBy = montarOrdenacao(SORT_MAP, sortBy, sortDir, `${DATE_SORT_EXPR} DESC, id DESC`);
     const sql = `SELECT ${LEITURA} FROM atualizacoes_v ${where} ORDER BY ${orderBy} LIMIT @limit OFFSET @offset`;
     const rows = this.conn.prepare(sql).all({ ...params, limit: pageSize, offset });
     return { rows, total, page, pageSize };
@@ -98,18 +98,18 @@ class AtualizacaoRepository extends BaseRepository {
   /**
    * Nomes distintos já usados no campo Responsável, para o filtro da tela
    * e para as sugestões de autocompletar. Agrupa ignorando maiúsculas/
-   * minúsculas e espaços nas bordas -- mesma regra de countsByResponsavel
+   * minúsculas e espaços nas bordas -- mesma regra de contagemPorResponsavel
    * (sem isso, "Camila", "CAMILA" e "camila" apareciam como três opções
    * diferentes no filtro, em vez de uma só).
    */
-  distinctResponsaveis() {
+  responsaveisDistintos() {
     const rows = this.conn
       .prepare(`SELECT DISTINCT responsavel FROM ${this.table} WHERE responsavel != ''`)
       .all();
     const vistos = new Map();
     for (const { responsavel } of rows) {
       const key = responsavel.trim().toLowerCase();
-      if (key && !vistos.has(key)) vistos.set(key, titleCase(responsavel.trim()));
+      if (key && !vistos.has(key)) vistos.set(key, primeiraMaiuscula(responsavel.trim()));
     }
     return [...vistos.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }
@@ -173,7 +173,7 @@ class AtualizacaoRepository extends BaseRepository {
    * depois de um "selecionar tudo"). Ler aqui, no mesmo instante da exclusao,
    * e' o unico jeito de o que volta ser exatamente o que saiu.
    */
-  findByIds(ids) {
+  buscarPorIds(ids) {
     const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
     if (limpos.length === 0) return [];
     const marcadores = limpos.map(() => "?").join(", ");
@@ -191,7 +191,7 @@ class AtualizacaoRepository extends BaseRepository {
    * filtrar. As clausulas sao montadas pelo mesmo helper de `list`, para as
    * duas nunca divergirem.
    */
-  exportAll(search = "", responsavel = "Todos", periodo = {}) {
+  exportarTudo(search = "", responsavel = "Todos", periodo = {}) {
     const { where, params } = this._filtros(search, responsavel, periodo);
     const sql = `SELECT ${COLUNAS_ATUALIZACOES.join(", ")}, versoes_sistemas FROM atualizacoes_v ${where} ORDER BY ${DATE_SORT_EXPR} DESC, id DESC`;
     return this.conn.prepare(sql).all(params);
@@ -206,7 +206,7 @@ class AtualizacaoRepository extends BaseRepository {
     return this.conn.prepare(`SELECT COUNT(*) AS total FROM atualizacoes_v ${where}`).get(params).total;
   }
 
-  /** Clausula WHERE + parametros compartilhados por `list` e `exportAll`. */
+  /** Clausula WHERE + parametros compartilhados por `list` e `exportarTudo`. */
   _filtros(search, responsavel, { desde = "", ate = "", sistema = "" } = {}) {
     const clauses = [];
     const params = {};
@@ -247,7 +247,7 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /** @param {string} monthStr formato "mm/aaaa", ex.: "08/2026" */
-  countForMonth(monthStr, ate) {
+  contarDoMes(monthStr, ate) {
     const row = this.conn
       .prepare(`SELECT COUNT(*) AS total FROM ${this.table} WHERE substr(data, 4, 7) = @mes AND ${DATE_SORT_EXPR} <= @ate`)
       .get({ mes: monthStr, ate: paraOrdenavel(ate) || "99999999" });
@@ -330,7 +330,7 @@ class AtualizacaoRepository extends BaseRepository {
    * Cliente, seção "Histórico recente"), para dar noção de
    * frequência/padrão ao longo do tempo, não só o instante mais recente.
    */
-  recentUpdatesForClient(nome, limit = 5) {
+  atualizacoesRecentesDoCliente(nome, limit = 5) {
     const sql = `
       SELECT a.id, a.data, a.sistema, a.versao, a.motivo, a.responsavel, a.maquinas, a.obs, a.versoes_sistemas FROM atualizacoes_v a
       WHERE ${DO_CLIENTE} ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC LIMIT @limit
@@ -442,7 +442,7 @@ class AtualizacaoRepository extends BaseRepository {
    * maiusculas/minusculas e espacos nas bordas (para "Camila", "CAMILA" e
    * " camila " contarem como a mesma pessoa).
    */
-  countsByResponsavel() {
+  contagemPorResponsavel() {
     const raw = this.conn
       .prepare(`SELECT responsavel, COUNT(*) AS qtde FROM ${this.table} WHERE responsavel != '' GROUP BY responsavel`)
       .all();
@@ -450,7 +450,7 @@ class AtualizacaoRepository extends BaseRepository {
     for (const { responsavel, qtde } of raw) {
       const key = responsavel.trim().toLowerCase();
       const atual = merged.get(key);
-      const label = atual ? atual.label : titleCase(responsavel.trim());
+      const label = atual ? atual.label : primeiraMaiuscula(responsavel.trim());
       const total = (atual ? atual.total : 0) + qtde;
       merged.set(key, { label, total });
     }
