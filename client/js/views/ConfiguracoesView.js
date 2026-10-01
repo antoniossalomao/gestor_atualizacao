@@ -15,6 +15,7 @@ import { SecaoAjustes } from "./configuracoes/SecaoAjustes.js";
 import { ContaConfig } from "./configuracoes/ContaConfig.js";
 import { RegrasEquipeConfig } from "./configuracoes/RegrasEquipeConfig.js";
 import { SobreAjuda } from "./configuracoes/SobreAjuda.js";
+import { ALIASES_CONFIGURACOES, abaAtual } from "../domain/abas.js";
 
 /**
  * Tela Configurações -- as preferências de quem está usando.
@@ -77,26 +78,8 @@ export class ConfiguracoesView extends View {
     });
 
     // Migra preferências salvas de chaves antigas para as novas seções
-    const ALIASES = {
-      conta: "conta",
-      navegacao: "trabalho",
-      tabelas: "trabalho",
-      rotina: "trabalho",
-      trabalho: "trabalho",
-      aparencia: "interface",
-      acessibilidade: "interface",
-      interface: "interface",
-      notificacoes: "notificacoes",
-      regras: "regras-equipe",
-      "regras-equipe": "regras-equipe",
-      atalhos: "ajuda",
-      sobre: "ajuda",
-      ajuda: "ajuda",
-    };
     const salva = prefs.get("configuracoes:aba", "conta");
-    if (ALIASES[salva] && ALIASES[salva] !== salva) {
-      prefs.set("configuracoes:aba", ALIASES[salva]);
-    }
+    if (abaAtual(ALIASES_CONFIGURACOES, salva) !== salva) prefs.set("configuracoes:aba", abaAtual(ALIASES_CONFIGURACOES, salva));
 
     this.tela = new TelaComAbas(container, {
       abas: this.abas,
@@ -140,23 +123,7 @@ export class ConfiguracoesView extends View {
       if (abaComAjuste) abaDestino = abaComAjuste;
     }
     if (abaDestino) {
-      const ALIASES = {
-        conta: "conta",
-        navegacao: "trabalho",
-        tabelas: "trabalho",
-        rotina: "trabalho",
-        trabalho: "trabalho",
-        aparencia: "interface",
-        acessibilidade: "interface",
-        interface: "interface",
-        notificacoes: "notificacoes",
-        regras: "regras-equipe",
-        "regras-equipe": "regras-equipe",
-        atalhos: "ajuda",
-        sobre: "ajuda",
-        ajuda: "ajuda",
-      };
-      abaDestino = ALIASES[abaDestino] || abaDestino;
+      abaDestino = abaAtual(ALIASES_CONFIGURACOES, abaDestino);
       this.tela.escolher(abaDestino);
     }
     this._ajustePendente = ajuste || null;

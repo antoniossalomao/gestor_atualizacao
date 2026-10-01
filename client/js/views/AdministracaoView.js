@@ -9,6 +9,7 @@ import { DadosAdmin } from "./administracao/DadosAdmin.js";
 import { IntegracoesAdmin } from "./administracao/IntegracoesAdmin.js";
 import { BackupsAdmin } from "./administracao/BackupsAdmin.js";
 import { SaudeAdmin } from "./administracao/SaudeAdmin.js";
+import { ALIASES_ADMINISTRACAO, abaAtual } from "../domain/abas.js";
 
 /**
  * Tela Administração -- exclusiva para administradores.
@@ -41,22 +42,6 @@ const ABAS = [
   { key: "diagnostico", rotulo: "Diagnóstico", icone: "saude", Secao: SaudeAdmin },
 ];
 
-const MAPA_ALIAS = {
-  usuarios: "pessoas",
-  pessoas: "pessoas",
-  operacao: "operacao",
-  regras: "operacao",
-  classificacao: "operacao",
-  dados: "dados",
-  integracoes: "integracoes",
-  notificacoes: "integracoes",
-  atualizador: "integracoes",
-  backups: "backups",
-  auditoria: "auditoria",
-  historico: "auditoria",
-  diagnostico: "diagnostico",
-  saude: "diagnostico",
-};
 
 export class AdministracaoView extends View {
   constructor(container, api, ctx) {
@@ -65,9 +50,7 @@ export class AdministracaoView extends View {
 
     // Migra preferência legada salva na sessão/localStorage se necessário
     const salva = prefs.get("administracao:aba", "pessoas");
-    if (MAPA_ALIAS[salva] && MAPA_ALIAS[salva] !== salva) {
-      prefs.set("administracao:aba", MAPA_ALIAS[salva]);
-    }
+    if (abaAtual(ALIASES_ADMINISTRACAO, salva) !== salva) prefs.set("administracao:aba", abaAtual(ALIASES_ADMINISTRACAO, salva));
 
     this.tela = new TelaComAbas(container, {
       abas: ABAS,
@@ -91,7 +74,7 @@ export class AdministracaoView extends View {
   /** `navigate("administracao", { aba: "backups" })` abre direto na aba suportando aliases legados. */
   aplicarParams({ aba } = {}) {
     if (!aba) return;
-    const abaDestino = MAPA_ALIAS[aba] || aba;
+    const abaDestino = abaAtual(ALIASES_ADMINISTRACAO, aba);
     this.tela.escolher(abaDestino);
   }
 

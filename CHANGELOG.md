@@ -15,6 +15,11 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Administração e Configurações, limpeza — F1 (01/10/2026):**
+  - A retenção de backups passou a usar o mesmo formulário das outras regras da equipe: Desfazer, aviso de "alteração não salva", e mínimo e máximo vindos do servidor. Feita à mão, a tela aceitava 1 e 2 cópias, que o servidor recusa (o mínimo é 3), e só avisava depois do clique.
+  - Os nomes antigos das abas, repetidos duas vezes nas Configurações e uma na Administração, foram para `domain/abas.js`, com um teste que confere se todo alias aponta para uma aba que existe.
+  - `mensagemDeErro` mora em `api/ApiPainel.js`, no lugar de três cópias.
+
 - **Administração, visual — V3 (01/10/2026):**
   - **Diagnóstico:** a frase do topo passa a ser o pior bloco. Antes dizia "Tudo em ordem" logo acima de "Nenhuma cópia" e com a chave dos agentes no valor de exemplo. Cada pendência aparece listada com um botão que leva à aba onde se resolve, e a hora da conferência fica à vista, então "Conferir de novo" mostra que fez algo. A regra fica em `situacaoDiagnostico`, com teste: banco corrompido e chave de exemplo são perigo; nenhuma cópia, cópia de 7 dias ou mais, agentes com erro e chave ausente são alerta.
   - **Integrações:** Discord e Atualizador em dois cartões, com um Salvar só. A barra de salvar fica presa no pé da tela enquanto há alteração. O aviso da chave dos agentes virou um bloco com o texto inteiro, em vez de um selo espremido.

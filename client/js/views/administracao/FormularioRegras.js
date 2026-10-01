@@ -1,4 +1,4 @@
-import { ErroApi } from "../../api/ApiPainel.js";
+import { mensagemDeErro } from "../../api/ApiPainel.js";
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
 import { avisoRapido } from "../../components/AvisosRapidos.js";
@@ -130,6 +130,5 @@ export class FormularioRegras extends View {
   }
 }
 
-export function mensagem(err) {
-  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
-}
+/** O mesmo `mensagemDeErro` de api/ApiPainel.js, com o nome que as abas daqui já usam. */
+export const mensagem = mensagemDeErro;

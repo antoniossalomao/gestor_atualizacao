@@ -6,8 +6,8 @@ import { html } from "../../utils/html.js";
 import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
-import { linhaBackup } from "../../templates/administracao.js";
-import { mensagem } from "./FormularioRegras.js";
+import { linhaBackup, linhaRegraNumero, rodapeFormulario } from "../../templates/administracao.js";
+import { FormularioRegras, mensagem } from "./FormularioRegras.js";
 
 /**
  * Seção Backups e recuperação da Administração:
@@ -17,7 +17,7 @@ export class BackupsAdmin extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
     this.backups = [];
-    this.retencaoAtual = 10;
+    this.ctx = ctx;
     this._desenharBase();
   }
 
@@ -29,28 +29,7 @@ export class BackupsAdmin extends View {
         acoes: html`<a class="btn" href="/api/backups/atual/download" download>${iconeHtml("download")} Baixar o banco de agora</a>`,
       })}
       <div class="admin-grade-vertical">
-        <section class="card secao-card">
-          ${tituloCartao({
-            titulo: "Política de retenção",
-            descricao: "Uma cópia é feita automaticamente toda vez que o servidor inicia.",
-          })}
-          <div class="cfg-linhas">
-            <div class="cfg-group">
-              <div class="cfg-group__labels">
-                <label class="cfg-group__title" for="regra-backupsManter">Manter cópias automáticas</label>
-                <span class="cfg-group__help">As cópias mais antigas que este limite são descartadas quando uma nova cópia é criada.</span>
-              </div>
-              <div class="form-actions">
-                <div class="input-unidade">
-                  <input type="number" class="input" id="regra-backupsManter" data-role="retencao" value="${this.retencaoAtual}"
-                         min="1" max="100" step="1" inputmode="numeric" />
-                  <span>cópias</span>
-                </div>
-                <button type="button" class="btn btn--small" data-action="salvar-retencao" disabled>Salvar</button>
-              </div>
-            </div>
-          </div>
-        </section>
+        <div data-role="retencao"></div>
 
         <section class="card secao-card">
           ${tituloCartao({
@@ -62,34 +41,22 @@ export class BackupsAdmin extends View {
       </div>`;
 
     this.conteudo = this.container.querySelector('[data-role="conteudo"]');
-    this.campoRetencao = this.container.querySelector('[data-role="retencao"]');
-    this.btnSalvarRetencao = this.container.querySelector('[data-action="salvar-retencao"]');
+    // A retenção é uma regra da equipe como as outras, então usa o mesmo
+    // formulário: Desfazer, "1 alteração não salva", e o mínimo e o máximo
+    // que vêm do servidor. Feita à mão, a tela aceitava 1 e 2 cópias, que o
+    // servidor recusa (mínimo 3), e só dizia isso depois do clique.
+    this.retencao = new RetencaoBackups(this.container.querySelector('[data-role="retencao"]'), this.api, this.ctx);
 
     this.conteudo.addEventListener("click", (e) => {
       const botao = e.target.closest('[data-action="restaurar"]');
       if (botao) this._confirmar(botao.dataset.arquivo);
     });
 
-    this.campoRetencao.addEventListener("input", () => {
-      const val = Number(this.campoRetencao.value);
-      this.btnSalvarRetencao.disabled = !val || val === this.retencaoAtual;
-    });
-
-    this.btnSalvarRetencao.addEventListener("click", () => this._salvarRetencao());
   }
 
   async refresh() {
     try {
-      const [backups, config] = await Promise.all([
-        this.api.get("/backups"),
-        this.api.get("/configuracao-sistema/completa").catch(() => null),
-      ]);
-      this.backups = backups;
-      if (config?.valores?.backupsManter != null) {
-        this.retencaoAtual = Number(config.valores.backupsManter);
-        if (this.campoRetencao) this.campoRetencao.value = String(this.retencaoAtual);
-        if (this.btnSalvarRetencao) this.btnSalvarRetencao.disabled = true;
-      }
+      [this.backups] = await Promise.all([this.api.get("/backups"), this.retencao.refresh()]);
     } catch (err) {
       if (err?.cancelled) return;
       avisoRapido.erro(mensagem(err));
@@ -122,20 +89,9 @@ export class BackupsAdmin extends View {
     this.conteudo.replaceChildren(tabela);
   }
 
-  async _salvarRetencao() {
-    const valor = Number(this.campoRetencao.value);
-    if (!valor || valor < 1) return;
-    const liberar = marcarOcupado(this.btnSalvarRetencao);
-    try {
-      await this.api.put("/configuracao-sistema", { backupsManter: valor });
-      this.retencaoAtual = valor;
-      this.btnSalvarRetencao.disabled = true;
-      avisoRapido.sucesso("Política de retenção atualizada.");
-    } catch (err) {
-      Modal.alert("Erro ao salvar retenção", mensagem(err), "error");
-    } finally {
-      liberar();
-    }
+  destroy() {
+    this.retencao?.destroy();
+    super.destroy();
   }
 
   _confirmar(arquivo) {
@@ -191,5 +147,30 @@ export class BackupsAdmin extends View {
         Modal.alert("Não foi possível restaurar", mensagem(err), "error");
       }
     });
+  }
+}
+
+/** O cartão "Política de retenção": uma regra da equipe, `backupsManter`. */
+class RetencaoBackups extends FormularioRegras {
+  nomes = ["backupsManter"];
+
+  desenhar({ valores, definicoes }) {
+    this.container.innerHTML = html`
+      <form class="card secao-card admin-form" data-role="form" novalidate>
+        ${tituloCartao({
+          titulo: "Política de retenção",
+          descricao: "Uma cópia é feita automaticamente toda vez que o servidor inicia.",
+        })}
+        ${linhaRegraNumero({
+          nome: "backupsManter",
+          titulo: "Manter cópias automáticas",
+          ajuda: "Quando uma cópia nova passa deste limite, a mais antiga é apagada.",
+          unidade: "cópias",
+          valor: valores.backupsManter,
+          min: definicoes.backupsManter?.min,
+          max: definicoes.backupsManter?.max,
+        })}
+        ${rodapeFormulario()}
+      </form>`.toString();
   }
 }

@@ -1,4 +1,4 @@
-import { ErroApi } from "../../api/ApiPainel.js";
+import { mensagemDeErro as mensagem } from "../../api/ApiPainel.js";
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
 import { avisoRapido } from "../../components/AvisosRapidos.js";
@@ -222,6 +222,3 @@ export class UsuariosAdmin extends View {
   }
 }
 
-function mensagem(err) {
-  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
-}

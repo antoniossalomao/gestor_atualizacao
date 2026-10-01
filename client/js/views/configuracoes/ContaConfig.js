@@ -1,4 +1,4 @@
-import { ErroApi } from "../../api/ApiPainel.js";
+import { mensagemDeErro as mensagem } from "../../api/ApiPainel.js";
 import { Modal } from "../../components/Modal.js";
 import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { html } from "../../utils/html.js";
@@ -293,6 +293,3 @@ export class ContaConfig {
   }
 }
 
-function mensagem(err) {
-  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
-}
