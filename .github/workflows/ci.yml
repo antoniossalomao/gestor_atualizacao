@@ -7,6 +7,13 @@ on:
     branches: ["main"]
   pull_request:
 
+# Os dois jobs só leem o código. Sem esta linha o GITHUB_TOKEN herda a
+# permissão padrão do repositório (que pode incluir escrita), e um passo
+# comprometido -- uma action de terceiro, um script de instalação do npm --
+# poderia empurrar código ou mexer em PR com ela.
+permissions:
+  contents: read
+
 jobs:
   testes:
     runs-on: ubuntu-latest

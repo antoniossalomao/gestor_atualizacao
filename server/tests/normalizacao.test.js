@@ -125,6 +125,17 @@ test("normalizacao - normalizarSistemas()", async (t) => {
     assert.equal(norm(undefined), "");
   });
 
+  await t.test("separador com espaços sobrando e texto longo de espaços", () => {
+    // A regex antiga tinha \s* e \s+ disputando a mesma fileira de espaços:
+    // correta, mas quadrática. A nova não tem quantificador e depende do trim
+    // de cada pedaço -- se ele sumir, "B_Vendas  " deixa de casar.
+    assert.equal(norm("B_Vendas   e   B_NFe"), "B_Vendas, B_NFe");
+    assert.equal(norm("B_Vendas  -  B_NFe ,  B_Sped"), "B_Vendas, B_NFe, B_Sped");
+    const inicio = Date.now();
+    norm(`B_Vendas${" ".repeat(50_000)}x`);
+    assert.ok(Date.now() - inicio < 500, "50 mil espaços não podem travar o servidor");
+  });
+
   await t.test("sem catálogo, os apelidos ainda funcionam", () => {
     // A migração roda antes de o catálogo estar completo; não pode depender dele.
     assert.equal(normalizarSistemas("NFE"), "B_NFe");

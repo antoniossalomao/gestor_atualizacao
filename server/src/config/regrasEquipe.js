@@ -156,7 +156,13 @@ function validarRegra(nome, valor) {
     throw new ErroDeValidacao(`"${regra.rotulo}" precisa ser um endereço do Discord (discord.com).`);
   }
   // Sem barra no fim: a URL pública é concatenada com "/api/..." e sairia "//api".
-  return nome === "publicUrl" ? texto.replace(/\/+$/, "") : texto;
+  // Laço, e não `replace(/\/+$/)`: a regex volta a tentar a partir de cada
+  // barra de uma fileira longa que não termina o texto, tempo quadrático
+  // (alerta de ReDoS do CodeQL).
+  if (nome !== "publicUrl") return texto;
+  let fim = texto.length;
+  while (fim > 0 && texto[fim - 1] === "/") fim -= 1;
+  return texto.slice(0, fim);
 }
 
 /**

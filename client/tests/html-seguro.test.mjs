@@ -30,7 +30,6 @@ const TETO = {
   "views/HistoricoView.js": 2,
   "views/AgenteDetalheModal.js": 2,
   "views/SistemasView.js": 1,
-  "main.js": 1,
   "components/Paginacao.js": 1,
   "components/Modal.js": 1,
   "components/MenuConta.js": 1,

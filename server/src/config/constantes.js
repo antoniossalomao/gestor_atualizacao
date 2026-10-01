@@ -72,6 +72,13 @@ const FILTRO_ARQUIVADAS = "Arquivadas";
 // só barram o absurdo antes de o arquivo chegar ao leitor.
 const LIMITE_UPLOAD_MB = { arquivo: 15, pacote: 500 };
 
+// Teto de pedidos às rotas que leem/gravam o banco inteiro em disco (download
+// e restauração de backup), por IP numa janela. Não é regra da equipe: é
+// trava de infraestrutura contra quem, com uma sessão de admin roubada ou um
+// script em laço, puxaria cópias do banco até esgotar disco/banda. 20 em 15
+// minutos sobra para o uso real (um admin baixa ou restaura poucas vezes).
+const LIMITE_ROTAS_DE_BACKUP = { maxPedidos: 20, janelaMs: 15 * 60 * 1000 };
+
 // Versão do painel, lida do package.json do servidor (que o Dockerfile copia
 // para a imagem). Até 30/09/2026 havia três números diferentes: "2.1.0" fixo
 // no Diagnóstico, "Versão 2.0" escrito na aba Sobre e "1.0.0" no
@@ -88,6 +95,7 @@ module.exports = {
   OBS_SUPORTE_BREDAS,
   FILTRO_ARQUIVADAS,
   LIMITE_UPLOAD_MB,
+  LIMITE_ROTAS_DE_BACKUP,
   VERSAO_PAINEL,
 };
 

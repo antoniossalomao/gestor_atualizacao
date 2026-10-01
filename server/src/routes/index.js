@@ -1,5 +1,6 @@
 const express = require("express");
 const multer = require("multer");
+const { rateLimit } = require("express-rate-limit");
 const fs = require("fs");
 const path = require("path");
 
@@ -8,7 +9,7 @@ const { exigirPapel } = require("../middlewares/exigirPapel");
 const { exigirAgente } = require("../middlewares/exigirAgente");
 const { exigirAtualizadorHabilitado } = require("../middlewares/exigirAtualizadorHabilitado");
 const { protecaoCsrf } = require("../middlewares/protecaoCsrf");
-const { LIMITE_UPLOAD_MB } = require("../config/constantes");
+const { LIMITE_UPLOAD_MB, LIMITE_ROTAS_DE_BACKUP } = require("../config/constantes");
 const { ErroDeValidacao } = require("../shared/erros");
 
 // Planilhas de import: limite de 15 MB e validação rigorosa de extensão (.xlsx / .xls)
@@ -62,6 +63,21 @@ class ApiRouter {
     this.loginLimiter = loginLimiter;
     this.configuracaoSistemaService = configuracaoSistemaService;
     this.router = express.Router();
+    // Um limitador por roteador (não no topo do módulo): cada Server dos
+    // testes ganha a sua contagem, senão um arquivo de teste herdaria os
+    // pedidos do anterior e tomaria 429 sem motivo.
+    //
+    // Por que pacote aqui e não o LimitadorDeLogin: a contagem por IP+usuário
+    // daquele é específica do login, e o CodeQL (js/missing-rate-limiting) só
+    // reconhece limitadores de bibliotecas conhecidas -- com um caseiro, o
+    // alerta continuaria aberto em toda PR que tocasse nestas linhas.
+    this.limitadorDeBackup = rateLimit({
+      windowMs: LIMITE_ROTAS_DE_BACKUP.janelaMs,
+      limit: LIMITE_ROTAS_DE_BACKUP.maxPedidos,
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+      message: { error: "Muitos pedidos de backup seguidos. Aguarde alguns minutos e tente novamente." },
+    });
     // Antes de qualquer rota, inclusive dos uploads: uma escrita recusada
     // não pode deixar nem o arquivo gravado pelo multer. Ver protecaoCsrf.js.
     this.router.use(protecaoCsrf);
@@ -197,9 +213,9 @@ class ApiRouter {
 
     // Backups: listagem para usuários autorizados, download e restore exclusivos do Admin
     api.get("/backups", backups.list);
-    api.get("/backups/atual/download", exigirPapel("admin"), backups.downloadCurrent);
-    api.get("/backups/:arquivo/download", exigirPapel("admin"), backups.download);
-    api.post("/backups/:arquivo/restore", exigirPapel("admin"), backups.restore);
+    api.get("/backups/atual/download", this.limitadorDeBackup, exigirPapel("admin"), backups.downloadCurrent);
+    api.get("/backups/:arquivo/download", this.limitadorDeBackup, exigirPapel("admin"), backups.download);
+    api.post("/backups/:arquivo/restore", this.limitadorDeBackup, exigirPapel("admin"), backups.restore);
 
     // Gestão de Usuários: listagem e administração restrita a Admin; troca de senha própria aberta
     api.get("/usuarios", exigirPapel("admin"), usuarios.list);
