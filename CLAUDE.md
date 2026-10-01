@@ -81,3 +81,11 @@ Se mudou comportamento visível, acrescente ao [`CHANGELOG.md`](CHANGELOG.md).
 Se tomou uma decisão cara de reverter, registre-a como nova subseção na
 [seção de decisões da documentação consolidada](docs/DOCUMENTACAO_CONSOLIDADA.md#4-decisões-de-arquitetura--adrs-do-painel-web).
 Não faça commit nem push sem o usuário pedir.
+
+## Segundo Cérebro (Obsidian / "Vault")
+
+O Vault **é um repositório GitHub**: `antoniossalomao/vault` (privado), não uma
+pasta local nem um MCP no PC do usuário. Em sessão na nuvem, anexe-o com
+`add_repo` (`access: "push"`), leia o `claude.md` da raiz dele e grave a nota em
+`Recursos/Claude/Conversas/`. Não responda "não tenho acesso ao Vault": se o
+`add_repo` for negado, diga que foi negado e peça ao usuário para liberar.
