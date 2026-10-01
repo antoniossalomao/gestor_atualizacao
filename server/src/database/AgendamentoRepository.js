@@ -54,7 +54,6 @@ const SORT_MAP = {
 
 /**
  * Agenda de tarefas internas (aba Agendamentos).
- * Equivalente de "AgendamentoRepository" em gestor/database.py.
  */
 class AgendamentoRepository extends BaseRepository {
   get table() {

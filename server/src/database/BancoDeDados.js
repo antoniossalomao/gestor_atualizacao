@@ -18,9 +18,8 @@ const { MIGRACOES, criarVisoes } = require("./migracoes");
 
 /**
  * Abre a conexao SQLite, garante o schema (criando/migrando tabelas) e
- * expoe um repositorio por tabela. Equivalente de "Database" em
- * gestor/database.py -- unico lugar do programa que abre a conexao de
- * verdade; todo o resto fala com o banco atraves dos repositorios.
+ * expoe um repositorio por tabela. E o unico lugar do programa que abre a
+ * conexao de verdade; todo o resto fala com o banco atraves dos repositorios.
  */
 class BancoDeDados {
   /** @param {string} dbPath caminho do arquivo gestao.db */
@@ -50,9 +49,8 @@ class BancoDeDados {
     this.conn = new Sqlite3(this.path);
     // WAL ("Write-Ahead Logging") permite varias leituras acontecendo ao
     // mesmo tempo que uma escrita, em vez de travar o banco inteiro a cada
-    // consulta -- importante agora que o app e usado por varias pessoas ao
-    // mesmo tempo (no Python original, uso individual, isso nao era
-    // necessario).
+    // consulta -- necessario porque o painel e usado por varias pessoas ao
+    // mesmo tempo.
     this.conn.pragma("journal_mode = WAL");
     this.conn.pragma("foreign_keys = ON");
 
@@ -160,8 +158,8 @@ class BancoDeDados {
         motivo TEXT
       )
     `);
-    // "maquinas" e "obs" foram adicionadas depois que o app original ja
-    // estava em uso -- ALTER TABLE falha (silenciosamente ignorado aqui)
+    // "maquinas" e "obs" foram adicionadas depois que o banco ja estava em
+    // uso -- ALTER TABLE falha (silenciosamente ignorado aqui)
     // se a coluna ja existir, o que deixa essa migracao segura de rodar
     // toda vez que o servidor sobe.
     for (const coluna of ["maquinas", "obs", "versoes_sistemas"]) {
@@ -182,7 +180,7 @@ class BancoDeDados {
       )
     `);
 
-    // Tabela nova (nao existia no app Python): acessos remotos (AnyDesk /
+    // Acessos remotos (AnyDesk /
     // Suporte Bredas) de cada maquina de um cliente -- aba Clientes, botao
     // "Acessos". "ON DELETE CASCADE" (com "foreign_keys = ON" ligado acima)
     // apaga os acessos junto quando o cliente e excluido, sem precisar de
@@ -231,7 +229,7 @@ class BancoDeDados {
     // aparecer como checkbox na aba Clientes mesmo em instalacoes antigas.
     conn.prepare("INSERT OR IGNORE INTO sistemas (nome) VALUES (?)").run(SISTEMA_SUPORTE_BREDAS);
 
-    // Tabela nova (nao existia no app Python): contas de login.
+    // Contas de login.
     conn.exec(`
       CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -634,8 +632,7 @@ class BancoDeDados {
       // no .db, sem isso, arriscava copiar um backup faltando os registros
       // mais recentes. "TRUNCATE" força esse merge agora e esvazia o -wal,
       // deixando o .db principal sozinho já com tudo -- um arquivo só,
-      // completo, do jeito que os backups do app original (SQLite sem WAL)
-      // sempre foram.
+      // completo, do jeito que os backups sempre foram (antes do WAL).
       this.conn.pragma("wal_checkpoint(TRUNCATE)");
 
       const dir = path.join(path.dirname(this.path), "backups");

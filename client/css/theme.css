@@ -1,9 +1,7 @@
 /*
  * Tokens visuais do app: cores, tipografia, espaçamento, raio de borda,
- * sombra. Tudo definido como "variável CSS" (--nome-da-variável), a mesma
- * ideia da paleta central em Python (gestor/config.py + gestor/theme.py),
- * só que aqui é o próprio navegador que entende o formato -- qualquer outro
- * arquivo CSS usa `var(--cor-x)` em vez de repetir o valor da cor.
+ * sombra. Tudo definido como "variável CSS" (--nome-da-variável): qualquer
+ * outro arquivo CSS usa `var(--cor-x)` em vez de repetir o valor da cor.
  *
  * ESTE É O ÚNICO ARQUIVO COM COR LITERAL. É essa disciplina que permitiu
  * acrescentar um tema claro sem tocar em nenhum componente: o bloco

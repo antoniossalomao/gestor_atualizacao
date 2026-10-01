@@ -25,8 +25,7 @@ function garantirListenerGlobal() {
 }
 
 /**
- * Liga um `<input>` a uma lista de sugestões que aparece ao digitar --
- * equivalente de `AutocompleteCombobox` no app Tkinter original.
+ * Liga um `<input>` a uma lista de sugestões que aparece ao digitar.
  *
  * Diferente de um `<select>`, o usuário pode digitar um nome que ainda não
  * existe na lista (o campo continua sendo texto livre) -- a lista é uma

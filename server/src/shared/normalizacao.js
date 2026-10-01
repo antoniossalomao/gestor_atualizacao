@@ -201,7 +201,7 @@ function separarSistemas(text) {
     .filter(Boolean);
 }
 
-/** "camila silva" -> "Camila Silva" (equivalente simples de str.title() do Python). */
+/** "camila silva" -> "Camila Silva". */
 function primeiraMaiuscula(text) {
   return text.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
 }

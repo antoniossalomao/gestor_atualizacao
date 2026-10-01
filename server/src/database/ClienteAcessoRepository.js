@@ -2,8 +2,7 @@ const { BaseRepository } = require("./BaseRepository");
 
 /**
  * Acessos remotos (AnyDesk / Suporte Bredas) cadastrados por máquina de cada
- * cliente -- aba Clientes, botão "Acessos". Tabela nova, sem equivalente no
- * app Python original.
+ * cliente -- aba Clientes, botão "Acessos".
  */
 class ClienteAcessoRepository extends BaseRepository {
   get table() {

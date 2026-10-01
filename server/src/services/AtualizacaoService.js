@@ -18,8 +18,7 @@ const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
 /**
  * Regras de negocio da aba Atualizacoes: CRUD, importacao/exportacao de
- * planilha, e os calculos usados na aba Resumo (que no app original ficavam
- * dentro de gestor/views/resumo.py, misturados com o desenho da tela).
+ * planilha, e os calculos usados na aba Resumo.
  */
 class AtualizacaoService {
   /**

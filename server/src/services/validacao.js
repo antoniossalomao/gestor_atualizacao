@@ -1,6 +1,5 @@
 /**
  * Validacoes compartilhadas entre servicos (por enquanto, so a de datas).
- * Equivalente de gestor/validation.py.
  */
 
 const DATA_REGEX = /^(\d{2})\/(\d{2})\/(\d{4})$/;

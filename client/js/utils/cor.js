@@ -2,7 +2,7 @@
  * Mistura duas cores hexadecimais ('#rrggbb'); t=0 devolve colorA, t=1
  * devolve colorB. Usado para tingir sutilmente o fundo de uma linha de tabela
  * (ex.: "quanto mais atrasado o cliente, mais vermelho o fundo" nas abas
- * Resumo e Sistemas). 
+ * Resumo e Sistemas).
  */
 export function misturarHex(colorA, colorB, t) {
   const [ra, ga, ba] = toRgb(colorA);

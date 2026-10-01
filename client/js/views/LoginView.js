@@ -7,10 +7,6 @@ import { iconeSvg, simboloMarca } from "../utils/icones.js";
  *  - "setup": mostrada quando ainda não existe nenhuma conta (primeira vez
  *    que o servidor sobe); cria a conta de administrador.
  *  - "login": tela normal de login, para todas as vezes depois disso.
- *
- * Não existia equivalente no app Python original (uso individual, sem
- * conceito de conta) -- é a peça nova exigida pelo modo "servidor com
- * vários usuários" combinado com o pedido do usuário.
  */
 export class LoginView {
   /**

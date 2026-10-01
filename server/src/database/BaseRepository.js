@@ -8,11 +8,10 @@
  * concentrada num unico lugar, facil de achar e de revisar.
  *
  * Usa "better-sqlite3", que e SINCRONO (nao usa "await" pra ler/escrever
- * no banco) -- diferente da maioria das bibliotecas Node, mas e o mesmo
- * jeito de programar que o "sqlite3" do Python original usava, o que deixa
- * o codigo mais direto de ler e evita uma camada de complexidade (Promises
- * encadeadas) que aqui nao traz beneficio nenhum: o SQLite le do disco tao
- * rapido que "esperar de forma assincrona" nao ajudaria em nada.
+ * no banco) -- diferente da maioria das bibliotecas Node. Isso deixa o codigo
+ * mais direto de ler e evita uma camada de Promises encadeadas que aqui nao
+ * traz beneficio nenhum: o SQLite le do disco tao rapido que "esperar de
+ * forma assincrona" nao ajudaria em nada.
  */
 class BaseRepository {
   /** @param {import('better-sqlite3').Database} conn conexao aberta com o banco */

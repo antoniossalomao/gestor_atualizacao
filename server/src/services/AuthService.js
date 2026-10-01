@@ -9,9 +9,8 @@ const SENHA_MIN_LENGTH = 8;
 const NOME_MAX_LENGTH = 80;
 
 /**
- * Login multiusuario -- novidade em relacao ao app Python original, que
- * era de uso individual e nao tinha conceito de conta. Guarda so o hash
- * da senha (bcrypt); a senha em texto puro nunca e salva em lugar nenhum.
+ * Login multiusuario. Guarda so o hash da senha (bcrypt); a senha em texto
+ * puro nunca e salva em lugar nenhum.
  */
 class AuthService {
   /**

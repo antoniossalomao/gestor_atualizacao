@@ -56,9 +56,7 @@ const NAO_SERVIR = [/^\/package(-lock)?\.json$/, /^\/tests(\/|$)/];
 /**
  * Classe raiz do backend: abre o banco, monta os servicos/controllers
  * (injecao de dependencia simples, na mao, sem framework de DI) e liga
- * tudo num app Express. Equivalente, do lado do servidor, ao papel que
- * "App(tk.Tk)" tinha em gestor/main_window.py -- so que aqui nao existe
- * janela nenhuma, o "start()" e o que corresponde ao antigo "mainloop()".
+ * tudo num app Express.
  */
 class Servidor {
   /**

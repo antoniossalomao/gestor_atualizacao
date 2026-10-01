@@ -5,8 +5,7 @@ const SAIDA_MS = 140;
 
 /**
  * Diálogos modais no tema do app (aviso / confirmação), em vez do
- * `alert()`/`confirm()` feio e não estilizável do navegador -- mesma ideia
- * de `gestor/dialogs.py` (CustomDialog) no app Tkinter original.
+ * `alert()`/`confirm()` feio e não estilizável do navegador.
  *
  * O `_open` daqui é reaproveitado pelos painéis flutuantes (Backups,
  * Usuários), então tudo que ele faz de acessibilidade vale para eles também:

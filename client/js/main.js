@@ -5,8 +5,6 @@ import { iniciarAparencia } from "./app/aparencia.js";
 
 // Ponto de entrada do front-end: aplica o tema salvo, cria o cliente de API e
 // a aplicação, e manda ela decidir o que mostrar (login ou o app principal).
-// Equivalente do antigo "App(DB_PATH).mainloop()" em Atualizacao.py -- só que
-// aqui não existe "mainloop": o navegador já fica reagindo a eventos sozinho.
 //
 // O tema vem PRIMEIRO, antes de qualquer coisa ser desenhada: aplicar depois
 // faria a tela piscar no tema errado por um quadro ("flash of wrong theme").

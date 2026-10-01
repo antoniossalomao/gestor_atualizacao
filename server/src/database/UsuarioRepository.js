@@ -1,9 +1,7 @@
 const { BaseRepository } = require("./BaseRepository");
 
 /**
- * Contas de login (tabela nova, nao existia no app Python original --
- * la o uso era individual, sem usuarios). Guarda so o hash da senha,
- * NUNCA a senha em texto puro (o hash e calculado em AuthService, com
+ * Contas de login. Guarda so o hash da senha, NUNCA a senha em texto puro (o hash e calculado em AuthService, com
  * bcryptjs, antes de chegar aqui).
  */
 class UsuarioRepository extends BaseRepository {

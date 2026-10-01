@@ -10,9 +10,8 @@ import { GRUPOS_SITUACAO, totaisSituacao, sistemasQueExplicam } from "../domain/
 import { blocoDeNumero, deltaTendencia, corpoSituacao } from "../templates/resumo.js";
 
 /**
- * Aba Resumo: indicadores gerais. Equivalente de gestor/views/resumo.py -- a
- * diferença é que os cálculos moram no backend (AtualizacaoService.resumo()),
- * então esta classe só cuida de desenhar o que a API devolve.
+ * Aba Resumo: indicadores gerais. Os cálculos moram no backend
+ * (AtualizacaoService.resumo()); esta classe só desenha o que a API devolve.
  */
 /**
  * Era "Parados Há Mais de N Dias", e o card ao lado chamava de "em dia" quem

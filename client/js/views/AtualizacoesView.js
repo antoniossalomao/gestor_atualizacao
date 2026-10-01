@@ -26,7 +26,6 @@ import { chipsFiltroAtualizacoes, chipsHtml } from "../templates/filtros.js";
 /**
  * Aba Atualizações: histórico de atualizações de sistemas por cliente.
  * Cadastro, edição, busca, importação/exportação de planilha (.xlsx).
- * Equivalente de gestor/views/atualizacoes.py.
  *
  * O que mudou nesta revisão:
  *  - virou um `<form>` de verdade (submit nativo, validação do navegador);
@@ -951,9 +950,8 @@ export class AtualizacoesView extends View {
     this.table?.limparSelecao();
     for (const col of COLUNAS_ATUALIZACOES) this.fields[col.key].value = "";
     this.fields.data.value = hojeBR();
-    // Melhoria em relação ao app original: já vem preenchido com quem está
-    // logado (continua editável, caso outra pessoa tenha feito a atualização
-    // em nome dela).
+    // Já vem preenchido com quem está logado (continua editável, caso outra
+    // pessoa tenha feito a atualização em nome dela).
     if (this.user) this.fields.responsavel.value = this.user.nome;
     for (const hint of this.form.querySelectorAll(".field__hint")) hint.textContent = "";
     this._pintarModo();

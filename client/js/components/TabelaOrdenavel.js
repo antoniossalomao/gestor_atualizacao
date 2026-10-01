@@ -5,8 +5,7 @@ const ATRASO_REFRESH_MS = 180;
 
 /**
  * Tabela genérica e ordenável, reaproveitada por todas as telas com lista
- * (Resumo, Atualizações, Agendamentos, Clientes). Equivalente combinado de
- * `ttk.Treeview` + `widgets.make_sortable` no app Tkinter original.
+ * (Resumo, Atualizações, Agendamentos, Clientes).
  *
  * Cada coluna é descrita como `{ key, label, type, largura }`, onde `type` é
  * "text" (padrão), "date" (dd/mm/aaaa) ou "numeric" -- controla como a coluna

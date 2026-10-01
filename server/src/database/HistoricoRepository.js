@@ -11,9 +11,6 @@ const SORT_MAP = {
 
 /**
  * Histórico de ações (quem criou/editou/excluiu o quê, e quando).
- * Tabela nova, sem equivalente no app Python original -- lá o uso era
- * individual, então "quem fez" era sempre a mesma pessoa e não precisava
- * ser registrado.
  *
  * Diferente dos outros repositórios, este não herda de BaseRepository:
  * histórico é um registro de fatos que já aconteceram -- não faz sentido

@@ -2,9 +2,8 @@
  * Trava simples de força bruta: bloqueia temporariamente tentativas de
  * login/criação de conta vindas do mesmo IP quando passam de um limite
  * numa janela de tempo. Sem isso, nada impedia alguém de tentar milhares
- * de senhas por segundo contra `/auth/login` -- risco real agora que o
- * servidor pode ficar acessível pela rede/internet (o app Python
- * original, de uso local e sem login, não tinha esse problema).
+ * de senhas por segundo contra `/auth/login` -- risco real, já que o
+ * servidor fica acessível pela rede.
  *
  * Guardado em memória (um Map), não no banco -- é informação descartável
  * (reinicia zerada se o servidor reiniciar) e não precisa sobreviver a

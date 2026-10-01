@@ -17,8 +17,7 @@ import { Gaveta } from "../components/Gaveta.js";
 
 /**
  * Aba Clientes: cadastro, edição e listagem dos clientes e seus sistemas.
- * O formulário fica escondido por padrão (botão "+ Novo Cliente") -- mesma
- * ideia de gestor/views/clientes.py.
+ * O formulário fica escondido por padrão (botão "+ Novo Cliente").
  */
 const ORDEM_INICIAL = { sortBy: "id", sortDir: "asc" };
 

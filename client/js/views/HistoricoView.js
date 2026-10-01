@@ -36,9 +36,8 @@ const ENTIDADE_LABEL = {
 const ENTIDADES = Object.keys(ENTIDADE_LABEL);
 
 /**
- * Aba Histórico: quem criou/editou/excluiu o quê, e quando. Não existia no
- * app Python original (uso individual, sem contas) -- é a peça que dá
- * visibilidade sobre o uso do sistema por uma equipe com vários logins.
+ * Aba Histórico: quem criou/editou/excluiu o quê, e quando. Dá visibilidade
+ * sobre o uso do sistema por uma equipe com vários logins.
  */
 export class HistoricoView extends View {
   constructor(container, api, ctx) {

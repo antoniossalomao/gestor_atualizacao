@@ -3,10 +3,8 @@ const { SISTEMA_PRINCIPAL } = require("./situacaoVersao");
 
 /**
  * Regras de negocio da aba Clientes, em cima do ClienteRepository /
- * SistemaRepository. Equivalente ao que hoje fica espalhado dentro de
- * gestor/views/clientes.py (a view Tkinter fazia validacao E desenho de
- * tela juntos; aqui a validacao vira uma classe propria, reaproveitavel
- * tanto pela rota HTTP quanto por testes).
+ * SistemaRepository. A validacao mora aqui, e nao na tela, para servir tanto
+ * a rota HTTP quanto os testes.
  */
 class ClienteService {
   /**

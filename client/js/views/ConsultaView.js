@@ -14,7 +14,7 @@ const MAX_SUGESTOES = 50;
 
 /**
  * Aba Consultar Cliente: busca por nome e mostra sistemas + última
- * atualização. Equivalente de gestor/views/consulta.py.
+ * atualização.
  *
  * Ganhou `aplicarParams({ cliente })`: a paleta de comandos (Ctrl+K) lista os
  * clientes cadastrados e abre a ficha direto aqui. Antes, ver a ficha de um
