@@ -5,7 +5,7 @@ import { formatarDataHora, tempoRelativo, formatarDuracao } from "../utils/data.
 import { estadoVazio } from "../components/estadoVazio.js";
 import { faseLabel } from "../domain/agenteLabels.js";
 import { ErroApi } from "../api/ApiPainel.js";
-import { toast } from "../components/AvisosRapidos.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { relatorioRetornosTexto } from "../domain/agenteReport.js";
 import { criarDetalhesRetorno } from "../components/detalhesRetorno.js";
 import { classificarRetorno } from "../domain/agenteStatus.js";
@@ -208,7 +208,7 @@ export class AgenteDetalheModal {
 
   async _copiar() {
     if (!this.logsFiltrados?.length) {
-      toast.info("Não há retornos neste filtro para copiar.");
+      avisoRapido.informar("Não há retornos neste filtro para copiar.");
       return;
     }
     const logsRelatorio = this.logsFiltrados.map((log) => ({ ...log, status: classificarRetorno(log).label }));
@@ -216,7 +216,7 @@ export class AgenteDetalheModal {
       titulo: `${this.somenteErros ? "ERROS E PENDÊNCIAS" : "RETORNOS DO AGENTE"} — ${this.agente.empresa || this.agente.cnpj}${this.sistema ? ` · ${this.sistema}` : ""}`,
     });
     if (this.logs.length >= LIMITE_RETORNOS) texto += `\n\nConsulta limitada aos ${LIMITE_RETORNOS} retornos mais recentes do agente.`;
-    if (await copyToClipboard(texto)) toast.success("Relatório copiado.");
-    else toast.error("Não foi possível copiar o relatório.");
+    if (await copyToClipboard(texto)) avisoRapido.sucesso("Relatório copiado.");
+    else avisoRapido.erro("Não foi possível copiar o relatório.");
   }
 }

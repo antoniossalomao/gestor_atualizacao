@@ -3,7 +3,7 @@ import { View } from "../app/View.js";
 import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
 import { Paginacao } from "../components/Paginacao.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/AvisosRapidos.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { iconeSvg, iconeHtml } from "../utils/icones.js";
 import { estadoVazio } from "../components/estadoVazio.js";
@@ -331,7 +331,7 @@ export class ClientesView extends View {
       const cb = [...this.sistemasGrid.querySelectorAll("input[type=checkbox]")].find((el) => el.value === nome);
       if (cb) cb.checked = true;
       this._toggleNovoSistema();
-      toast.success(`Sistema "${nome}" adicionado.`);
+      avisoRapido.sucesso(`Sistema "${nome}" adicionado.`);
     } catch (err) {
       Modal.alert("Validação", errorMessage(err), "warning");
     }
@@ -416,7 +416,7 @@ export class ClientesView extends View {
       this.cache?.invalidar("clientes:");
       await this._reloadSistemas();
       await this._reloadList();
-      toast.success(
+      avisoRapido.sucesso(
         resultado.clientesAfetados > 0
           ? `Sistema "${sistema}" excluído (desmarcado de ${plural(resultado.clientesAfetados, "cliente")}).`
           : `Sistema "${sistema}" excluído.`
@@ -551,7 +551,7 @@ export class ClientesView extends View {
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
-      toast.success("Cliente adicionado.");
+      avisoRapido.sucesso("Cliente adicionado.");
     } catch (err) {
       Modal.alert("Validação", errorMessage(err), "warning");
     } finally {
@@ -574,7 +574,7 @@ export class ClientesView extends View {
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
-      toast.success("Cliente atualizado.");
+      avisoRapido.sucesso("Cliente atualizado.");
     } catch (err) {
       Modal.alert("Validação", errorMessage(err), "warning");
     } finally {
@@ -608,7 +608,7 @@ export class ClientesView extends View {
       this.clearForm();
       this._invalidar();
       await this._reloadList();
-      toast.success("Cliente excluído.");
+      avisoRapido.sucesso("Cliente excluído.");
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
     } finally {
@@ -641,7 +641,7 @@ export class ClientesView extends View {
       this.table.limparMarcadas();
       this._invalidar();
       await this._reloadList();
-      toast.success(
+      avisoRapido.sucesso(
         afetados === 0
           ? `Todos os ${plural(total, "cliente selecionado", "clientes selecionados")} já tinham "${sistema}".`
           : `"${sistema}" adicionado a ${plural(afetados, "cliente")}${afetados < total ? ` (${total - afetados} já tinha${total - afetados === 1 ? "" : "m"})` : ""}.`
@@ -680,7 +680,7 @@ export class ClientesView extends View {
       this.clearForm();
       this._invalidar();
       await this._reloadList();
-      toast.success(`${plural(excluidos, "cliente")} ${excluidos === 1 ? "excluído" : "excluídos"}.`);
+      avisoRapido.sucesso(`${plural(excluidos, "cliente")} ${excluidos === 1 ? "excluído" : "excluídos"}.`);
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
     } finally {
@@ -715,7 +715,7 @@ export class ClientesView extends View {
     this._pintarModo();
 
     if (comDesfazer && tinhaConteudo) {
-      toast.undo("Formulário limpo.", () => {
+      avisoRapido.desfazer("Formulário limpo.", () => {
         this.fields.codigo.value = antes.codigo;
         this.fields.nome.value = antes.nome;
         this.fields.cidade.value = antes.cidade;

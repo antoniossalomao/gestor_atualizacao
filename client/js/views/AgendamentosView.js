@@ -4,7 +4,7 @@ import { ErroApi } from "../api/ApiPainel.js";
 import { View } from "../app/View.js";
 import { CampoComSugestoes } from "../components/CampoComSugestoes.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/AvisosRapidos.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { hojeBR, dataBRValida, mascaraDataBR } from "../utils/data.js";
 import { estadoVazio } from "../components/estadoVazio.js";
@@ -637,7 +637,7 @@ export class AgendamentosView extends View {
       const atualizado = await this.api.put(`/agendamentos/${row.id}`, { ...row, status: novoStatus });
       if (atualizado) Object.assign(row, atualizado);
       this._invalidar();
-      toast.success(`Tarefa movida para "${novoStatus}".`);
+      avisoRapido.sucesso(`Tarefa movida para "${novoStatus}".`);
     } catch (err) {
       row.status = statusAnterior;
       this._renderKanban(this.rows);
@@ -780,7 +780,7 @@ export class AgendamentosView extends View {
       this.clearForm();
       this._invalidar();
       await this._reloadList();
-      toast.success(`"${tarefa.tarefa}" voltou para a lista como "${OPCOES_STATUS[0]}".`);
+      avisoRapido.sucesso(`"${tarefa.tarefa}" voltou para a lista como "${OPCOES_STATUS[0]}".`);
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
     } finally {
@@ -841,7 +841,7 @@ export class AgendamentosView extends View {
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
-      toast.success("Tarefa adicionada.");
+      avisoRapido.sucesso("Tarefa adicionada.");
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
     } finally {
@@ -861,7 +861,7 @@ export class AgendamentosView extends View {
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
-      toast.success("Tarefa atualizada.");
+      avisoRapido.sucesso("Tarefa atualizada.");
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
     } finally {
@@ -880,14 +880,14 @@ export class AgendamentosView extends View {
       this.clearForm();
       this._invalidar();
       await this._reloadList();
-      toast.undo(`Tarefa "${dadosAntes.tarefa}" excluída.`, async () => {
+      avisoRapido.desfazer(`Tarefa "${dadosAntes.tarefa}" excluída.`, async () => {
         try {
           await this.api.post("/agendamentos", dadosAntes);
           this._invalidar();
           await this._reloadList();
-          toast.success("Exclusão desfeita.");
+          avisoRapido.sucesso("Exclusão desfeita.");
         } catch {
-          toast.error("Não foi possível desfazer a exclusão.");
+          avisoRapido.erro("Não foi possível desfazer a exclusão.");
         }
       });
     } catch (err) {
@@ -916,7 +916,7 @@ export class AgendamentosView extends View {
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
-      toast.success("Tarefa arquivada.");
+      avisoRapido.sucesso("Tarefa arquivada.");
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
     } finally {
@@ -950,7 +950,7 @@ export class AgendamentosView extends View {
     this._pintarModo();
 
     if (comDesfazer && tinhaConteudo) {
-      toast.undo(
+      avisoRapido.desfazer(
         "Formulário limpo.",
         () => {
           for (const col of COLUNAS_AGENDAMENTOS) this.fields[col.key].value = antes[col.key];

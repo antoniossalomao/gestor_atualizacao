@@ -5,7 +5,7 @@ import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
 import { Paginacao } from "../components/Paginacao.js";
 import { CampoComSugestoes } from "../components/CampoComSugestoes.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/AvisosRapidos.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { hojeBR, dataBRValida, mascaraDataBR } from "../utils/data.js";
 import { iconeSvg, iconeHtml } from "../utils/icones.js";
@@ -787,7 +787,7 @@ export class AtualizacoesView extends View {
       this.page = 1;
       this._invalidar();
       await this._reloadList();
-      toast.success("Registro adicionado.");
+      avisoRapido.sucesso("Registro adicionado.");
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
     } finally {
@@ -810,7 +810,7 @@ export class AtualizacoesView extends View {
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
       await this._reloadList();
-      toast.success("Registro atualizado.");
+      avisoRapido.sucesso("Registro atualizado.");
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
     } finally {
@@ -841,14 +841,14 @@ export class AtualizacoesView extends View {
       this.clearForm();
       this._invalidar();
       await this._reloadList();
-      toast.undo(`Registro de ${dadosAntes.cliente || "cliente"} excluído.`, async () => {
+      avisoRapido.desfazer(`Registro de ${dadosAntes.cliente || "cliente"} excluído.`, async () => {
         try {
           await this.api.post("/atualizacoes", dadosAntes);
           this._invalidar();
           await this._reloadList();
-          toast.success("Exclusão desfeita.");
+          avisoRapido.sucesso("Exclusão desfeita.");
         } catch {
-          toast.error("Não foi possível desfazer a exclusão.");
+          avisoRapido.erro("Não foi possível desfazer a exclusão.");
         }
       });
     } catch (err) {
@@ -906,7 +906,7 @@ export class AtualizacoesView extends View {
       this._invalidar();
       await this._reloadList();
 
-      toast.undo(`${plural(excluidos, "registro")} ${excluidos === 1 ? "excluído" : "excluídos"}.`, async () => {
+      avisoRapido.desfazer(`${plural(excluidos, "registro")} ${excluidos === 1 ? "excluído" : "excluídos"}.`, async () => {
         try {
           // Um a um: não existe rota de criação em lote, e recriar é uma
           // operação rara o bastante para não valer uma. `id` sai fora --
@@ -917,9 +917,9 @@ export class AtualizacoesView extends View {
           }
           this._invalidar();
           await this._reloadList();
-          toast.success("Exclusão desfeita.");
+          avisoRapido.sucesso("Exclusão desfeita.");
         } catch {
-          toast.error("Não foi possível desfazer tudo. Confira a lista.");
+          avisoRapido.erro("Não foi possível desfazer tudo. Confira a lista.");
           this._invalidar();
           this._reloadList();
         }
@@ -959,7 +959,7 @@ export class AtualizacoesView extends View {
     this._pintarModo();
 
     if (comDesfazer && tinhaConteudo) {
-      toast.undo("Formulário limpo.", () => {
+      avisoRapido.desfazer("Formulário limpo.", () => {
         for (const col of COLUNAS_ATUALIZACOES) this.fields[col.key].value = antes[col.key];
         this.fields.cliente.focus();
       }, "Restaurar");
@@ -1010,7 +1010,7 @@ export class AtualizacoesView extends View {
       ? `_${(this.desde || "inicio").replace(/\//g, "-")}_${(this.ate || "fim").replace(/\//g, "-")}`
       : this._temFiltro() ? "_filtrado" : "";
     baixarBlob(blob, `atualizacoes${sufixo}.xlsx`);
-    toast.info(this._temFiltro() ? "Exportação concluída (com os filtros atuais)." : "Exportação concluída.");
+    avisoRapido.informar(this._temFiltro() ? "Exportação concluída (com os filtros atuais)." : "Exportação concluída.");
   }
 
   /**

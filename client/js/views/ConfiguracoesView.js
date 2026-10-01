@@ -3,7 +3,7 @@ import { prefs } from "../app/preferencias.js";
 import { temaApp } from "../app/tema.js";
 import { aparencia, reaplicarAparencia, PERFIS } from "../app/aparencia.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/AvisosRapidos.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { TelaComAbas } from "../components/TelaComAbas.js";
 import { html } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
@@ -247,7 +247,7 @@ export class ConfiguracoesView extends View {
     const perfil = PERFIS.find((p) => p.valor === valor);
     if (!perfil || !aparencia.aplicarPerfil(valor)) return;
     this._aplicarEmLote();
-    toast.success(`Perfil "${perfil.rotulo}" aplicado.`);
+    avisoRapido.sucesso(`Perfil "${perfil.rotulo}" aplicado.`);
   }
 
   _restaurarSecao(aba) {
@@ -255,7 +255,7 @@ export class ConfiguracoesView extends View {
     if (chaves.length === 0) return;
     aparencia.restaurarPadroes(chaves);
     this._aplicarEmLote();
-    toast.success(`"${aba.rotulo}" voltou ao padrão.`);
+    avisoRapido.sucesso(`"${aba.rotulo}" voltou ao padrão.`);
   }
 
   async _restaurarTudo() {
@@ -267,7 +267,7 @@ export class ConfiguracoesView extends View {
     if (!ok) return;
     aparencia.restaurarPadroes();
     this._aplicarEmLote();
-    toast.success("Preferências restauradas.");
+    avisoRapido.sucesso("Preferências restauradas.");
   }
 
 
@@ -279,7 +279,7 @@ export class ConfiguracoesView extends View {
       String(agora.getDate()).padStart(2, "0"),
     ].join("-");
     baixarTexto(JSON.stringify(aparencia.exportar(), null, 2), `preferencias-gestor-${carimbo}.json`);
-    toast.success("Arquivo de preferências salvo.");
+    avisoRapido.sucesso("Arquivo de preferências salvo.");
   }
 
   async _importar() {
@@ -290,7 +290,7 @@ export class ConfiguracoesView extends View {
     try {
       conteudo = JSON.parse(await arquivo.text());
     } catch {
-      toast.error("Arquivo inválido: não é um JSON legível.");
+      avisoRapido.erro("Arquivo inválido: não é um JSON legível.");
       return;
     }
 
@@ -300,12 +300,12 @@ export class ConfiguracoesView extends View {
     } catch (erro) {
       // As mensagens de `importar` são escritas para serem lidas por quem
       // escolheu o arquivo -- repassar direto é melhor que traduzir aqui.
-      toast.error(erro.message);
+      avisoRapido.erro(erro.message);
       return;
     }
 
     this._aplicarEmLote();
-    toast.success(
+    avisoRapido.sucesso(
       resultado.ignoradas > 0
         ? `${resultado.aplicadas} preferências aplicadas. ${resultado.ignoradas} não foram reconhecidas.`
         : `${resultado.aplicadas} preferências aplicadas.`

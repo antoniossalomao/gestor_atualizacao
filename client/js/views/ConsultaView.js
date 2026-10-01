@@ -3,7 +3,7 @@ import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { estadoVazio } from "../components/estadoVazio.js";
 import { plural, html } from "../utils/html.js";
 import { copyToClipboard } from "../components/areaDeTransferencia.js";
-import { toast } from "../components/AvisosRapidos.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { iconeHtml } from "../utils/icones.js";
 import { relatorioDeAtualizacao, haQuantoTempo } from "../domain/relatorio.js";
 import { tempoRelativo, formatarDataHora } from "../utils/data.js";
@@ -157,7 +157,7 @@ export class ConsultaView extends View {
     try {
       const cliente = await this.api.get(`/clientes/by-nome/${encodeURIComponent(nome)}`, null, { key: "consulta:cliente" });
       if (!cliente) {
-        toast.error("Cliente não encontrado.");
+        avisoRapido.erro("Cliente não encontrado.");
         return;
       }
       const [historico, painelVersoes, acessos, situacaoSistemas] = await Promise.all([
@@ -169,7 +169,7 @@ export class ConsultaView extends View {
       this._renderDetail(cliente, historico, painelVersoes, acessos, situacaoSistemas);
     } catch (erro) {
       if (erro?.cancelled) return; // outra seleção, mais nova, tomou o lugar
-      toast.error("Não foi possível carregar os dados deste cliente.");
+      avisoRapido.erro("Não foi possível carregar os dados deste cliente.");
     }
   }
 
@@ -252,7 +252,7 @@ export class ConsultaView extends View {
         const tipo = e.target.closest("[data-copy]")?.dataset.copy;
         if (!tipo) return;
         const valor = tipo === "anydesk" ? acesso.anydesk : (acesso.suporte_bredas || acesso.suporteBredas);
-        if (valor && await copyToClipboard(valor)) toast.success("Acesso copiado.");
+        if (valor && await copyToClipboard(valor)) avisoRapido.sucesso("Acesso copiado.");
       });
       acessosBox.appendChild(card);
     }
@@ -319,7 +319,7 @@ export class ConsultaView extends View {
       const anterior = historico[idx + 1] || null;
       const textoChamado = relatorioDeAtualizacao(reg, { cliente, anterior });
       if (await copyToClipboard(textoChamado)) {
-        toast.success("Chamado copiado para a área de transferência.");
+        avisoRapido.sucesso("Chamado copiado para a área de transferência.");
       }
     });
   }

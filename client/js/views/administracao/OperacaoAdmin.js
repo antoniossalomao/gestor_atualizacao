@@ -1,6 +1,6 @@
 import { html } from "../../utils/html.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/AvisosRapidos.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { linhaRegraNumero, rodapeFormulario } from "../../templates/administracao.js";
@@ -87,7 +87,7 @@ export class OperacaoAdmin extends FormularioRegras {
     try {
       this.sistemas = (await this.api.get("/sistemas/catalogo")).filter((s) => s.ativo);
     } catch (err) {
-      if (!err?.cancelled) toast.error("Não foi possível carregar a classificação dos sistemas.");
+      if (!err?.cancelled) avisoRapido.erro("Não foi possível carregar a classificação dos sistemas.");
       return;
     }
 
@@ -176,7 +176,7 @@ export class OperacaoAdmin extends FormularioRegras {
       });
       for (const chave of ["resumo", "sistemas:", "consulta:", "atualizacoes:"]) this.cache?.invalidar(chave);
       await this._carregarSistemas();
-      toast.success("Classificação salva para a equipe.");
+      avisoRapido.sucesso("Classificação salva para a equipe.");
     } catch (err) {
       Modal.alert("Não foi possível salvar", err.message || "Ocorreu um erro inesperado.", "error");
     } finally {

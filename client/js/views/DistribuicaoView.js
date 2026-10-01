@@ -1,6 +1,6 @@
 import { View } from "../app/View.js";
 import { iconeSvg } from "../utils/icones.js";
-import { toast } from "../components/AvisosRapidos.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { Modal } from "../components/Modal.js";
 import { estadoVazio } from "../components/estadoVazio.js";
 import { escapeAttr, escapeHtml, plural } from "../utils/html.js";
@@ -148,7 +148,7 @@ export class DistribuicaoView extends View {
       button.disabled = true;
       this.cache?.invalidar("distribuicao:");
       try { await this.refresh(true); }
-      catch { toast.error("Não foi possível atualizar o painel. Tente novamente."); }
+      catch { avisoRapido.erro("Não foi possível atualizar o painel. Tente novamente."); }
       finally { button.disabled = false; }
     });
     this.container.querySelector('[data-action="copy-report"]').addEventListener("click", () => this._copyReport());
@@ -231,7 +231,7 @@ export class DistribuicaoView extends View {
     );
 
     this._startPolling();
-    if (manual) toast.info("Painel atualizado.");
+    if (manual) avisoRapido.informar("Painel atualizado.");
   }
 
   _fillSystems() {
@@ -337,12 +337,12 @@ export class DistribuicaoView extends View {
   async _copyReport() {
     const logs = this._filteredLogGroups().flatMap((group) => group.logs);
     if (!logs.length) {
-      toast.info("Não há retornos nesse filtro para copiar.");
+      avisoRapido.informar("Não há retornos nesse filtro para copiar.");
       return;
     }
     const classificados = logs.map((log) => ({ ...log, status: classificarRetorno(log).label }));
-    if (await copyToClipboard(relatorioRetornosTexto(classificados))) toast.success("Relatório copiado.");
-    else toast.error("Não foi possível copiar o relatório.");
+    if (await copyToClipboard(relatorioRetornosTexto(classificados))) avisoRapido.sucesso("Relatório copiado.");
+    else avisoRapido.erro("Não foi possível copiar o relatório.");
   }
 
   _renderAgents() {
@@ -451,9 +451,9 @@ export class DistribuicaoView extends View {
           .join("\n");
 
         if (await copyToClipboard(textoDiag)) {
-          toast.success(`Diagnóstico de ${agent.empresa} copiado.`);
+          avisoRapido.sucesso(`Diagnóstico de ${agent.empresa} copiado.`);
         } else {
-          toast.error("Não foi possível copiar o diagnóstico.");
+          avisoRapido.erro("Não foi possível copiar o diagnóstico.");
         }
       });
       actions.appendChild(diagBtn);
@@ -491,7 +491,7 @@ export class DistribuicaoView extends View {
       const result = await this.api.delete(`/versoes/agentes/${identificador}`);
       const total = Number(result?.retornosExcluidos) || 0;
       if (total === 0) throw new ErroApi("O servidor não removeu nenhum retorno. Reinicie o serviço web e tente novamente.", 409);
-      toast.success(`Agente excluído (${plural(total, "retorno")} removido${total === 1 ? "" : "s"}).`);
+      avisoRapido.sucesso(`Agente excluído (${plural(total, "retorno")} removido${total === 1 ? "" : "s"}).`);
       this.cache?.invalidar("distribuicao:");
       await this.refresh();
     } catch (error) {
@@ -515,7 +515,7 @@ export class DistribuicaoView extends View {
     try {
       const identificador = encodeURIComponent(String(agent.cnpj || "").trim());
       await this.api.patch(`/versoes/agentes/${identificador}/${pausar ? "pausar" : "retomar"}`);
-      toast.success(pausar ? "Agente pausado." : "Agente retomado.");
+      avisoRapido.sucesso(pausar ? "Agente pausado." : "Agente retomado.");
       this.cache?.invalidar("distribuicao:");
       await this.refresh();
     } catch (error) {
@@ -548,7 +548,7 @@ export class DistribuicaoView extends View {
   _avisarRecuperados(antes, depois) {
     const falhas = new Map(antes.filter((a) => ["erro", "offline", "pendencias"].includes(a.situacao)).map((a) => [a.cnpj, a]));
     for (const agente of depois) {
-      if (agente.situacao === "ok" && falhas.has(agente.cnpj)) toast.success(`${agente.empresa || agente.cnpj} voltou a ficar em dia.`);
+      if (agente.situacao === "ok" && falhas.has(agente.cnpj)) avisoRapido.sucesso(`${agente.empresa || agente.cnpj} voltou a ficar em dia.`);
     }
   }
 

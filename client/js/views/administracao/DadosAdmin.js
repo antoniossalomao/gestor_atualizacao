@@ -1,6 +1,6 @@
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/AvisosRapidos.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { html } from "../../utils/html.js";
 import { iconeHtml } from "../../utils/icones.js";
@@ -115,7 +115,7 @@ export class DadosAdmin extends View {
       const agora = new Date();
       const carimbo = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
       baixarBlob(blob, `atualizacoes_completo_${carimbo}.xlsx`);
-      toast.success("Planilha completa de atualizações exportada com sucesso.");
+      avisoRapido.sucesso("Planilha completa de atualizações exportada com sucesso.");
     } catch (err) {
       Modal.alert("Erro ao exportar", err.message || "Não foi possível baixar os dados.", "error");
     } finally {

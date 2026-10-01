@@ -30,7 +30,7 @@ const ICONES = { success: "check", error: "alerta", info: "relogio" };
  *  - **Não duplica**: dois toasts com o mesmo texto viram um só com contador
  *    ("2×"). Importar uma planilha grande disparava a mesma mensagem várias
  *    vezes, empilhando lixo no canto.
- *  - **Ação de desfazer**: `toast.undo(texto, fn)` mostra um botão "Desfazer".
+ *  - **Ação de desfazer**: `avisoRapido.desfazer(texto, fn)` mostra um botão "Desfazer".
  *    É o que substituiu o modal de confirmação em toda exclusão -- confirmar
  *    no automático não protege ninguém, poder voltar atrás protege.
  */
@@ -46,7 +46,7 @@ export class GerenteDeAvisos {
    * @param {"success"|"error"|"info"} kind
    * @param {{acao?: {label: string, onClick: () => void}, duracao?: number}} [opts]
    */
-  show(message, kind = "success", opts = {}) {
+  exibir(message, kind = "success", opts = {}) {
     const chave = `${kind}:${message}`;
     const existente = this.ativos.get(chave);
     // Mesma mensagem repetida vira um contador, em vez de N caixas idênticas.
@@ -120,16 +120,16 @@ export class GerenteDeAvisos {
     this._agendarSaida(chave, duracao);
   }
 
-  success(message, opts) {
-    this.show(message, "success", opts);
+  sucesso(message, opts) {
+    this.exibir(message, "success", opts);
   }
 
-  error(message, opts) {
-    this.show(message, "error", opts);
+  erro(message, opts) {
+    this.exibir(message, "error", opts);
   }
 
-  info(message, opts) {
-    this.show(message, "info", opts);
+  informar(message, opts) {
+    this.exibir(message, "info", opts);
   }
 
   /**
@@ -137,8 +137,8 @@ export class GerenteDeAvisos {
    * exclusões: a ação acontece na hora (rápido) e fica reversível por alguns
    * segundos (seguro).
    */
-  undo(message, onUndo, label = "Desfazer") {
-    this.show(message, "info", { acao: { label, onClick: onUndo } });
+  desfazer(message, onUndo, label = "Desfazer") {
+    this.exibir(message, "info", { acao: { label, onClick: onUndo } });
   }
 
   _agendarSaida(chave, ms) {
@@ -160,4 +160,4 @@ export class GerenteDeAvisos {
   }
 }
 
-export const toast = new GerenteDeAvisos();
+export const avisoRapido = new GerenteDeAvisos();

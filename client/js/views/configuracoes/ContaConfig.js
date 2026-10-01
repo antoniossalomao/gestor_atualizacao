@@ -1,6 +1,6 @@
 import { ErroApi } from "../../api/ApiPainel.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/AvisosRapidos.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { html } from "../../utils/html.js";
 import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
@@ -193,7 +193,7 @@ export class ContaConfig {
         this.perfil = await this.api.put("/usuarios/me", { nome: campo.value });
         this._pintarPerfil();
         this.opcoes.aoMudarNome(this.perfil.nome);
-        toast.success("Nome atualizado.");
+        avisoRapido.sucesso("Nome atualizado.");
       } catch (err) {
         liberar();
         Modal.alert("Não foi possível trocar o nome", mensagem(err), "warning");
@@ -240,7 +240,7 @@ export class ContaConfig {
         await this.api.put("/usuarios/me/senha", { senhaAtual: valor("senhaAtual"), senhaNova: valor("senhaNova") });
         form.reset();
         estado.textContent = "";
-        toast.success("Senha trocada. A sua conta foi desconectada nos outros aparelhos.");
+        avisoRapido.sucesso("Senha trocada. A sua conta foi desconectada nos outros aparelhos.");
         this._pintarSessoes(await this.api.get("/usuarios/me/sessoes").catch(() => null));
       } catch (err) {
         estado.textContent = mensagem(err);
@@ -262,10 +262,10 @@ export class ContaConfig {
         const liberar = marcarOcupado(encerrar);
         try {
           await this.api.delete(`/usuarios/me/sessoes/${encodeURIComponent(encerrar.dataset.id || "")}`);
-          toast.success("Sessão encerrada. Aquele aparelho vai pedir login de novo.");
+          avisoRapido.sucesso("Sessão encerrada. Aquele aparelho vai pedir login de novo.");
         } catch (err) {
           liberar();
-          toast.error(mensagem(err));
+          avisoRapido.erro(mensagem(err));
         }
         this._pintarSessoes(await this.api.get("/usuarios/me/sessoes").catch(() => null));
         return;
@@ -284,9 +284,9 @@ export class ContaConfig {
     if (!ok) return;
     try {
       const { encerradas } = await this.api.delete("/usuarios/me/sessoes");
-      toast.success(encerradas === 1 ? "1 sessão encerrada." : `${encerradas} sessões encerradas.`);
+      avisoRapido.sucesso(encerradas === 1 ? "1 sessão encerrada." : `${encerradas} sessões encerradas.`);
     } catch (err) {
-      toast.error(mensagem(err));
+      avisoRapido.erro(mensagem(err));
     }
     this._pintarSessoes(await this.api.get("/usuarios/me/sessoes").catch(() => null));
   }

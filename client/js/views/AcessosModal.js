@@ -1,6 +1,6 @@
 import { ErroApi } from "../api/ApiPainel.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/AvisosRapidos.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { iconeSvg } from "../utils/icones.js";
 import { escapeHtml } from "../utils/html.js";
 import { copyToClipboard } from "../components/areaDeTransferencia.js";
@@ -154,7 +154,7 @@ export class AcessosModal {
     copiar.title = `Copiar ${rotulo}`;
     copiar.addEventListener("click", async () => {
       const ok = await copyToClipboard(valor);
-      toast[ok ? "success" : "error"](ok ? `${rotulo} copiado.` : "Não foi possível copiar.");
+      avisoRapido[ok ? "sucesso" : "erro"](ok ? `${rotulo} copiado.` : "Não foi possível copiar.");
     });
     linha.appendChild(copiar);
 
@@ -215,10 +215,10 @@ export class AcessosModal {
     try {
       if (this.editingId == null) {
         await this.api.post(`/clientes/${this.cliente.id}/acessos`, data);
-        toast.success(`Máquina "${maquina}" adicionada.`);
+        avisoRapido.sucesso(`Máquina "${maquina}" adicionada.`);
       } else {
         await this.api.put(`/clientes/acessos/${this.editingId}`, data);
-        toast.success(`Máquina "${maquina}" atualizada.`);
+        avisoRapido.sucesso(`Máquina "${maquina}" atualizada.`);
       }
       this._resetForm();
       await this._reload();
@@ -241,7 +241,7 @@ export class AcessosModal {
     try {
       await this.api.delete(`/clientes/acessos/${acesso.id}`);
       await this._reload();
-      toast.success(`Máquina "${acesso.maquina}" removida.`);
+      avisoRapido.sucesso(`Máquina "${acesso.maquina}" removida.`);
     } catch (err) {
       liberar();
       Modal.alert("Erro", errorMessage(err), "error");

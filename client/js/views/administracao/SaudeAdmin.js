@@ -1,5 +1,5 @@
 import { View } from "../../app/View.js";
-import { toast } from "../../components/AvisosRapidos.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { html } from "../../utils/html.js";
 import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
@@ -43,7 +43,7 @@ export class SaudeAdmin extends View {
       dados = await this.api.get("/saude");
     } catch (err) {
       if (err?.cancelled) return;
-      toast.error(mensagem(err));
+      avisoRapido.erro(mensagem(err));
       return;
     }
     const saudavel = dados.statusGeral === "saudavel";

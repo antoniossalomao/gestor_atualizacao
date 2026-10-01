@@ -1,7 +1,7 @@
 import { View } from "../app/View.js";
 import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/AvisosRapidos.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { estadoVazio } from "../components/estadoVazio.js";
 import { ErroApi } from "../api/ApiPainel.js";
 import { prefs } from "../app/preferencias.js";
@@ -239,7 +239,7 @@ export class CampanhasView extends View {
   async _mudar(fazer, sucesso) {
     try {
       await fazer();
-      toast.success(sucesso);
+      avisoRapido.sucesso(sucesso);
       this.cache?.invalidar();
       await this.refresh();
     } catch (err) {
@@ -284,7 +284,7 @@ export class CampanhasView extends View {
             data: hojeBR(),
             obs: c.prazo ? `Prazo da campanha: ${c.prazo}` : "",
           });
-          toast.success(`Agendamento criado para ${row.nome}.`);
+          avisoRapido.sucesso(`Agendamento criado para ${row.nome}.`);
           this.cache?.invalidar();
           await this.refresh();
         } catch (err) {
@@ -359,7 +359,7 @@ export class CampanhasView extends View {
         try {
           const salva = campanha ? await this.api.put(`/campanhas/${campanha.id}`, dados) : await this.api.post("/campanhas", dados);
           close();
-          toast.success(campanha ? "Campanha atualizada." : "Campanha criada.");
+          avisoRapido.sucesso(campanha ? "Campanha atualizada." : "Campanha criada.");
           this.mostrarEncerradas = Boolean(salva.encerradaEm);
           this.selecionadaId = salva.id;
           this._salvar();

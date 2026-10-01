@@ -1,6 +1,6 @@
 import { iconeSvg, simboloMarca } from "../utils/icones.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/AvisosRapidos.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { CacheSwr } from "./CacheSwr.js";
 import { Roteador } from "./Roteador.js";
 import { PaletaDeComandos } from "../components/PaletaDeComandos.js";
@@ -751,7 +751,7 @@ export class App {
     // também passa, justamente quando o que ele mostra está mais velho.
     this._carregarNotificacoes();
     await this._mostrarAba(this.activeTab);
-    if (avisar) toast.success("Dados atualizados.");
+    if (avisar) avisoRapido.sucesso("Dados atualizados.");
   }
 
   /**
@@ -870,13 +870,13 @@ export class App {
         executar: () => {
           const compacta = aparencia.densidade() === "compacta";
           aparencia.aplicar({ densidade: compacta ? "padrao" : "compacta" });
-          toast.info(compacta ? "Linhas no tamanho padrão." : "Linhas compactas: cabe mais na tela.");
+          avisoRapido.informar(compacta ? "Linhas no tamanho padrão." : "Linhas compactas: cabe mais na tela.");
         } },
       { id: "acao:contraste", titulo: "Alternar contraste alto", grupo: "Aparência", icone: "acessibilidade",
         executar: () => {
           const alto = aparencia.contraste() === "alto";
           aparencia.aplicar({ contraste: alto ? "normal" : "alto" });
-          toast.info(alto ? "Contraste normal." : "Contraste alto ligado.");
+          avisoRapido.informar(alto ? "Contraste normal." : "Contraste alto ligado.");
         } },
       { id: "acao:atalhos", titulo: "Ver atalhos de teclado", grupo: "Ações", icone: "teclado",
         executar: () => mostrarAtalhos() },
@@ -1095,7 +1095,7 @@ export class App {
       // novamente" (View.swr). Toast em cima seria o mesmo recado duas vezes,
       // e de novo a cada tentativa.
       if (error?.avisadoNaTela) return;
-      toast.error("Não foi possível carregar os dados desta tela.");
+      avisoRapido.erro("Não foi possível carregar os dados desta tela.");
     });
   }
 
@@ -1106,7 +1106,7 @@ export class App {
     this._desmontar();
     this.root.className = "";
     this.root.replaceChildren();
-    toast.info("Sua sessão expirou. Entre novamente.");
+    avisoRapido.informar("Sua sessão expirou. Entre novamente.");
     new LoginView(this.root, this.api, "login", (user) => {
       this.reauthenticating = false;
       this._onAuthenticated(user);

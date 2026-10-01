@@ -1,7 +1,7 @@
 import { ErroApi } from "../../api/ApiPainel.js";
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/AvisosRapidos.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { Gaveta } from "../../components/Gaveta.js";
 import { html } from "../../utils/html.js";
 import { iconeHtml } from "../../utils/icones.js";
@@ -99,7 +99,7 @@ export class UsuariosAdmin extends View {
       this.usuarios = await this.api.get("/usuarios");
     } catch (err) {
       if (err?.cancelled) return;
-      toast.error(mensagem(err));
+      avisoRapido.erro(mensagem(err));
       return;
     }
     this._desenhar();
@@ -129,7 +129,7 @@ export class UsuariosAdmin extends View {
       await this.api.post("/usuarios", dados);
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
-      toast.success(`Conta de "${dados.nome}" criada como ${rotuloPapel(dados.role)}.`);
+      avisoRapido.sucesso(`Conta de "${dados.nome}" criada como ${rotuloPapel(dados.role)}.`);
       await this.refresh();
     } catch (err) {
       Modal.alert("Não foi possível criar a conta", mensagem(err), "warning");
@@ -157,7 +157,7 @@ export class UsuariosAdmin extends View {
     select.disabled = true;
     try {
       await this.api.put(`/usuarios/${u.id}`, { role: novo });
-      toast.success(`"${u.nome}" agora é ${rotuloPapel(novo)}. Ele precisa entrar de novo para valer.`);
+      avisoRapido.sucesso(`"${u.nome}" agora é ${rotuloPapel(novo)}. Ele precisa entrar de novo para valer.`);
       await this.refresh();
     } catch (err) {
       select.value = u.role;
@@ -178,7 +178,7 @@ export class UsuariosAdmin extends View {
     const liberar = marcarOcupado(botao);
     try {
       await this.api.delete(`/usuarios/${u.id}`);
-      toast.success(`Acesso de "${u.nome}" removido.`);
+      avisoRapido.sucesso(`Acesso de "${u.nome}" removido.`);
       await this.refresh();
     } catch (err) {
       liberar();

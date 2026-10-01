@@ -1,7 +1,7 @@
 import { Modal } from "./Modal.js";
 import { html } from "../utils/html.js";
 import { copyToClipboard } from "./areaDeTransferencia.js";
-import { toast } from "./AvisosRapidos.js";
+import { avisoRapido } from "./AvisosRapidos.js";
 import { aparencia } from "../app/aparencia.js";
 
 /**
@@ -123,7 +123,7 @@ export function abrirRelatorio({ tipos, gerar, periodo = false }) {
 
   box.querySelector('[data-action="copiar"]').addEventListener("click", async () => {
     if (await copyToClipboard(texto)) {
-      toast.success("Relatório copiado.");
+      avisoRapido.sucesso("Relatório copiado.");
       if (aparencia.relatorioFecharAoCopiar()) close();
     } else {
       const area = document.createElement("textarea");
@@ -133,7 +133,7 @@ export function abrirRelatorio({ tipos, gerar, periodo = false }) {
       previa.replaceChildren(area);
       area.focus();
       area.select();
-      toast.info("Use Ctrl+C para copiar o texto selecionado.");
+      avisoRapido.informar("Use Ctrl+C para copiar o texto selecionado.");
     }
   });
 

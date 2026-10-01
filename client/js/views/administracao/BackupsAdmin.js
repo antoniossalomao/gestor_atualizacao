@@ -1,6 +1,6 @@
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/AvisosRapidos.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { estadoVazio } from "../../components/estadoVazio.js";
 import { html } from "../../utils/html.js";
 import { iconeHtml } from "../../utils/icones.js";
@@ -92,7 +92,7 @@ export class BackupsAdmin extends View {
       }
     } catch (err) {
       if (err?.cancelled) return;
-      toast.error(mensagem(err));
+      avisoRapido.erro(mensagem(err));
       return;
     }
 
@@ -130,7 +130,7 @@ export class BackupsAdmin extends View {
       await this.api.put("/configuracao-sistema", { backupsManter: valor });
       this.retencaoAtual = valor;
       this.btnSalvarRetencao.disabled = true;
-      toast.success("Política de retenção atualizada.");
+      avisoRapido.sucesso("Política de retenção atualizada.");
     } catch (err) {
       Modal.alert("Erro ao salvar retenção", mensagem(err), "error");
     } finally {
@@ -184,7 +184,7 @@ export class BackupsAdmin extends View {
           senha: senha.value,
         });
         close();
-        toast.success(`Banco restaurado para ${b.label}. Recarregando…`);
+        avisoRapido.sucesso(`Banco restaurado para ${b.label}. Recarregando…`);
         setTimeout(() => window.location.reload(), 1200);
       } catch (err) {
         liberar();

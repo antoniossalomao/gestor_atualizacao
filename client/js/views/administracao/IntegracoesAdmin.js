@@ -1,4 +1,4 @@
-import { toast } from "../../components/AvisosRapidos.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { html } from "../../utils/html.js";
 import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
@@ -112,10 +112,10 @@ export class IntegracoesAdmin extends FormularioRegras {
     const liberar = marcarOcupado(botao);
     try {
       const r = await this.api.post("/configuracao-sistema/testar-discord", url ? { url } : {});
-      if (r.ok) toast.success(r.detalhe);
-      else toast.error(r.detalhe);
+      if (r.ok) avisoRapido.sucesso(r.detalhe);
+      else avisoRapido.erro(r.detalhe);
     } catch (err) {
-      toast.error(mensagem(err));
+      avisoRapido.erro(mensagem(err));
     } finally {
       liberar();
     }

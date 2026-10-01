@@ -22,7 +22,7 @@ import { duradouras, prefs } from "../../app/preferencias.js";
 import { notificacoes } from "../../app/notificacoesDoSistema.js";
 import { ATALHOS } from "../../app/atalhos.js";
 import { COMO_USAR_TELAS, NOVIDADES, explicacaoSituacoes } from "../../domain/ajuda.js";
-import { toast } from "../../components/AvisosRapidos.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
 
 /**
  * Definição central de todas as preferências das Configurações (Seção 12 do planejamento).
@@ -130,7 +130,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar,
               atual: () => String(aparencia.linhasPorPagina()),
               aoEscolher: (valor) => {
                 aparencia.aplicar({ linhasPorPagina: Number(valor) });
-                toast.info(`As tabelas passam a mostrar ${valor} linhas por página.`);
+                avisoRapido.informar(`As tabelas passam a mostrar ${valor} linhas por página.`);
               },
             },
             {
@@ -239,7 +239,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar,
               atual: () => aparencia.posicaoAvisos(),
               aoEscolher: (valor) => {
                 aparencia.aplicar({ posicaoAvisos: valor });
-                toast.info(valor === "topo" ? "Os avisos passam a aparecer aqui em cima." : "Os avisos voltam para o rodapé.");
+                avisoRapido.informar(valor === "topo" ? "Os avisos passam a aparecer aqui em cima." : "Os avisos voltam para o rodapé.");
               },
             },
             {
@@ -259,7 +259,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar,
               ajuda: "Exibe uma notificação de teste com a posição e duração configuradas.",
               busca: "exemplo testar aviso toast",
               rotulo: "Mostrar um aviso",
-              executar: () => toast.success("Este é um aviso de exemplo. É assim que o Gestor confirma as suas ações."),
+              executar: () => avisoRapido.sucesso("Este é um aviso de exemplo. É assim que o Gestor confirma as suas ações."),
             },
           ],
         },
@@ -413,7 +413,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar,
               aoEscolher: async (ligar) => {
                 const ligou = await notificacoes.definir(ligar);
                 if (ligar && !ligou) {
-                  toast.error(notificacoes.estadoPermissao().texto);
+                  avisoRapido.erro(notificacoes.estadoPermissao().texto);
                   return false;
                 }
                 return true;

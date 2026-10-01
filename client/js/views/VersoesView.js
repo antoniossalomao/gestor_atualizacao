@@ -1,5 +1,5 @@
 import { View } from "../app/View.js";
-import { toast } from "../components/AvisosRapidos.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { iconeSvg } from "../utils/icones.js";
 import { estadoVazio } from "../components/estadoVazio.js";
 import { escapeAttr, escapeHtml, plural } from "../utils/html.js";
@@ -230,7 +230,7 @@ export class VersoesView extends View {
       }
     );
 
-    if (showToast && dados) toast.info("Dados de versões atualizados.");
+    if (showToast && dados) avisoRapido.informar("Dados de versões atualizados.");
   }
 
   _render() {
@@ -597,7 +597,7 @@ export class VersoesView extends View {
       this._renderPilotPicker();
       this._resetChangelog();
       this._updateReplacementWarning();
-      toast.success("Versão enviada como rascunho. Revise e publique no histórico abaixo.");
+      avisoRapido.sucesso("Versão enviada como rascunho. Revise e publique no histórico abaixo.");
       this._invalidateVersions();
       await this.refresh();
     } catch (error) {
@@ -643,7 +643,7 @@ export class VersoesView extends View {
     try {
       const result = await this.api.post(`/versoes/${item.id}/publicar`);
       const replaced = result?.substituidas || [];
-      toast.success(
+      avisoRapido.sucesso(
         replaced.length ? `Versão ${item.versao} no ar. A ${replaced[0].versao} foi substituída.` : `Versão ${item.versao} publicada.`
       );
       this._invalidateVersions();
@@ -669,7 +669,7 @@ export class VersoesView extends View {
     button.disabled = true;
     try {
       await this.api.delete(`/versoes/${item.id}`);
-      toast.success(`Versão ${item.versao} excluída.`);
+      avisoRapido.sucesso(`Versão ${item.versao} excluída.`);
       this._invalidateVersions();
       await this.refresh();
     } catch (error) {
@@ -684,7 +684,7 @@ export class VersoesView extends View {
     button.disabled = true;
     try {
       await this.api.post(`/versoes/${item.id}/promover`);
-      toast.success("Versão promovida para produção geral.");
+      avisoRapido.sucesso("Versão promovida para produção geral.");
       this._invalidateVersions();
       await this.refresh();
     } catch (error) {
@@ -699,7 +699,7 @@ export class VersoesView extends View {
     button.disabled = true;
     try {
       const resultado = await this.api.post(`/versoes/${item.id}/rollback`);
-      toast.success(`Rollback concluído. ${resultado.versao.versao} voltou ao ar.`);
+      avisoRapido.sucesso(`Rollback concluído. ${resultado.versao.versao} voltou ao ar.`);
       this._invalidateVersions();
       await this.refresh();
     } catch (error) {
