@@ -15,6 +15,8 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Diagnóstico, "Copiar para o suporte" — F6 (01/10/2026):** um botão junta a conferência num texto pronto para colar: situação, pendências, versão, Node, tempo no ar, memória, banco, backups, agentes, pacotes e navegador. Antes, o administrador copiava número por número ou mandava um print que não dava para pesquisar. O texto é o mesmo da tela no momento da conferência e não leva nada que dê acesso (só o nome do arquivo do banco, nunca a chave dos agentes). A ajuda da aba Sobre cita o botão.
+
 - **Backups e Dados — F4 (01/10/2026):**
   - **Fazer cópia agora:** novo botão em Backups (`POST /api/backups`, só admin, com o mesmo limitador dos downloads). Serve para antes de uma importação grande ou de reclassificar sistemas, já que a cópia automática só acontece quando o servidor inicia. A cópia é conferida, entra na mesma retenção, fica registrada na Auditoria e atualiza a faixa de pendências na hora.
   - **Conferência de cadastros (Dados):** antes eram só dois botões que abriam Clientes e Sistemas. Agora mostra quantos e quais clientes estão sem nenhum sistema (`GET /api/clientes/sem-sistema`) e quais sistemas atualizáveis estão sem versão oficial. Os dois casos ficam fora da conta de situação sem ninguém perceber.

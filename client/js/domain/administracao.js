@@ -1,3 +1,5 @@
+import { formatarBytes, formatarDataHora } from "../utils/data.js";
+
 /**
  * Regras da tela Administração que não dependem do DOM.
  */
@@ -164,4 +166,38 @@ export function pendenciasPorAba(pendencias) {
  */
 export function sistemasSemReferencia(catalogo) {
   return (catalogo || []).filter((s) => s.ativo && s.controlaVersao && !s.ultimaVersao).map((s) => s.nome);
+}
+
+/**
+ * O Diagnóstico em texto puro, para colar numa conversa com o suporte. Antes
+ * a ajuda pedia "anote a tela, o que você fez e a hora", e o administrador
+ * copiava número por número dos blocos -- ou mandava um print que não dava
+ * para pesquisar.
+ *
+ * Só o que ajuda a diagnosticar e nada que dê acesso: o nome do arquivo do
+ * banco, e não o caminho; a situação da chave dos agentes, e não ela.
+ * @param {any} dados resposta de /api/saude
+ * @param {ReturnType<typeof situacaoDiagnostico>} situacao
+ * @param {{atualizadorHabilitado: boolean, conferidoEm: Date, navegador?: string}} opcoes
+ */
+export function textoDiagnostico(dados, situacao, { atualizadorHabilitado, conferidoEm, navegador = "" }) {
+  const agentes = dados?.agentes || {};
+  const linhas = [
+    `Diagnóstico do Gestor de Atualizações — ${formatarDataHora(conferidoEm.toISOString())}`,
+    "",
+    `Situação: ${situacao.titulo}`,
+    ...situacao.pendencias.map((p) => `  - ${p.texto}`),
+    "",
+    `Servidor: v${dados?.servidor?.versao ?? "?"} · Node ${dados?.servidor?.node ?? "?"} · ${dados?.servidor?.plataforma ?? "?"}`,
+    `No ar há: ${formatarTempoAtivo(dados?.servidor?.uptimeSegundos)}`,
+    `Memória: ${dados?.servidor?.memoriaHeapUsadaMB ?? "?"} MB de ${dados?.servidor?.memoriaHeapTotalMB ?? "?"} MB`,
+    `Banco: ${dados?.banco?.caminho ?? "?"} · ${formatarBytes(dados?.banco?.tamanhoBytes)} · integridade ${dados?.banco?.integridade ?? "?"} · ${String(dados?.banco?.journalMode ?? "?").toUpperCase()}`,
+    `Backups: ${dados?.backups?.total ?? 0} · último ${dados?.backups?.ultimo ? formatarDataHora(dados.backups.ultimo) : "nenhum"}`,
+    atualizadorHabilitado
+      ? `Agentes: ${agentes.total ?? 0} (${agentes.ok ?? 0} em dia · ${agentes.offline ?? 0} sem contato · ${agentes.erro ?? 0} com erro)`
+      : "Atualizador: desligado",
+    `Pacotes em disco: ${dados?.pacotes?.total ? `${dados.pacotes.total} (${formatarBytes(dados.pacotes.tamanhoBytes)})` : "nenhum"}`,
+  ];
+  if (navegador) linhas.push(`Navegador: ${navegador}`);
+  return linhas.join("\n");
 }

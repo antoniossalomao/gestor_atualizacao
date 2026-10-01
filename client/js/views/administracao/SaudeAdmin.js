@@ -5,7 +5,8 @@ import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao } from "../../templates/secao.js";
 import { blocosSaude, resumoDiagnostico } from "../../templates/administracao.js";
-import { situacaoDiagnostico } from "../../domain/administracao.js";
+import { situacaoDiagnostico, textoDiagnostico } from "../../domain/administracao.js";
+import { copiarParaAreaDeTransferencia } from "../../components/areaDeTransferencia.js";
 import { mensagem } from "./FormularioRegras.js";
 
 /**
@@ -21,12 +22,22 @@ export class SaudeAdmin extends View {
       ${cabecalhoSecao({
         titulo: "Diagnóstico do servidor",
         descricao: "Saúde do processo, integridade do banco de dados e cópias de segurança.",
-        acoes: html`<button type="button" class="btn" data-action="atualizar">${iconeHtml("atualizar")} Conferir de novo</button>`,
+        acoes: html`
+          <button type="button" class="btn" data-action="copiar" disabled>${iconeHtml("copiar")} Copiar para o suporte</button>
+          <button type="button" class="btn" data-action="atualizar">${iconeHtml("atualizar")} Conferir de novo</button>`,
       })}
       <div data-role="situacao"></div>
       <div data-role="blocos"></div>`;
     this.situacao = this.container.querySelector('[data-role="situacao"]');
     this.blocos = this.container.querySelector('[data-role="blocos"]');
+    this.botaoCopiar = /** @type {HTMLButtonElement} */ (this.container.querySelector('[data-action="copiar"]'));
+    this.botaoCopiar.addEventListener("click", async () => {
+      if (!this.texto) return;
+      const ok = await copiarParaAreaDeTransferencia(this.texto);
+      if (ok) avisoRapido.sucesso("Diagnóstico copiado. Cole na conversa com o suporte.");
+      else avisoRapido.erro("O navegador não deixou copiar. Selecione os blocos e copie à mão.");
+    });
+
     // Cada pendência leva à aba onde ela se resolve.
     this.situacao.addEventListener("click", (e) => {
       const alvo = /** @type {HTMLElement} */ (e.target).closest("[data-ir-aba]");
@@ -63,7 +74,16 @@ export class SaudeAdmin extends View {
       atualizadorHabilitado: this.atualizadorHabilitado,
       chaveAgentes: completa?.chaveAgentes ?? null,
     });
-    this.situacao.innerHTML = resumoDiagnostico(situacao, new Date()).toString();
+    const conferidoEm = new Date();
+    this.situacao.innerHTML = resumoDiagnostico(situacao, conferidoEm).toString();
+    // O texto é do MESMO momento da tela, e não montado no clique: o que se
+    // manda ao suporte é o que a pessoa está vendo.
+    this.texto = textoDiagnostico(dados, situacao, {
+      atualizadorHabilitado: this.atualizadorHabilitado,
+      conferidoEm,
+      navegador: navigator.userAgent,
+    });
+    this.botaoCopiar.disabled = false;
     this.blocos.innerHTML = blocosSaude(dados, { atualizadorHabilitado: this.atualizadorHabilitado });
   }
 }

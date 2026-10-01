@@ -241,7 +241,7 @@ export function cartoesSuporte({ versao, ehAdmin }) {
           <div>
             <strong>Encontrou um problema no painel</strong>
             <p>Anote a tela, o que você fez e a hora, e passe para um administrador${versao ? ` (versão ${versao})` : ""}.
-              ${ehAdmin ? "Em Administração, Auditoria mostra quem mudou o quê, e Diagnóstico mostra a saúde do servidor." : ""}</p>
+              ${ehAdmin ? "Em Administração, Auditoria mostra quem mudou o quê, e em Diagnóstico o botão “Copiar para o suporte” junta a saúde do servidor num texto pronto para colar." : ""}</p>
           </div>
         </div>
       </div>

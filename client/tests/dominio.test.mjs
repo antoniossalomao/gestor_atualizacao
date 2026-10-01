@@ -451,3 +451,38 @@ test("Administração - sistemas sem versão oficial", async () => {
   assert.deepEqual(sistemasSemReferencia(catalogo), ["B_NFe", "DFe"]);
   assert.deepEqual(sistemasSemReferencia(null), []);
 });
+
+test("Administração - diagnóstico em texto para o suporte", async (t) => {
+  const { textoDiagnostico, situacaoDiagnostico } = await import("../js/domain/administracao.js");
+  const dados = {
+    banco: { caminho: "gestao.db", tamanhoBytes: 2048, integridade: "ok", journalMode: "wal" },
+    servidor: { versao: "2.1.0", node: "v22.0.0", plataforma: "win32 (x64)", uptimeSegundos: 3700, memoriaHeapUsadaMB: 20, memoriaHeapTotalMB: 30 },
+    backups: { total: 0, ultimo: null },
+    agentes: { total: 3, ok: 2, offline: 1, erro: 0 },
+    pacotes: { total: 0, tamanhoBytes: 0 },
+  };
+  const situacao = situacaoDiagnostico(dados, { atualizadorHabilitado: true, chaveAgentes: { situacao: "exemplo" } });
+  const texto = textoDiagnostico(dados, situacao, { atualizadorHabilitado: true, conferidoEm: new Date("2026-10-01T15:00:00Z"), navegador: "Chrome" });
+
+  await t.test("traz a situação, as pendências e os números de cada bloco", () => {
+    assert.match(texto, /2 pontos precisam de atenção/);
+    assert.match(texto, /- A chave dos agentes ainda é o valor de exemplo/);
+    assert.match(texto, /Servidor: v2\.1\.0/);
+    assert.match(texto, /No ar há: 1h 1m/);
+    assert.match(texto, /Backups: 0 · último nenhum/);
+    assert.match(texto, /Agentes: 3 \(2 em dia · 1 sem contato · 0 com erro\)/);
+    assert.match(texto, /Navegador: Chrome/);
+    assert.match(texto, /Pacotes em disco: nenhum/);
+  });
+
+  await t.test("nada que dê acesso: só o nome do arquivo do banco, nunca a chave", () => {
+    assert.doesNotMatch(texto, /AGENT_API_TOKEN|terminando em/);
+    assert.match(texto, /Banco: gestao\.db/);
+  });
+
+  await t.test("com o Atualizador desligado, diz isso em vez de contar agentes", () => {
+    const off = textoDiagnostico(dados, situacaoDiagnostico(dados, { atualizadorHabilitado: false }), { atualizadorHabilitado: false, conferidoEm: new Date() });
+    assert.match(off, /Atualizador: desligado/);
+    assert.doesNotMatch(off, /Agentes:/);
+  });
+});

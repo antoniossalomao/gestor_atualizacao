@@ -740,7 +740,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar,
               titulo: "Encontrou um problema no painel",
               get ajuda() {
                 const v = versao();
-                return `Anote a tela, o que você fez e a hora, e passe para um administrador${v ? ` (versão ${v})` : ""}. Em Administração, Auditoria mostra quem mudou o quê, e Diagnóstico mostra a saúde do servidor.`;
+                return `Anote a tela, o que você fez e a hora, e passe para um administrador${v ? ` (versão ${v})` : ""}. Em Administração, Auditoria mostra quem mudou o quê, e em Diagnóstico o botão "Copiar para o suporte" junta a saúde do servidor num texto pronto para colar.`;
               },
               busca: "problema erro bug falha suporte diagnostico auditoria",
             },
