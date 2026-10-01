@@ -3,7 +3,7 @@
  * preenchido pelo AuthController no login/setup, e some quando a sessao
  * expira ou o usuario faz logout.
  */
-function requireAuth(req, res, next) {
+function exigirLogin(req, res, next) {
   if (!req.session || !req.session.user) {
     res.status(401).json({ error: "Não autenticado." });
     return;
@@ -11,4 +11,4 @@ function requireAuth(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth };
+module.exports = { exigirLogin };

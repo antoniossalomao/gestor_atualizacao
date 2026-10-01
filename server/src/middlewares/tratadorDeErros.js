@@ -1,14 +1,14 @@
 /**
  * Middleware final do Express: qualquer erro passado para `next(err)` em
- * algum controller cai aqui. Erros "esperados" (ValidationError,
- * NotFoundError -- ver shared/errors.js) ja sabem seu proprio
+ * algum controller cai aqui. Erros "esperados" (ErroDeValidacao,
+ * ErroNaoEncontrado -- ver shared/erros.js) ja sabem seu proprio
  * `statusCode` e tem uma mensagem segura de mostrar pro usuario; qualquer
  * outro erro (bug, falha do banco) vira um 500 generico, sem vazar detalhes
  * internos para quem esta usando o navegador.
  */
-const { LIMITE_UPLOAD_MB } = require("../config/constants");
+const { LIMITE_UPLOAD_MB } = require("../config/constantes");
 
-function errorHandler(err, req, res, _next) {
+function tratadorDeErros(err, req, res, _next) {
   // Recusas do multer (upload): não têm statusCode, e caíam no 500 genérico
   // -- quem mandava uma planilha grande demais lia "Erro interno do
   // servidor." (P05). Viram 413/400 com o motivo.
@@ -33,4 +33,4 @@ function errorHandler(err, req, res, _next) {
   });
 }
 
-module.exports = { errorHandler };
+module.exports = { tratadorDeErros };

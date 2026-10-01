@@ -16,7 +16,7 @@
 - [ ] `npm test` passa (servidor + front-end)
 - [ ] Toda regra que, se quebrar, **erra em silêncio** tem teste
 - [ ] Comentário novo explica *por quê*, não *o quê*
-- [ ] Se mexi em rota: conferi `requireAuth`/`requireRole` em `routes/index.js`
+- [ ] Se mexi em rota: conferi `exigirLogin`/`exigirPapel` em `routes/index.js`
 - [ ] Se montei HTML com dado do usuário: passei por `escapeHtml`
 - [ ] Se ordeno por coluna: usei `shared/sortHelper.js`, não interpolei no SQL
 - [ ] Se a decisão é cara de reverter: escrevi um ADR em `docs/adr/`

@@ -32,7 +32,7 @@ function exigirHttps(req, res, next) {
   if (req.secure || LIBERADOS_EM_HTTP.has(`${req.method} ${req.path}`)) return next();
   // 403 e não 426 (Upgrade Required): o 426 pede o cabeçalho Upgrade, que é
   // de troca de protocolo na mesma conexão (TLS em HTTP/1.1, RFC 2817) e que
-  // nenhum navegador implementa. O formato segue o notFoundHandler.
+  // nenhum navegador implementa. O formato segue o rotaNaoEncontrada.
   if (req.path.startsWith("/api")) return res.status(403).json({ error: MENSAGEM });
   res.status(403).type("txt").send(MENSAGEM);
 }

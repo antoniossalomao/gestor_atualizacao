@@ -1,7 +1,7 @@
 const crypto = require("node:crypto");
 const bcrypt = require("bcryptjs");
 
-const { ValidationError, ForbiddenError } = require("../shared/errors");
+const { ErroDeValidacao, ErroDePermissao } = require("../shared/erros");
 
 const SALT_ROUNDS = 10;
 const SENHA_MIN_LENGTH = 8;
@@ -21,7 +21,7 @@ class AuthService {
   constructor(db, historico) {
     this.db = db;
     this.historico = historico;
-    /** @type {import('../database/SqliteSessionStore').SqliteSessionStore|null} */
+    /** @type {import('../database/ArmazemDeSessaoSqlite').ArmazemDeSessaoSqlite|null} */
     this.sessionStore = null;
   }
 
@@ -29,12 +29,11 @@ class AuthService {
    * Injeta o store de sessões após a construção (o store só existe depois de
    * _configureExpress, que roda após _buildServices -- mesmo padrão do
    * BackupService.setSessionStore).
-   * @param {import('../database/SqliteSessionStore').SqliteSessionStore} store
+   * @param {import('../database/ArmazemDeSessaoSqlite').ArmazemDeSessaoSqlite} store
    */
   setSessionStore(store) {
     this.sessionStore = store;
   }
-
 
   /** True quando ainda nao existe nenhuma conta -- o front-end mostra a tela de "criar administrador" nesse caso. */
   needsSetup() {
@@ -48,7 +47,7 @@ class AuthService {
    */
   setupAdmin({ nome, usuario, senha }) {
     if (!this.needsSetup()) {
-      throw new ValidationError("Já existe uma conta cadastrada; use a tela de login.");
+      throw new ErroDeValidacao("Já existe uma conta cadastrada; use a tela de login.");
     }
     const criado = this.createUser({ nome, usuario, senha }, null, "admin");
     // Sem isto, a tela de Usuários mostraria "Nunca acessou" para o próprio
@@ -68,25 +67,25 @@ class AuthService {
     */
   createUser({ nome, usuario, senha, role }, usuarioLogado, papelPadrao = "operador") {
     if (usuarioLogado && usuarioLogado.role !== "admin") {
-      throw new ForbiddenError("Apenas administradores podem criar novos usuários.");
+      throw new ErroDePermissao("Apenas administradores podem criar novos usuários.");
     }
     const nomeLimpo = (nome || "").trim();
     const usuarioLimpo = (usuario || "").trim();
     const papelEscolhido = (role || papelPadrao || "operador").toLowerCase();
     const papeisValidos = ["admin", "operador", "consulta", "user"];
 
-    if (!nomeLimpo) throw new ValidationError("Informe o nome da pessoa.");
-    if (!usuarioLimpo) throw new ValidationError("Informe um nome de usuário para login.");
+    if (!nomeLimpo) throw new ErroDeValidacao("Informe o nome da pessoa.");
+    if (!usuarioLimpo) throw new ErroDeValidacao("Informe um nome de usuário para login.");
     if (!papeisValidos.includes(papelEscolhido)) {
-      throw new ValidationError("Papel inválido. Escolha entre Administrador, Operador ou Consulta.");
+      throw new ErroDeValidacao("Papel inválido. Escolha entre Administrador, Operador ou Consulta.");
     }
     const papelFinal = papelEscolhido === "user" ? "operador" : papelEscolhido;
 
     if (!senha || senha.length < SENHA_MIN_LENGTH) {
-      throw new ValidationError(`A senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
+      throw new ErroDeValidacao(`A senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
     }
     if (this.db.usuarios.findByUsuario(usuarioLimpo)) {
-      throw new ValidationError(`Já existe uma conta com o usuário '${usuarioLimpo}'.`);
+      throw new ErroDeValidacao(`Já existe uma conta com o usuário '${usuarioLimpo}'.`);
     }
     const hash = bcrypt.hashSync(senha, SALT_ROUNDS);
     const criado = this.db.usuarios.insert(nomeLimpo, usuarioLimpo, hash, papelFinal);
@@ -115,21 +114,21 @@ class AuthService {
    */
   updateUser(id, { nome, role }, usuarioLogado) {
     if (usuarioLogado.role !== "admin") {
-      throw new ForbiddenError("Apenas administradores podem alterar usuários e permissões.");
+      throw new ErroDePermissao("Apenas administradores podem alterar usuários e permissões.");
     }
     const alvo = this.db.usuarios.findById(id);
-    if (!alvo) throw new ValidationError("Usuário não encontrado.");
+    if (!alvo) throw new ErroDeValidacao("Usuário não encontrado.");
 
     let novoPapel = role ? role.toLowerCase() : alvo.role;
     if (novoPapel === "user") novoPapel = "operador";
     if (!["admin", "operador", "consulta"].includes(novoPapel)) {
-      throw new ValidationError("Papel inválido. Escolha entre Administrador, Operador ou Consulta.");
+      throw new ErroDeValidacao("Papel inválido. Escolha entre Administrador, Operador ou Consulta.");
     }
 
     if (alvo.role === "admin" && novoPapel !== "admin") {
       const admins = this.db.usuarios.list().filter((u) => u.role === "admin");
       if (admins.length <= 1) {
-        throw new ValidationError("Não é possível rebaixar o único administrador ativo do sistema.");
+        throw new ErroDeValidacao("Não é possível rebaixar o único administrador ativo do sistema.");
       }
     }
 
@@ -139,7 +138,7 @@ class AuthService {
     });
 
     // O papel que vale nas rotas é o gravado NA SESSÃO no momento do login
-    // (ver requireRole) -- não o do banco. Sem derrubar as sessões aqui, um
+    // (ver exigirPapel) -- não o do banco. Sem derrubar as sessões aqui, um
     // admin rebaixado continuava admin por até 7 dias (o maxAge do cookie),
     // inclusive podendo religar o Atualizador e publicar executável para
     // todos os clientes. Só quando o papel muda: trocar o nome não mexe em
@@ -167,24 +166,24 @@ class AuthService {
    */
   deleteUser(id, usuarioLogado) {
     if (usuarioLogado.role !== "admin") {
-      throw new ForbiddenError("Apenas administradores podem remover usuários.");
+      throw new ErroDePermissao("Apenas administradores podem remover usuários.");
     }
     if (id === usuarioLogado.id) {
-      throw new ValidationError("Você não pode excluir a própria conta enquanto está logado com ela.");
+      throw new ErroDeValidacao("Você não pode excluir a própria conta enquanto está logado com ela.");
     }
     const alvo = this.db.usuarios.findById(id);
-    if (!alvo) throw new ValidationError("Usuário não encontrado.");
+    if (!alvo) throw new ErroDeValidacao("Usuário não encontrado.");
     if (this.db.usuarios.count() <= 1) {
-      throw new ValidationError("Não é possível remover a única conta existente.");
+      throw new ErroDeValidacao("Não é possível remover a única conta existente.");
     }
     if (alvo.role === "admin") {
       const admins = this.db.usuarios.list().filter((u) => u.role === "admin");
       if (admins.length <= 1) {
-        throw new ValidationError("Não é possível remover o único administrador ativo do sistema.");
+        throw new ErroDeValidacao("Não é possível remover o único administrador ativo do sistema.");
       }
     }
     this.db.usuarios.delete(id);
-    // requireAuth só confere se a sessão existe, não se a conta ainda existe:
+    // exigirLogin só confere se a sessão existe, não se a conta ainda existe:
     // sem isto, quem teve a conta excluída seguia usando o painel com o papel
     // que tinha até o cookie expirar (7 dias).
     this.sessionStore?.clearByUserId(id);
@@ -197,7 +196,7 @@ class AuthService {
     // Mensagem generica de proposito (nao diz se foi o usuario ou a senha
     // que estava errada) -- evita que alguem descubra, por tentativa, quais
     // nomes de usuario existem no sistema.
-    const erroPadrao = new ValidationError("Usuário ou senha inválidos.");
+    const erroPadrao = new ErroDeValidacao("Usuário ou senha inválidos.");
     if (!linha) throw erroPadrao;
     const confere = bcrypt.compareSync(senha || "", linha.senha_hash);
     if (!confere) throw erroPadrao;
@@ -219,12 +218,12 @@ class AuthService {
     // Só acontece se a conta foi excluída por outra pessoa entre a sessão
     // abrir e este pedido chegar -- não é um caminho que a tela normal
     // alcança, mas devolve um erro claro em vez de travar num bcrypt.compareSync(null).
-    if (!linha) throw new ValidationError("Sua conta não foi encontrada. Faça login novamente.");
+    if (!linha) throw new ErroDeValidacao("Sua conta não foi encontrada. Faça login novamente.");
     if (!bcrypt.compareSync(senhaAtual || "", linha.senha_hash)) {
-      throw new ValidationError("Senha atual incorreta.");
+      throw new ErroDeValidacao("Senha atual incorreta.");
     }
     if (!senhaNova || senhaNova.length < SENHA_MIN_LENGTH) {
-      throw new ValidationError(`A nova senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
+      throw new ErroDeValidacao(`A nova senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
     }
     this.db.usuarios.updateSenhaHash(linha.id, bcrypt.hashSync(senhaNova, SALT_ROUNDS));
     this.historico.registrar(usuarioLogado, "atualizar", "usuario", `Senha de "${linha.nome}" (@${linha.usuario}) alterada`);
@@ -236,10 +235,6 @@ class AuthService {
     this.sessionStore?.clearByUserId(linha.id);
   }
 
-  // ==========================================================================
-  // A PRÓPRIA CONTA (Configurações > Conta)
-  // ==========================================================================
-
   /**
    * Os dados da conta de quem está logado, lidos do BANCO e não da sessão: a
    * sessão guarda uma cópia feita no login, e "membro desde" e "último
@@ -248,7 +243,7 @@ class AuthService {
    */
   meuPerfil(usuarioLogado) {
     const linha = this.db.usuarios.findById(usuarioLogado.id);
-    if (!linha) throw new ValidationError("Sua conta não foi encontrada. Faça login novamente.");
+    if (!linha) throw new ErroDeValidacao("Sua conta não foi encontrada. Faça login novamente.");
     const { id, nome, usuario, role, criado_em, ultimo_login } = linha;
     return { id, nome, usuario, role, criado_em, ultimo_login };
   }
@@ -265,11 +260,11 @@ class AuthService {
    */
   atualizarMeuNome(usuarioLogado, nome) {
     const linha = this.db.usuarios.findById(usuarioLogado.id);
-    if (!linha) throw new ValidationError("Sua conta não foi encontrada. Faça login novamente.");
+    if (!linha) throw new ErroDeValidacao("Sua conta não foi encontrada. Faça login novamente.");
     const nomeLimpo = String(nome ?? "").trim().replace(/\s+/g, " ");
-    if (!nomeLimpo) throw new ValidationError("Informe o seu nome.");
+    if (!nomeLimpo) throw new ErroDeValidacao("Informe o seu nome.");
     if (nomeLimpo.length > NOME_MAX_LENGTH) {
-      throw new ValidationError(`O nome pode ter no máximo ${NOME_MAX_LENGTH} caracteres.`);
+      throw new ErroDeValidacao(`O nome pode ter no máximo ${NOME_MAX_LENGTH} caracteres.`);
     }
     if (nomeLimpo !== linha.nome) {
       this.db.usuarios.updateUser(linha.id, { nome: nomeLimpo, role: linha.role });
@@ -319,9 +314,9 @@ class AuthService {
    */
   encerrarSessao(usuarioLogado, id, sidAtual) {
     const alvo = this._sessoesDaConta(usuarioLogado).find((s) => idPublicoDaSessao(s.sid) === id);
-    if (!alvo) throw new ValidationError("Essa sessão já não existe: ela expirou ou foi encerrada.");
+    if (!alvo) throw new ErroDeValidacao("Essa sessão já não existe: ela expirou ou foi encerrada.");
     if (alvo.sid === sidAtual) {
-      throw new ValidationError("Esta é a sessão que você está usando agora. Para encerrá-la, use Sair da conta.");
+      throw new ErroDeValidacao("Esta é a sessão que você está usando agora. Para encerrá-la, use Sair da conta.");
     }
     this.sessionStore.destroy(alvo.sid);
     this.historico?.registrar(usuarioLogado, "excluir", "usuario", `"${usuarioLogado.nome}" encerrou uma sessão aberta em outro aparelho`);

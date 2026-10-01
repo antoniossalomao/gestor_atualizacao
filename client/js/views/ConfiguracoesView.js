@@ -202,9 +202,6 @@ export class ConfiguracoesView extends View {
     });
   }
 
-  // ==========================================================================
-  // O QUE ESTÁ FORA DO PADRÃO
-  // ==========================================================================
 
   _atualizarTudo() {
     for (const aba of this.abas) {
@@ -227,9 +224,6 @@ export class ConfiguracoesView extends View {
     }
   }
 
-  // ==========================================================================
-  // MUDANÇAS EM LOTE
-  // ==========================================================================
 
   /**
    * O que fazer depois de mexer em muitas preferências de uma vez (perfil,
@@ -276,9 +270,6 @@ export class ConfiguracoesView extends View {
     toast.success("Preferências restauradas.");
   }
 
-  // ==========================================================================
-  // LEVAR PARA OUTRA MÁQUINA
-  // ==========================================================================
 
   _exportar() {
     const agora = new Date();
@@ -321,9 +312,6 @@ export class ConfiguracoesView extends View {
     );
   }
 
-  // ==========================================================================
-  // BUSCA
-  // ==========================================================================
 
   /**
    * Todos os ajustes de todas as abas, achatados -- inclusive os das abas que

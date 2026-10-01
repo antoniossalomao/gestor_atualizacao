@@ -512,7 +512,7 @@ login) foi deliberadamente evitada aqui porque, no momento em que este
 projeto foi criado, ela trazia uma cadeia de dependências (`sqlite3` →
 `node-gyp` → `tar`) com vulnerabilidades conhecidas nas ferramentas de
 build. Em vez dela, as sessões são guardadas com uma classe própria e
-pequena (`server/src/database/SqliteSessionStore.js`), usando a mesma
+pequena (`server/src/database/ArmazemDeSessaoSqlite.js`), usando a mesma
 biblioteca (`better-sqlite3`) que o resto do app já usa.
 
 ### Atualização de dependências e endurecimento — set/2026
@@ -546,7 +546,7 @@ exigiu nenhuma mudança de rota.
 **O que mudou de fato no código, por causa do endurecimento de CSP feito
 junto (não das majors em si):** o script inline de tema no `<head>` de
 `client/index.html` foi extraído para `client/js/temaInicial.js`, e
-`Server.js`/`requireAgent.js` ganharam uma CSP sob medida e comparação
+`Server.js`/`exigirAgente.js` ganharam uma CSP sob medida e comparação
 de token em tempo constante — ver histórico do git para o antes/depois.
 
 **Deixado de fora, de propósito:** a vulnerabilidade restante do

@@ -7,7 +7,7 @@
  *
  * @param {import('../services/ConfiguracaoSistemaService').ConfiguracaoSistemaService} configuracaoSistemaService
  */
-function requireAtualizadorHabilitado(configuracaoSistemaService) {
+function exigirAtualizadorHabilitado(configuracaoSistemaService) {
   return (req, res, next) => {
     if (!configuracaoSistemaService.atualizadorHabilitado()) {
       res.status(403).json({ error: "O Atualizador está desativado temporariamente neste servidor." });
@@ -17,4 +17,4 @@ function requireAtualizadorHabilitado(configuracaoSistemaService) {
   };
 }
 
-module.exports = { requireAtualizadorHabilitado };
+module.exports = { exigirAtualizadorHabilitado };

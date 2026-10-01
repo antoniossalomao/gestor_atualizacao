@@ -176,10 +176,6 @@ export class ContaConfig {
     /** @type {HTMLElement|null} */ (alvo.querySelector("input, button:not([disabled])"))?.focus({ preventScroll: true });
   }
 
-  // ==========================================================================
-  // PERFIL
-  // ==========================================================================
-
   _pintarPerfil() {
     const alvo = /** @type {HTMLElement} */ (this.container.querySelector('[data-role="perfil"]'));
     alvo.innerHTML = cartaoPerfil(this.perfil).toString();
@@ -211,10 +207,6 @@ export class ContaConfig {
     const nome = campo.value.trim().replace(/\s+/g, " ");
     return nome.length > 0 && nome !== this.perfil.nome;
   }
-
-  // ==========================================================================
-  // SENHA
-  // ==========================================================================
 
   _ligarSenha() {
     const form = /** @type {HTMLFormElement} */ (this.container.querySelector('[data-role="form-senha"]'));
@@ -260,10 +252,6 @@ export class ContaConfig {
       }
     });
   }
-
-  // ==========================================================================
-  // SESSÕES
-  // ==========================================================================
 
   _ligarSessoes() {
     const cartao = /** @type {HTMLElement} */ (this.container.querySelector('[data-ajuste="sessoes"]'));

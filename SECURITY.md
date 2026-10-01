@@ -22,17 +22,17 @@ trate como incidente: rotacione primeiro, avise depois.
 | Proteção | Onde | Por quê |
 |---|---|---|
 | Senhas com `bcrypt` | `services/AuthService.js` | nunca se guarda senha legível |
-| Sessão em SQLite, cookie `httpOnly` + `sameSite=lax` | `database/SqliteSessionStore.js`, `Server.js` | JS da página não lê o cookie; reduz CSRF |
+| Sessão em SQLite, cookie `httpOnly` + `sameSite=lax` | `database/ArmazemDeSessaoSqlite.js`, `Server.js` | JS da página não lê o cookie; reduz CSRF |
 | Token CSRF por sessão em toda escrita da API | `middlewares/protecaoCsrf.js`, `client/js/api/ApiClient.js` | outra página aberta no navegador não altera nada em nome de quem está logado, nem por formulário multipart |
-| Limite de tentativas de login | `middlewares/LoginRateLimiter.js` | força bruta contra senha fraca |
-| Papéis (RBAC) por subárvore de rota | `middlewares/requireRole.js`, `routes/index.js` | padrão fechado: rota nova nasce protegida |
+| Limite de tentativas de login | `middlewares/LimitadorDeLogin.js` | força bruta contra senha fraca |
+| Papéis (RBAC) por subárvore de rota | `middlewares/exigirPapel.js`, `routes/index.js` | padrão fechado: rota nova nasce protegida |
 | CSP sem `script-src unsafe-inline` | `Server.js` | reduz o estrago de um XSS |
 | `ORDER BY` só a partir de lista fixa | `database/ordenacao.js` | injeção de SQL via `?sortBy=` |
 | Escape de HTML na montagem de tela | `client/js/utils/html.js` | XSS armazenado vindo de campo de texto |
 | Somente HTTPS na rede | `docker-compose.yml`, `proxy/Caddyfile`, `config/transporte.js`, `middlewares/exigirHttps.js` | senha e cookie nunca trafegam em texto puro; HTTP puro só escuta em `127.0.0.1` |
 | Cookie `Secure` + HSTS com HTTPS ligado | `Server.js` | o navegador não manda a sessão nem volta a tentar `http://` |
-| Token compartilhado para os agentes C# | `middlewares/requireAgent.js` | as rotas do agente não usam sessão de navegador |
-| 404 explícito em vez de fallback de SPA | `middlewares/notFoundHandler.js` | rota de API errada devolvia HTML e escondia o erro |
+| Token compartilhado para os agentes C# | `middlewares/exigirAgente.js` | as rotas do agente não usam sessão de navegador |
+| 404 explícito em vez de fallback de SPA | `middlewares/rotaNaoEncontrada.js` | rota de API errada devolvia HTML e escondia o erro |
 
 ## Segredos
 

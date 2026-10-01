@@ -24,7 +24,7 @@ const UM_DIA_MS = 24 * 60 * 60 * 1000;
  * qualquer session store precisa seguir para o express-session conseguir
  * usa-lo.
  */
-class SqliteSessionStore extends session.Store {
+class ArmazemDeSessaoSqlite extends session.Store {
   /** @param {{filePath: string}} options caminho do arquivo sessions.sqlite */
   constructor({ filePath }) {
     super();
@@ -161,4 +161,4 @@ class SqliteSessionStore extends session.Store {
   }
 }
 
-module.exports = { SqliteSessionStore };
+module.exports = { ArmazemDeSessaoSqlite };

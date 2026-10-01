@@ -648,7 +648,7 @@ Para o agente C#, o equivalente é
   depois com "expected a JavaScript module script but the server responded with
   a MIME type of text/html" — mensagem que manda procurar no lugar errado.
   Agora um pedido com extensão de arquivo que não existe dá 404 de verdade
-  (`middlewares/notFoundHandler.js`), e rota de API inexistente responde JSON,
+  (`middlewares/rotaNaoEncontrada.js`), e rota de API inexistente responde JSON,
   não HTML. Encontrado durante a reorganização de pastas do `client/`.
 
 - **`client/package.json` e `client/tests/` eram servidos publicamente** pelo

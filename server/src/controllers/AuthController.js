@@ -10,7 +10,7 @@
  * a rota.
  */
 const { garantirTokenCsrf, CABECALHO_CSRF } = require("../middlewares/protecaoCsrf");
-const { VERSAO_PAINEL } = require("../config/constants");
+const { VERSAO_PAINEL } = require("../config/constantes");
 
 class AuthController {
   /**

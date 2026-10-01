@@ -79,7 +79,7 @@ test("Roteamento HTTP - montagem do Express", async (t) => {
   });
 
   await t.test("uma rota de API inexistente nunca devolve o index.html", async () => {
-    // Sem sessao, o requireAuth montado sobre TODA a subarvore /api (ver
+    // Sem sessao, o exigirLogin montado sobre TODA a subarvore /api (ver
     // routes/index.js) responde 401 antes de qualquer 404 -- de proposito:
     // um anonimo nao descobre, pelo codigo de status, quais rotas existem.
     // O que importa testar aqui e' o que NAO pode acontecer: cair no
@@ -90,8 +90,8 @@ test("Roteamento HTTP - montagem do Express", async (t) => {
   });
 
   await t.test("logado, uma rota de API inexistente responde 404 em JSON", async () => {
-    // Este e' o unico jeito de alcancar o ramo de API do notFoundHandler:
-    // enquanto nao ha sessao, o requireAuth responde 401 primeiro (testado
+    // Este e' o unico jeito de alcancar o ramo de API do rotaNaoEncontrada:
+    // enquanto nao ha sessao, o exigirLogin responde 401 primeiro (testado
     // acima). Cria o primeiro admin (rota de setup, que so funciona com o
     // banco vazio -- e o banco deste teste e' novo), reaproveita o cookie
     // de sessao e so entao pede uma rota que nao existe.

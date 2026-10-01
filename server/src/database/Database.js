@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const Sqlite3 = require("better-sqlite3");
 
-const { SISTEMAS_CONHECIDOS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
+const { SISTEMAS_CONHECIDOS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constantes");
 const { lerRegra } = require("../config/regrasEquipe");
 const { AtualizacaoRepository } = require("./AtualizacaoRepository");
 const { ClienteRepository } = require("./ClienteRepository");

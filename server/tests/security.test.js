@@ -9,7 +9,7 @@ const { AuthService } = require("../src/services/AuthService");
 const { BackupService } = require("../src/services/BackupService");
 const { VersaoService } = require("../src/services/VersaoService");
 const { HistoricoService } = require("../src/services/HistoricoService");
-const { requireRole } = require("../src/middlewares/requireRole");
+const { exigirPapel } = require("../src/middlewares/exigirPapel");
 
 function criarAmbienteTeste() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-test-"));
@@ -32,9 +32,9 @@ function criarAmbienteTeste() {
   return { tmpDir, dbPath, db, historico, auth, backups, versoes, cleanup };
 }
 
-test("RBAC - Middleware requireRole", async (t) => {
+test("RBAC - Middleware exigirPapel", async (t) => {
   await t.test("rejeita requisições sem autenticação com 401", () => {
-    const mw = requireRole("admin");
+    const mw = exigirPapel("admin");
     let status = null;
     let json = null;
     const req = { session: null };
@@ -54,7 +54,7 @@ test("RBAC - Middleware requireRole", async (t) => {
   });
 
   await t.test("rejeita papel 'consulta' em rota de operador/admin com 403", () => {
-    const mw = requireRole("operador", "admin");
+    const mw = exigirPapel("operador", "admin");
     let status = null;
     let json = null;
     const req = { session: { user: { id: 1, usuario: "visitante", role: "consulta" } } };
@@ -74,7 +74,7 @@ test("RBAC - Middleware requireRole", async (t) => {
   });
 
   await t.test("rejeita papel 'operador' em rota restrita a 'admin' com 403", () => {
-    const mw = requireRole("admin");
+    const mw = exigirPapel("admin");
     let status = null;
     const req = { session: { user: { id: 2, usuario: "operador1", role: "operador" } } };
     const res = {
@@ -93,7 +93,7 @@ test("RBAC - Middleware requireRole", async (t) => {
   });
 
   await t.test("libera 'operador' (e conta legada 'user') em rotas permitidas", () => {
-    const mw = requireRole("operador", "admin");
+    const mw = exigirPapel("operador", "admin");
     let next1 = false;
     let next2 = false;
 
@@ -109,7 +109,7 @@ test("RBAC - Middleware requireRole", async (t) => {
   });
 
   await t.test("libera 'admin' em qualquer rota", () => {
-    const mw = requireRole("admin");
+    const mw = exigirPapel("admin");
     let next = false;
     mw({ session: { user: { role: "admin" } } }, {}, () => {
       next = true;

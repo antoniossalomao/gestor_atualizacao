@@ -167,7 +167,7 @@ Três coisas quebram silenciosamente e caro:
 1. **SQL montado com texto vindo do usuário.** Ordenação por coluna já tem uma
    porta de entrada segura (`database/ordenacao.js`), que só aceita chaves de
    uma lista fixa. Use-a; não interpole `sortBy` no SQL.
-2. **Uma rota nova sem `requireAuth`/`requireRole`.** O padrão é fechado: as
+2. **Uma rota nova sem `exigirLogin`/`exigirPapel`.** O padrão é fechado: as
    proteções são montadas sobre a subárvore inteira em `routes/index.js`.
    Confira lá ao acrescentar rota.
 3. **HTML montado com dado do usuário sem `escapeHtml`.** A CSP em `Server.js`

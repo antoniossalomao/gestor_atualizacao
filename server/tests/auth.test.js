@@ -218,7 +218,7 @@ test("AuthService - troca de senha", async (t) => {
 
 /*
  * O papel que as rotas conferem é o COPIADO para a sessão no login (ver
- * requireRole), não o do banco. Então rebaixar ou excluir uma conta só tem
+ * exigirPapel), não o do banco. Então rebaixar ou excluir uma conta só tem
  * efeito real se as sessões abertas dela caírem junto -- senão a pessoa segue
  * com o papel antigo até o cookie expirar (7 dias). Nada na tela denuncia o
  * problema: a lista de usuários mostra o papel novo, corretamente.
@@ -228,8 +228,8 @@ test("AuthService - troca de senha", async (t) => {
  */
 test("AuthService - sessões caem quando o papel muda ou a conta some", async (t) => {
   const env = ambiente();
-  const { SqliteSessionStore } = require("../src/database/SqliteSessionStore");
-  const store = new SqliteSessionStore({ filePath: path.join(path.dirname(env.db.path), "sessions.sqlite") });
+  const { ArmazemDeSessaoSqlite } = require("../src/database/ArmazemDeSessaoSqlite");
+  const store = new ArmazemDeSessaoSqlite({ filePath: path.join(path.dirname(env.db.path), "sessions.sqlite") });
   env.auth.setSessionStore(store);
 
   const abrirSessao = (sid, user) =>

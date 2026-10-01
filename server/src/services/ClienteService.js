@@ -1,4 +1,4 @@
-const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
+const { ErroDeValidacao, ErroNaoEncontrado, ErroDeConflito } = require("../shared/erros");
 const { SISTEMA_PRINCIPAL } = require("./situacaoVersao");
 
 /**
@@ -47,7 +47,7 @@ class ClienteService {
 
   getById(id) {
     const row = this.db.clientes.getById(id);
-    if (!row) throw new NotFoundError("Cliente não encontrado.");
+    if (!row) throw new ErroNaoEncontrado("Cliente não encontrado.");
     return toClienteDTO(row, this.db.atualizacoes.maquinasDoCliente(row.id));
   }
 
@@ -67,7 +67,7 @@ class ClienteService {
     // nome seriam indistinguiveis nas telas que listam por nome, e o vinculo
     // de uma atualização digitada pelo nome escolheria um deles as cegas.
     if (this.db.clientes.nameExists(nome)) {
-      throw new ValidationError(`Já existe um cliente chamado '${nome}'.`);
+      throw new ErroDeValidacao(`Já existe um cliente chamado '${nome}'.`);
     }
     const id = this.db.clientes.insert(codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo, regimeTributario);
     this.historico.registrar(usuario, "criar", "cliente", `Cliente "${nome}"`);
@@ -76,18 +76,18 @@ class ClienteService {
 
   update(id, input, usuario) {
     const existente = this.db.clientes.getById(id);
-    if (!existente) throw new NotFoundError("Cliente não encontrado.");
+    if (!existente) throw new ErroNaoEncontrado("Cliente não encontrado.");
     const { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validate(input);
     if (this.db.clientes.nameExists(nome, id)) {
-      throw new ValidationError(`Já existe um cliente chamado '${nome}'.`);
+      throw new ErroDeValidacao(`Já existe um cliente chamado '${nome}'.`);
     }
     // O nome copiado nas atualizações/agendamentos ligados acompanha o
     // rename dentro de ClienteRepository.update.
     const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
     if (this.db.clientes.update(id, codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo, revisaoEsperada, usuario?.nome || "", regimeTributario) === 0) {
       const agora = this.db.clientes.getById(id);
-      if (agora && revisaoEsperada != null) throw new ConflictError(`Este cliente foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, toClienteDTO(agora));
-      throw new NotFoundError("Cliente não encontrado.");
+      if (agora && revisaoEsperada != null) throw new ErroDeConflito(`Este cliente foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, toClienteDTO(agora));
+      throw new ErroNaoEncontrado("Cliente não encontrado.");
     }
     const descricao =
       existente.nome !== nome ? `Cliente "${existente.nome}" renomeado para "${nome}"` : `Cliente "${nome}"`;
@@ -103,7 +103,7 @@ class ClienteService {
 
   delete(id, usuario) {
     const existente = this.db.clientes.getById(id);
-    if (!existente) throw new NotFoundError("Cliente não encontrado.");
+    if (!existente) throw new ErroNaoEncontrado("Cliente não encontrado.");
     this.db.clientes.delete(id);
     this.historico.registrar(usuario, "excluir", "cliente", `Cliente "${existente.nome}"`, { antes: toClienteDTO(existente), depois: null });
   }
@@ -121,7 +121,7 @@ class ClienteService {
   deleteMany(ids, usuario) {
     const registros = this.db.clientes.findByIds(ids);
     if (registros.length === 0) {
-      throw new NotFoundError("Nenhum dos clientes selecionados existe mais. A lista pode estar desatualizada.");
+      throw new ErroNaoEncontrado("Nenhum dos clientes selecionados existe mais. A lista pode estar desatualizada.");
     }
     const excluidos = this.db.clientes.deleteMany(registros.map((r) => r.id));
     const nomes = registros.slice(0, 3).map((r) => r.nome).join(", ") + (registros.length > 3 ? ` e mais ${registros.length - 3}` : "");
@@ -136,10 +136,10 @@ class ClienteService {
    */
   addSistemaMany(ids, nomeSistema, usuario) {
     const limpo = (nomeSistema || "").trim();
-    if (!limpo) throw new ValidationError("Escolha um sistema.");
+    if (!limpo) throw new ErroDeValidacao("Escolha um sistema.");
     const registros = this.db.clientes.findByIds(ids);
     if (registros.length === 0) {
-      throw new NotFoundError("Nenhum dos clientes selecionados existe mais. A lista pode estar desatualizada.");
+      throw new ErroNaoEncontrado("Nenhum dos clientes selecionados existe mais. A lista pode estar desatualizada.");
     }
     const [sistema] = this.db.sistemas.resolverOuCriar([limpo]);
     const afetados = this.db.clientes.addSistemaToMany(registros.map((r) => r.id), sistema.id);
@@ -153,16 +153,16 @@ class ClienteService {
   salvarVersaoSistema(nome, data, usuario, versaoEsperada) {
     const { dataValida } = require("./validacao");
     if (typeof data !== "string" || (data !== "" && !dataValida(data))) {
-      throw new ValidationError("Informe uma data válida no formato dd/mm/aaaa.");
+      throw new ErroDeValidacao("Informe uma data válida no formato dd/mm/aaaa.");
     }
     const sistema = this.db.sistemas.resolver(nome);
-    if (!sistema?.ativo) throw new NotFoundError("Sistema não encontrado.");
-    if (!sistema.controla_versao) throw new ValidationError(`"${sistema.nome}" é um componente fixo e não recebe versão oficial.`);
-    if (typeof versaoEsperada !== "string") throw new ValidationError("Informe a referência anterior para evitar sobrescrever outra edição.");
-    if (sistema.ultima_versao !== versaoEsperada) throw new ConflictError("A versão oficial mudou desde que você abriu a edição. Recarregue a lista antes de salvar.");
+    if (!sistema?.ativo) throw new ErroNaoEncontrado("Sistema não encontrado.");
+    if (!sistema.controla_versao) throw new ErroDeValidacao(`"${sistema.nome}" é um componente fixo e não recebe versão oficial.`);
+    if (typeof versaoEsperada !== "string") throw new ErroDeValidacao("Informe a referência anterior para evitar sobrescrever outra edição.");
+    if (sistema.ultima_versao !== versaoEsperada) throw new ErroDeConflito("A versão oficial mudou desde que você abriu a edição. Recarregue a lista antes de salvar.");
     const antes = { nome: sistema.nome, data: sistema.ultima_versao || "" };
     if (!this.db.sistemas.salvarVersaoSeAtual(sistema.nome, data, versaoEsperada, usuario?.nome || "")) {
-      throw new ConflictError("A versão oficial foi alterada por outra pessoa. Recarregue a lista antes de salvar.");
+      throw new ErroDeConflito("A versão oficial foi alterada por outra pessoa. Recarregue a lista antes de salvar.");
     }
     this.historico.registrar(usuario, "atualizar", "sistema", `Última versão de ${sistema.nome}: ${data || "não informada"}`, { antes, depois: { nome: sistema.nome, data } });
     return { nome: sistema.nome, data };
@@ -173,14 +173,14 @@ class ClienteService {
    * @param {boolean} [atualizaComPrincipal] sem ele, a marcação de dependente do B_Vendas não muda
    */
   classificarSistema(id, controlaVersao, usuario, atualizaComPrincipal) {
-    if (typeof controlaVersao !== "boolean") throw new ValidationError("Informe se o sistema controla versão.");
+    if (typeof controlaVersao !== "boolean") throw new ErroDeValidacao("Informe se o sistema controla versão.");
     if (atualizaComPrincipal !== undefined && typeof atualizaComPrincipal !== "boolean") {
-      throw new ValidationError(`Informe se o sistema atualiza junto com o ${SISTEMA_PRINCIPAL}.`);
+      throw new ErroDeValidacao(`Informe se o sistema atualiza junto com o ${SISTEMA_PRINCIPAL}.`);
     }
     const sistema = this.db.sistemas.getById(Number(id));
-    if (!sistema?.ativo) throw new NotFoundError("Sistema não encontrado no catálogo ativo.");
+    if (!sistema?.ativo) throw new ErroNaoEncontrado("Sistema não encontrado no catálogo ativo.");
     if (atualizaComPrincipal && sistema.nome.toLowerCase() === SISTEMA_PRINCIPAL.toLowerCase()) {
-      throw new ValidationError(`O ${SISTEMA_PRINCIPAL} não pode depender dele mesmo.`);
+      throw new ErroDeValidacao(`O ${SISTEMA_PRINCIPAL} não pode depender dele mesmo.`);
     }
     const mudaClasse = Boolean(sistema.controlaVersao) !== controlaVersao;
     const mudaDependencia = atualizaComPrincipal !== undefined && Boolean(sistema.atualizaComPrincipal) !== atualizaComPrincipal;
@@ -202,9 +202,9 @@ class ClienteService {
   /** @returns {{created: boolean}} created=false quando o sistema ja existia */
   addSistema(nome, usuario) {
     const limpo = (nome || "").trim();
-    if (!limpo) throw new ValidationError("Informe um nome para o sistema.");
+    if (!limpo) throw new ErroDeValidacao("Informe um nome para o sistema.");
     const created = this.db.sistemas.add(limpo);
-    if (!created) throw new ValidationError(`O sistema '${limpo}' já existe.`);
+    if (!created) throw new ErroDeValidacao(`O sistema '${limpo}' já existe.`);
     this.historico.registrar(usuario, "criar", "sistema", `Sistema "${limpo}"`);
     return { created: true };
   }
@@ -226,9 +226,9 @@ class ClienteService {
    */
   removeSistema(nome, usuario) {
     const limpo = (nome || "").trim();
-    if (!limpo) throw new ValidationError("Informe o nome do sistema.");
+    if (!limpo) throw new ErroDeValidacao("Informe o nome do sistema.");
     const removido = this.db.sistemas.remove(limpo);
-    if (!removido) throw new NotFoundError(`O sistema "${limpo}" não está cadastrado.`);
+    if (!removido) throw new ErroNaoEncontrado(`O sistema "${limpo}" não está cadastrado.`);
     const { clientesAfetados } = removido;
     this.historico.registrar(
       usuario,
@@ -243,12 +243,12 @@ class ClienteService {
 
   _validate(input) {
     const nome = (input.nome || "").trim();
-    if (!nome) throw new ValidationError("Campo 'Cliente' é obrigatório.");
+    if (!nome) throw new ErroDeValidacao("Campo 'Cliente' é obrigatório.");
     const codigo = (input.codigo || "").trim();
     const cidade = (input.cidade || "").trim();
     const grupo = (input.grupo || "").trim();
     const regimeTributario = String(input.regimeTributario || "").trim();
-    if (regimeTributario.length > 100) throw new ValidationError("Regime tributário pode ter no máximo 100 caracteres.");
+    if (regimeTributario.length > 100) throw new ErroDeValidacao("Regime tributário pode ter no máximo 100 caracteres.");
     const sistemas = Array.isArray(input.sistemas) ? input.sistemas.map((s) => String(s || "").trim()).filter(Boolean) : [];
     return { nome, codigo, cidade, sistemas, grupo, regimeTributario };
   }
@@ -256,13 +256,13 @@ class ClienteService {
   /** Acessos remotos (AnyDesk / Suporte Bredas) das máquinas de um cliente -- aba Clientes, botão "Acessos". */
   listAcessos(clienteId) {
     const cliente = this.db.clientes.getById(clienteId);
-    if (!cliente) throw new NotFoundError("Cliente não encontrado.");
+    if (!cliente) throw new ErroNaoEncontrado("Cliente não encontrado.");
     return this.db.clienteAcessos.listByCliente(clienteId);
   }
 
   addAcesso(clienteId, input, usuario) {
     const cliente = this.db.clientes.getById(clienteId);
-    if (!cliente) throw new NotFoundError("Cliente não encontrado.");
+    if (!cliente) throw new ErroNaoEncontrado("Cliente não encontrado.");
     const { maquina, anydesk, suporteBredas, observacoes } = this._validateAcesso(input);
     const id = this.db.clienteAcessos.insert(clienteId, maquina, anydesk, suporteBredas, observacoes);
     this.historico.registrar(usuario, "criar", "acesso", `Acesso "${maquina}" de "${cliente.nome}"`);
@@ -271,7 +271,7 @@ class ClienteService {
 
   updateAcesso(id, input, usuario) {
     const existente = this.db.clienteAcessos.getById(id);
-    if (!existente) throw new NotFoundError("Acesso não encontrado.");
+    if (!existente) throw new ErroNaoEncontrado("Acesso não encontrado.");
     const { maquina, anydesk, suporteBredas, observacoes } = this._validateAcesso(input);
     this.db.clienteAcessos.update(id, maquina, anydesk, suporteBredas, observacoes);
     const cliente = this.db.clientes.getById(existente.clienteId);
@@ -281,7 +281,7 @@ class ClienteService {
 
   removeAcesso(id, usuario) {
     const existente = this.db.clienteAcessos.getById(id);
-    if (!existente) throw new NotFoundError("Acesso não encontrado.");
+    if (!existente) throw new ErroNaoEncontrado("Acesso não encontrado.");
     this.db.clienteAcessos.delete(id);
     const cliente = this.db.clientes.getById(existente.clienteId);
     this.historico.registrar(
@@ -294,7 +294,7 @@ class ClienteService {
 
   _validateAcesso(input) {
     const maquina = (input.maquina || "").trim();
-    if (!maquina) throw new ValidationError("Campo 'Máquina' é obrigatório.");
+    if (!maquina) throw new ErroDeValidacao("Campo 'Máquina' é obrigatório.");
     const anydesk = (input.anydesk || "").trim();
     const suporteBredas = (input.suporteBredas || "").trim();
     const observacoes = (input.observacoes || "").trim();

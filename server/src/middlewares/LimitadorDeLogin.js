@@ -10,7 +10,7 @@
  * (reinicia zerada se o servidor reiniciar) e não precisa sobreviver a
  * isso; um pacote dedicado (ex. "express-rate-limit") resolveria o mesmo
  * problema, mas essa lógica é pequena o bastante para não valer mais uma
- * dependência externa (mesma filosofia de SqliteSessionStore.js).
+ * dependência externa (mesma filosofia de ArmazemDeSessaoSqlite.js).
  *
  * Faxina periódica: sem ela, toda chave (IP+usuário) que já apareceu uma vez
  * ficava PARA SEMPRE no Map -- o filtro por janela só decide se a tentativa
@@ -21,7 +21,7 @@
  * (não depende de alguém chamar o middleware de novo) e remove as chaves cuja
  * última tentativa já saiu da janela.
  */
-class LoginRateLimiter {
+class LimitadorDeLogin {
   /** @param {{maxTentativas?: number, janelaMs?: number}} opcoes */
   constructor({ maxTentativas = 10, janelaMs = 10 * 60 * 1000 } = {}) {
     this.maxTentativas = maxTentativas;
@@ -62,4 +62,4 @@ class LoginRateLimiter {
   }
 }
 
-module.exports = { LoginRateLimiter };
+module.exports = { LimitadorDeLogin };

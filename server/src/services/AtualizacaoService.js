@@ -1,10 +1,10 @@
 const ExcelJS = require("exceljs");
 
-const { COLUMNS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
+const { COLUNAS_ATUALIZACOES, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constantes");
 const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, parseData } = require("./validacao");
 const { normalizarSistemas, normalizarResponsavel, splitSystems } = require("../shared/normalizacao");
-const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
+const { ErroDeValidacao, ErroNaoEncontrado, ErroDeConflito } = require("../shared/erros");
 const { situacaoDoSistema, situacaoDoCliente, contaComoAtraso, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL } = require("./situacaoVersao");
 const { acharSistema } = require("../database/SistemaRepository");
 const { LIMITE_LINHAS_IMPORTACAO, LIMITE_LINHAS_EXPORTACAO } = require("../config/limitesPlanilha");
@@ -84,8 +84,8 @@ class AtualizacaoService {
     const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
     if (this.db.atualizacoes.update(id, this._paraTabela(data), sistemas, revisaoEsperada, usuario?.nome || "") === 0) {
       const agora = this.db.atualizacoes.find(id);
-      if (agora && revisaoEsperada != null) throw new ConflictError(`Esta atualização foi alterada por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, agora);
-      throw new NotFoundError("Esta atualização não existe mais. Ela pode ter sido excluída por outra pessoa.");
+      if (agora && revisaoEsperada != null) throw new ErroDeConflito(`Esta atualização foi alterada por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, agora);
+      throw new ErroNaoEncontrado("Esta atualização não existe mais. Ela pode ter sido excluída por outra pessoa.");
     }
     this.historico.registrar(usuario, "atualizar", "atualizacao", `Atualização #${id} de "${data.cliente}"`, { antes, depois: data });
     this._marcarSuporteBredasSeNecessario(data, usuario);
@@ -119,7 +119,7 @@ class AtualizacaoService {
   delete(id, usuario) {
     const existente = this.db.atualizacoes.find(id);
     if (this.db.atualizacoes.delete(id) === 0) {
-      throw new NotFoundError("Esta atualização não existe mais.");
+      throw new ErroNaoEncontrado("Esta atualização não existe mais.");
     }
     this.historico.registrar(usuario, "excluir", "atualizacao", `Atualização #${id}`, { antes: existente, depois: null });
   }
@@ -140,7 +140,7 @@ class AtualizacaoService {
   deleteMany(ids, usuario) {
     const registros = this.db.atualizacoes.findByIds(ids);
     if (registros.length === 0) {
-      throw new NotFoundError("Nenhum dos registros selecionados existe mais. A lista pode estar desatualizada.");
+      throw new ErroNaoEncontrado("Nenhum dos registros selecionados existe mais. A lista pode estar desatualizada.");
     }
 
     const excluidos = this.db.atualizacoes.deleteMany(registros.map((r) => r.id));
@@ -183,12 +183,12 @@ class AtualizacaoService {
    */
   relatorioPorSistema(sistema, atualizacaoAntesDe, hoje = new Date()) {
     const sistemaLimpo = (sistema || "").trim();
-    if (!sistemaLimpo) throw new ValidationError("Informe o sistema.");
+    if (!sistemaLimpo) throw new ErroDeValidacao("Informe o sistema.");
     const alvo = this.db.sistemas.resolver(sistemaLimpo);
     if (alvo && (!alvo.ativo || !contaParaVersao(alvo))) return [];
     const oficial = alvo?.ultima_versao || "";
     if (atualizacaoAntesDe && !dataValida(atualizacaoAntesDe)) {
-      throw new ValidationError("Campo 'Última atualização antes de' precisa estar no formato dd/mm/aaaa.");
+      throw new ErroDeValidacao("Campo 'Última atualização antes de' precisa estar no formato dd/mm/aaaa.");
     }
     const limiteAtualizacao = atualizacaoAntesDe ? parseData(atualizacaoAntesDe) : null;
     if (!alvo) return [];
@@ -228,12 +228,12 @@ class AtualizacaoService {
     if (input.restaurarVersoes === true) {
       if (input.versoes_sistemas == null) return this._versoesLegadas(data, lista);
       let mapa;
-      try { mapa = JSON.parse(input.versoes_sistemas); } catch { throw new ValidationError("Versões inválidas."); }
-      if (!mapa || Array.isArray(mapa) || typeof mapa !== "object") throw new ValidationError("Versões inválidas.");
+      try { mapa = JSON.parse(input.versoes_sistemas); } catch { throw new ErroDeValidacao("Versões inválidas."); }
+      if (!mapa || Array.isArray(mapa) || typeof mapa !== "object") throw new ErroDeValidacao("Versões inválidas.");
       const sistemas = lista.map((s) => {
         const chave = Object.keys(mapa).find((nome) => nome === s.nome) ?? Object.keys(mapa).find((nome) => this.db.sistemas.resolver(nome)?.id === s.id);
         const valor = chave == null ? null : mapa[chave] ?? null;
-        if (valor !== null && (typeof valor !== "string" || valor.length > 100)) throw new ValidationError("Versões inválidas.");
+        if (valor !== null && (typeof valor !== "string" || valor.length > 100)) throw new ErroDeValidacao("Versões inválidas.");
         return { ...s, versao: valor };
       });
       this._resumirVersoes(data, sistemas);
@@ -354,11 +354,11 @@ class AtualizacaoService {
 
   _validate(input) {
     const cliente = (input.cliente || "").trim();
-    if (!cliente) throw new ValidationError("Campo 'Cliente' é obrigatório.");
+    if (!cliente) throw new ErroDeValidacao("Campo 'Cliente' é obrigatório.");
     const data = (input.data || "").trim();
-    if (!dataValida(data)) throw new ValidationError("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
+    if (!dataValida(data)) throw new ErroDeValidacao("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
     const registro = { cliente, data };
-    for (const { key } of COLUMNS) {
+    for (const { key } of COLUNAS_ATUALIZACOES) {
       if (key !== "cliente" && key !== "data") registro[key] = (input[key] || "").trim();
     }
     return this._normalizar(registro, this._contextoNormalizacao());
@@ -660,29 +660,29 @@ class AtualizacaoService {
 
   /**
    * Lê e classifica cada linha, sem gravar. Erro de ARQUIVO (não abre, sem
-   * linhas, sem a coluna Cliente) é ValidationError: não há o que prever.
+   * linhas, sem a coluna Cliente) é ErroDeValidacao: não há o que prever.
    * Erro de LINHA (cliente em branco, data) e aviso (cliente sem cadastro,
    * sistema fora do catálogo, duplicidade) ficam em cada linha.
    * @param {Buffer} buffer
    */
   async _lerPlanilha(buffer) {
     const brutas = await lerLinhasDaPlanilha(buffer, LIMITE_LINHAS_IMPORTACAO);
-    if (brutas.length === 0) throw new ValidationError("A planilha está vazia: a primeira aba precisa ter ao menos uma linha.");
+    if (brutas.length === 0) throw new ErroDeValidacao("A planilha está vazia: a primeira aba precisa ter ao menos uma linha.");
 
-    const expected = COLUMNS.map((c) => c.key);
+    const expected = COLUNAS_ATUALIZACOES.map((c) => c.key);
     const cabecalho = (brutas[0].numero === 1 ? brutas[0].valores : []).map((h) => h.trim());
     const colMap = {};
     const colunasIgnoradas = [];
     cabecalho.forEach((h, idx) => {
-      const match = COLUMNS.find((c) => h.toLowerCase() === c.key || h.toLowerCase() === c.label.toLowerCase());
+      const match = COLUNAS_ATUALIZACOES.find((c) => h.toLowerCase() === c.key || h.toLowerCase() === c.label.toLowerCase());
       if (match) colMap[match.key] = idx;
       else if (h) colunasIgnoradas.push(h);
     });
     // Menos de duas colunas reconhecidas: a planilha não tem o nosso
-    // cabeçalho, e vale a ordem fixa de COLUMNS (como sempre foi).
+    // cabeçalho, e vale a ordem fixa de COLUNAS_ATUALIZACOES (como sempre foi).
     const semCabecalho = Object.keys(colMap).length < 2;
     if (!semCabecalho && colMap.cliente == null) {
-      throw new ValidationError('A coluna "Cliente" não foi encontrada no cabeçalho. Ela é obrigatória.');
+      throw new ErroDeValidacao('A coluna "Cliente" não foi encontrada no cabeçalho. Ela é obrigatória.');
     }
     // Sem cabeçalho, a linha 1 já é DADO: começa nela, e o que havia nela não
     // é "coluna ignorada". (Começar sempre na 2 descartava o primeiro
@@ -735,7 +735,7 @@ class AtualizacaoService {
       }
       vistas.add(chave);
     }
-    if (linhas.length === 0) throw new ValidationError(semCabecalho ? "A planilha está vazia." : "A planilha não tem nenhuma linha preenchida abaixo do cabeçalho.");
+    if (linhas.length === 0) throw new ErroDeValidacao(semCabecalho ? "A planilha está vazia." : "A planilha não tem nenhuma linha preenchida abaixo do cabeçalho.");
     return { linhas, colunasIgnoradas, semCabecalho };
   }
 
@@ -768,23 +768,23 @@ class AtualizacaoService {
   async exportXlsxBuffer(search = "", responsavel = "Todos", periodo = {}) {
     const workbook = new ExcelJS.Workbook();
     const ws = workbook.addWorksheet("Atualizações");
-    ws.addRow(COLUMNS.map((c) => c.label));
+    ws.addRow(COLUNAS_ATUALIZACOES.map((c) => c.label));
     validarPeriodo(periodo);
     // Conta ANTES de ler: acima do limite, recusa sem montar nada na memória
     // (ver config/limitesPlanilha.js).
     const total = this.db.atualizacoes.contarFiltrados(search, responsavel, periodo);
     if (total > LIMITE_LINHAS_EXPORTACAO) {
-      throw new ValidationError(
+      throw new ErroDeValidacao(
         `A exportação teria ${total.toLocaleString("pt-BR")} linhas; o limite é ${LIMITE_LINHAS_EXPORTACAO.toLocaleString("pt-BR")}. ` +
           "Filtre por período (botão Filtros) e exporte em partes."
       );
     }
     const registros = this.db.atualizacoes.exportAll(search, responsavel, periodo);
     for (const row of registros) {
-      ws.addRow(COLUMNS.map((c) => row[c.key]));
+      ws.addRow(COLUNAS_ATUALIZACOES.map((c) => row[c.key]));
     }
     ws.views = [{ state: "frozen", ySplit: 1 }];
-    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: ws.rowCount, column: COLUMNS.length } };
+    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: ws.rowCount, column: COLUNAS_ATUALIZACOES.length } };
     ws.columns.forEach((col, i) => { col.width = [32, 30, 40, 24, 16, 30, 14, 60][i] || 24; });
     ws.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
     ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF24476B" } };
@@ -801,9 +801,9 @@ class AtualizacaoService {
 /** Período do relatório e da exportação: datas válidas, e a inicial antes da final. */
 function validarPeriodo(periodo) {
   for (const data of [periodo.desde, periodo.ate]) {
-    if (data && !dataValida(data)) throw new ValidationError("Período inválido.");
+    if (data && !dataValida(data)) throw new ErroDeValidacao("Período inválido.");
   }
-  if (periodo.desde && periodo.ate && parseData(periodo.desde) > parseData(periodo.ate)) throw new ValidationError("A data inicial deve ser anterior à final.");
+  if (periodo.desde && periodo.ate && parseData(periodo.desde) > parseData(periodo.ate)) throw new ErroDeValidacao("A data inicial deve ser anterior à final.");
 }
 
 /**
@@ -848,7 +848,7 @@ function chaveDuplicidade(cliente, data, sistema, catalogo) {
  */
 async function lerLinhasDaPlanilha(buffer, limite) {
   const grande = () =>
-    new ValidationError(
+    new ErroDeValidacao(
       `A planilha tem mais de ${limite.toLocaleString("pt-BR")} linhas, o limite por importação. ` +
         "Divida o arquivo em partes menores e importe uma de cada vez. Nada foi gravado."
     );
@@ -859,7 +859,7 @@ async function lerLinhasDaPlanilha(buffer, limite) {
   try {
     await workbook.xlsx.load(buffer);
   } catch {
-    throw new ValidationError("Não foi possível abrir o arquivo. Envie uma planilha Excel (.xlsx) sem senha.");
+    throw new ErroDeValidacao("Não foi possível abrir o arquivo. Envie uma planilha Excel (.xlsx) sem senha.");
   }
   const ws = workbook.worksheets[0];
   if (!ws) return [];

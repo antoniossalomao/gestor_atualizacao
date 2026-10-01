@@ -69,8 +69,6 @@ export class FormularioRegras extends View {
   /** Chamado depois de salvar -- o Atualizador usa para recarregar o app. */
   aposSalvar(mudou) {}
 
-  // ==========================================================================
-
   _ligarFormulario() {
     this.form = this.container.querySelector('[data-role="form"]');
     this.estado = this.form.querySelector('[data-role="estado"]');

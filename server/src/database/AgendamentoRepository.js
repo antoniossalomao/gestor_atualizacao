@@ -2,9 +2,9 @@ const { BaseRepository } = require("./BaseRepository");
 const { DATE_SORT_EXPR } = require("./AtualizacaoRepository");
 const { titleCase } = require("../shared/normalizacao");
 const { buildOrderBy } = require("./ordenacao");
-const { FILTRO_ARQUIVADAS, STATUS_OPTIONS } = require("../config/constants");
+const { FILTRO_ARQUIVADAS, OPCOES_STATUS } = require("../config/constantes");
 
-const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+const STATUS_CONCLUIDO = OPCOES_STATUS[OPCOES_STATUS.length - 1];
 
 /**
  * Hoje no relógio LOCAL, na forma aaaammdd de DATE_SORT_EXPR. Local, e não
@@ -15,7 +15,7 @@ function hojeOrdenavel(agora = new Date()) {
   return `${agora.getFullYear()}${String(agora.getMonth() + 1).padStart(2, "0")}${String(agora.getDate()).padStart(2, "0")}`;
 }
 
-const COLUMNS = ["tarefa", "cliente", "sistema", "responsavel", "prioridade", "data", "horario", "status", "obs"];
+const COLUNAS_ATUALIZACOES = ["tarefa", "cliente", "sistema", "responsavel", "prioridade", "data", "horario", "status", "obs"];
 
 // A tarefa guarda o nome do cliente como foi digitado e, se ele tiver
 // cadastro, o id -- mesma regra de vínculo de ClienteRepository.resolverNome
@@ -118,7 +118,7 @@ class AgendamentoRepository extends BaseRepository {
       `${STATUS_ORDER_EXPR}, ${PRIORIDADE_ORDER_EXPR}, ${DATE_SORT_EXPR} ASC, ${HORARIO_SORT_EXPR}, id DESC`
     );
     const sql = `
-      SELECT id, ${COLUMNS.join(", ")}, arquivado_em AS arquivadoEm, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table}
+      SELECT id, ${COLUNAS_ATUALIZACOES.join(", ")}, arquivado_em AS arquivadoEm, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table}
       ${where}
       ORDER BY ${orderBy}
       LIMIT @limit OFFSET @offset
@@ -130,13 +130,13 @@ class AgendamentoRepository extends BaseRepository {
   /** Uma tarefa por id, incluindo criado_em/concluido_em (que list() nao devolve). */
   find(id) {
     return this.conn
-      .prepare(`SELECT id, ${COLUMNS.join(", ")}, criado_em AS criadoEm, concluido_em AS concluidoEm, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table} WHERE id = ?`)
+      .prepare(`SELECT id, ${COLUNAS_ATUALIZACOES.join(", ")}, criado_em AS criadoEm, concluido_em AS concluidoEm, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table} WHERE id = ?`)
       .get(id);
   }
 
   insert(data) {
-    const columns = [...COLUMNS, "criado_em", "cliente_id"].join(", ");
-    const placeholders = [...COLUMNS.map((c) => `@${c}`), "@criadoEm", CLIENTE_ID_EXPR].join(", ");
+    const columns = [...COLUNAS_ATUALIZACOES, "criado_em", "cliente_id"].join(", ");
+    const placeholders = [...COLUNAS_ATUALIZACOES.map((c) => `@${c}`), "@criadoEm", CLIENTE_ID_EXPR].join(", ");
     this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`).run({ ...data, criadoEm: new Date().toISOString() });
   }
 
@@ -148,7 +148,7 @@ class AgendamentoRepository extends BaseRepository {
    * concluida ou nunca esteve.
    */
   update(id, data, revisaoEsperada = null, usuarioNome = "") {
-    const assignments = [...COLUMNS.map((c) => `${c} = @${c}`), `cliente_id = ${CLIENTE_ID_EXPR}`, "concluido_em = @concluidoEm", "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
+    const assignments = [...COLUNAS_ATUALIZACOES.map((c) => `${c} = @${c}`), `cliente_id = ${CLIENTE_ID_EXPR}`, "concluido_em = @concluidoEm", "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
     return this.conn
       .prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)`)
       .run({ ...data, id, concluidoEm: data.concluidoEm ?? null, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome }).changes;
@@ -280,7 +280,7 @@ class AgendamentoRepository extends BaseRepository {
   dueSoon() {
     const cutoff = hojeOrdenavel();
     const sql = `
-      SELECT id, ${COLUMNS.join(", ")} FROM ${this.table}
+      SELECT id, ${COLUNAS_ATUALIZACOES.join(", ")} FROM ${this.table}
       WHERE status NOT IN ('Concluído', 'Sem resposta') AND data != '' AND ${DATE_SORT_EXPR} <= @cutoff
       ORDER BY ${DATE_SORT_EXPR} ASC, ${HORARIO_SORT_EXPR}
     `;

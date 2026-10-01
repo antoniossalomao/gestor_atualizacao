@@ -1,4 +1,4 @@
-const { ValidationError } = require("../shared/errors");
+const { ErroDeValidacao } = require("../shared/erros");
 
 // Teto de tamanho do conjunto de preferencias. Nao ha caso legitimo perto
 // disso -- sao duas dezenas de escolhas curtas ("escuro", "compacta", 50) --
@@ -72,7 +72,7 @@ class PreferenciaService {
 
   _exigirId(usuario) {
     const id = Number(usuario?.id);
-    if (!Number.isInteger(id) || id <= 0) throw new ValidationError("Sessão sem usuário identificado.");
+    if (!Number.isInteger(id) || id <= 0) throw new ErroDeValidacao("Sessão sem usuário identificado.");
     return id;
   }
 
@@ -88,15 +88,15 @@ class PreferenciaService {
    */
   _validar(prefs) {
     if (!prefs || typeof prefs !== "object" || Array.isArray(prefs)) {
-      throw new ValidationError("Preferências precisam vir como um objeto.");
+      throw new ErroDeValidacao("Preferências precisam vir como um objeto.");
     }
     const entradas = Object.entries(prefs);
     if (entradas.length > MAX_CHAVES) {
-      throw new ValidationError(`Preferências demais (máximo ${MAX_CHAVES}).`);
+      throw new ErroDeValidacao(`Preferências demais (máximo ${MAX_CHAVES}).`);
     }
     const limpo = Object.create(null);
     for (const [chave, valor] of entradas) {
-      if (!NOME_CHAVE.test(chave)) throw new ValidationError(`Nome de preferência inválido: "${String(chave).slice(0, 40)}".`);
+      if (!NOME_CHAVE.test(chave)) throw new ErroDeValidacao(`Nome de preferência inválido: "${String(chave).slice(0, 40)}".`);
       const formato = FORMATOS[chave];
       // Valor fora do formato é DESCARTADO (a opção volta ao padrão na tela),
       // e não motivo para recusar o conjunto: o cliente manda todas as
@@ -104,14 +104,14 @@ class PreferenciaService {
       // travaria em silêncio a sincronização de todas as outras.
       if (formato && !formato(valor)) continue;
       if (typeof valor === "string") {
-        if (valor.length > MAX_TEXTO) throw new ValidationError(`Valor de "${chave}" é longo demais.`);
+        if (valor.length > MAX_TEXTO) throw new ErroDeValidacao(`Valor de "${chave}" é longo demais.`);
         limpo[chave] = valor;
       } else if (typeof valor === "number" && Number.isFinite(valor)) {
         limpo[chave] = valor;
       } else if (typeof valor === "boolean" || valor === null) {
         limpo[chave] = valor;
       } else {
-        throw new ValidationError(`Valor de "${chave}" precisa ser texto, número ou sim/não.`);
+        throw new ErroDeValidacao(`Valor de "${chave}" precisa ser texto, número ou sim/não.`);
       }
     }
     return { ...limpo };

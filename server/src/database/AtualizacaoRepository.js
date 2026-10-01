@@ -24,7 +24,7 @@ function paraOrdenavel(texto) {
  * coluna da tabela: vem montado pela visão `atualizacoes_v` a partir de
  * `atualizacao_sistemas` (ver migracoes.js).
  */
-const COLUMNS = ["cliente", "sistema", "versao", "responsavel", "data", "motivo", "maquinas", "obs"];
+const COLUNAS_ATUALIZACOES = ["cliente", "sistema", "versao", "responsavel", "data", "motivo", "maquinas", "obs"];
 
 /** Colunas gravadas na tabela `atualizacoes` em si. */
 const COLUNAS_DA_TABELA = ["cliente", "cliente_id", "versao", "responsavel", "data", "motivo", "maquinas", "obs", "versoes_por_sistema"];
@@ -39,7 +39,7 @@ const VALOR = {
 };
 const valorDe = (c) => VALOR[c] || `@${c}`;
 
-const LEITURA = `id, ${COLUMNS.join(", ")}, versoes_sistemas, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor`;
+const LEITURA = `id, ${COLUNAS_ATUALIZACOES.join(", ")}, versoes_sistemas, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor`;
 
 /** Colunas que a tela pode pedir para ordenar, e a expressao SQL segura correspondente. */
 const SORT_MAP = {
@@ -178,7 +178,7 @@ class AtualizacaoRepository extends BaseRepository {
     if (limpos.length === 0) return [];
     const marcadores = limpos.map(() => "?").join(", ");
     return this.conn
-      .prepare(`SELECT id, ${COLUMNS.join(", ")}, versoes_sistemas FROM atualizacoes_v WHERE id IN (${marcadores})`)
+      .prepare(`SELECT id, ${COLUNAS_ATUALIZACOES.join(", ")}, versoes_sistemas FROM atualizacoes_v WHERE id IN (${marcadores})`)
       .all(...limpos);
   }
 
@@ -193,7 +193,7 @@ class AtualizacaoRepository extends BaseRepository {
    */
   exportAll(search = "", responsavel = "Todos", periodo = {}) {
     const { where, params } = this._filtros(search, responsavel, periodo);
-    const sql = `SELECT ${COLUMNS.join(", ")}, versoes_sistemas FROM atualizacoes_v ${where} ORDER BY ${DATE_SORT_EXPR} DESC, id DESC`;
+    const sql = `SELECT ${COLUNAS_ATUALIZACOES.join(", ")}, versoes_sistemas FROM atualizacoes_v ${where} ORDER BY ${DATE_SORT_EXPR} DESC, id DESC`;
     return this.conn.prepare(sql).all(params);
   }
 

@@ -1,5 +1,5 @@
 import { ocuparAlturaDisponivel } from "../components/alturaDisponivel.js";
-import { AGENDA_COLUMNS, STATUS_OPTIONS, FILTRO_ARQUIVADAS, PRIORIDADE_OPTIONS } from "../config.js";
+import { COLUNAS_AGENDAMENTOS, OPCOES_STATUS, FILTRO_ARQUIVADAS, OPCOES_PRIORIDADE } from "../config.js";
 import { ApiError } from "../api/ApiClient.js";
 import { View } from "../app/View.js";
 import { Autocomplete } from "../components/Autocomplete.js";
@@ -61,15 +61,15 @@ export class AgendamentosView extends View {
   }
 
   _carregarOrdemColunas() {
-    const salva = prefs.get("agendamentos:colunas", STATUS_OPTIONS);
+    const salva = prefs.get("agendamentos:colunas", OPCOES_STATUS);
     if (Array.isArray(salva)) {
-      const validas = salva.filter((s) => STATUS_OPTIONS.includes(s));
-      for (const s of STATUS_OPTIONS) {
+      const validas = salva.filter((s) => OPCOES_STATUS.includes(s));
+      for (const s of OPCOES_STATUS) {
         if (!validas.includes(s)) validas.push(s);
       }
       return validas;
     }
-    return [...STATUS_OPTIONS];
+    return [...OPCOES_STATUS];
   }
 
   _reordenarColunas(origemStatus, destinoStatus) {
@@ -119,7 +119,7 @@ export class AgendamentosView extends View {
             <label class="field__label" for="age-filtro-status">Status</label>
             <select class="input" id="age-filtro-status" data-role="status-filter">
               <option>Todos</option>
-              ${STATUS_OPTIONS.map((s) => html`<option>${s}</option>`)}
+              ${OPCOES_STATUS.map((s) => html`<option>${s}</option>`)}
               <option value="${FILTRO_ARQUIVADAS}">${FILTRO_ARQUIVADAS}</option>
             </select>
           </div>
@@ -127,7 +127,7 @@ export class AgendamentosView extends View {
             <label class="field__label" for="age-filtro-prioridade">Prioridade</label>
             <select class="input" id="age-filtro-prioridade" data-role="prioridade-filter">
               <option value="Todas">Todas</option>
-              ${PRIORIDADE_OPTIONS.slice().reverse().map((p) => html`<option>${p}</option>`)}
+              ${OPCOES_PRIORIDADE.slice().reverse().map((p) => html`<option>${p}</option>`)}
             </select>
           </div>
           <div class="toolbar__clear">
@@ -313,7 +313,7 @@ export class AgendamentosView extends View {
   _buildFields() {
     const wrap = this.container.querySelector('[data-role="fields"]');
     this.fields = {};
-    for (const col of AGENDA_COLUMNS) {
+    for (const col of COLUNAS_AGENDAMENTOS) {
       const id = `age-${col.key}`;
       const field = document.createElement("div");
       field.className = "field";
@@ -324,11 +324,11 @@ export class AgendamentosView extends View {
       if (col.key === "status") {
         input = document.createElement("select");
         input.className = "input";
-        input.innerHTML = html`${STATUS_OPTIONS.map((s) => html`<option>${s}</option>`)}`;
+        input.innerHTML = html`${OPCOES_STATUS.map((s) => html`<option>${s}</option>`)}`;
       } else if (col.key === "prioridade") {
         input = document.createElement("select");
         input.className = "input";
-        input.innerHTML = html`${PRIORIDADE_OPTIONS.map((p) => html`<option>${p}</option>`)}`;
+        input.innerHTML = html`${OPCOES_PRIORIDADE.map((p) => html`<option>${p}</option>`)}`;
       } else if (col.key === "obs") {
         input = document.createElement("textarea");
         input.className = "input";
@@ -682,9 +682,9 @@ export class AgendamentosView extends View {
   }
 
   async _avancar(row) {
-    const indice = STATUS_OPTIONS.indexOf(row.status);
-    if (indice < 0 || indice >= STATUS_OPTIONS.length - 1) return;
-    const proximo = STATUS_OPTIONS[indice + 1];
+    const indice = OPCOES_STATUS.indexOf(row.status);
+    if (indice < 0 || indice >= OPCOES_STATUS.length - 1) return;
+    const proximo = OPCOES_STATUS[indice + 1];
     await this._moverCard(row.id, proximo);
   }
 
@@ -698,7 +698,7 @@ export class AgendamentosView extends View {
       if (vendo) {
         this.avisoArquivadas.textContent =
           `Tarefas concluídas há mais de ${plural(arquivarDias, "dia")} saem da lista ativa. ` +
-          `Clique em "Reabrir" em qualquer cartão para trazê-lo de volta como "${STATUS_OPTIONS[0]}".`;
+          `Clique em "Reabrir" em qualquer cartão para trazê-lo de volta como "${OPCOES_STATUS[0]}".`;
       }
     }
   }
@@ -739,7 +739,7 @@ export class AgendamentosView extends View {
   _loadIntoForm(row) {
     this.selectedId = row.id;
     this.selectedRevision = row.revisao;
-    for (const col of AGENDA_COLUMNS) {
+    for (const col of COLUNAS_AGENDAMENTOS) {
       if (this.fields?.[col.key]) this.fields[col.key].value = row[col.key] ?? "";
     }
     this._pintarModo();
@@ -780,7 +780,7 @@ export class AgendamentosView extends View {
       this.clearForm();
       this._invalidar();
       await this._reloadList();
-      toast.success(`"${tarefa.tarefa}" voltou para a lista como "${STATUS_OPTIONS[0]}".`);
+      toast.success(`"${tarefa.tarefa}" voltou para a lista como "${OPCOES_STATUS[0]}".`);
     } catch (err) {
       Modal.alert("Erro", errorMessage(err), "error");
     } finally {
@@ -813,7 +813,7 @@ export class AgendamentosView extends View {
 
   _readForm() {
     const data = {};
-    for (const col of AGENDA_COLUMNS) data[col.key] = this.fields[col.key].value.trim();
+    for (const col of COLUNAS_AGENDAMENTOS) data[col.key] = this.fields[col.key].value.trim();
     if (!data.tarefa) {
       Modal.alert("Validação", "Campo 'Tarefa' é obrigatório.", "warning").then(() => this.fields.tarefa.focus());
       return null;
@@ -873,7 +873,7 @@ export class AgendamentosView extends View {
     if (this.selectedId == null) return;
     const id = this.selectedId;
     const dadosAntes = {};
-    for (const col of AGENDA_COLUMNS) dadosAntes[col.key] = this.fields[col.key].value.trim();
+    for (const col of COLUNAS_AGENDAMENTOS) dadosAntes[col.key] = this.fields[col.key].value.trim();
 
     try {
       await this.api.delete(`/agendamentos/${id}`);
@@ -928,7 +928,7 @@ export class AgendamentosView extends View {
     const antes = {};
     let tinhaConteudo = false;
     if (this.fields) {
-      for (const col of AGENDA_COLUMNS) {
+      for (const col of COLUNAS_AGENDAMENTOS) {
         antes[col.key] = this.fields[col.key]?.value || "";
         if (["tarefa", "cliente"].includes(col.key) && antes[col.key].trim()) tinhaConteudo = true;
       }
@@ -937,11 +937,11 @@ export class AgendamentosView extends View {
     this.selectedId = null;
     this.selectedRevision = null;
     if (this.fields) {
-      for (const col of AGENDA_COLUMNS) {
+      for (const col of COLUNAS_AGENDAMENTOS) {
         if (this.fields[col.key]) this.fields[col.key].value = "";
       }
       if (this.fields.data) this.fields.data.value = todayBR();
-      if (this.fields.status) this.fields.status.value = STATUS_OPTIONS[0];
+      if (this.fields.status) this.fields.status.value = OPCOES_STATUS[0];
       if (this.user && this.fields.responsavel) this.fields.responsavel.value = this.user.nome || "";
     }
     if (this.form) {
@@ -953,7 +953,7 @@ export class AgendamentosView extends View {
       toast.undo(
         "Formulário limpo.",
         () => {
-          for (const col of AGENDA_COLUMNS) this.fields[col.key].value = antes[col.key];
+          for (const col of COLUNAS_AGENDAMENTOS) this.fields[col.key].value = antes[col.key];
           this.fields.tarefa.focus();
         },
         "Restaurar"

@@ -8,10 +8,10 @@
  *  - "consulta": Acesso estritamente somente-leitura e exportação.
  *
  * Exemplo de uso nas rotas:
- *   api.post("/versoes/:id/publicar", requireRole("admin"), versoes.publish);
- *   api.post("/clientes", requireRole("operador", "admin"), clientes.create);
+ *   api.post("/versoes/:id/publicar", exigirPapel("admin"), versoes.publish);
+ *   api.post("/clientes", exigirPapel("operador", "admin"), clientes.create);
  */
-function requireRole(...rolesPermitidas) {
+function exigirPapel(...rolesPermitidas) {
   const permitidos = new Set(rolesPermitidas);
   if (permitidos.has("operador")) {
     permitidos.add("user"); // retrocompatibilidade com contas legadas
@@ -40,5 +40,5 @@ function requireRole(...rolesPermitidas) {
   };
 }
 
-module.exports = { requireRole };
+module.exports = { exigirPapel };
 

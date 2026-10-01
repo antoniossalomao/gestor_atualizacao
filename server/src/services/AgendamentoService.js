@@ -1,8 +1,8 @@
-const { STATUS_OPTIONS, PRIORIDADE_OPTIONS } = require("../config/constants");
+const { OPCOES_STATUS, OPCOES_PRIORIDADE } = require("../config/constantes");
 const { REGRAS } = require("../config/regrasEquipe");
 const { dataValida, horaValida } = require("./validacao");
 const { normalizarResponsavel } = require("../shared/normalizacao");
-const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
+const { ErroDeValidacao, ErroNaoEncontrado, ErroDeConflito } = require("../shared/erros");
 
 /**
  * Regras de negocio da aba Agendamentos, em cima do AgendamentoRepository.
@@ -51,19 +51,19 @@ class AgendamentoService {
   arquivarAntigas() {
     return this.db.agendamentos.arquivarConcluidasAntigas(
       this.regras.valor("agendamentoArquivarDias"),
-      STATUS_OPTIONS[STATUS_OPTIONS.length - 1]
+      OPCOES_STATUS[OPCOES_STATUS.length - 1]
     );
   }
 
   /** Traz uma tarefa arquivada de volta para a lista, reaberta. */
   reabrir(id, usuario) {
     const tarefa = this.db.agendamentos.find(id);
-    if (!tarefa) throw new NotFoundError("Esta tarefa não existe mais.");
-    if (this.db.agendamentos.reabrir(id, STATUS_OPTIONS[0]) === 0) {
-      throw new NotFoundError("Esta tarefa não está arquivada.");
+    if (!tarefa) throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
+    if (this.db.agendamentos.reabrir(id, OPCOES_STATUS[0]) === 0) {
+      throw new ErroNaoEncontrado("Esta tarefa não está arquivada.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${tarefa.tarefa}" desarquivada e reaberta`);
-    return { ...tarefa, status: STATUS_OPTIONS[0], concluidoEm: null };
+    return { ...tarefa, status: OPCOES_STATUS[0], concluidoEm: null };
   }
 
   /**
@@ -75,13 +75,13 @@ class AgendamentoService {
    */
   arquivar(id, usuario) {
     const tarefa = this.db.agendamentos.find(id);
-    if (!tarefa) throw new NotFoundError("Esta tarefa não existe mais.");
-    const statusConcluido = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+    if (!tarefa) throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
+    const statusConcluido = OPCOES_STATUS[OPCOES_STATUS.length - 1];
     if (tarefa.status !== statusConcluido) {
-      throw new ValidationError(`Só é possível arquivar tarefas "${statusConcluido}".`);
+      throw new ErroDeValidacao(`Só é possível arquivar tarefas "${statusConcluido}".`);
     }
     if (this.db.agendamentos.arquivar(id) === 0) {
-      throw new NotFoundError("Esta tarefa já está arquivada.");
+      throw new ErroNaoEncontrado("Esta tarefa já está arquivada.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${tarefa.tarefa}" arquivada`);
   }
@@ -108,7 +108,7 @@ class AgendamentoService {
     // continua concluída de uma edição pra outra -> preserva a data
     // original (senão editar o responsável de uma tarefa já fechada
     // "resetaria" o tempo de resolução dela).
-    const statusConcluido = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+    const statusConcluido = OPCOES_STATUS[OPCOES_STATUS.length - 1];
     const atual = this.db.agendamentos.find(id);
     let concluidoEm = null;
     if (data.status === statusConcluido) {
@@ -117,8 +117,8 @@ class AgendamentoService {
     const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
     if (this.db.agendamentos.update(id, { ...data, concluidoEm }, revisaoEsperada, usuario?.nome || "") === 0) {
       const agora = this.db.agendamentos.find(id);
-      if (agora && revisaoEsperada != null) throw new ConflictError(`Este agendamento foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, agora);
-      throw new NotFoundError("Esta tarefa não existe mais. Ela pode ter sido excluída por outra pessoa.");
+      if (agora && revisaoEsperada != null) throw new ErroDeConflito(`Este agendamento foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, agora);
+      throw new ErroNaoEncontrado("Esta tarefa não existe mais. Ela pode ter sido excluída por outra pessoa.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${data.tarefa}"`, { antes: atual, depois: data });
     // Devolve a linha RELIDA, com a `revisao` nova. Devolver só `data` (sem
@@ -132,28 +132,28 @@ class AgendamentoService {
   delete(id, usuario) {
     const atual = this.db.agendamentos.find(id);
     if (this.db.agendamentos.delete(id) === 0) {
-      throw new NotFoundError("Esta tarefa não existe mais.");
+      throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
     }
     this.historico.registrar(usuario, "excluir", "agendamento", `Tarefa #${id}`, { antes: atual, depois: null });
   }
 
   /** Atalho: marca a tarefa com o ultimo status da lista ("Concluído"). */
   markDone(id, usuario) {
-    if (this.db.agendamentos.markDone(id, STATUS_OPTIONS[STATUS_OPTIONS.length - 1]) === 0) {
-      throw new NotFoundError("Esta tarefa não existe mais.");
+    if (this.db.agendamentos.markDone(id, OPCOES_STATUS[OPCOES_STATUS.length - 1]) === 0) {
+      throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
     }
     this.historico.registrar(usuario, "marcar_concluida", "agendamento", `Tarefa #${id} concluída`);
   }
 
   _validate(input) {
     const tarefa = (input.tarefa || "").trim();
-    if (!tarefa) throw new ValidationError("Campo 'Tarefa' é obrigatório.");
+    if (!tarefa) throw new ErroDeValidacao("Campo 'Tarefa' é obrigatório.");
     const data = (input.data || "").trim();
-    if (!dataValida(data)) throw new ValidationError("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
+    if (!dataValida(data)) throw new ErroDeValidacao("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
     const horario = (input.horario || "").trim();
-    if (!horaValida(horario)) throw new ValidationError("Campo 'Horário' precisa estar no formato hh:mm.");
-    const status = STATUS_OPTIONS.includes(input.status) ? input.status : STATUS_OPTIONS[0];
-    const prioridade = PRIORIDADE_OPTIONS.includes(input.prioridade) ? input.prioridade : "Normal";
+    if (!horaValida(horario)) throw new ErroDeValidacao("Campo 'Horário' precisa estar no formato hh:mm.");
+    const status = OPCOES_STATUS.includes(input.status) ? input.status : OPCOES_STATUS[0];
+    const prioridade = OPCOES_PRIORIDADE.includes(input.prioridade) ? input.prioridade : "Normal";
     return {
       tarefa,
       cliente: (input.cliente || "").trim(),

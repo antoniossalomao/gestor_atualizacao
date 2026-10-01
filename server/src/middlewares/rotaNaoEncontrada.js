@@ -1,6 +1,6 @@
 /**
  * Middleware de "nao encontrado", montado depois de todas as rotas e do
- * fallback de SPA, e antes do errorHandler.
+ * fallback de SPA, e antes do tratadorDeErros.
  *
  * Sem ele, quem responde e' o 404 padrao do Express: uma pagina HTML com
  * "Cannot GET /caminho". Isso e' ruim de dois jeitos. Para /api/..., um
@@ -11,10 +11,10 @@
  * server responded with a MIME type of text/html" -- mensagem que manda
  * procurar o problema no lugar errado.
  *
- * O formato da resposta da API e' o mesmo de errorHandler.js (`{ error }`),
+ * O formato da resposta da API e' o mesmo de tratadorDeErros.js (`{ error }`),
  * para o front-end ter um unico formato de erro para tratar.
  */
-function notFoundHandler(req, res) {
+function rotaNaoEncontrada(req, res) {
   if (req.path.startsWith("/api")) {
     return res.status(404).json({ error: "Rota de API não encontrada." });
   }
@@ -25,4 +25,4 @@ function notFoundHandler(req, res) {
   res.status(404).type("txt").send("Arquivo não encontrado.");
 }
 
-module.exports = { notFoundHandler };
+module.exports = { rotaNaoEncontrada };

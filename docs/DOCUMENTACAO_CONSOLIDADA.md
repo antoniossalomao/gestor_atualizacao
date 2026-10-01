@@ -352,7 +352,7 @@ rotas (routes/)  ->  controllers/  ->  services/  ->  database/ (repositórios) 
 - **`controllers/`** — finos de propósito: recebem a requisição, chamam o serviço certo, devolvem
   a resposta.
 - **`routes/index.js`** — só o mapeamento verbo HTTP + caminho → método do controller. Rotas de
-  `/api/auth/...` não passam pelo middleware `requireAuth`; todo o resto passa.
+  `/api/auth/...` não passam pelo middleware `exigirLogin`; todo o resto passa.
 - **`Server.js`** — classe raiz: cria o `Database`, monta serviços/controllers (injeção de
   dependência simples, na mão) e configura o Express.
 
@@ -361,11 +361,11 @@ não usam `await`. Foge do padrão assíncrono comum em Node, mas segue a mesma 
 direto que o `sqlite3` do Python já usava — o SQLite lê do disco rápido o bastante para
 "assíncrono" não trazer benefício, só complexidade.
 
-**Erros:** `shared/errors.js` define `ValidationError` (400) e `NotFoundError` (404) — erros
+**Erros:** `shared/erros.js` define `ErroDeValidacao` (400) e `ErroNaoEncontrado` (404) — erros
 esperados, com mensagem segura de mostrar ao usuário. Qualquer outro erro vira 500 genérico, sem
 vazar detalhe interno.
 
-**Sessão de login:** `database/SqliteSessionStore.js` é uma classe própria (estende
+**Sessão de login:** `database/ArmazemDeSessaoSqlite.js` é uma classe própria (estende
 `session.Store`) que guarda sessões num `sessions.sqlite` separado, usando a mesma
 `better-sqlite3` do resto do app — evita depender de `connect-sqlite3`, que traz `sqlite3` +
 `node-gyp`, cadeia com vulnerabilidades conhecidas de build.
@@ -644,7 +644,7 @@ usava os padrões que mudaram.
 
 O que mudou de fato no código, por causa do endurecimento de CSP feito junto: o script inline de
 tema no `<head>` de `client/index.html` foi extraído para `client/js/temaInicial.js`, e
-`Server.js`/`requireAgent.js` ganharam uma CSP sob medida e comparação de token em tempo
+`Server.js`/`exigirAgente.js` ganharam uma CSP sob medida e comparação de token em tempo
 constante.
 
 Deixado de fora de propósito: a vulnerabilidade restante do `npm audit` é em `uuid`, puxada por
@@ -652,7 +652,7 @@ Deixado de fora de propósito: a vulnerabilidade restante do `npm audit` é em `
 
 **`connect-sqlite3` foi evitado deliberadamente** desde o início do projeto: depende de `sqlite3` +
 `node-gyp`, cadeia com vulnerabilidades conhecidas nas ferramentas de build. As sessões usam uma
-classe própria (`SqliteSessionStore.js`) com a mesma `better-sqlite3` do resto do app.
+classe própria (`ArmazemDeSessaoSqlite.js`) com a mesma `better-sqlite3` do resto do app.
 
 **`.env.bak` esteve commitado no git** (corrigido em set/2026): a regra do `.gitignore` só cobria
 `.env` (nome exato); um `.env.bak` real chegou a ser commitado ("Snapshot antes da migração para
@@ -1300,7 +1300,7 @@ há ferramenta de migração externa.
 distribui binário pré-compilado, então `npm install` no Windows não precisa de compilador C++ (ao
 contrário do driver `sqlite3`); sendo síncrono, o código de repositório é linear, sem `async`/
 `await` nem callback para ler uma linha — elimina uma classe inteira de bugs de ordem de execução,
-e é o que torna o `SqliteSessionStore` seguro (ver [ADR 4.3](#43-adr-0003--armazenamento-de-sessão-escrito-à-mão));
+e é o que torna o `ArmazemDeSessaoSqlite` seguro (ver [ADR 4.3](#43-adr-0003--armazenamento-de-sessão-escrito-à-mão));
 backup é copiar um arquivo — é literalmente o que `BackupService` faz.
 
 *Custos aceitos:* uma consulta lenta trava o event loop do Node inteiro (com este volume, cada
@@ -1325,7 +1325,7 @@ mundo é deslogado a cada reinício do servidor — inaceitável para um app que
 Windows e reinicia em toda atualização. A escolha natural seria `connect-sqlite3`, que faz
 exatamente isso.
 
-**Decisão.** Escrever `src/database/SqliteSessionStore.js`: uma classe que estende `session.Store`
+**Decisão.** Escrever `src/database/ArmazemDeSessaoSqlite.js`: uma classe que estende `session.Store`
 e implementa `get`, `set`, `destroy`, `touch` e `clearAll` sobre um `sessions.sqlite` próprio,
 usando o `better-sqlite3` que o app já usa.
 
@@ -1427,7 +1427,7 @@ para arquivos antigos, em anotações fora do repositório, quebraram.
 **Efeito colateral valioso:** a migração revelou um bug real — um caminho de asset inexistente
 respondia 200 com o `index.html`, porque o fallback de SPA capturava qualquer caminho fora de
 `/api`; o navegador só reclamava depois, com uma mensagem de MIME type que manda procurar no lugar
-errado. Corrigido em `Server.js` e `middlewares/notFoundHandler.js`, com teste de regressão em
+errado. Corrigido em `Server.js` e `middlewares/rotaNaoEncontrada.js`, com teste de regressão em
 `tests/routing.test.js`.
 
 **Alternativas consideradas.** Manter `core/` e só criar subpastas dentro dela — descartado:

@@ -1,4 +1,4 @@
-import { COLUMNS } from "../config.js";
+import { COLUNAS_ATUALIZACOES } from "../config.js";
 import { ApiError } from "../api/ApiClient.js";
 import { View } from "../app/View.js";
 import { SortableTable } from "../components/SortableTable.js";
@@ -196,7 +196,7 @@ export class AtualizacoesView extends View {
       ocuparAltura: true,
       columns: [
         { key: "id", label: "ID", type: "numeric", largura: LARGURAS_ATUALIZACAO.id },
-        ...COLUMNS.map((c) => ({
+        ...COLUNAS_ATUALIZACOES.map((c) => ({
           key: c.key,
           label: c.label,
           type: c.key === "data" ? "date" : "text",
@@ -476,7 +476,7 @@ export class AtualizacoesView extends View {
   _buildFields() {
     const wrap = this.container.querySelector('[data-role="fields"]');
     this.fields = {};
-    for (const col of COLUMNS) {
+    for (const col of COLUNAS_ATUALIZACOES) {
       const id = `atu-${col.key}`;
       const field = document.createElement("div");
       field.className = "field";
@@ -704,7 +704,7 @@ export class AtualizacoesView extends View {
     // fato está gravado, que é o que ele vai colar no chamado.
     this.selectedRow = row;
     this.selectedRevision = row.revisao;
-    for (const col of COLUMNS) this.fields[col.key].value = row[col.key] ?? "";
+    for (const col of COLUNAS_ATUALIZACOES) this.fields[col.key].value = row[col.key] ?? "";
     this._pintarModo();
   }
 
@@ -756,7 +756,7 @@ export class AtualizacoesView extends View {
 
   _readForm() {
     const data = {};
-    for (const col of COLUMNS) data[col.key] = this.fields[col.key].value.trim();
+    for (const col of COLUNAS_ATUALIZACOES) data[col.key] = this.fields[col.key].value.trim();
     if (!data.cliente) {
       Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning").then(() => this.fields.cliente.focus());
       return null;
@@ -939,7 +939,7 @@ export class AtualizacoesView extends View {
     const antes = {};
     let tinhaConteudo = false;
     if (this.fields) {
-      for (const col of COLUMNS) {
+      for (const col of COLUNAS_ATUALIZACOES) {
         antes[col.key] = this.fields[col.key].value;
         if (col.key !== "data" && col.key !== "responsavel" && antes[col.key].trim()) tinhaConteudo = true;
       }
@@ -949,7 +949,7 @@ export class AtualizacoesView extends View {
     this.selectedRow = null;
     this.selectedRevision = null;
     this.table?.clearSelection();
-    for (const col of COLUMNS) this.fields[col.key].value = "";
+    for (const col of COLUNAS_ATUALIZACOES) this.fields[col.key].value = "";
     this.fields.data.value = todayBR();
     // Melhoria em relação ao app original: já vem preenchido com quem está
     // logado (continua editável, caso outra pessoa tenha feito a atualização
@@ -960,7 +960,7 @@ export class AtualizacoesView extends View {
 
     if (comDesfazer && tinhaConteudo) {
       toast.undo("Formulário limpo.", () => {
-        for (const col of COLUMNS) this.fields[col.key].value = antes[col.key];
+        for (const col of COLUNAS_ATUALIZACOES) this.fields[col.key].value = antes[col.key];
         this.fields.cliente.focus();
       }, "Restaurar");
     }

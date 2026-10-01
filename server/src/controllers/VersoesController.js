@@ -64,7 +64,7 @@ class VersoesController {
     }
   };
 
-  /** Consumido pelo Worker C# (rota de agente, sem sessão -- ver requireAgent). */
+  /** Consumido pelo Worker C# (rota de agente, sem sessão -- ver exigirAgente). */
   statusAgente = (req, res, next) => {
     try {
       res.json(this.service.statusAgente(req.params.cnpj));

@@ -1,4 +1,4 @@
-const { ForbiddenError, ValidationError } = require("../shared/errors");
+const { ErroDePermissao, ErroDeValidacao } = require("../shared/erros");
 const { REGRAS, validarRegra, converterRegra } = require("../config/regrasEquipe");
 
 /** O valor do .env.example. Chave igual a esta é o mesmo que não ter chave. */
@@ -41,7 +41,7 @@ class ConfiguracaoSistemaService {
     return converterRegra(nome, this.db.configuracoesSistema.get(REGRAS[nome].chave));
   }
 
-  /** Atalho usado em toda rota do Atualizador (ver requireAtualizadorHabilitado). */
+  /** Atalho usado em toda rota do Atualizador (ver exigirAtualizadorHabilitado). */
   atualizadorHabilitado() {
     return this.valor("atualizadorHabilitado");
   }
@@ -72,7 +72,7 @@ class ConfiguracaoSistemaService {
   atualizar(usuarioLogado, parcial) {
     this._exigirAdmin(usuarioLogado);
     if (!parcial || typeof parcial !== "object" || Array.isArray(parcial)) {
-      throw new ValidationError("Envie as regras a alterar.");
+      throw new ErroDeValidacao("Envie as regras a alterar.");
     }
 
     const novos = {};
@@ -165,8 +165,6 @@ class ConfiguracaoSistemaService {
     this._ouvintes.push(ouvinte);
   }
 
-  // ==========================================================================
-
   _valores(filtro) {
     return Object.fromEntries(
       Object.entries(REGRAS)
@@ -213,7 +211,7 @@ class ConfiguracaoSistemaService {
 
   _exigirAdmin(usuarioLogado) {
     if (!usuarioLogado || usuarioLogado.role !== "admin") {
-      throw new ForbiddenError("Apenas administradores podem ver ou alterar as regras da equipe.");
+      throw new ErroDePermissao("Apenas administradores podem ver ou alterar as regras da equipe.");
     }
   }
 }

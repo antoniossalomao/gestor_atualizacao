@@ -1,6 +1,6 @@
 const { SistemaRepository } = require("./SistemaRepository");
 const { normalizarSistemas } = require("../shared/normalizacao");
-const { SISTEMA_SUPORTE_BREDAS } = require("../config/constants");
+const { SISTEMA_SUPORTE_BREDAS } = require("../config/constantes");
 
 /**
  * Migrações numeradas do esquema. O número da última aplicada fica no
@@ -242,7 +242,7 @@ function migracao5(conn) {
  * marca os dois pelos nomes gravados em produção (conferidos numa cópia do
  * banco de 29/09/2026: "B_NFCe" e "Consignado M2"). Pelo `resolver`, e não
  * por nome exato: o catálogo inicial de uma instalação nova grava "NFCe",
- * sem o "B_" (config/constants.js), e o resolver trata os dois como o mesmo.
+ * sem o "B_" (config/constantes.js), e o resolver trata os dois como o mesmo.
  */
 function migracao6(conn) {
   conn.exec("ALTER TABLE sistemas ADD COLUMN atualiza_com_principal INTEGER NOT NULL DEFAULT 0");

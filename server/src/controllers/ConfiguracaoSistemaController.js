@@ -1,7 +1,7 @@
 /**
  * Rotas das regras da equipe (tela Administração). Leitura das regras
  * públicas para qualquer conta logada; o resto só administrador -- ver
- * requireRole nas rotas e a checagem repetida no serviço.
+ * exigirPapel nas rotas e a checagem repetida no serviço.
  */
 class ConfiguracaoSistemaController {
   /**

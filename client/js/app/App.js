@@ -230,7 +230,7 @@ export class App {
    * Busca o que alimenta o sino: agendamentos vencidos/de hoje e o painel dos
    * agentes. As duas chamadas juntas, e cada uma com o seu próprio `catch`:
    * com o Atualizador desativado `/versoes/painel` responde 403 (ver
-   * `requireAtualizadorHabilitado`), e uma falha de rede numa delas não pode
+   * `exigirAtualizadorHabilitado`), e uma falha de rede numa delas não pode
    * apagar o que a outra tinha a dizer.
    */
   async _carregarNotificacoes() {
@@ -889,7 +889,7 @@ export class App {
       const [resClientes, resAtivas, resPainel] = await Promise.allSettled([
         this.api.get("/clientes/names", null, { key: "clientes:names" }),
         // Com o Atualizador desativado, "/versoes/*" responde 403 (ver
-        // requireAtualizadorHabilitado no servidor) -- nem vale chamar.
+        // exigirAtualizadorHabilitado no servidor) -- nem vale chamar.
         this.atualizadorHabilitado
           ? this.api.get("/versoes/ativas", null, { key: "cmd:ativas" })
           : Promise.resolve([]),

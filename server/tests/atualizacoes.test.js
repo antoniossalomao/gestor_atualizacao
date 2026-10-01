@@ -80,7 +80,7 @@ test("AtualizacaoService - normalização na gravação", async (t) => {
   const env = ambiente();
   try {
     // B_NFe e B_Vendas ja vem no catalogo semeado na criacao do banco
-    // (SISTEMAS_INICIAIS em config/constants.js) -- nao precisam ser criados,
+    // (SISTEMAS_INICIAIS em config/constantes.js) -- nao precisam ser criados,
     // e tentar criar de novo seria recusado como duplicata.
 
     await t.test("o sistema é gravado na grafia canônica", () => {

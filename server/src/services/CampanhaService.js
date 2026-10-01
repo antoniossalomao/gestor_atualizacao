@@ -1,13 +1,13 @@
 const ExcelJS = require("exceljs");
 
-const { STATUS_OPTIONS } = require("../config/constants");
+const { OPCOES_STATUS } = require("../config/constantes");
 const { dataValida } = require("./validacao");
-const { ValidationError, NotFoundError } = require("../shared/errors");
+const { ErroDeValidacao, ErroNaoEncontrado } = require("../shared/erros");
 const { splitSystems } = require("../shared/normalizacao");
 const { acharSistema } = require("../database/SistemaRepository");
 const { situacaoDoSistema, contaParaVersao } = require("./situacaoVersao");
 
-const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+const STATUS_CONCLUIDO = OPCOES_STATUS[OPCOES_STATUS.length - 1];
 /** Status em que a tarefa não encaminha mais o cliente (ver abertasComCliente). */
 const STATUS_ENCERRADOS = [STATUS_CONCLUIDO, "Sem resposta"];
 
@@ -82,7 +82,7 @@ class CampanhaService {
   encerrar(id, usuario) {
     const { totalClientes, atendidos, titulo } = this.detalhe(id);
     if (this.db.campanhas.encerrar(Number(id), { usuarioNome: usuario?.nome || "", total: totalClientes, atendidos }) === 0) {
-      throw new ValidationError("Esta campanha já está encerrada.");
+      throw new ErroDeValidacao("Esta campanha já está encerrada.");
     }
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${titulo}" encerrada com ${atendidos} de ${totalClientes} cliente(s) atualizado(s)`);
     return this.detalhe(id);
@@ -90,7 +90,7 @@ class CampanhaService {
 
   reabrir(id, usuario) {
     const campanha = this._achar(id);
-    if (this.db.campanhas.reabrir(campanha.id) === 0) throw new ValidationError("Esta campanha não está encerrada.");
+    if (this.db.campanhas.reabrir(campanha.id) === 0) throw new ErroDeValidacao("Esta campanha não está encerrada.");
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${campanha.titulo}" reaberta`);
     return this.detalhe(campanha.id);
   }
@@ -137,7 +137,7 @@ class CampanhaService {
 
   _achar(id) {
     const campanha = this.db.campanhas.find(Number(id));
-    if (!campanha) throw new NotFoundError("Esta campanha não existe mais.");
+    if (!campanha) throw new ErroNaoEncontrado("Esta campanha não existe mais.");
     return campanha;
   }
 
@@ -147,19 +147,19 @@ class CampanhaService {
     const prazo = String(input.prazo || "").trim();
     const cidadeInformada = String(input.cidade || "").trim();
     const cidade = cidadeInformada ? [cidadeAtual, ...this.db.clientes.cidades()].find((item) => item.toLocaleLowerCase("pt-BR") === cidadeInformada.toLocaleLowerCase("pt-BR")) : "";
-    if (cidadeInformada && !cidade) throw new ValidationError("Escolha uma cidade cadastrada nos clientes.");
+    if (cidadeInformada && !cidade) throw new ErroDeValidacao("Escolha uma cidade cadastrada nos clientes.");
     const versaoAlvo = String(input.versaoAlvo || "").trim();
-    if (!titulo) throw new ValidationError("Informe o título da campanha.");
-    if (titulo.length > 120) throw new ValidationError("O título pode ter no máximo 120 caracteres.");
-    if (descricao.length > 1000) throw new ValidationError("A descrição pode ter no máximo 1000 caracteres.");
-    if (!dataValida(prazo)) throw new ValidationError("Campo 'Prazo' precisa estar no formato dd/mm/aaaa.");
+    if (!titulo) throw new ErroDeValidacao("Informe o título da campanha.");
+    if (titulo.length > 120) throw new ErroDeValidacao("O título pode ter no máximo 120 caracteres.");
+    if (descricao.length > 1000) throw new ErroDeValidacao("A descrição pode ter no máximo 1000 caracteres.");
+    if (!dataValida(prazo)) throw new ErroDeValidacao("Campo 'Prazo' precisa estar no formato dd/mm/aaaa.");
     if (!nova) return { titulo, descricao, prazo, cidade };
-    if (!versaoAlvo || !dataValida(versaoAlvo)) throw new ValidationError("Campo 'Versão-alvo' precisa estar no formato dd/mm/aaaa.");
+    if (!versaoAlvo || !dataValida(versaoAlvo)) throw new ErroDeValidacao("Campo 'Versão-alvo' precisa estar no formato dd/mm/aaaa.");
     const sistema = this.db.sistemas.resolver(String(input.sistema || ""));
-    if (!sistema || !sistema.ativo) throw new ValidationError("Escolha um sistema do catálogo.");
+    if (!sistema || !sistema.ativo) throw new ErroDeValidacao("Escolha um sistema do catálogo.");
     // Fixos (B_Atualizador, Suporte Bredas) não têm versão para cobrar -- a
     // campanha nunca terminaria, e ficaria todo mundo "pendente" de nada.
-    if (!contaParaVersao(sistema)) throw new ValidationError(`"${sistema.nome}" não controla versão e não pode ter campanha.`);
+    if (!contaParaVersao(sistema)) throw new ErroDeValidacao(`"${sistema.nome}" não controla versão e não pode ter campanha.`);
     return { titulo, descricao, prazo, cidade, versaoAlvo, sistemaId: sistema.id, sistemaNome: sistema.nome };
   }
 

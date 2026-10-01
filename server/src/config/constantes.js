@@ -1,17 +1,10 @@
 /**
- * Constantes de configuracao do backend: colunas de formulario, opcoes
- * fixas e regras de negocio simples (ex.: prazo de "cliente desatualizado").
- *
- * Nada neste arquivo acessa banco de dados ou monta rotas -- so valores.
- * Equivalente direto de "gestor/config.py" do projeto Python original.
- *
- * Nota para quem esta comecando a programar: em JavaScript, "module.exports"
- * e a forma de dizer "estes valores daqui podem ser usados por outros
- * arquivos que derem 'require' neste arquivo".
+ * Colunas de formulário, opções fixas e limites do backend. Só valores:
+ * nada aqui acessa banco nem monta rotas.
  */
 
 // Colunas do formulario/tabela de Atualizacoes: { chave no banco, rotulo pro usuario }.
-const COLUMNS = [
+const COLUNAS_ATUALIZACOES = [
   { key: "cliente", label: "Cliente" },
   { key: "sistema", label: "Sistema" },
   { key: "versao", label: "Versão" },
@@ -23,7 +16,7 @@ const COLUMNS = [
 ];
 
 // Colunas do formulario/tabela de Agendamentos.
-const AGENDA_COLUMNS = [
+const COLUNAS_AGENDAMENTOS = [
   { key: "tarefa", label: "Tarefa" },
   { key: "cliente", label: "Cliente" },
   { key: "sistema", label: "Sistema" },
@@ -37,13 +30,13 @@ const AGENDA_COLUMNS = [
 
 // Níveis de prioridade de uma tarefa agendada (ordem crescente de urgência).
 // "Normal" é o padrão: tarefas sem prioridade definida ficam aqui.
-const PRIORIDADE_OPTIONS = ["Baixa", "Normal", "Alta", "Urgente"];
+const OPCOES_PRIORIDADE = ["Baixa", "Normal", "Alta", "Urgente"];
 
 // Opcoes fixas de andamento de uma tarefa (a ordem importa: e a ordem de
 // prioridade usada para ordenar a tabela -- pendentes antes de concluidas.
 // "Concluído" precisa continuar sendo o ULTIMO item: o front-end usa
-// STATUS_OPTIONS[length - 1] para saber qual e o status de "tarefa feita").
-const STATUS_OPTIONS = ["A Fazer", "Em Andamento", "Sem resposta", "Concluído"];
+// OPCOES_STATUS[length - 1] para saber qual e o status de "tarefa feita").
+const OPCOES_STATUS = ["A Fazer", "Em Andamento", "Sem resposta", "Concluído"];
 
 // Lista inicial de sistemas conhecidos, usada so para "semear" o banco na
 // primeira vez que ele e criado (depois disso a lista mora na tabela
@@ -66,14 +59,14 @@ const OBS_SUPORTE_BREDAS = "adicionado o suporte bredas";
 // config/regrasEquipe.js.
 
 // Valor do filtro de status que pede justamente o que some da lista. Nao e
-// um status de verdade (nao entra em STATUS_OPTIONS, ninguem marca uma
+// um status de verdade (nao entra em OPCOES_STATUS, ninguem marca uma
 // tarefa como "Arquivadas") -- e um modo de consulta.
 const FILTRO_ARQUIVADAS = "Arquivadas";
 
 // Tamanho máximo de cada upload, em MB, pelo nome do campo do formulário:
 // "arquivo" é a planilha de importação, "pacote" é o pacote de uma versão.
 // Mora aqui, e não só no multer (routes/index.js), porque a mensagem de
-// "arquivo grande demais" (middlewares/errorHandler.js) precisa dizer o
+// "arquivo grande demais" (middlewares/tratadorDeErros.js) precisa dizer o
 // número -- e os dois lugares não podem discordar. O que protege a memória
 // na importação é o limite de LINHAS (config/limitesPlanilha.js); estes 15 MB
 // só barram o absurdo antes de o arquivo chegar ao leitor.
@@ -86,10 +79,10 @@ const LIMITE_UPLOAD_MB = { arquivo: 15, pacote: 500 };
 const VERSAO_PAINEL = require("../../package.json").version;
 
 module.exports = {
-  COLUMNS,
-  AGENDA_COLUMNS,
-  STATUS_OPTIONS,
-  PRIORIDADE_OPTIONS,
+  COLUNAS_ATUALIZACOES,
+  COLUNAS_AGENDAMENTOS,
+  OPCOES_STATUS,
+  OPCOES_PRIORIDADE,
   SISTEMAS_CONHECIDOS,
   SISTEMA_SUPORTE_BREDAS,
   OBS_SUPORTE_BREDAS,

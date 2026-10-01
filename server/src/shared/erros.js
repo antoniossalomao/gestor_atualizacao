@@ -5,40 +5,40 @@
  * com uma mensagem que pode ser mostrada direto pro usuario, em vez de um
  * genérico "erro interno do servidor" (500).
  */
-class ValidationError extends Error {
+class ErroDeValidacao extends Error {
   constructor(message) {
     super(message);
-    this.name = "ValidationError";
+    this.name = "ErroDeValidacao";
     this.statusCode = 400;
   }
 }
 
 /** Erro "nao encontrado" (id que nao existe mais, por exemplo). */
-class NotFoundError extends Error {
+class ErroNaoEncontrado extends Error {
   constructor(message = "Registro não encontrado.") {
     super(message);
-    this.name = "NotFoundError";
+    this.name = "ErroNaoEncontrado";
     this.statusCode = 404;
   }
 }
 
 /** Erro de permissao (usuario logado, mas sem o papel necessario para a acao). */
-class ForbiddenError extends Error {
+class ErroDePermissao extends Error {
   constructor(message = "Você não tem permissão para fazer isso.") {
     super(message);
-    this.name = "ForbiddenError";
+    this.name = "ErroDePermissao";
     this.statusCode = 403;
   }
 }
 
 /** Edição otimista: o registro mudou desde que a pessoa abriu o formulário. */
-class ConflictError extends Error {
+class ErroDeConflito extends Error {
   constructor(message, atual = null) {
     super(message);
-    this.name = "ConflictError";
+    this.name = "ErroDeConflito";
     this.statusCode = 409;
     this.atual = atual;
   }
 }
 
-module.exports = { ValidationError, NotFoundError, ForbiddenError, ConflictError };
+module.exports = { ErroDeValidacao, ErroNaoEncontrado, ErroDePermissao, ErroDeConflito };

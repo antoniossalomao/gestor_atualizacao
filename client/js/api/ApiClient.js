@@ -1,6 +1,6 @@
 /**
  * Erro lançado quando a API responde com um status de erro (4xx/5xx). Guarda
- * a mensagem que o servidor mandou (ver server/src/middlewares/errorHandler.js)
+ * a mensagem que o servidor mandou (ver server/src/middlewares/tratadorDeErros.js)
  * para poder mostrar ela direto num toast/modal, sem o resto do código
  * precisar saber nada sobre o formato da resposta HTTP.
  */

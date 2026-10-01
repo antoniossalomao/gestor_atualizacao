@@ -1,4 +1,4 @@
-const { ValidationError } = require("../shared/errors");
+const { ErroDeValidacao } = require("../shared/erros");
 const { parsePaginacao } = require("./paginacao");
 
 /** Rotas de CRUD de clientes (aba Clientes) + lista de nomes p/ autocompletar. */
@@ -93,7 +93,7 @@ class ClientesController {
   removeMany = (req, res, next) => {
     try {
       const ids = Array.isArray(req.body?.ids) ? req.body.ids : null;
-      if (!ids || ids.length === 0) throw new ValidationError("Selecione ao menos um cliente para excluir.");
+      if (!ids || ids.length === 0) throw new ErroDeValidacao("Selecione ao menos um cliente para excluir.");
       res.json(this.clienteService.deleteMany(ids, req.session.user));
     } catch (err) {
       next(err);
@@ -103,7 +103,7 @@ class ClientesController {
   addSistemaMany = (req, res, next) => {
     try {
       const ids = Array.isArray(req.body?.ids) ? req.body.ids : null;
-      if (!ids || ids.length === 0) throw new ValidationError("Selecione ao menos um cliente.");
+      if (!ids || ids.length === 0) throw new ErroDeValidacao("Selecione ao menos um cliente.");
       res.json(this.clienteService.addSistemaMany(ids, req.body?.sistema, req.session.user));
     } catch (err) {
       next(err);

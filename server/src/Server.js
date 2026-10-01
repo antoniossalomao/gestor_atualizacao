@@ -5,7 +5,7 @@ const session = require("express-session");
 const helmet = require("helmet");
 
 const { Database } = require("./database/Database");
-const { SqliteSessionStore } = require("./database/SqliteSessionStore");
+const { ArmazemDeSessaoSqlite } = require("./database/ArmazemDeSessaoSqlite");
 const { HistoricoService } = require("./services/HistoricoService");
 const { AuthService } = require("./services/AuthService");
 const { ClienteService } = require("./services/ClienteService");
@@ -33,10 +33,10 @@ const { CampanhaService } = require("./services/CampanhaService");
 const { CampanhasController } = require("./controllers/CampanhasController");
 const { SaudeService } = require("./services/SaudeService");
 const { SaudeController } = require("./controllers/SaudeController");
-const { LoginRateLimiter } = require("./middlewares/LoginRateLimiter");
+const { LimitadorDeLogin } = require("./middlewares/LimitadorDeLogin");
 const { ApiRouter } = require("./routes/index");
-const { errorHandler } = require("./middlewares/errorHandler");
-const { notFoundHandler } = require("./middlewares/notFoundHandler");
+const { tratadorDeErros } = require("./middlewares/tratadorDeErros");
+const { rotaNaoEncontrada } = require("./middlewares/rotaNaoEncontrada");
 const { exigirHttps } = require("./middlewares/exigirHttps");
 
 const CLIENT_DIR = path.join(__dirname, "..", "..", "client");
@@ -131,7 +131,7 @@ class Server {
       saude: new SaudeController(s.saude),
       campanhas: new CampanhasController(s.campanhas),
     };
-    this.loginLimiter = new LoginRateLimiter();
+    this.loginLimiter = new LimitadorDeLogin();
   }
 
   _configureExpress() {
@@ -206,7 +206,7 @@ class Server {
     if (this.config.sessionSecure) this.app.use(exigirHttps);
 
     this.app.use(express.json({ limit: "1mb" }));
-    this.sessionStore = new SqliteSessionStore({ filePath: path.join(dbDir, "sessions.sqlite") });
+    this.sessionStore = new ArmazemDeSessaoSqlite({ filePath: path.join(dbDir, "sessions.sqlite") });
     this.services.backups.setSessionStore(this.sessionStore);
     // Permite que AuthService.changePassword invalide as sessões ativas do
     // usuário após a troca de senha -- mesmo padrão de injeção pós-construção
@@ -242,7 +242,7 @@ class Server {
     // tarde, o arquivo teria sido enviado.
     this.app.use((req, res, next) => {
       if (!NAO_SERVIR.some((padrao) => padrao.test(req.path))) return next();
-      // 404 direto, no mesmo formato do notFoundHandler. Nao e' "next()" com
+      // 404 direto, no mesmo formato do rotaNaoEncontrada. Nao e' "next()" com
       // desvio: "next('router')" aqui, no nivel do app, tem semantica sutil
       // (encerra o router atual) e deixaria "/tests" -- sem extensao -- cair
       // no fallback de SPA e responder o index.html com 200.
@@ -269,8 +269,8 @@ class Server {
       res.sendFile(path.join(CLIENT_DIR, "index.html"));
     });
 
-    this.app.use(notFoundHandler);
-    this.app.use(errorHandler);
+    this.app.use(rotaNaoEncontrada);
+    this.app.use(tratadorDeErros);
   }
 
   start() {

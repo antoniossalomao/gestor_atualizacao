@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { VERSAO_PAINEL } = require("../config/constants");
+const { VERSAO_PAINEL } = require("../config/constantes");
 
 /**
  * Serviço de diagnóstico operacional e saúde do sistema.

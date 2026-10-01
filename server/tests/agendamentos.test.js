@@ -21,10 +21,10 @@ const os = require("node:os");
 const { Database } = require("../src/database/Database");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AgendamentoService } = require("../src/services/AgendamentoService");
-const { STATUS_OPTIONS } = require("../src/config/constants");
+const { OPCOES_STATUS } = require("../src/config/constantes");
 
-const A_FAZER = STATUS_OPTIONS[0];
-const CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+const A_FAZER = OPCOES_STATUS[0];
+const CONCLUIDO = OPCOES_STATUS[OPCOES_STATUS.length - 1];
 const USUARIO = { id: 1, nome: "Teste" };
 
 function ambiente() {
@@ -136,7 +136,7 @@ test("AgendamentoService - concorrência otimista e geração em lote", () => {
     // mesmo cartão (sair de "Em Andamento", por exemplo) era um 409 contra a
     // própria pessoa. Ida e volta entre "Em Andamento" e cada outro status.
     let linha = criar(env.service, env.db, { tarefa: "Vai e volta" });
-    for (const outro of STATUS_OPTIONS.filter((s) => s !== "Em Andamento")) {
+    for (const outro of OPCOES_STATUS.filter((s) => s !== "Em Andamento")) {
       for (const status of ["Em Andamento", outro]) {
         const resposta = env.service.update(linha.id, { ...linha, status }, USUARIO);
         assert.equal(resposta.status, status);

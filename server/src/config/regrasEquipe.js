@@ -1,4 +1,4 @@
-const { ValidationError } = require("../shared/errors");
+const { ErroDeValidacao } = require("../shared/erros");
 
 /**
  * As regras que valem para a EQUIPE INTEIRA (não para uma conta): quantos
@@ -123,10 +123,10 @@ const REGRAS = {
  */
 function validarRegra(nome, valor) {
   const regra = REGRAS[nome];
-  if (!regra) throw new ValidationError(`Regra desconhecida: ${nome}.`);
+  if (!regra) throw new ErroDeValidacao(`Regra desconhecida: ${nome}.`);
 
   if (regra.tipo === "booleano") {
-    if (typeof valor !== "boolean") throw new ValidationError(`"${regra.rotulo}" precisa ser sim ou não.`);
+    if (typeof valor !== "boolean") throw new ErroDeValidacao(`"${regra.rotulo}" precisa ser sim ou não.`);
     return valor;
   }
 
@@ -135,7 +135,7 @@ function validarRegra(nome, valor) {
     // Number("") é 0, então o vazio precisa ser recusado antes.
     const n = typeof valor === "string" && valor.trim() !== "" ? Number(valor) : valor;
     if (typeof n !== "number" || !Number.isInteger(n) || n < regra.min || n > regra.max) {
-      throw new ValidationError(`"${regra.rotulo}" precisa ser um número inteiro entre ${regra.min} e ${regra.max}.`);
+      throw new ErroDeValidacao(`"${regra.rotulo}" precisa ser um número inteiro entre ${regra.min} e ${regra.max}.`);
     }
     return n;
   }
@@ -147,13 +147,13 @@ function validarRegra(nome, valor) {
   try {
     url = new URL(texto);
   } catch {
-    throw new ValidationError(`"${regra.rotulo}" não é um endereço válido.`);
+    throw new ErroDeValidacao(`"${regra.rotulo}" não é um endereço válido.`);
   }
   if (!regra.protocolos.includes(url.protocol)) {
-    throw new ValidationError(`"${regra.rotulo}" precisa começar com ${regra.protocolos.map((p) => `${p}//`).join(" ou ")}.`);
+    throw new ErroDeValidacao(`"${regra.rotulo}" precisa começar com ${regra.protocolos.map((p) => `${p}//`).join(" ou ")}.`);
   }
   if (regra.hosts && !regra.hosts.includes(url.hostname)) {
-    throw new ValidationError(`"${regra.rotulo}" precisa ser um endereço do Discord (discord.com).`);
+    throw new ErroDeValidacao(`"${regra.rotulo}" precisa ser um endereço do Discord (discord.com).`);
   }
   // Sem barra no fim: a URL pública é concatenada com "/api/..." e sairia "//api".
   return nome === "publicUrl" ? texto.replace(/\/+$/, "") : texto;

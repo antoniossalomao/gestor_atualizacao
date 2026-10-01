@@ -1,4 +1,4 @@
-const { ValidationError } = require("../shared/errors");
+const { ErroDeValidacao } = require("../shared/erros");
 const { parsePaginacao } = require("./paginacao");
 
 /**
@@ -99,9 +99,9 @@ class AtualizacoesController {
   removeMany = (req, res, next) => {
     try {
       const ids = Array.isArray(req.body?.ids) ? req.body.ids : null;
-      if (!ids || ids.length === 0) throw new ValidationError("Selecione ao menos um registro para excluir.");
+      if (!ids || ids.length === 0) throw new ErroDeValidacao("Selecione ao menos um registro para excluir.");
       if (ids.length > LOTE_MAXIMO) {
-        throw new ValidationError(`Só é possível excluir até ${LOTE_MAXIMO} registros de uma vez.`);
+        throw new ErroDeValidacao(`Só é possível excluir até ${LOTE_MAXIMO} registros de uma vez.`);
       }
       res.json(this.atualizacaoService.deleteMany(ids, req.session.user));
     } catch (err) {
@@ -111,7 +111,7 @@ class AtualizacoesController {
 
   importXlsx = async (req, res, next) => {
     try {
-      if (!req.file) throw new ValidationError("Selecione um arquivo .xlsx para importar.");
+      if (!req.file) throw new ErroDeValidacao("Selecione um arquivo .xlsx para importar.");
       // "pularDuplicadas" chega como texto no multipart ("1"/"0").
       const pularDuplicadas = String(req.body?.pularDuplicadas ?? "") === "1";
       res.json(await this.atualizacaoService.importXlsx(req.file.buffer, req.session.user, { pularDuplicadas }));
@@ -122,7 +122,7 @@ class AtualizacoesController {
 
   previaImport = async (req, res, next) => {
     try {
-      if (!req.file) throw new ValidationError("Selecione um arquivo .xlsx para conferir.");
+      if (!req.file) throw new ErroDeValidacao("Selecione um arquivo .xlsx para conferir.");
       res.json(await this.atualizacaoService.previaImportacao(req.file.buffer));
     } catch (err) {
       next(err);

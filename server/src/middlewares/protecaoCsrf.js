@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const { tokensIguais } = require("./requireAgent");
+const { tokensIguais } = require("./exigirAgente");
 
 /**
  * Proteção contra CSRF (ADR-0011): uma página de OUTRA
@@ -31,7 +31,7 @@ const { tokensIguais } = require("./requireAgent");
  * O que fica de fora, de propósito:
  * - GET/HEAD/OPTIONS: não alteram nada (e não podem passar a alterar).
  * - Pedido sem usuário na sessão: não há o que roubar. As rotas protegidas
- *   respondem 401 logo depois (requireAuth), e a mensagem certa para "sessão
+ *   respondem 401 logo depois (exigirLogin), e a mensagem certa para "sessão
  *   expirada" é essa, não "token inválido". Cobre também os agentes C#
  *   (/api/update/...), que se autenticam por X-Agent-Token e não têm cookie.
  * - Login e configuração inicial: não há sessão logada antes deles, então

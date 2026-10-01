@@ -13,7 +13,7 @@ function tokensIguais(a, b) {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
-function requireAgent(req, res, next) {
+function exigirAgente(req, res, next) {
   const expected = req.app.locals.agentApiToken;
   const supplied = req.get("x-agent-token");
   if (!expected || !supplied || !tokensIguais(supplied, expected)) {
@@ -23,4 +23,4 @@ function requireAgent(req, res, next) {
   next();
 }
 
-module.exports = { requireAgent, tokensIguais };
+module.exports = { exigirAgente, tokensIguais };
