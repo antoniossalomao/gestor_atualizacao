@@ -46,11 +46,11 @@ const UM_DIA_MS = 24 * 60 * 60 * 1000;
 // (ate 8 caracteres, sem barra). Serve para separar "/clientes" (rota do
 // front-end, cai no index.html) de "/js/app/App.js" ou "/css/theme.css"
 // (arquivo que ou existe, ou e' 404) -- ver o fallback no fim de
-// _configurarExpress().
+// _servirApiEArquivos().
 const EXTENSAO_DE_ARQUIVO = /\.[a-zA-Z0-9]{1,8}$/;
 
 // Caminhos dentro de client/ que existem para o desenvolvimento e nao devem
-// ser servidos pelo navegador -- ver _configurarExpress().
+// ser servidos pelo navegador -- ver _servirApiEArquivos().
 const NAO_SERVIR = [/^\/package(-lock)?\.json$/, /^\/tests(\/|$)/];
 
 /**
@@ -132,9 +132,15 @@ class Servidor {
     this.loginLimiter = new LimitadorDeLogin();
   }
 
+  /** A ordem importa: cada etapa só vale se as anteriores já estiverem montadas. */
   _configurarExpress() {
-    const dbDir = path.dirname(this.db.path);
+    this._confiarNoProxy();
+    this._aplicarCabecalhosDeSeguranca();
+    this._abrirSessao();
+    this._servirApiEArquivos();
+  }
 
+  _confiarNoProxy() {
     // Atras de um proxy reverso (Caddy/nginx terminando o HTTPS), a conexao
     // que chega ate o Node e HTTP simples -- sem isto o Express enxerga
     // `req.protocol === "http"` e o express-session, com `cookie.secure`
@@ -149,7 +155,9 @@ class Servidor {
     // só é seguro porque, no docker-compose.yml, a porta do Node não é
     // publicada: o único que alcança o Node é o proxy.
     this.app.set("trust proxy", this.config.trustProxy ? 1 : false);
+  }
 
+  _aplicarCabecalhosDeSeguranca() {
     // Cabeçalhos HTTP de segurança padrão (X-Content-Type-Options,
     // desativa X-Powered-By, política básica de referrer, etc.) --
     // gratuito e amplamente usado, sem sentido reescrever isso na mão.
@@ -202,7 +210,10 @@ class Servidor {
     // arquivos da tela. Logo depois do helmet, para a recusa também levar os
     // cabeçalhos de segurança. Ver middlewares/exigirHttps.js.
     if (this.config.sessionSecure) this.app.use(exigirHttps);
+  }
 
+  _abrirSessao() {
+    const dbDir = path.dirname(this.db.path);
     this.app.use(express.json({ limit: "1mb" }));
     this.sessionStore = new ArmazemDeSessaoSqlite({ filePath: path.join(dbDir, "sessions.sqlite") });
     this.services.backups.definirArmazemDeSessao(this.sessionStore);
@@ -225,7 +236,9 @@ class Servidor {
         },
       })
     );
+  }
 
+  _servirApiEArquivos() {
     // API primeiro, depois os arquivos estaticos do front-end -- assim uma
     // rota de API mal digitada nunca cai silenciosamente no fallback do
     // index.html.

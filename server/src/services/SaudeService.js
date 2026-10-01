@@ -2,6 +2,22 @@ const fs = require("fs");
 const path = require("path");
 const { VERSAO_PAINEL } = require("../config/constantes");
 
+const MB = 1024 * 1024;
+
+/**
+ * Roda `ler` e devolve o resultado; se lançar, devolve `padrao`. O diagnóstico
+ * existe justamente para funcionar com o sistema doente: um banco ou uma pasta
+ * com problema vira um campo "desconhecido" na tela, e não um 500 que esconde
+ * todo o resto.
+ */
+function tentar(ler, padrao) {
+  try {
+    return ler();
+  } catch {
+    return padrao;
+  }
+}
+
 /**
  * Serviço de diagnóstico operacional e saúde do sistema.
  * Reúne informações de banco de dados, arquivos, backups e runtime do servidor.
@@ -21,94 +37,55 @@ class SaudeService {
   }
 
   obterDiagnostico() {
-    let integridade = "ok";
-    try {
-      integridade = this.db.verificarIntegridade();
-    } catch {
-      integridade = "erro_ao_verificar";
-    }
-
-    let journalMode = "wal";
-    try {
-      journalMode = this.db.modoDeGravacao();
-    } catch {
-      journalMode = "desconhecido";
-    }
-
-    let dbSizeBytes = 0;
-    try {
-      if (fs.existsSync(this.db.path)) {
-        dbSizeBytes = fs.statSync(this.db.path).size;
-      }
-    } catch {
-      dbSizeBytes = 0;
-    }
-
-    let listaBackups = [];
-    try {
-      listaBackups = this.backups.list();
-    } catch {
-      listaBackups = [];
-    }
-
-    const painelAgentes = this.versoes.painel();
-    const agentes = painelAgentes.agentes || [];
-    const agentesStats = {
-      total: agentes.length,
-      ok: agentes.filter((a) => a.situacao === "ok").length,
-      offline: agentes.filter((a) => a.situacao === "offline").length,
-      erro: agentes.filter((a) => a.situacao === "erro" || a.situacao === "aguardando_autorizacao_demorada").length,
-      pendencias: agentes.filter((a) => a.situacao === "pendencias").length,
-    };
-
-    let totalPacotes = 0;
-    let tamanhoPacotesBytes = 0;
-    try {
-      const pkgDir = this.versoes.pastaDosPacotes;
-      if (fs.existsSync(pkgDir)) {
-        const files = fs.readdirSync(pkgDir);
-        totalPacotes = files.length;
-        for (const file of files) {
-          try {
-            tamanhoPacotesBytes += fs.statSync(path.join(pkgDir, file)).size;
-          } catch {
-            // ignora arquivo inacessível
-          }
-        }
-      }
-    } catch {
-      // ignora
-    }
-
+    const integridade = tentar(() => this.db.verificarIntegridade(), "erro_ao_verificar");
+    const agentes = this._contarAgentes();
+    const backups = tentar(() => this.backups.list(), []);
     const mem = process.memoryUsage();
 
     return {
-      statusGeral: integridade === "ok" && agentesStats.erro === 0 ? "saudavel" : "atencao",
+      statusGeral: integridade === "ok" && agentes.erro === 0 ? "saudavel" : "atencao",
       banco: {
         caminho: path.basename(this.db.path),
-        tamanhoBytes: dbSizeBytes,
+        tamanhoBytes: tentar(() => (fs.existsSync(this.db.path) ? fs.statSync(this.db.path).size : 0), 0),
         integridade,
-        journalMode,
+        journalMode: tentar(() => this.db.modoDeGravacao(), "desconhecido"),
       },
       servidor: {
         versao: VERSAO_PAINEL,
         node: process.version,
         plataforma: `${process.platform} (${process.arch})`,
         uptimeSegundos: Math.round(process.uptime()),
-        memoriaHeapUsadaMB: Math.round(mem.heapUsed / 1024 / 1024),
-        memoriaHeapTotalMB: Math.round(mem.heapTotal / 1024 / 1024),
+        memoriaHeapUsadaMB: Math.round(mem.heapUsed / MB),
+        memoriaHeapTotalMB: Math.round(mem.heapTotal / MB),
       },
       backups: {
-        total: listaBackups.length,
-        ultimo: listaBackups[0]?.data || null,
-        arquivoMaisRecente: listaBackups[0]?.arquivo || null,
+        total: backups.length,
+        ultimo: backups[0]?.data || null,
+        arquivoMaisRecente: backups[0]?.arquivo || null,
       },
-      pacotes: {
-        total: totalPacotes,
-        tamanhoBytes: tamanhoPacotesBytes,
-      },
-      agentes: agentesStats,
+      pacotes: this._medirPacotes(),
+      agentes,
     };
+  }
+
+  _contarAgentes() {
+    const agentes = this.versoes.painel().agentes || [];
+    const com = (...situacoes) => agentes.filter((a) => situacoes.includes(a.situacao)).length;
+    return {
+      total: agentes.length,
+      ok: com("ok"),
+      offline: com("offline"),
+      erro: com("erro", "aguardando_autorizacao_demorada"),
+      pendencias: com("pendencias"),
+    };
+  }
+
+  /** Quantidade e tamanho dos pacotes em disco; um arquivo ilegível só fica de fora da soma. */
+  _medirPacotes() {
+    const pasta = this.versoes.pastaDosPacotes;
+    const arquivos = tentar(() => (fs.existsSync(pasta) ? fs.readdirSync(pasta) : []), []);
+    const tamanhoBytes = arquivos.reduce((soma, nome) => soma + tentar(() => fs.statSync(path.join(pasta, nome)).size, 0), 0);
+    return { total: arquivos.length, tamanhoBytes };
   }
 }
 
