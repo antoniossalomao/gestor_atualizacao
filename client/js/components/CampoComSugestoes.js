@@ -44,7 +44,7 @@ function garantirListenerGlobal() {
  *  - **rola até o item ativo** ao navegar com as setas;
  *  - tem `destroy()`, e implementa o padrão ARIA de combobox.
  */
-export class Autocomplete {
+export class CampoComSugestoes {
   /** @param {HTMLInputElement} input @param {{values?: string[], minChars?: number}} options */
   constructor(input, { values = [], minChars = 1 } = {}) {
     this.input = input;

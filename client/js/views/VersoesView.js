@@ -1,11 +1,11 @@
 import { View } from "../app/View.js";
-import { toast } from "../components/Toast.js";
-import { icon } from "../utils/icons.js";
-import { emptyState } from "../components/estadoVazio.js";
+import { toast } from "../components/AvisosRapidos.js";
+import { iconeSvg } from "../utils/icones.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { escapeAttr, escapeHtml, plural } from "../utils/html.js";
-import { formatarDataHora, tempoRelativo, formatarBytes } from "../utils/date.js";
+import { formatarDataHora, tempoRelativo, formatarBytes } from "../utils/data.js";
 import { Modal } from "../components/Modal.js";
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 
 const STATUS = {
   publicada: { texto: "No ar", classe: "badge--success" },
@@ -42,7 +42,7 @@ export class VersoesView extends View {
     this.container.innerHTML = `
       <div class="toolbar versions-toolbar">
         <div class="toolbar-spacer"></div>
-        <button type="button" class="btn btn--small btn--ghost" data-action="refresh">${icon("atualizar")} Atualizar dados</button>
+        <button type="button" class="btn btn--small btn--ghost" data-action="refresh">${iconeSvg("atualizar")} Atualizar dados</button>
       </div>
 
       <div class="version-management-layout">
@@ -94,7 +94,7 @@ export class VersoesView extends View {
                 </div>
                 <input type="hidden" name="codigosPiloto" data-role="pilot-value" value="[]" />
                 <div class="pilot-picker__search-wrap">
-                  ${icon("busca")}
+                  ${iconeSvg("busca")}
                   <input class="input pilot-picker__search" id="version-pilot-search" type="search" autocomplete="off"
                          placeholder="Digite o código ou nome do cliente" data-role="pilot-search" />
                 </div>
@@ -107,7 +107,7 @@ export class VersoesView extends View {
             <div class="field">
               <span class="field__label" id="version-changelog-label">O que mudou nesta entrega</span>
               <div class="changelog-editor" data-role="changelog-items" aria-labelledby="version-changelog-label"></div>
-              <button type="button" class="btn btn--small btn--ghost" data-action="add-changelog-item">${icon("plus")} Adicionar item</button>
+              <button type="button" class="btn btn--small btn--ghost" data-action="add-changelog-item">${iconeSvg("plus")} Adicionar item</button>
               <textarea name="observacoes" hidden data-role="changelog-value"></textarea>
             </div>
 
@@ -121,7 +121,7 @@ export class VersoesView extends View {
               <span data-role="upload-progress-text">0%</span>
             </div>
 
-            <button class="btn btn--accent" type="submit">${icon("upload")} Enviar versão</button>
+            <button class="btn btn--accent" type="submit">${iconeSvg("upload")} Enviar versão</button>
           </form>
 
           <div class="card version-overview-card">
@@ -260,7 +260,7 @@ export class VersoesView extends View {
     if (!semPublicacao.length) {
       const ok = document.createElement("div");
       ok.className = "version-coverage__status is-ok";
-      ok.innerHTML = `${icon("check")} <span>Todos os sistemas cadastrados possuem versão publicada ativa.</span>`;
+      ok.innerHTML = `${iconeSvg("check")} <span>Todos os sistemas cadastrados possuem versão publicada ativa.</span>`;
       coverage.appendChild(ok);
       return;
     }
@@ -285,7 +285,7 @@ export class VersoesView extends View {
 
     if (!versions.length) {
       list.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: "Nenhuma versão publicada",
           descricao: "Prepare o primeiro pacote no formulário ao lado e publique quando estiver pronto para os agentes.",
           icone: "distribuicao",
@@ -309,12 +309,12 @@ export class VersoesView extends View {
         <div class="published-release__changelog" data-role="changelog"></div>
         <div class="version-timeline">
           <div class="version-timeline__step is-done">
-            <span class="version-timeline__dot">${icon("check")}</span>
+            <span class="version-timeline__dot">${iconeSvg("check")}</span>
             <span class="version-timeline__name">Rascunho</span>
           </div>
           <div class="version-timeline__line is-done"></div>
           <div class="version-timeline__step is-done">
-            <span class="version-timeline__dot">${icon("check")}</span>
+            <span class="version-timeline__dot">${iconeSvg("check")}</span>
             <span class="version-timeline__name">Publicada</span>
           </div>
           <div class="version-timeline__line is-active"></div>
@@ -365,7 +365,7 @@ export class VersoesView extends View {
       td.colSpan = 8;
       td.className = "table-empty";
       td.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: this.versions.length ? "Nenhuma versão com esse filtro" : "Nenhuma versão cadastrada",
           descricao: this.versions.length
             ? "Tente outro sistema ou selecione um status diferente."
@@ -601,7 +601,7 @@ export class VersoesView extends View {
       this._invalidateVersions();
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível salvar", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível salvar", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
     } finally {
       button.disabled = false;
       this._hideProgress();
@@ -649,7 +649,7 @@ export class VersoesView extends View {
       this._invalidateVersions();
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível publicar", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível publicar", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
     } finally {
       button.disabled = false;
     }
@@ -673,7 +673,7 @@ export class VersoesView extends View {
       this._invalidateVersions();
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível excluir", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível excluir", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
       button.disabled = false;
     }
   }
@@ -688,7 +688,7 @@ export class VersoesView extends View {
       this._invalidateVersions();
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível promover", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível promover", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
       button.disabled = false;
     }
   }
@@ -703,7 +703,7 @@ export class VersoesView extends View {
       this._invalidateVersions();
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível reverter", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível reverter", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
       button.disabled = false;
     }
   }

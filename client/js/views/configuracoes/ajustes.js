@@ -17,12 +17,12 @@ import {
   ESCOPOS_AGENDA,
   HORARIOS,
   ABAS_RELATORIO,
-} from "../../app/appearance.js";
-import { settings, prefs } from "../../app/prefs.js";
-import { notificacoes } from "../../app/notify.js";
+} from "../../app/aparencia.js";
+import { duradouras, prefs } from "../../app/preferencias.js";
+import { notificacoes } from "../../app/notificacoesDoSistema.js";
 import { ATALHOS } from "../../app/atalhos.js";
 import { COMO_USAR_TELAS, NOVIDADES, explicacaoSituacoes } from "../../domain/ajuda.js";
-import { toast } from "../../components/Toast.js";
+import { toast } from "../../components/AvisosRapidos.js";
 
 /**
  * Definição central de todas as preferências das Configurações (Seção 12 do planejamento).
@@ -143,7 +143,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar,
                 { valor: "aberto", rotulo: "Aberto" },
                 { valor: "recolhido", rotulo: "Recolhido" },
               ],
-              atual: () => (settings.get("sidebarRecolhida", false) ? "recolhido" : "aberto"),
+              atual: () => (duradouras.get("sidebarRecolhida", false) ? "recolhido" : "aberto"),
               aoEscolher: (valor) => definirSidebar(valor === "recolhido"),
             },
           ],

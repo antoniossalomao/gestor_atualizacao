@@ -1,12 +1,12 @@
 import { View } from "../app/View.js";
-import { prefs } from "../app/prefs.js";
-import { theme } from "../app/theme.js";
-import { aparencia, reaplicarAparencia, PERFIS } from "../app/appearance.js";
+import { prefs } from "../app/preferencias.js";
+import { temaApp } from "../app/tema.js";
+import { aparencia, reaplicarAparencia, PERFIS } from "../app/aparencia.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
+import { toast } from "../components/AvisosRapidos.js";
 import { TelaComAbas } from "../components/TelaComAbas.js";
 import { html } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
+import { iconeHtml } from "../utils/icones.js";
 import { filtrarPorBusca } from "../utils/busca.js";
 import { baixarTexto, escolherArquivo } from "../components/arquivos.js";
 import { resultadosBusca } from "../templates/configuracoes.js";
@@ -60,7 +60,7 @@ import { RegrasEquipeConfig } from "./configuracoes/RegrasEquipeConfig.js";
 export class ConfiguracoesView extends View {
   /**
    * @param {HTMLElement} container
-   * @param {import('../api/ApiClient').ApiClient} api
+   * @param {import('../api/ApiPainel').ApiPainel} api
    * @param {any} ctx além do de toda view: `abasDoMenu`, `definirSidebar`,
    *   `sincronizarPreferencias` e `aoMudarNome` (ver App._montarAbas)
    */
@@ -104,7 +104,7 @@ export class ConfiguracoesView extends View {
       chavePrefs: "configuracoes:aba",
       extra: html`
         <label class="cfg-busca">
-          <span class="cfg-busca__icone" aria-hidden="true">${iconHtml("busca")}</span>
+          <span class="cfg-busca__icone" aria-hidden="true">${iconeHtml("busca")}</span>
           <input type="search" class="input" data-role="busca" placeholder="Buscar um ajuste…"
                  aria-label="Buscar um ajuste" autocomplete="off" spellcheck="false" />
         </label>`,
@@ -237,7 +237,7 @@ export class ConfiguracoesView extends View {
    * o menu lateral.
    */
   _aplicarEmLote() {
-    theme.aplicar();
+    temaApp.aplicar();
     reaplicarAparencia();
     this.ctx.sincronizarPreferencias?.();
     this._atualizarTudo();

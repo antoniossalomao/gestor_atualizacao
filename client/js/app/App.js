@@ -1,14 +1,14 @@
-import { icon, simboloMarca } from "../utils/icons.js";
+import { iconeSvg, simboloMarca } from "../utils/icones.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { SwrCache } from "./SwrCache.js";
-import { Router } from "./Router.js";
-import { CommandPalette } from "../components/CommandPalette.js";
+import { toast } from "../components/AvisosRapidos.js";
+import { CacheSwr } from "./CacheSwr.js";
+import { Roteador } from "./Roteador.js";
+import { PaletaDeComandos } from "../components/PaletaDeComandos.js";
 import { ligarAtalhoAjuda, mostrarAtalhos } from "./atalhos.js";
-import { theme } from "./theme.js";
-import { settings, conectarPreferencias } from "./prefs.js";
-import { aparencia, reaplicarAparencia } from "./appearance.js";
-import { RequestCancelled } from "../api/ApiClient.js";
+import { temaApp } from "./tema.js";
+import { duradouras, conectarPreferencias } from "./preferencias.js";
+import { aparencia, reaplicarAparencia } from "./aparencia.js";
+import { RequisicaoCancelada } from "../api/ApiPainel.js";
 import { LoginView } from "../views/LoginView.js";
 import { ResumoView } from "../views/ResumoView.js";
 import { AtualizacoesView } from "../views/AtualizacoesView.js";
@@ -24,7 +24,7 @@ import { VersoesView } from "../views/VersoesView.js";
 import { MenuNotificacoes } from "../components/MenuNotificacoes.js";
 import { MenuConta } from "../components/MenuConta.js";
 import { montarNotificacoes } from "../domain/notificacoes.js";
-import { notificacoes } from "./notify.js";
+import { notificacoes } from "./notificacoesDoSistema.js";
 import { ConexaoBanner } from "../components/ConexaoBanner.js";
 
 /**
@@ -94,7 +94,7 @@ const TABS = [
  * O que ela ganhou nesta revisão:
  *  - **rota na URL** (`#/clientes`), então recarregar mantém a tela e dá para
  *    mandar link de uma aba específica;
- *  - **cache compartilhado** entre as views (`SwrCache`), que é o que faz a
+ *  - **cache compartilhado** entre as views (`CacheSwr`), que é o que faz a
  *    troca de aba ser instantânea;
  *  - **título de verdade** (`<h1>`) que muda conforme a aba -- antes o
  *    cabeçalho não tinha `h1` nenhum, e a regra de CSS que o estilizava
@@ -104,7 +104,7 @@ const TABS = [
  *    quando a sessão expira.
  */
 export class App {
-  /** @param {HTMLElement} root @param {import('../api/ApiClient').ApiClient} api */
+  /** @param {HTMLElement} root @param {import('../api/ApiPainel').ApiPainel} api */
   constructor(root, api) {
     this.root = root;
     this.api = api;
@@ -112,7 +112,7 @@ export class App {
     this.views = new Map();
     this.activeTab = null;
     this.reauthenticating = false;
-    this.cache = new SwrCache();
+    this.cache = new CacheSwr();
     /** @type {Array<() => void>} coisas a desligar quando o shell é desmontado */
     this._cleanups = [];
     /** Abas que já foram abertas ao menos uma vez -- ver a animação em _mostrarAba. */
@@ -164,7 +164,7 @@ export class App {
     this.root.innerHTML = `
       <div class="auth-screen">
         <div class="empty-state">
-          <div class="empty-state__icon">${icon("alerta")}</div>
+          <div class="empty-state__icon">${iconeSvg("alerta")}</div>
           <p class="empty-state__title">Não foi possível conectar ao servidor</p>
           <p class="empty-state__desc">Verifique se o Gestor está rodando e tente de novo.</p>
           <button type="button" class="btn btn--accent" data-action="retry">Tentar novamente</button>
@@ -204,12 +204,12 @@ export class App {
     // pessoa usou este mesmo navegador antes. Sem `await`: o app não fica
     // esperando por isso para abrir.
     conectarPreferencias(this.api, user, () => {
-      theme.aplicar();
+      temaApp.aplicar();
       reaplicarAparencia();
     });
 
     this._buildShell();
-    this.router = new Router(
+    this.router = new Roteador(
       this.tabsAtivas.map((t) => t.key),
       (rota) => this._mostrarAba(rota)
     );
@@ -244,7 +244,7 @@ export class App {
     this._dadosSino = { lembretes, painel };
     this._redesenharSino({ podeTocar: true });
     // Falhas guardadas durante o horário silencioso: o fim do silêncio é
-    // percebido aqui, no ritmo do sino (ver notify.liberarAcumuladas).
+    // percebido aqui, no ritmo do sino (ver notificacoes.liberarAcumuladas).
     notificacoes.liberarAcumuladas();
   }
 
@@ -350,7 +350,7 @@ export class App {
   }
 
   _buildShell() {
-    const recolhida = settings.get("sidebarRecolhida", false);
+    const recolhida = duradouras.get("sidebarRecolhida", false);
     this.root.className = recolhida ? "is-sidebar-collapsed" : "";
     this.root.innerHTML = `
       <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -370,7 +370,7 @@ export class App {
              Recolhido" em Configurações diz a mesma coisa por extenso. -->
         <nav class="tabs" role="tablist" aria-label="Telas do sistema"></nav>
         <div class="app-sidebar__footer">
-          <button type="button" class="btn btn--small btn--sidebar" data-action="config" data-tooltip="Configurações">${icon("config")} <span>Configurações</span></button>
+          <button type="button" class="btn btn--small btn--sidebar" data-action="config" data-tooltip="Configurações">${iconeSvg("config")} <span>Configurações</span></button>
         </div>
       </aside>
       <section class="app-shell">
@@ -402,7 +402,7 @@ export class App {
             -->
             <button type="button" class="btn btn--small app-header__search" data-action="buscar"
                     aria-label="Buscar telas, clientes e ações (Ctrl+K)">
-              ${icon("busca")}<span>Buscar…</span><kbd>Ctrl</kbd><kbd>K</kbd>
+              ${iconeSvg("busca")}<span>Buscar…</span><kbd>Ctrl</kbd><kbd>K</kbd>
             </button>
             <button type="button" class="btn btn--accent btn--small app-header__quick" data-action="acao-rapida"
                     aria-label="Abrir ações rápidas (Alt+N)">+ <span>Ação rápida</span><kbd>Alt+N</kbd></button>
@@ -552,7 +552,7 @@ export class App {
       // segundo parado em cima -- e ninguém para em cima de um menu que já
       // sabe usar. Ela ocupa o espaço dela o tempo todo (muda só a opacidade),
       // senão cada aba mudaria de largura quando o mouse passasse.
-      button.innerHTML = `${icon(tab.icon)}<span>${tab.label}</span>${atalho ? `<kbd class="tab-button__atalho">${atalho}</kbd>` : ""}`;
+      button.innerHTML = `${iconeSvg(tab.icon)}<span>${tab.label}</span>${atalho ? `<kbd class="tab-button__atalho">${atalho}</kbd>` : ""}`;
       tabsNav.appendChild(button);
       container.setAttribute("aria-labelledby", `aba-${tab.key}`);
     }
@@ -610,7 +610,7 @@ export class App {
       ...(this.atualizadorHabilitado ? [["versoes", "Publicar Nova Versão", "versoes"]] : []),
     ];
     box.innerHTML = `<h3 class="modal-box__title">Ação rápida</h3><p class="modal-box__message">Comece uma tarefa sem perder tempo procurando a tela.</p>
-      <div class="quick-action-list">${itens.map(([aba, label, icone]) => `<button type="button" class="btn" data-tab="${aba}" ${permitida ? "" : "disabled"}>${icon(icone)}<span>${label}</span></button>`).join("")}</div>`;
+      <div class="quick-action-list">${itens.map(([aba, label, icone]) => `<button type="button" class="btn" data-tab="${aba}" ${permitida ? "" : "disabled"}>${iconeSvg(icone)}<span>${label}</span></button>`).join("")}</div>`;
     box.addEventListener("click", (e) => {
       const botao = e.target.closest("[data-tab]");
       if (!botao) return;
@@ -702,7 +702,7 @@ export class App {
       if (alvo && (alvo.tagName === "INPUT" || alvo.tagName === "TEXTAREA" || alvo.isContentEditable)) return;
       if (document.querySelector(".modal-overlay, .cmdk-overlay")) return;
       e.preventDefault();
-      this._definirSidebar(!settings.get("sidebarRecolhida", false));
+      this._definirSidebar(!duradouras.get("sidebarRecolhida", false));
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -733,7 +733,7 @@ export class App {
   /**
    * Busca de novo os dados da aba aberta, jogando fora o que estava guardado.
    *
-   * Existe porque o cache torna a troca de aba instantânea (`SwrCache`), e o
+   * Existe porque o cache torna a troca de aba instantânea (`CacheSwr`), e o
    * preço disso é não haver um jeito de dizer "esqueça o que você guardou e
    * pergunte de novo agora" -- que é exatamente o que se quer quando outra
    * pessoa acabou de mexer no mesmo registro do outro lado da sala. Recarregar
@@ -864,7 +864,7 @@ export class App {
         subtitulo: "Descarta o que está em cache e pergunta de novo ao servidor",
         grupo: "Ações", icone: "atualizar", executar: () => this.recarregarAba({ avisar: true }) },
       { id: "acao:tema", titulo: "Alternar tema (claro / escuro / sistema)", grupo: "Ações", icone: "temaClaro",
-        executar: () => theme.alternar() },
+        executar: () => temaApp.alternar() },
       { id: "acao:densidade", titulo: "Alternar densidade das linhas (compacta / padrão)",
         grupo: "Aparência", icone: "tabela",
         executar: () => {
@@ -953,7 +953,7 @@ export class App {
       return itens;
     };
 
-    this.palette = new CommandPalette(comandosBase, carregarExtras);
+    this.palette = new PaletaDeComandos(comandosBase, carregarExtras);
     this._cleanups.push(this.palette.ligarAtalho());
   }
 
@@ -970,7 +970,7 @@ export class App {
   /** Recolhe ou abre o menu. Vem de Configurações e do Ctrl + B. */
   _definirSidebar(recolhida) {
     this.root.classList.toggle("is-sidebar-collapsed", recolhida);
-    settings.set("sidebarRecolhida", recolhida);
+    duradouras.set("sidebarRecolhida", recolhida);
     // Avisa quem mostra essa preferência (a tela Configurações, se estiver
     // aberta): pelo Ctrl + B ela muda sem passar por lá.
     reaplicarAparencia();
@@ -990,7 +990,7 @@ export class App {
    * número de linhas por página que estiver valendo.
    */
   _sincronizarComPreferencias() {
-    this.root.classList.toggle("is-sidebar-collapsed", settings.get("sidebarRecolhida", false));
+    this.root.classList.toggle("is-sidebar-collapsed", duradouras.get("sidebarRecolhida", false));
   }
 
   /**
@@ -1089,7 +1089,7 @@ export class App {
     // busca terminou para só então confirmar na tela. Quem troca de aba pelo
     // clique continua ignorando o retorno, como sempre ignorou.
     return instance.refresh().catch((error) => {
-      if (error instanceof RequestCancelled) return;
+      if (error instanceof RequisicaoCancelada) return;
       if (error?.status === 401) return; // já tratado por api.onUnauthorized
       // A própria tela já mostra o aviso fixo, com o motivo e "Tentar
       // novamente" (View.swr). Toast em cima seria o mesmo recado duas vezes,

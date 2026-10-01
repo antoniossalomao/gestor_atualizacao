@@ -1,4 +1,4 @@
-import { settings } from "./prefs.js";
+import { duradouras } from "./preferencias.js";
 
 /**
  * Alternância entre tema escuro e claro.
@@ -16,10 +16,10 @@ import { settings } from "./prefs.js";
 const MODOS = ["sistema", "escuro", "claro"];
 const CHAVE = "tema";
 
-export const theme = {
+export const temaApp = {
   /** @returns {"sistema"|"escuro"|"claro"} */
   atual() {
-    const salvo = settings.get(CHAVE, "sistema");
+    const salvo = duradouras.get(CHAVE, "sistema");
     return MODOS.includes(salvo) ? salvo : "sistema";
   },
 
@@ -31,7 +31,7 @@ export const theme = {
   },
 
   aplicar(modo = this.atual()) {
-    settings.set(CHAVE, modo);
+    duradouras.set(CHAVE, modo);
     const raiz = document.documentElement;
     if (modo === "sistema") raiz.removeAttribute("data-tema");
     else raiz.setAttribute("data-tema", modo);
@@ -64,16 +64,16 @@ export const theme = {
  * trocam sozinhos ao anoitecer).
  */
 export function iniciarTema() {
-  theme.aplicar();
+  temaApp.aplicar();
   window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
-    if (theme.atual() === "sistema") theme.aplicar("sistema");
+    if (temaApp.atual() === "sistema") temaApp.aplicar("sistema");
   });
 }
 
 /**
  * Lê o valor atual de uma variável CSS de tema (ex.: `--zebra-a`).
  *
- * Existe porque `blendHex` faz conta com números e não consegue misturar uma
+ * Existe porque `misturarHex` faz conta com números e não consegue misturar uma
  * `var(--cor-x)` diretamente. Antes, as views que tingem linhas resolviam
  * isso copiando os hex do tema para dentro do JavaScript (`const ZEBRA =
  * ["#101218", "#15171f"]`) -- o que quebrou no momento em que existiu um

@@ -1,4 +1,4 @@
-import { iconHtml } from "../utils/icons.js";
+import { iconeHtml } from "../utils/icones.js";
 import { html } from "../utils/html.js";
 
 const MAX_RESULTADOS = 12;
@@ -22,7 +22,7 @@ const SAIDA_MS = 140;
  * recentemente sobem. É o mesmo comportamento de VS Code/Spotlight, que é o
  * que as pessoas já esperam de um campo assim.
  */
-export class CommandPalette {
+export class PaletaDeComandos {
   /**
    * @param {() => Array<Comando>} comandosBase telas e ações -- disponíveis na
    *   hora, sem rede, para a paleta nunca abrir vazia enquanto a lista de
@@ -64,7 +64,7 @@ export class CommandPalette {
     this.overlay.innerHTML = html`
       <div class="cmdk" role="dialog" aria-modal="true" aria-label="Paleta de comandos">
         <div class="cmdk__field">
-          ${iconHtml("busca")}
+          ${iconeHtml("busca")}
           <input type="text" class="cmdk__input" role="combobox" aria-expanded="true" aria-controls="cmdk-lista"
                  aria-autocomplete="list" placeholder="Buscar telas, ações e clientes..." autocomplete="off" />
           <kbd class="cmdk__esc">Esc</kbd>
@@ -153,7 +153,7 @@ export class CommandPalette {
       item.setAttribute("aria-selected", String(idx === this.indiceAtivo));
       item.id = `cmdk-item-${idx}`;
       item.innerHTML = html`
-        <span class="cmdk__icon">${iconHtml(cmd.icone || "seta")}</span>
+        <span class="cmdk__icon">${iconeHtml(cmd.icone || "seta")}</span>
         <span class="cmdk__labels">
           <strong>${cmd.titulo}</strong>
           ${cmd.subtitulo && html`<span>${cmd.subtitulo}</span>`}
@@ -201,7 +201,7 @@ export class CommandPalette {
    * um -- a cada seta apertada e a cada movimento do mouse por cima da lista.
    * Segurar a seta para baixo virava uma sequência de reconstruções, e o
    * cintilar disso aparece justamente na tela que se usa com mais pressa.
-   * É o mesmo tratamento que `SortableTable._marcarSelecionada` já dá às
+   * É o mesmo tratamento que `TabelaOrdenavel._marcarSelecionada` já dá às
    * linhas de tabela: mexer só no que mudou.
    */
   _marcarAtivo() {

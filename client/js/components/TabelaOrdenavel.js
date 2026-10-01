@@ -28,7 +28,7 @@ const ATRASO_REFRESH_MS = 180;
  * **3. `aria-sort` e cabeçalhos como botão**, para o estado de ordenação ser
  * anunciado em vez de existir só como uma setinha desenhada.
  */
-export class SortableTable {
+export class TabelaOrdenavel {
   /**
    * @param {HTMLElement} container onde a tabela é desenhada
    * @param {{

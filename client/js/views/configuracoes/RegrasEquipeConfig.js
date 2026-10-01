@@ -1,5 +1,5 @@
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
+import { iconeHtml } from "../../utils/icones.js";
 import { rotuloPapel } from "../../domain/pessoa.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 
@@ -11,7 +11,7 @@ import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 export class RegrasEquipeConfig {
   /**
    * @param {HTMLElement} container
-   * @param {import('../../api/ApiClient').ApiClient} api
+   * @param {import('../../api/ApiPainel').ApiPainel} api
    * @param {{
    *   usuario: {id: number, nome: string, usuario: string, role?: string},
    *   navigate: (aba: string, params?: object) => void,
@@ -66,12 +66,12 @@ export class RegrasEquipeConfig {
           ehAdmin
             ? html`
               <button type="button" class="card cfg-link cfg-link--cartao" data-action="ir-administracao">
-                <span class="cfg-link__icon">${iconHtml("escudo")}</span>
+                <span class="cfg-link__icon">${iconeHtml("escudo")}</span>
                 <span class="cfg-link__labels">
                   <strong>Gerenciar regras na Administração</strong>
                   <span>Abrir a tela de Administração para editar prazos, arquivamento, sistemas e integrações.</span>
                 </span>
-                <span class="cfg-link__seta">${iconHtml("seta")}</span>
+                <span class="cfg-link__seta">${iconeHtml("seta")}</span>
               </button>`
             : html`
               <section class="card secao-card cfg-cartao">

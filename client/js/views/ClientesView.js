@@ -1,19 +1,19 @@
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
-import { Pagination } from "../components/Pagination.js";
+import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
+import { Paginacao } from "../components/Paginacao.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { debounce } from "../utils/debounce.js";
-import { icon, iconHtml } from "../utils/icons.js";
-import { emptyState } from "../components/estadoVazio.js";
+import { toast } from "../components/AvisosRapidos.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { iconeSvg, iconeHtml } from "../utils/icones.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { html, plural } from "../utils/html.js";
 import { marcarOcupado } from "../components/botaoOcupado.js";
-import { prefs } from "../app/prefs.js";
-import { aparencia } from "../app/appearance.js";
-import { Autocomplete } from "../components/Autocomplete.js";
+import { prefs } from "../app/preferencias.js";
+import { aparencia } from "../app/aparencia.js";
+import { CampoComSugestoes } from "../components/CampoComSugestoes.js";
 import { AcessosModal } from "./AcessosModal.js";
-import { Drawer } from "../components/Drawer.js";
+import { Gaveta } from "../components/Gaveta.js";
 
 /**
  * Aba Clientes: cadastro, edição e listagem dos clientes e seus sistemas.
@@ -71,7 +71,7 @@ export class ClientesView extends View {
 
         <div class="clientes-sistemas-head" style="margin-top: var(--sp-4);">
           <span class="field__label">Sistemas Contratados</span>
-          <button type="button" class="btn btn--small" data-action="toggle-novo-sistema">${iconHtml("plus")} Novo Sistema</button>
+          <button type="button" class="btn btn--small" data-action="toggle-novo-sistema">${iconeHtml("plus")} Novo Sistema</button>
         </div>
         <div class="toolbar" data-role="novo-sistema-row" hidden>
           <input type="text" class="input" data-role="novo-sistema-input" style="max-width:240px" placeholder="Nome do sistema" />
@@ -81,7 +81,7 @@ export class ClientesView extends View {
 
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconeHtml("alerta")} Excluir</button>
           </div>
           <div class="form-actions__right">
             <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
@@ -102,7 +102,7 @@ export class ClientesView extends View {
           </div>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
-          <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
+          <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconeHtml("alerta")} Excluir</button>
           <button type="button" class="btn btn--accent btn--small" data-action="toggle-form">+ Novo Cliente</button>
         </div>
         <p class="text-muted bulk-hint">
@@ -115,7 +115,7 @@ export class ClientesView extends View {
           <select class="input" data-role="bulk-sistema-select" style="max-width:200px"></select>
           <button type="button" class="btn btn--small" data-action="bulk-add-sistema">Adicionar sistema</button>
           <button type="button" class="btn btn--small btn--danger" data-action="bulk-excluir">
-            ${iconHtml("alerta")} Excluir selecionados
+            ${iconeHtml("alerta")} Excluir selecionados
           </button>
         </div>
         <div data-role="table"></div>
@@ -124,7 +124,7 @@ export class ClientesView extends View {
     `;
 
     this.formCard = this.container.querySelector('[data-role="form-card"]');
-    this.drawer = new Drawer(this.formCard, {
+    this.drawer = new Gaveta(this.formCard, {
       titulo: "Novo Cliente",
       descricao: "Cadastre um novo cliente e selecione seus sistemas.",
     });
@@ -141,7 +141,7 @@ export class ClientesView extends View {
         if (e.key === "Escape") this.clearForm({ comDesfazer: true });
       });
     }
-    this.grupoAutocomplete = new Autocomplete(this.fields.grupo, { values: [] });
+    this.grupoAutocomplete = new CampoComSugestoes(this.fields.grupo, { values: [] });
 
     this.sistemasGrid = this.formCard.querySelector('[data-role="sistemas-grid"]');
     this.novoSistemaRow = this.formCard.querySelector('[data-role="novo-sistema-row"]');
@@ -155,7 +155,7 @@ export class ClientesView extends View {
       }
     });
 
-    this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
+    this.table = new TabelaOrdenavel(this.container.querySelector('[data-role="table"]'), {
       ocuparAltura: true,
       columns: [
         { key: "id", label: "ID", type: "numeric", largura: "56px" },
@@ -188,13 +188,13 @@ export class ClientesView extends View {
       caption: "Clientes cadastrados",
       emptyNode: () =>
         this.busca
-          ? emptyState({
+          ? estadoVazio({
               titulo: "Nenhum cliente encontrado",
               descricao: `Nada casa com "${this.busca}". Tente outro termo.`,
               icone: "busca",
               acao: { label: "Limpar busca", onClick: () => this._limparFiltros() },
             })
-          : emptyState({
+          : estadoVazio({
               titulo: "Nenhum cliente cadastrado",
               descricao: "Cadastre o primeiro cliente para começar a registrar atualizações.",
               icone: "clientes",
@@ -209,7 +209,7 @@ export class ClientesView extends View {
         this._reloadList();
       },
     });
-    this.pagination = new Pagination(this.container.querySelector('[data-role="pagination"]'), (page) => {
+    this.pagination = new Paginacao(this.container.querySelector('[data-role="pagination"]'), (page) => {
       this.page = page;
       this._reloadList();
     });
@@ -218,7 +218,7 @@ export class ClientesView extends View {
     this.searchInput = this.container.querySelector('[data-role="search"]');
     this.botaoLimparFiltros = this.container.querySelector('[data-action="limpar-filtros"]');
     this.searchInput.value = this.busca;
-    const reload = debounce(() => {
+    const reload = aguardarPausa(() => {
       this.page = 1;
       this._salvarFiltros();
       this._reloadList();
@@ -775,7 +775,7 @@ function acoesCliente(row, role) {
     botao.dataset.id = row.id;
     botao.title = titulo;
     botao.setAttribute("aria-label", titulo);
-    botao.innerHTML = icon(nomeIcone);
+    botao.innerHTML = iconeSvg(nomeIcone);
     wrap.appendChild(botao);
   }
   return wrap;
@@ -786,5 +786,5 @@ function isTypingTarget(el) {
 }
 
 function errorMessage(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

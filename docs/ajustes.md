@@ -290,7 +290,7 @@ Consignado M2 só porque a atualização não foi lançada nesses sistemas.
 
 ### A08 — Gráfico "Atualizações por sistema este mês"
 
-**Onde:** `BarChart` criado em `ResumoView.js`, linha 139.
+**Onde:** `GraficoDeBarras` criado em `ResumoView.js`, linha 139.
 
 - [x] Barras horizontais em ordem decrescente, com o número no fim da barra.
 - [x] Comparação com o mês anterior (▲/▼ e diferença).

@@ -39,7 +39,7 @@ function gravar(store, chave, valor) {
  * "Lembrar filtros ao trocar de aba" (Configurações > Comportamento).
  *
  * Lido direto do localStorage, e não via `aparencia.lembrarFiltros()`, de
- * propósito: `appearance.js` importa ESTE arquivo, e o caminho de volta
+ * propósito: `aparencia.js` importa ESTE arquivo, e o caminho de volta
  * fecharia um ciclo de importação -- que o navegador até resolve, mas
  * deixando um dos dois módulos pela metade durante o arranque, que é
  * justamente quando o primeiro filtro é lido. Um `JSON.parse` de uma chave é
@@ -109,7 +109,7 @@ let enviarAoServidor = () => {};
 let enviarAgora = async () => {};
 
 /** Preferências duradouras (tema, cor de destaque, sidebar recolhida). */
-export const settings = {
+export const duradouras = {
   get: (chave, padrao = null) => ler(localStorage, chave, padrao),
   set: (chave, valor) => {
     gravar(localStorage, chave, valor);

@@ -17,7 +17,7 @@ Para o agente C#, o equivalente é
 
 - **Auditoria da documentação — A17 (30/09/2026):** README, CONTRIBUTING, SECURITY, CLAUDE.md, o runbook e a documentação consolidada foram conferidos contra o código (links e âncoras, caminhos citados, scripts do npm, variáveis do `.env`, rotas, nomes de tela). Corrigido o que estava falso: o card do Resumo e os filtros de Sistemas ainda citavam "Verificação pendente" e "Nunca atualizado" como grupos; "Administração → Atualizador" e "→ Saúde do servidor" eram abas que hoje se chamam Integrações e Diagnóstico; o runbook mandava consultar uma rota do agente que não existe (`/agente/status`, a real é `/update/status/:cnpj`); o CONTRIBUTING e o CLAUDE.md mandavam rodar um script de testes de navegador que saiu do repositório; a SECURITY dizia que o histórico de dependências estava no CHANGELOG (está no README); e havia contagens de testes e um gráfico de pizza que já não existem. Os 30 links para o `MELHORIAS.md` removido (e para âncoras escritas à mão que quebravam) foram tirados, e os comentários de código que citavam os itens do plano passaram a citar o ADR. Na documentação consolidada entram o ADR-0014 ("atualização" como termo único) e as revisões dos ADRs 0005 e 0006 (as pastas sem DOM) e 0012 (a suíte de navegador foi revogada), além da seção 7.3 sobre o fim do `MELHORIAS.md`.
 
-- **Organização — A16 (30/09/2026):** cada arquivo na pasta que a regra do projeto manda. No front-end, cinco arquivos de `utils/` e `domain/` tocavam o documento (download de arquivo, botão ocupado, `el()`, copiar para a área de transferência, leitura de variável CSS e o bloco visual de retorno do agente) e foram para `components/` e `app/theme.js`; o portão "sem DOM" só parecia existir (o `tsconfig` tinha `dom` nas libs e o teste só olhava `templates/` e `domain/`), e agora o `tsc` roda sem `dom` e o teste cobre `utils/` também. No servidor, `shared/` ficou com `errors` e `normalizacao`, os dois que têm consumidores em camadas diferentes: paginação, ordenação e validação tinham uma camada só e foram morar nela; `splitSystems` e `titleCase` subiram para a normalização; e os serviços deixaram de usar a conexão direto (`Database` ganhou `transacao`, `verificarIntegridade` e `modoDeGravacao`). Sem mudança de comportamento. Os testes seguiram: um arquivo por regra (validação, paginação, ordenação, saúde). Sete arquivos com nome fora do padrão (classe em camelCase, função em PascalCase) e `UsuariosController` e `NotificacaoService` foram renomeados.
+- **Organização — A16 (30/09/2026):** cada arquivo na pasta que a regra do projeto manda. No front-end, cinco arquivos de `utils/` e `domain/` tocavam o documento (download de arquivo, botão ocupado, `el()`, copiar para a área de transferência, leitura de variável CSS e o bloco visual de retorno do agente) e foram para `components/` e `app/tema.js`; o portão "sem DOM" só parecia existir (o `tsconfig` tinha `dom` nas libs e o teste só olhava `templates/` e `domain/`), e agora o `tsc` roda sem `dom` e o teste cobre `utils/` também. No servidor, `shared/` ficou com `errors` e `normalizacao`, os dois que têm consumidores em camadas diferentes: paginação, ordenação e validação tinham uma camada só e foram morar nela; `splitSystems` e `titleCase` subiram para a normalização; e os serviços deixaram de usar a conexão direto (`Database` ganhou `transacao`, `verificarIntegridade` e `modoDeGravacao`). Sem mudança de comportamento. Os testes seguiram: um arquivo por regra (validação, paginação, ordenação, saúde). Sete arquivos com nome fora do padrão (classe em camelCase, função em PascalCase) e `UsuariosController` e `NotificacaoService` foram renomeados.
 
 - **Limpeza — A15 (30/09/2026):** varredura do repositório atrás de tudo o que não tinha uso. Saíram cinco rotas da API que nem o cliente, nem o Atualizador, nem os testes chamavam: em Atualizações, `last-by-client` e `versoes-por-sistema`; em Agendamentos, `excluir-lote`, `concluir-lote` e `gerar-lote` (sobra de quando a tela era uma tabela, o quadro Kanban não tem seleção múltipla), com o código e os testes que só elas usavam. Saíram também métodos de repositório sem chamador, código do front-end, 12 classes e 10 variáveis de CSS sem uso. `--raio-md` era usada em 4 lugares sem nunca ter sido definida, então os menus "Relatórios" e "Mais ações" de Atualizações, o painel de versões oficiais, a linha do "Antes × Depois" e o tooltip do gráfico de barras ficavam de canto reto; passam a usar `--raio`. O servidor deixou de depender do próprio repositório (`"gestor-de-atualizacoes": "file:.."`, que entrou por engano em 18/09): o Dockerfile ficou mais simples e o atalho circular que essa dependência criava em `server/node_modules` deixou de existir. No CI, o passo de testes de navegador saiu, junto com o script `test:navegador`: a pasta `navegador/` já não está no repositório, então o passo não testava nada.
 - **Tela de login — A12 (30/09/2026):** em tela larga, a tela se divide em duas metades: a marca num painel tingido com a cor de destaque e o formulário na outra. O logo e o nome apareciam duas vezes, porque a regra que escondia os do cartão perdia para a regra base no CSS. No celular fica só o formulário, com o logo e o nome em cima. Ao entrar, o botão diz "Entrando…" e os campos travam até a resposta. O erro ganhou espaço, borda e sinal de alerta, marca os campos em vermelho (e para o leitor de tela) e some ao começar a corrigir. Antes de o app carregar, a página mostra "Carregando o Gestor…" em vez de ficar em branco. Mostrar senha e aviso de Caps Lock continuam; tudo revisto no tema claro e no escuro, sem biblioteca nova.
@@ -71,11 +71,11 @@ Para o agente C#, o equivalente é
   - *Um aviso, não uma pilha de toasts*: o toast "Não foi possível carregar os dados desta tela", que voltava a cada tentativa, não aparece mais nas telas que mostram o aviso.
   - *Vale para todas as telas que usam o cache*, porque mora na `View.swr` (`client/js/utils/estadoDados.js`).
   - *Telas que escapavam do aviso*: Clientes e Sistemas buscavam a primeira coisa fora do cache e, com o servidor fora, nem desenhavam o dado guardado; Campanhas e Sistemas abriam um modal de erro por cima. Achado no teste de navegador com o servidor derrubado.
-  - *Faixa de "sem conexão" com o proxy*: com o Caddy da P01, o painel fora do ar respondia 502 pelo proxy e a faixa nunca aparecia. O `ApiClient` passa a contar 502/503/504 como queda.
+  - *Faixa de "sem conexão" com o proxy*: com o Caddy da P01, o painel fora do ar respondia 502 pelo proxy e a faixa nunca aparecia. O `ApiPainel` passa a contar 502/503/504 como queda.
   - *Testes*: `client/tests/estadoDados.test.mjs` e o caso do 502 em `client/tests/apiclient.test.mjs`.
 
 - **Proteção CSRF — P02 (29/09/2026):** toda escrita da API feita com sessão (POST, PUT, PATCH, DELETE, inclusive upload de planilha e de pacote) passa a exigir o token da sessão no cabeçalho `X-CSRF-Token`. Outra página aberta no navegador de quem está logado não consegue mais alterar nada em nome dessa pessoa. Antes, `SameSite=Lax` e "só JSON" barravam o caso comum, mas não um formulário multipart nem os POST sem corpo (publicar versão, sair). Decisão em [ADR-0011](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0011).
-  - *Invisível para quem usa*: o servidor entrega o token em toda resposta com sessão, e o `ApiClient` o devolve sozinho. Se a pessoa entrou de novo em outra aba (sessão nova, token novo), o pedido recusado é repetido uma vez com o token atual. Sessões abertas antes da atualização ganham o token na primeira chamada, sem precisar entrar de novo.
+  - *Invisível para quem usa*: o servidor entrega o token em toda resposta com sessão, e o `ApiPainel` o devolve sozinho. Se a pessoa entrou de novo em outra aba (sessão nova, token novo), o pedido recusado é repetido uma vez com o token atual. Sessões abertas antes da atualização ganham o token na primeira chamada, sem precisar entrar de novo.
   - *Fora da regra*: login e configuração inicial (não há sessão antes deles) e pedidos sem sessão, que continuam recebendo o 401 que leva ao login. Os agentes C# não são afetados.
   - *Testes*: `server/tests/csrf.test.js`, `client/tests/apiclient.test.mjs`; os testes HTTP antigos passam a devolver o token como o navegador.
 
@@ -257,7 +257,7 @@ Para o agente C#, o equivalente é
     na imagem: no tema claro virava um quadrado preto, e não acompanhava a
     cor de destaque escolhida nas Configurações. O símbolo (setas em ciclo
     + raio) foi redesenhado em SVG inline (`simboloMarca()` em
-    `utils/icons.js`), com traço pensado para 16 px. O quadrado colorido em
+    `utils/icones.js`), com traço pensado para 16 px. O quadrado colorido em
     volta agora vem do CSS. Há também `favicon.svg`, e o `favicon.png` foi
     refeito a partir dele para as notificações.
 
@@ -462,12 +462,12 @@ Para o agente C#, o equivalente é
 
   A causa-raiz por trás do cabeçalho "vazando" era mais geral, e por isso a
   correção foi no componente, não só nesta tela: o cabeçalho ordenável
-  (`SortableTable`) é um `<button>` `display:flex`, e um item flex não
+  (`TabelaOrdenavel`) é um `<button>` `display:flex`, e um item flex não
   encolhe abaixo do tamanho do próprio conteúdo por padrão -- sem
   `min-width: 0` no botão e sem o rótulo estar num `<span>` próprio com
   `text-overflow: ellipsis`, um texto comprido numa coluna estreita
   simplesmente ultrapassava a largura da célula em vez de truncar. Vale
-  para qualquer tabela que use `SortableTable`, não só Atualizações.
+  para qualquer tabela que use `TabelaOrdenavel`, não só Atualizações.
 
 - **O selo vermelho do indicador "Parados" no Resumo mostrava um pedaço de
   cor destacado atrás do ícone.** `.stat-tile__icon` é uma caixa quadrada de
@@ -570,8 +570,8 @@ Para o agente C#, o equivalente é
   emoji colorido por ícone SVG monocromático.** Os botões usavam glifos de
   emoji (📋 👤 ✏️ 🔑 🔍) como conteúdo do `<button>`; cada sistema operacional
   renderiza emoji com sua própria fonte colorida, destoando do resto da
-  interface, que usa só os ícones de linha de `utils/icons.js`
-  (`stroke="currentColor"`). Trocado por `icon()`, acrescentando os ícones
+  interface, que usa só os ícones de linha de `utils/icones.js`
+  (`stroke="currentColor"`). Trocado por `iconeSvg()`, acrescentando os ícones
   `editar`, `chave` e `converter` ao conjunto existente.
 
 - **Atualização automática da Distribuição concentrada em Configurações.** A
@@ -942,7 +942,7 @@ Para o agente C#, o equivalente é
 ### 22/09/2026
 
 - **Dois ajustes no gráfico de "Tendência Mensal de Atualizações"
-  (`LineChart`).** O `cursor: crosshair` no SVG duplicava o crosshair que o
+  (`GraficoDeLinhas`).** O `cursor: crosshair` no SVG duplicava o crosshair que o
   componente já desenha (linha vertical + ponto + tooltip): em telas de
   alto DPI o cursor nativo do SO aparecia como uma cruz grande e sem
   relação com a escala do gráfico. Removido — o overlay próprio já basta.

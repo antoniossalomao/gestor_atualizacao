@@ -1,7 +1,7 @@
-import { ApiClient } from "./api/ApiClient.js";
+import { ApiPainel } from "./api/ApiPainel.js";
 import { App } from "./app/App.js";
-import { iniciarTema } from "./app/theme.js";
-import { iniciarAparencia } from "./app/appearance.js";
+import { iniciarTema } from "./app/tema.js";
+import { iniciarAparencia } from "./app/aparencia.js";
 
 // Ponto de entrada do front-end: aplica o tema salvo, cria o cliente de API e
 // a aplicação, e manda ela decidir o que mostrar (login ou o app principal).
@@ -16,7 +16,7 @@ iniciarTema();
 // altura e pularem para outra.
 iniciarAparencia();
 
-const api = new ApiClient();
+const api = new ApiPainel();
 const app = new App(document.getElementById("app"), api);
 app.start().catch((err) => {
   console.error("Falha fatal ao iniciar aplicação:", err);

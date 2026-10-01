@@ -110,7 +110,7 @@ test("Proteção CSRF", async (t) => {
     const antes = clientes();
     const r = await pedir("/clientes", { metodo: "POST", cookie: admin.cookie, corpo: { nome: "Sem Token" } });
     assert.equal(r.status, 403);
-    assert.equal(r.corpo.codigo, "csrf", "o ApiClient distingue esta recusa de uma falta de permissão por aqui");
+    assert.equal(r.corpo.codigo, "csrf", "o ApiPainel distingue esta recusa de uma falta de permissão por aqui");
     assert.match(r.corpo.error, /Recarregue a página/);
     assert.equal(clientes(), antes);
   });
@@ -178,7 +178,7 @@ test("Proteção CSRF", async (t) => {
     assert.equal(r.status, 200);
     assert.ok(r.token);
     assert.notEqual(r.token, admin.token, "sessão nova, token novo");
-    // O token velho não vale na sessão nova: é o caso que o ApiClient resolve
+    // O token velho não vale na sessão nova: é o caso que o ApiPainel resolve
     // buscando o atual e repetindo o pedido.
     const velho = await pedir("/clientes", { metodo: "POST", cookie: r.cookie, token: admin.token, corpo: { nome: "Token Velho" } });
     assert.equal(velho.status, 403);

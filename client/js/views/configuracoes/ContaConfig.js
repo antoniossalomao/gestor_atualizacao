@@ -1,8 +1,8 @@
-import { ApiError } from "../../api/ApiClient.js";
+import { ErroApi } from "../../api/ApiPainel.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/Toast.js";
+import { toast } from "../../components/AvisosRapidos.js";
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
+import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { cartaoPerfil, listaSessoes } from "../../templates/configuracoes.js";
@@ -23,7 +23,7 @@ const SENHA_MINIMA = 8;
 export class ContaConfig {
   /**
    * @param {HTMLElement} container
-   * @param {import('../../api/ApiClient').ApiClient} api
+   * @param {import('../../api/ApiPainel').ApiPainel} api
    * @param {{
    *   usuario: {id: number, nome: string, usuario: string, role?: string},
    *   navigate: (aba: string, params?: object) => void,
@@ -103,8 +103,8 @@ export class ContaConfig {
                 <span class="cfg-group__help">Um arquivo com todas as suas escolhas, para aplicar em outra conta ou guardar.</span>
               </div>
               <div class="cfg-botoes">
-                <button type="button" class="btn btn--small" data-action="exportar">${iconHtml("download")} Exportar</button>
-                <button type="button" class="btn btn--small" data-action="importar">${iconHtml("upload")} Importar</button>
+                <button type="button" class="btn btn--small" data-action="exportar">${iconeHtml("download")} Exportar</button>
+                <button type="button" class="btn btn--small" data-action="importar">${iconeHtml("upload")} Importar</button>
               </div>
             </div>
             <div class="cfg-group cfg-linha" data-ajuste="restaurar">
@@ -113,7 +113,7 @@ export class ContaConfig {
                 <span class="cfg-group__help" data-role="resumo"></span>
               </div>
               <button type="button" class="btn btn--small btn--danger" data-action="restaurar-tudo">
-                ${iconHtml("restaurar")} Restaurar tudo</button>
+                ${iconeHtml("restaurar")} Restaurar tudo</button>
             </div>
           </div>
         </section>
@@ -121,12 +121,12 @@ export class ContaConfig {
         ${
           ehAdmin &&
           html`<button type="button" class="card cfg-link cfg-link--cartao" data-action="administracao">
-            <span class="cfg-link__icon">${iconHtml("escudo")}</span>
+            <span class="cfg-link__icon">${iconeHtml("escudo")}</span>
             <span class="cfg-link__labels">
               <strong>Administração da equipe</strong>
               <span>Usuários e papéis, histórico de alterações, regras da equipe, backups e saúde do servidor.</span>
             </span>
-            <span class="cfg-link__seta">${iconHtml("seta")}</span>
+            <span class="cfg-link__seta">${iconeHtml("seta")}</span>
           </button>`
         }
       </div>`.toString();
@@ -307,5 +307,5 @@ export class ContaConfig {
 }
 
 function mensagem(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

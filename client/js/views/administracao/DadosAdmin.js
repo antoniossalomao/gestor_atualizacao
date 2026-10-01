@@ -1,9 +1,9 @@
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/Toast.js";
+import { toast } from "../../components/AvisosRapidos.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
+import { iconeHtml } from "../../utils/icones.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { baixarBlob } from "../../components/arquivos.js";
 import { ImportacaoModal } from "../../components/ImportacaoModal.js";
@@ -37,7 +37,7 @@ export class DadosAdmin extends View {
                 <span class="cfg-group__help">Gera um arquivo .xlsx com todos os registros cadastrados na base, sem recortes de data.</span>
               </div>
               <button type="button" class="btn btn--small" data-action="exportar-todos">
-                ${iconHtml("download")} Exportar (.xlsx)
+                ${iconeHtml("download")} Exportar (.xlsx)
               </button>
             </div>
 
@@ -47,7 +47,7 @@ export class DadosAdmin extends View {
                 <span class="cfg-group__help">Acrescenta registros ao histórico a partir de um arquivo .xlsx, com prévia antes de gravar. Registros existentes não são alterados.</span>
               </div>
               <button type="button" class="btn btn--small btn--accent" data-action="importar-planilha">
-                ${iconHtml("upload")} Importar planilha
+                ${iconeHtml("upload")} Importar planilha
               </button>
             </div>
           </div>
@@ -65,7 +65,7 @@ export class DadosAdmin extends View {
                 <span class="cfg-group__help">Cópia do arquivo SQLite com todas as tabelas, configurações e usuários no estado exato deste momento.</span>
               </div>
               <a class="btn btn--small" href="/api/backups/atual/download" download>
-                ${iconHtml("download")} Baixar banco (.sqlite)
+                ${iconeHtml("download")} Baixar banco (.sqlite)
               </a>
             </div>
 
@@ -76,10 +76,10 @@ export class DadosAdmin extends View {
               </div>
               <div class="form-actions">
                 <button type="button" class="btn btn--small" data-action="ir-clientes">
-                  ${iconHtml("users")} Ver clientes
+                  ${iconeHtml("users")} Ver clientes
                 </button>
                 <button type="button" class="btn btn--small" data-action="ir-sistemas">
-                  ${iconHtml("sistemas")} Ver sistemas
+                  ${iconeHtml("sistemas")} Ver sistemas
                 </button>
               </div>
             </div>

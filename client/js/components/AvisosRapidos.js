@@ -1,5 +1,5 @@
-import { icon } from "../utils/icons.js";
-import { aparencia } from "../app/appearance.js";
+import { iconeSvg } from "../utils/icones.js";
+import { aparencia } from "../app/aparencia.js";
 
 const DURACAO_MS = 4000;
 const DURACAO_ACAO_MS = 7000;
@@ -34,7 +34,7 @@ const ICONES = { success: "check", error: "alerta", info: "relogio" };
  *    É o que substituiu o modal de confirmação em toda exclusão -- confirmar
  *    no automático não protege ninguém, poder voltar atrás protege.
  */
-export class ToastManager {
+export class GerenteDeAvisos {
   constructor() {
     this.stack = document.getElementById("toast-stack");
     /** @type {Map<string, {el: HTMLElement, n: number, timer: number, duracao?: number}>} */
@@ -65,7 +65,7 @@ export class ToastManager {
     const marca = document.createElement("span");
     marca.className = "toast__icon";
     marca.setAttribute("aria-hidden", "true");
-    marca.innerHTML = icon(ICONES[kind] || "relogio");
+    marca.innerHTML = iconeSvg(ICONES[kind] || "relogio");
 
     const texto = document.createElement("span");
     texto.className = "toast__text";
@@ -160,4 +160,4 @@ export class ToastManager {
   }
 }
 
-export const toast = new ToastManager();
+export const toast = new GerenteDeAvisos();

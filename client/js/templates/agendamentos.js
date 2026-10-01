@@ -1,6 +1,6 @@
 import { html, confiavel } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
-import { todayBR } from "../utils/date.js";
+import { iconeHtml } from "../utils/icones.js";
+import { hojeBR } from "../utils/data.js";
 import { STATUS_CONCLUIDO, estaAtrasada } from "../domain/agendamento.js";
 
 /**
@@ -21,7 +21,7 @@ import { STATUS_CONCLUIDO, estaAtrasada } from "../domain/agendamento.js";
  */
 export function cartaoKanban(row, role, { agora = new Date() } = {}) {
   const vencida = row.status !== STATUS_CONCLUIDO && estaAtrasada(row.data, agora);
-  const hoje = row.status !== STATUS_CONCLUIDO && row.data === todayBR(agora);
+  const hoje = row.status !== STATUS_CONCLUIDO && row.data === hojeBR(agora);
   const podeArrastar = role !== "consulta" && !row.arquivadoEm;
   const dataHora = [row.data, row.horario].filter(Boolean).join(" · ");
   const meta = [row.sistema, row.responsavel].filter(Boolean).join(" · ");
@@ -67,7 +67,7 @@ export function cartaoKanban(row, role, { agora = new Date() } = {}) {
     ${row.arquivadoEm && role !== "consulta" && html`
       <div class="kanban-card__actions">
         <button type="button" class="btn btn--small btn--ghost" data-row-action="reabrir" data-id="${row.id}">
-          ${iconHtml("atualizar")} Reabrir
+          ${iconeHtml("atualizar")} Reabrir
         </button>
       </div>`}
   </article>`;

@@ -10,7 +10,7 @@
  * então não há risco de uma rota do front conflitar com uma rota da API. Para
  * um app interno de uma aba só, é a opção mais simples que funciona.
  */
-export class Router {
+export class Roteador {
   /**
    * @param {string[]} rotasValidas chaves das abas
    * @param {(rota: string) => void} aoMudar

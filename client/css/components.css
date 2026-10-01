@@ -1944,12 +1944,12 @@ table.data-table {
 .data-table thead th:last-child { border-top-right-radius: 5px; }
 
 /*
- * O cabeçalho ordenável (SortableTable) é um <button> DENTRO do <th> --
+ * O cabeçalho ordenável (TabelaOrdenavel) é um <button> DENTRO do <th> --
  * alcançável por Tab, acionável por Enter. É só esse <button> que vira flex;
  * o <th> continua `display: table-cell` (herdado), porque é isso que faz um
  * <th> participar do layout de tabela.
  *
- * As tabelas que NÃO passam pelo SortableTable (Distribuição, Versões --
+ * As tabelas que NÃO passam pelo TabelaOrdenavel (Distribuição, Versões --
  * `<th>Sistema</th>` escrito direto no HTML, sem nenhum <button> dentro)
  * caem na segunda regra abaixo. Ela tinha `display: flex` também, achando
  * que deixaria os dois tipos de cabeçalho visualmente idênticos -- só que
@@ -2056,7 +2056,7 @@ table.data-table {
   cursor: default;
 }
 
-/* -- seleção múltipla (Shift+clique ou Shift+seta -- ver SortableTable) --
+/* -- seleção múltipla (Shift+clique ou Shift+seta -- ver TabelaOrdenavel) --
    Sem coluna de caixinhas: a linha marcada para o lote se distingue só pelo
    fundo. Tom mais discreto que o `.is-selected` (a linha aberta no
    formulário) de propósito -- são dois estados diferentes que podem valer ao
@@ -5555,7 +5555,7 @@ hr.separator {
   font-variant-numeric: tabular-nums;
 }
 
-/* O fill de verdade é o gradiente em <defs> (ver LineChart.render) -- aqui só
+/* O fill de verdade é o gradiente em <defs> (ver GraficoDeLinhas.render) -- aqui só
    as cores DAS PARADAS do gradiente, que view sim resolvem `var()` num
    elemento SVG (diferente de `fill`/`stroke` como atributo cru). Mais forte
    perto da linha, sumindo perto da base: um accent fraco (Grafite, no painel

@@ -1,12 +1,12 @@
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
-import { Pagination } from "../components/Pagination.js";
-import { debounce } from "../utils/debounce.js";
-import { emptyState } from "../components/estadoVazio.js";
+import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
+import { Paginacao } from "../components/Paginacao.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { plural } from "../utils/html.js";
-import { tempoRelativo, formatarDataHora } from "../utils/date.js";
-import { prefs } from "../app/prefs.js";
-import { aparencia } from "../app/appearance.js";
+import { tempoRelativo, formatarDataHora } from "../utils/data.js";
+import { prefs } from "../app/preferencias.js";
+import { aparencia } from "../app/aparencia.js";
 import { Modal } from "../components/Modal.js";
 import { escapeHtml } from "../utils/html.js";
 
@@ -78,7 +78,7 @@ export class HistoricoView extends View {
       </div>
     `;
 
-    this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
+    this.table = new TabelaOrdenavel(this.container.querySelector('[data-role="table"]'), {
       columns: [
         { key: "quando", label: "Quando", type: "text", title: (row) => formatarDataHora(row.criado_em) },
         { key: "usuario_nome", label: "Quem" },
@@ -91,13 +91,13 @@ export class HistoricoView extends View {
       caption: "Ações registradas no sistema",
       emptyNode: () =>
         this._temFiltro()
-          ? emptyState({
+          ? estadoVazio({
               titulo: "Nenhuma ação com esse filtro",
               descricao: "Tente outro termo ou outro tipo.",
               icone: "busca",
               acao: { label: "Limpar filtros", onClick: () => this._limparFiltros() },
             })
-          : emptyState({
+          : estadoVazio({
               titulo: "Nenhuma ação registrada",
               descricao: "Tudo que a equipe fizer no sistema aparece aqui.",
               icone: "historico",
@@ -115,7 +115,7 @@ export class HistoricoView extends View {
         this._reloadList();
       },
     });
-    this.pagination = new Pagination(this.container.querySelector('[data-role="pagination"]'), (page) => {
+    this.pagination = new Paginacao(this.container.querySelector('[data-role="pagination"]'), (page) => {
       this.page = page;
       this._reloadList();
     });
@@ -126,7 +126,7 @@ export class HistoricoView extends View {
     this.searchInput.value = this.busca;
     this.entidadeFilter.value = this.entidade;
 
-    const reload = debounce(() => {
+    const reload = aguardarPausa(() => {
       this.page = 1;
       this._salvarFiltros();
       this._reloadList();

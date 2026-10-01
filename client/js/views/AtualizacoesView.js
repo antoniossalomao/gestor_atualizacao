@@ -1,25 +1,25 @@
 import { COLUNAS_ATUALIZACOES } from "../config.js";
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
-import { Pagination } from "../components/Pagination.js";
-import { Autocomplete } from "../components/Autocomplete.js";
+import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
+import { Paginacao } from "../components/Paginacao.js";
+import { CampoComSugestoes } from "../components/CampoComSugestoes.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { debounce } from "../utils/debounce.js";
-import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
-import { icon, iconHtml } from "../utils/icons.js";
+import { toast } from "../components/AvisosRapidos.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { hojeBR, dataBRValida, mascaraDataBR } from "../utils/data.js";
+import { iconeSvg, iconeHtml } from "../utils/icones.js";
 import { html, plural } from "../utils/html.js";
 import { ImportacaoModal } from "../components/ImportacaoModal.js";
 import { abrirRelatorio } from "../components/relatorioModal.js";
 import { relatorioDeAtualizacao, relatorioDoCliente, relatorioSituacao, relatorioDoPeriodo, versaoRegistrada } from "../domain/relatorio.js";
 import { splitSistemas } from "../domain/matrizVersoes.js";
-import { emptyState } from "../components/estadoVazio.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { withBusyButton, marcarOcupado } from "../components/botaoOcupado.js";
 import { baixarBlob } from "../components/arquivos.js";
-import { prefs } from "../app/prefs.js";
-import { aparencia } from "../app/appearance.js";
-import { Drawer } from "../components/Drawer.js";
+import { prefs } from "../app/preferencias.js";
+import { aparencia } from "../app/aparencia.js";
+import { Gaveta } from "../components/Gaveta.js";
 import { montarPresets, intervaloPreset } from "../components/presetsDeData.js";
 import { chipsFiltroAtualizacoes, htmlChips } from "../templates/filtros.js";
 
@@ -73,7 +73,7 @@ export class AtualizacoesView extends View {
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconeHtml("alerta")} Excluir</button>
             <span class="form-actions__hint text-muted" data-role="modo"></span>
           </div>
           <div class="form-actions__right">
@@ -106,20 +106,20 @@ export class AtualizacoesView extends View {
           <div class="menu-acoes" data-role="menu-relatorios">
             <button type="button" class="btn btn--ghost btn--small" data-action="toggle-relatorios" aria-haspopup="menu" aria-expanded="false">Relatórios ▾</button>
             <div class="menu-acoes__lista" role="menu" hidden>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio-periodo">${iconHtml("copiar")} Relatório do período</button>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio" disabled>${iconHtml("copiar")} Relatório do cliente</button>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio-periodo">${iconeHtml("copiar")} Relatório do período</button>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio" disabled>${iconeHtml("copiar")} Relatório do cliente</button>
             </div>
           </div>
           <!-- Mais ações: exportar e importar (I08) -->
           <div class="menu-acoes" data-role="menu-acoes">
             <button type="button" class="btn btn--ghost btn--small" data-action="toggle-mais-acoes" aria-haspopup="menu" aria-expanded="false">Mais ações ▾</button>
             <div class="menu-acoes__lista" role="menu" hidden>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="export">${iconHtml("download")} Exportar resultado (.xlsx)</button>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="import">${iconHtml("upload")} Importar planilha…</button>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="export">${iconeHtml("download")} Exportar resultado (.xlsx)</button>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="import">${iconeHtml("upload")} Importar planilha…</button>
             </div>
           </div>
           <!-- Excluir: aparece só quando há seleção; lote oculta este -->
-          <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
+          <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconeHtml("alerta")} Excluir</button>
           <button type="button" class="btn btn--accent btn--small" data-action="nova-atualizacao">+ Nova Atualização</button>
         </div>
 
@@ -159,7 +159,7 @@ export class AtualizacoesView extends View {
           <button type="button" class="btn btn--small btn--ghost" data-action="bulk-limpar">Desmarcar</button>
           <div class="toolbar-spacer"></div>
           <button type="button" class="btn btn--small btn--danger" data-action="bulk-excluir">
-            ${iconHtml("alerta")} Excluir selecionados
+            ${iconeHtml("alerta")} Excluir selecionados
           </button>
         </div>
 
@@ -192,7 +192,7 @@ export class AtualizacoesView extends View {
       acoes: "104px",
     };
 
-    this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
+    this.table = new TabelaOrdenavel(this.container.querySelector('[data-role="table"]'), {
       ocuparAltura: true,
       columns: [
         { key: "id", label: "ID", type: "numeric", largura: LARGURAS_ATUALIZACAO.id },
@@ -220,13 +220,13 @@ export class AtualizacoesView extends View {
       caption: "Atualizações registradas",
       emptyNode: () =>
         this._temFiltro()
-          ? emptyState({
+          ? estadoVazio({
               titulo: "Nenhum registro com esse filtro",
               descricao: "Tente outro termo, ou limpe os filtros para ver tudo.",
               icone: "busca",
               acao: { label: "Limpar filtros", onClick: () => this._limparFiltros() },
             })
-          : emptyState({
+          : estadoVazio({
               titulo: "Nenhuma atualização registrada",
               descricao: "Preencha o formulário acima para registrar a primeira, ou importe uma planilha.",
               icone: "atualizacoes",
@@ -240,13 +240,13 @@ export class AtualizacoesView extends View {
         this._reloadList();
       },
     });
-    this.pagination = new Pagination(this.container.querySelector('[data-role="pagination"]'), (page) => {
+    this.pagination = new Paginacao(this.container.querySelector('[data-role="pagination"]'), (page) => {
       this.page = page;
       this._reloadList();
     });
 
     this.form = this.container.querySelector('[data-role="form"]');
-    this.drawer = new Drawer(this.form, {
+    this.drawer = new Gaveta(this.form, {
       titulo: "Atualização",
       descricao: "Registre uma atualização sem perder a lista de vista.",
     });
@@ -259,7 +259,7 @@ export class AtualizacoesView extends View {
     this.botaoLimparFiltros = this.container.querySelector('[data-action="limpar-filtros"]');
     this.searchInput.value = this.busca;
 
-    const reload = debounce(() => {
+    const reload = aguardarPausa(() => {
       this.page = 1;
       this._salvarFiltros();
       this._reloadList();
@@ -292,9 +292,9 @@ export class AtualizacoesView extends View {
     // Uma data pela metade ("15/01/") não é filtro nenhum: enquanto não estiver
     // completa, o campo é simplesmente ignorado, em vez de a lista esvaziar e
     // reaparecer a cada tecla digitada.
-    const aplicarPeriodo = debounce(() => {
-      this.desde = isValidDateBR(this.desdeInput.value) ? this.desdeInput.value.trim() : "";
-      this.ate = isValidDateBR(this.ateInput.value) ? this.ateInput.value.trim() : "";
+    const aplicarPeriodo = aguardarPausa(() => {
+      this.desde = dataBRValida(this.desdeInput.value) ? this.desdeInput.value.trim() : "";
+      this.ate = dataBRValida(this.ateInput.value) ? this.ateInput.value.trim() : "";
       this.page = 1;
       this._trocouDeFiltro();
       this._salvarFiltros();
@@ -304,7 +304,7 @@ export class AtualizacoesView extends View {
       campo.addEventListener("input", () => {
         campo.value = mascaraDataBR(campo.value);
         const vazio = !campo.value.trim();
-        const invalido = !vazio && !isValidDateBR(campo.value);
+        const invalido = !vazio && !dataBRValida(campo.value);
         campo.setAttribute("aria-invalid", String(invalido));
         aplicarPeriodo();
       });
@@ -503,18 +503,18 @@ export class AtualizacoesView extends View {
         input.setAttribute("aria-describedby", hint.id);
         input.addEventListener("input", () => {
           input.value = mascaraDataBR(input.value);
-          const invalida = Boolean(input.value) && !isValidDateBR(input.value);
+          const invalida = Boolean(input.value) && !dataBRValida(input.value);
           hint.textContent = invalida ? "Formato esperado: dd/mm/aaaa" : "";
           input.setAttribute("aria-invalid", String(invalida));
         });
       }
       this.fields[col.key] = input;
     }
-    this.clienteAutocomplete = new Autocomplete(this.fields.cliente, { values: [] });
+    this.clienteAutocomplete = new CampoComSugestoes(this.fields.cliente, { values: [] });
     // Sugere nomes já usados no campo Responsável -- diferente de Cliente,
     // continua sendo texto livre (a mesma pessoa pode digitar um nome novo),
     // só ajuda a não escrever "Camila" de um jeito diferente cada vez.
-    this.responsavelAutocomplete = new Autocomplete(this.fields.responsavel, { values: [] });
+    this.responsavelAutocomplete = new CampoComSugestoes(this.fields.responsavel, { values: [] });
   }
 
   async refresh() {
@@ -761,7 +761,7 @@ export class AtualizacoesView extends View {
       Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning").then(() => this.fields.cliente.focus());
       return null;
     }
-    if (!isValidDateBR(data.data)) {
+    if (!dataBRValida(data.data)) {
       Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning").then(() => this.fields.data.focus());
       return null;
     }
@@ -950,7 +950,7 @@ export class AtualizacoesView extends View {
     this.selectedRevision = null;
     this.table?.clearSelection();
     for (const col of COLUNAS_ATUALIZACOES) this.fields[col.key].value = "";
-    this.fields.data.value = todayBR();
+    this.fields.data.value = hojeBR();
     // Melhoria em relação ao app original: já vem preenchido com quem está
     // logado (continua editável, caso outra pessoa tenha feito a atualização
     // em nome dela).
@@ -1001,7 +1001,7 @@ export class AtualizacoesView extends View {
       // Antes não havia catch: uma exportação recusada (acima do limite de
       // linhas, período inválido) ou falha de rede não mostrava NADA -- o
       // botão voltava ao normal e o arquivo simplesmente não vinha (P05).
-      if (err?.status === 401) return; // já tratado pelo ApiClient (login)
+      if (err?.status === 401) return; // já tratado pelo ApiPainel (login)
       Modal.alert("Não foi possível exportar", errorMessage(err), "warning");
       return;
     }
@@ -1150,7 +1150,7 @@ function acoesAtualizacao(row, role) {
     botao.dataset.id = row.id;
     botao.title = titulo;
     botao.setAttribute("aria-label", titulo);
-    botao.innerHTML = icon(nomeIcone);
+    botao.innerHTML = iconeSvg(nomeIcone);
     wrap.appendChild(botao);
   }
   return wrap;
@@ -1161,5 +1161,5 @@ function isTypingTarget(el) {
 }
 
 function errorMessage(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

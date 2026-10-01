@@ -97,7 +97,7 @@ const PATHS = {
 };
 
 /** @param {keyof typeof PATHS} name @returns {string} markup do `<svg>` pronto pra inserir via innerHTML */
-export function icon(name) {
+export function iconeSvg(name) {
   const inner = PATHS[name] || "";
   return `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false">${inner}</svg>`;
 }
@@ -109,8 +109,8 @@ export function icon(name) {
  * e nada que venha da API ou de um formulário entra na marcação.
  * @param {keyof typeof PATHS} name
  */
-export function iconHtml(name) {
-  return confiavel(icon(name));
+export function iconeHtml(name) {
+  return confiavel(iconeSvg(name));
 }
 
 /**

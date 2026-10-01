@@ -1,5 +1,5 @@
 /*
- * Testes do SwrCache -- o "mostra o que tem, revalida por trás" que faz cada
+ * Testes do CacheSwr -- o "mostra o que tem, revalida por trás" que faz cada
  * troca de aba parecer instantânea.
  *
  * Ele é puro (só `Map` e `Date.now()`), então dá para testar aqui fora do
@@ -20,17 +20,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { SwrCache } from "../js/app/SwrCache.js";
+import { CacheSwr } from "../js/app/CacheSwr.js";
 
-test("SwrCache - guardar e ler", async (t) => {
+test("CacheSwr - guardar e ler", async (t) => {
   await t.test("chave que nunca foi gravada devolve undefined", () => {
-    const c = new SwrCache();
+    const c = new CacheSwr();
     assert.equal(c.peek("nada"), undefined);
     assert.equal(c.buscadoEm("nada"), null);
   });
 
   await t.test("devolve o que foi guardado", () => {
-    const c = new SwrCache();
+    const c = new CacheSwr();
     c.set("clientes", [{ id: 1, nome: "A" }]);
     assert.deepEqual(c.peek("clientes"), [{ id: 1, nome: "A" }]);
     assert.equal(typeof c.buscadoEm("clientes"), "number");
@@ -44,14 +44,14 @@ test("SwrCache - guardar e ler", async (t) => {
     // zero, `set` e `peek` no mesmo milissegundo dão diferença 0, que não é
     // "> 0" -- o teste passaria ou falharia conforme o relógio, e testaria a
     // borda em vez do comportamento.
-    const c = new SwrCache({ maxAgeMs: 1000 });
+    const c = new CacheSwr({ maxAgeMs: 1000 });
     c.set("x", 1);
     c.entradas.get("x").em -= 5000;
     assert.equal(c.peek("x"), undefined);
   });
 
   await t.test("ler um valor vencido também o remove do cache", () => {
-    const c = new SwrCache({ maxAgeMs: 1000 });
+    const c = new CacheSwr({ maxAgeMs: 1000 });
     c.set("x", 1);
     c.entradas.get("x").em -= 5000;
     c.peek("x");
@@ -59,27 +59,27 @@ test("SwrCache - guardar e ler", async (t) => {
   });
 
   await t.test("valor dentro do prazo é devolvido", () => {
-    const c = new SwrCache({ maxAgeMs: 60_000 });
+    const c = new CacheSwr({ maxAgeMs: 60_000 });
     c.set("x", 1);
     assert.equal(c.peek("x"), 1);
   });
 
   await t.test("guardar de novo substitui", () => {
-    const c = new SwrCache();
+    const c = new CacheSwr();
     c.set("x", 1);
     c.set("x", 2);
     assert.equal(c.peek("x"), 2);
   });
 });
 
-test("SwrCache - mudou()", async (t) => {
+test("CacheSwr - mudou()", async (t) => {
   await t.test("sem nada guardado, tudo é novidade", () => {
-    const c = new SwrCache();
+    const c = new CacheSwr();
     assert.equal(c.mudou("x", [1, 2, 3]), true);
   });
 
   await t.test("valor idêntico não mudou", () => {
-    const c = new SwrCache();
+    const c = new CacheSwr();
     c.set("x", [{ id: 1, nome: "A" }]);
     assert.equal(c.mudou("x", [{ id: 1, nome: "A" }]), false);
   });
@@ -89,7 +89,7 @@ test("SwrCache - mudou()", async (t) => {
     // consultas, então a mesma linha pode voltar como {id, nome} ou
     // {nome, id}. Com `JSON.stringify` puro, toda revalidação pareceria uma
     // mudança, e a tabela seria reconstruída sem nada ter mudado.
-    const c = new SwrCache();
+    const c = new CacheSwr();
     c.set("x", [{ id: 1, nome: "A", cidade: "Uberaba" }]);
     assert.equal(c.mudou("x", [{ cidade: "Uberaba", nome: "A", id: 1 }]), false);
   });
@@ -97,13 +97,13 @@ test("SwrCache - mudou()", async (t) => {
   await t.test("ordem dos ITENS conta como mudança", () => {
     // Array não é objeto: a ordem das linhas de uma tabela é informação
     // (ordenação escolhida por quem está olhando), não ruído.
-    const c = new SwrCache();
+    const c = new CacheSwr();
     c.set("x", [{ id: 1 }, { id: 2 }]);
     assert.equal(c.mudou("x", [{ id: 2 }, { id: 1 }]), true);
   });
 
   await t.test("mudança real é detectada, inclusive aninhada", () => {
-    const c = new SwrCache();
+    const c = new CacheSwr();
     c.set("x", [{ id: 1, nome: "A" }]);
     assert.equal(c.mudou("x", [{ id: 1, nome: "B" }]), true);
 
@@ -113,7 +113,7 @@ test("SwrCache - mudou()", async (t) => {
   });
 
   await t.test("distingue tipos que parecem iguais", () => {
-    const c = new SwrCache();
+    const c = new CacheSwr();
     c.set("x", 1);
     assert.equal(c.mudou("x", "1"), true, "número e texto não são a mesma coisa");
     c.set("y", null);
@@ -121,9 +121,9 @@ test("SwrCache - mudou()", async (t) => {
   });
 });
 
-test("SwrCache - invalidar()", async (t) => {
+test("CacheSwr - invalidar()", async (t) => {
   function cheio() {
-    const c = new SwrCache();
+    const c = new CacheSwr();
     c.set("clientes:lista", [1]);
     c.set("clientes:1", { id: 1 });
     c.set("atualizacoes:lista", [2]);

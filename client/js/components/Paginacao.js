@@ -13,7 +13,7 @@
  * mudam. O botão continua sendo o mesmo elemento, então o foco fica onde
  * estava.
  */
-export class Pagination {
+export class Paginacao {
   /** @param {HTMLElement} container @param {(page: number) => void} onChange */
   constructor(container, onChange) {
     this.container = container;

@@ -1,11 +1,11 @@
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { icon } from "../utils/icons.js";
+import { toast } from "../components/AvisosRapidos.js";
+import { iconeSvg } from "../utils/icones.js";
 import { escapeHtml } from "../utils/html.js";
 import { copyToClipboard } from "../components/areaDeTransferencia.js";
 import { marcarOcupado } from "../components/botaoOcupado.js";
-import { emptyState } from "../components/estadoVazio.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 
 /**
  * Janela flutuante com os acessos remotos (AnyDesk / Suporte Bredas) das
@@ -15,7 +15,7 @@ import { emptyState } from "../components/estadoVazio.js";
  * cima da tela, não uma aba fixa.
  */
 export class AcessosModal {
-  /** @param {import('../api/ApiClient').ApiClient} api @param {{id:number, nome:string}} cliente */
+  /** @param {import('../api/ApiPainel').ApiPainel} api @param {{id:number, nome:string}} cliente */
   constructor(api, cliente) {
     this.api = api;
     this.cliente = cliente;
@@ -32,7 +32,7 @@ export class AcessosModal {
       <p class="modal-box__message">AnyDesk e Suporte Bredas de cada máquina deste cliente.</p>
       <div class="users-list" data-role="list"></div>
       <button type="button" class="btn btn--small" data-action="toggle-form" aria-expanded="false" aria-controls="nova-maquina">
-        ${icon("plus")} Nova Máquina
+        ${iconeSvg("plus")} Nova Máquina
       </button>
       <form class="users-new" id="nova-maquina" data-role="form" hidden>
         <div class="form-grid form-grid--2">
@@ -87,7 +87,7 @@ export class AcessosModal {
 
     if (acessos.length === 0) {
       list.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: "Nenhuma máquina cadastrada",
           descricao: "Use o formulário abaixo para adicionar a primeira.",
           icone: "acessos",
@@ -149,7 +149,7 @@ export class AcessosModal {
     const copiar = document.createElement("button");
     copiar.type = "button";
     copiar.className = "btn btn--small btn--ghost acesso-linha__copiar";
-    copiar.innerHTML = icon("copiar");
+    copiar.innerHTML = iconeSvg("copiar");
     copiar.setAttribute("aria-label", `Copiar ${rotulo}`);
     copiar.title = `Copiar ${rotulo}`;
     copiar.addEventListener("click", async () => {
@@ -176,7 +176,7 @@ export class AcessosModal {
     this.salvarBtn.textContent = "Salvar Máquina";
     this.cancelarEdicaoBtn.hidden = false;
     this.toggleBtn.textContent = "";
-    this.toggleBtn.innerHTML = `${icon("minus")} Nova Máquina`;
+    this.toggleBtn.innerHTML = `${iconeSvg("minus")} Nova Máquina`;
     this._toggleForm(true);
     this._marcarEdicao();
   }
@@ -193,7 +193,7 @@ export class AcessosModal {
     for (const input of Object.values(this.fields)) input.value = "";
     this.salvarBtn.textContent = "Adicionar Máquina";
     this.cancelarEdicaoBtn.hidden = true;
-    this.toggleBtn.innerHTML = `${icon("plus")} Nova Máquina`;
+    this.toggleBtn.innerHTML = `${iconeSvg("plus")} Nova Máquina`;
     this._toggleForm(false);
     this._marcarEdicao();
   }
@@ -250,5 +250,5 @@ export class AcessosModal {
 }
 
 function errorMessage(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

@@ -1,6 +1,6 @@
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 import { marcarOcupado } from "../components/botaoOcupado.js";
-import { icon, simboloMarca } from "../utils/icons.js";
+import { iconeSvg, simboloMarca } from "../utils/icones.js";
 
 /**
  * Tela cheia de autenticação -- funciona em dois modos:
@@ -15,7 +15,7 @@ import { icon, simboloMarca } from "../utils/icons.js";
 export class LoginView {
   /**
    * @param {HTMLElement} root
-   * @param {import('../api/ApiClient').ApiClient} api
+   * @param {import('../api/ApiPainel').ApiPainel} api
    * @param {"setup"|"login"} mode
    * @param {(user: {id:number, nome:string, usuario:string}) => void} onSuccess
    */
@@ -45,9 +45,9 @@ export class LoginView {
       <strong class="auth-screen__brand-name">Gestor de Atualizações</strong>
       <p class="auth-screen__brand-tagline">Bredas Sistemas · Atualizações dos clientes, num só lugar.</p>
       <ul class="auth-screen__brand-list">
-        <li>${icon("clientes")} Cadastro de clientes e sistemas</li>
-        <li>${icon("atualizacoes")} Histórico de atualizações</li>
-        <li>${icon("distribuicao")} Distribuição automática de versões</li>
+        <li>${iconeSvg("clientes")} Cadastro de clientes e sistemas</li>
+        <li>${iconeSvg("atualizacoes")} Histórico de atualizações</li>
+        <li>${iconeSvg("distribuicao")} Distribuição automática de versões</li>
       </ul>
     `;
     screen.appendChild(brand);
@@ -91,7 +91,7 @@ export class LoginView {
             <input class="input" type="password" id="login-senha" name="senha" required
                    autocomplete="${isSetup ? "new-password" : "current-password"}" />
             <button type="button" class="input-acao" data-action="ver-senha"
-                    aria-label="Mostrar a senha" aria-pressed="false" title="Mostrar a senha">${icon("olho")}</button>
+                    aria-label="Mostrar a senha" aria-pressed="false" title="Mostrar a senha">${iconeSvg("olho")}</button>
           </div>
           <!--
             Caps Lock ligado é a causa silenciosa de metade dos "minha senha
@@ -128,7 +128,7 @@ export class LoginView {
     botao.addEventListener("click", () => {
       const mostrando = campo.type === "text";
       campo.type = mostrando ? "password" : "text";
-      botao.innerHTML = icon(mostrando ? "olho" : "olhoRiscado");
+      botao.innerHTML = iconeSvg(mostrando ? "olho" : "olhoRiscado");
       botao.setAttribute("aria-pressed", String(!mostrando));
       const rotulo = mostrando ? "Mostrar a senha" : "Esconder a senha";
       botao.setAttribute("aria-label", rotulo);
@@ -173,7 +173,7 @@ export class LoginView {
       const { user } = await this.api.post(path, data);
       this.onSuccess(user);
     } catch (err) {
-      this._showError(err instanceof ApiError ? err.message : "Não foi possível conectar ao servidor.");
+      this._showError(err instanceof ErroApi ? err.message : "Não foi possível conectar ao servidor.");
       // O foco volta para a senha: é o campo que quase sempre precisa mudar,
       // e sem isso a pessoa tem que pegar o mouse depois de cada erro.
       form.querySelector('input[name="senha"]').select();

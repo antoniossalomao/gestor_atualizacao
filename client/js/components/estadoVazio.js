@@ -1,4 +1,4 @@
-import { icon } from "../utils/icons.js";
+import { iconeSvg } from "../utils/icones.js";
 import { el } from "./elemento.js";
 
 /**
@@ -14,7 +14,7 @@ import { el } from "./elemento.js";
  * @param {{titulo: string, descricao?: string, icone?: string, acao?: {label: string, onClick: () => void}}} opts
  * @returns {HTMLElement}
  */
-export function emptyState({ titulo, descricao, icone = "vazio", acao }) {
+export function estadoVazio({ titulo, descricao, icone = "vazio", acao }) {
   // "busca" é o ícone que toda tela já usa para "seu filtro não achou nada"
   // (ver AtualizacoesView, ClientesView, HistoricoView, AgendamentosView,
   // SistemasView) -- um vazio temporário e resolvível (limpar o filtro),
@@ -23,7 +23,7 @@ export function emptyState({ titulo, descricao, icone = "vazio", acao }) {
   // ler o texto.
   const classe = icone === "busca" ? "empty-state empty-state--busca" : "empty-state";
   const box = el("div", { class: classe });
-  box.appendChild(el("div", { class: "empty-state__icon", html: icon(icone) }));
+  box.appendChild(el("div", { class: "empty-state__icon", html: iconeSvg(icone) }));
   box.appendChild(el("p", { class: "empty-state__title", text: titulo }));
   if (descricao) box.appendChild(el("p", { class: "empty-state__desc", text: descricao }));
   if (acao) {

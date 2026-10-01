@@ -1,5 +1,5 @@
 import { html, plural } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
+import { iconeHtml } from "../utils/icones.js";
 
 /**
  * Marcação do fluxo de importação de planilha (components/ImportacaoModal.js):
@@ -27,7 +27,7 @@ export function orientacaoImportacao() {
     </div>
     <div class="modal-box__actions">
       <button type="button" class="btn" data-action="fechar">Cancelar</button>
-      <button type="button" class="btn btn--accent" data-action="escolher">${iconHtml("upload")} Escolher arquivo</button>
+      <button type="button" class="btn btn--accent" data-action="escolher">${iconeHtml("upload")} Escolher arquivo</button>
     </div>`;
 }
 
@@ -50,7 +50,7 @@ export function previaImportacao(p, nomeArquivo, pularDuplicadas) {
     </div>
     ${p.semCabecalho ? html`<p class="importacao__aviso">Cabeçalho não reconhecido: as colunas foram lidas na ordem ${COLUNAS_IMPORTACAO.join(", ")}.</p>` : ""}
     ${p.colunasIgnoradas?.length ? html`<p class="importacao__aviso">Colunas ignoradas: ${p.colunasIgnoradas.join(", ")}.</p>` : ""}
-    ${p.ocorrencias.length ? tabelaOcorrencias(p) : html`<p class="importacao__ok">${iconHtml("check")} Nenhum problema encontrado.</p>`}
+    ${p.ocorrencias.length ? tabelaOcorrencias(p) : html`<p class="importacao__ok">${iconeHtml("check")} Nenhum problema encontrado.</p>`}
     ${p.duplicadas
       ? html`<label class="importacao__opcao"><input type="checkbox" data-role="pular-duplicadas" ${pularDuplicadas ? html`checked` : ""} /> Pular possíveis duplicidades (recomendado ao reenviar um arquivo)</label>`
       : ""}

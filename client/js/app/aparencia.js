@@ -1,12 +1,12 @@
-import { settings } from "./prefs.js";
+import { duradouras } from "./preferencias.js";
 
 /**
  * Preferências de apresentação que valem para o app inteiro: cor, tamanho do
  * texto, quão apertadas ficam as linhas das tabelas, quantos registros cabem
  * numa página, onde os avisos aparecem.
  *
- * São irmãs do `theme.js` -- mesma ideia, mesmo armazenamento (o localStorage
- * como cache e a conta no servidor como fonte da verdade; ver prefs.js),
+ * São irmãs do `tema.js` -- mesma ideia, mesmo armazenamento (o localStorage
+ * como cache e a conta no servidor como fonte da verdade; ver preferencias.js),
  * mesma forma de avisar o resto do app (um evento no `document`). O tema ficou
  * num arquivo próprio porque tem uma terceira via que nenhuma destas tem
  * ("seguir o sistema", que obriga a ouvir o `matchMedia` para sempre); aqui
@@ -252,7 +252,7 @@ const PADROES = {
 
 /**
  * Preferências que NÃO acompanham a conta (ver `SO_DESTE_APARELHO` em
- * prefs.js) e por isso ficam fora do mapa de padrões -- mas que "Restaurar
+ * preferencias.js) e por isso ficam fora do mapa de padrões -- mas que "Restaurar
  * padrões" ainda precisa limpar, senão a permissão de notificação continuaria
  * marcada depois de um reset que prometeu zerar tudo.
  */
@@ -374,7 +374,7 @@ export const PERFIS = [
 
 /** Lê uma preferência restrita a uma lista fechada de valores. */
 function umDe(chave, opcoes, padrao) {
-  const salvo = settings.get(chave, padrao);
+  const salvo = duradouras.get(chave, padrao);
   return opcoes.some((o) => o.valor === salvo) ? salvo : padrao;
 }
 
@@ -384,7 +384,7 @@ export const aparencia = {
   },
 
   linhasPorPagina() {
-    const salvo = Number(settings.get("linhasPorPagina", PADROES.linhasPorPagina));
+    const salvo = Number(duradouras.get("linhasPorPagina", PADROES.linhasPorPagina));
     return LINHAS_OPCOES.includes(salvo) ? salvo : PADROES.linhasPorPagina;
   },
 
@@ -394,13 +394,13 @@ export const aparencia = {
 
   /** Milissegundos entre atualizações automáticas da Distribuição; 0 desliga. */
   ritmoPainel() {
-    const salvo = Number(settings.get("ritmoPainel", PADROES.ritmoPainel));
+    const salvo = Number(duradouras.get("ritmoPainel", PADROES.ritmoPainel));
     return RITMOS.some((r) => r.valor === salvo) ? salvo : PADROES.ritmoPainel;
   },
 
   /** Aba que abre ao entrar. Vazio = a primeira da lista. */
   abaInicial() {
-    return settings.get("abaInicial", "") || "";
+    return duradouras.get("abaInicial", "") || "";
   },
 
   realce() {
@@ -413,12 +413,12 @@ export const aparencia = {
 
   /** "normal" (segue só o sistema) ou "reduzido" (corta as animações aqui). */
   movimento() {
-    return settings.get("movimento", "normal") === "reduzido" ? "reduzido" : "normal";
+    return duradouras.get("movimento", "normal") === "reduzido" ? "reduzido" : "normal";
   },
 
   /** "grade" (padrão, com a textura e o halo) ou "liso". */
   fundoTela() {
-    return settings.get("fundoTela", "grade") === "liso" ? "liso" : "grade";
+    return duradouras.get("fundoTela", "grade") === "liso" ? "liso" : "grade";
   },
 
   /** "normal" ou "alto" -- reforço de bordas e texto por cima do tema atual. */
@@ -454,7 +454,7 @@ export const aparencia = {
 
   /** Se as dicas de atalho (Alt+1 no menu, Ctrl K na busca) aparecem na tela. */
   dicasAtalho() {
-    return settings.get("dicasAtalho", true) !== false;
+    return duradouras.get("dicasAtalho", true) !== false;
   },
 
   duracaoAvisos() {
@@ -473,12 +473,12 @@ export const aparencia = {
 
   /** Se "Sair da conta" pede confirmação antes. */
   confirmarSaida() {
-    return settings.get("confirmarSaida", true) !== false;
+    return duradouras.get("confirmarSaida", true) !== false;
   },
 
   /** Se o título da aba do navegador leva o número de pendências do sino. */
   contadorNoTitulo() {
-    return settings.get("contadorNoTitulo", true) !== false;
+    return duradouras.get("contadorNoTitulo", true) !== false;
   },
 
   /**
@@ -489,16 +489,16 @@ export const aparencia = {
   sino() {
     const escopo = umDe("sinoEscopo", ESCOPOS_AGENDA, PADROES.sinoEscopo);
     return {
-      atrasados: settings.get("sinoAtrasados", true) !== false,
-      hoje: settings.get("sinoHoje", true) !== false,
-      agentes: settings.get("sinoAgentes", true) !== false,
+      atrasados: duradouras.get("sinoAtrasados", true) !== false,
+      hoje: duradouras.get("sinoHoje", true) !== false,
+      agentes: duradouras.get("sinoAgentes", true) !== false,
       escopo: escopo === "minhas" ? "minhas" : "equipe",
     };
   },
 
   /** Toque curto quando surge pendência nova no sino ou falha de agente. Desligado por padrão. */
   somAvisos() {
-    return settings.get("somAvisos", false) === true;
+    return duradouras.get("somAvisos", false) === true;
   },
 
   /**
@@ -509,10 +509,10 @@ export const aparencia = {
    */
   silencio() {
     return {
-      ativo: settings.get("silencioAtivo", false) === true,
+      ativo: duradouras.get("silencioAtivo", false) === true,
       inicio: umDe("silencioInicio", HORARIOS, PADROES.silencioInicio),
       fim: umDe("silencioFim", HORARIOS, PADROES.silencioFim),
-      criticos: settings.get("silencioCriticos", true) !== false,
+      criticos: duradouras.get("silencioCriticos", true) !== false,
     };
   },
 
@@ -523,17 +523,17 @@ export const aparencia = {
 
   /** Se "Copiar texto" também fecha o relatório. Desligado: copiar não fecha (decisão do 7.3). */
   relatorioFecharAoCopiar() {
-    return settings.get("relatorioFecharAoCopiar", false) === true;
+    return duradouras.get("relatorioFecharAoCopiar", false) === true;
   },
 
   /**
    * Se busca, filtro e ordenação sobrevivem à troca de aba. Ligado por padrão
    * -- é o comportamento que o app já tinha, e desligá-lo é o caso raro (a
    * máquina compartilhada do balcão, onde quem senta depois não quer herdar o
-   * filtro de quem usou antes). Ver prefs.js, que é quem obedece.
+   * filtro de quem usou antes). Ver preferencias.js, que é quem obedece.
    */
   lembrarFiltros() {
-    return settings.get("lembrarFiltros", true) !== false;
+    return duradouras.get("lembrarFiltros", true) !== false;
   },
 
   /** O valor de fábrica de uma chave (ou o mapa inteiro, sem argumento). */
@@ -554,7 +554,7 @@ export const aparencia = {
   diferencas() {
     const mudadas = new Set();
     for (const [chave, padrao] of Object.entries(PADROES)) {
-      const atual = settings.get(chave, padrao);
+      const atual = duradouras.get(chave, padrao);
       if (JSON.stringify(atual) !== JSON.stringify(padrao)) mudadas.add(chave);
     }
     return mudadas;
@@ -563,7 +563,7 @@ export const aparencia = {
   /** Volta ao estado de fábrica. Com uma lista de chaves, só elas. */
   restaurarPadroes(chaves) {
     const alvo = chaves || [...Object.keys(PADROES), ...CHAVES_DESTE_APARELHO];
-    for (const chave of alvo) settings.remove(chave);
+    for (const chave of alvo) duradouras.remove(chave);
   },
 
   /**
@@ -577,7 +577,7 @@ export const aparencia = {
    */
   exportar() {
     const preferencias = {};
-    for (const chave of Object.keys(PADROES)) preferencias[chave] = settings.get(chave, PADROES[chave]);
+    for (const chave of Object.keys(PADROES)) preferencias[chave] = duradouras.get(chave, PADROES[chave]);
     return { app: "gestor-atualizacoes", versao: 1, geradoEm: new Date().toISOString(), preferencias };
   },
 
@@ -611,12 +611,12 @@ export const aparencia = {
       throw new Error("Nenhuma preferência reconhecida neste arquivo.");
     }
 
-    // Grava direto pelo `settings`, sem passar pelo `aplicar()`: as chaves aqui
+    // Grava direto pelo `duradouras`, sem passar pelo `aplicar()`: as chaves aqui
     // já são as do armazenamento (é o que o arquivo carrega), enquanto
     // `aplicar()` fala o vocabulário do painel, onde `altura` vira
     // `alturaTabela`. Traduzir de um para o outro só para voltar ao mesmo lugar
     // seria uma volta sem ganho nenhum.
-    for (const [chave, valor] of Object.entries(aceitas)) settings.set(chave, valor);
+    for (const [chave, valor] of Object.entries(aceitas)) duradouras.set(chave, valor);
     return { aplicadas: Object.keys(aceitas).length, ignoradas };
   },
 
@@ -637,8 +637,8 @@ export const aparencia = {
     if (!perfil) return false;
     for (const [chave, padrao] of Object.entries(PADROES)) {
       const escolhido = perfil.valores[chave];
-      if (escolhido === undefined || JSON.stringify(escolhido) === JSON.stringify(padrao)) settings.remove(chave);
-      else settings.set(chave, escolhido);
+      if (escolhido === undefined || JSON.stringify(escolhido) === JSON.stringify(padrao)) duradouras.remove(chave);
+      else duradouras.set(chave, escolhido);
     }
     reaplicarAparencia();
     return true;
@@ -658,7 +658,7 @@ export const aparencia = {
     const perfil = PERFIS.find((candidato) =>
       Object.keys(PADROES).every((chave) => {
         const esperado = candidato.valores[chave] ?? PADROES[chave];
-        return JSON.stringify(settings.get(chave, PADROES[chave])) === JSON.stringify(esperado);
+        return JSON.stringify(duradouras.get(chave, PADROES[chave])) === JSON.stringify(esperado);
       })
     );
     return perfil ? perfil.valor : null;
@@ -673,26 +673,26 @@ export const aparencia = {
     // armazenamento (sem a tradução de `altura` para `alturaTabela`), então
     // passam todas pelo mesmo caminho: texto de uma lista fechada, ou booleano.
     for (const chave of ["fonte", "largura", "foco", "duracaoAvisos", "periodoAtualizacoes", "sinoEscopo", "silencioInicio", "silencioFim", "relatorioAba"]) {
-      if (mudancas[chave] !== undefined && valorValido(chave, mudancas[chave])) settings.set(chave, mudancas[chave]);
+      if (mudancas[chave] !== undefined && valorValido(chave, mudancas[chave])) duradouras.set(chave, mudancas[chave]);
     }
     for (const chave of ["dicasAtalho", "confirmarSaida", "contadorNoTitulo", "sinoAtrasados", "sinoHoje", "sinoAgentes", "somAvisos", "silencioAtivo", "silencioCriticos", "relatorioFecharAoCopiar"]) {
-      if (mudancas[chave] !== undefined) settings.set(chave, Boolean(mudancas[chave]));
+      if (mudancas[chave] !== undefined) duradouras.set(chave, Boolean(mudancas[chave]));
     }
 
-    if (densidade) settings.set("densidade", densidade);
-    if (linhasPorPagina) settings.set("linhasPorPagina", Number(linhasPorPagina));
-    if (altura) settings.set("alturaTabela", altura);
-    if (ritmoPainel !== undefined) settings.set("ritmoPainel", Number(ritmoPainel));
-    if (abaInicial !== undefined) settings.set("abaInicial", abaInicial);
-    if (realce) settings.set("realce", realce);
-    if (escalaTexto) settings.set("escalaTexto", escalaTexto);
-    if (movimento) settings.set("movimento", movimento);
-    if (fundoTela) settings.set("fundoTela", fundoTela);
-    if (contraste) settings.set("contraste", contraste);
-    if (transparencia) settings.set("transparencia", transparencia);
-    if (zebra) settings.set("zebra", zebra);
-    if (posicaoAvisos) settings.set("posicaoAvisos", posicaoAvisos);
-    if (lembrarFiltros !== undefined) settings.set("lembrarFiltros", Boolean(lembrarFiltros));
+    if (densidade) duradouras.set("densidade", densidade);
+    if (linhasPorPagina) duradouras.set("linhasPorPagina", Number(linhasPorPagina));
+    if (altura) duradouras.set("alturaTabela", altura);
+    if (ritmoPainel !== undefined) duradouras.set("ritmoPainel", Number(ritmoPainel));
+    if (abaInicial !== undefined) duradouras.set("abaInicial", abaInicial);
+    if (realce) duradouras.set("realce", realce);
+    if (escalaTexto) duradouras.set("escalaTexto", escalaTexto);
+    if (movimento) duradouras.set("movimento", movimento);
+    if (fundoTela) duradouras.set("fundoTela", fundoTela);
+    if (contraste) duradouras.set("contraste", contraste);
+    if (transparencia) duradouras.set("transparencia", transparencia);
+    if (zebra) duradouras.set("zebra", zebra);
+    if (posicaoAvisos) duradouras.set("posicaoAvisos", posicaoAvisos);
+    if (lembrarFiltros !== undefined) duradouras.set("lembrarFiltros", Boolean(lembrarFiltros));
 
     reaplicarAparencia();
   },
@@ -711,7 +711,7 @@ function valorValido(chave, valor) {
  *
  * Serve a dois momentos: quem acabou de mexer no painel de Configurações, e a
  * chegada das preferências da conta vindas do servidor (ver
- * `conectarPreferencias` em prefs.js), que pode trazer valores diferentes dos
+ * `conectarPreferencias` em preferencias.js), que pode trazer valores diferentes dos
  * que o cache local pintou alguns milissegundos antes.
  */
 export function reaplicarAparencia() {

@@ -4,7 +4,7 @@
  * para poder mostrar ela direto num toast/modal, sem o resto do código
  * precisar saber nada sobre o formato da resposta HTTP.
  */
-export class ApiError extends Error {
+export class ErroApi extends Error {
   /**
    * @param {string} message
    * @param {number} status
@@ -12,7 +12,7 @@ export class ApiError extends Error {
    */
   constructor(message, status, codigo) {
     super(message);
-    this.name = "ApiError";
+    this.name = "ErroApi";
     this.status = status;
     this.codigo = codigo;
   }
@@ -23,10 +23,10 @@ export class ApiError extends Error {
  * outra, mais nova, tomou o lugar dela (ver `key` em `get`). Quem chamou deve
  * simplesmente ignorar: não é falha, é a resposta que não interessa mais.
  */
-export class RequestCancelled extends Error {
+export class RequisicaoCancelada extends Error {
   constructor() {
     super("Requisição cancelada.");
-    this.name = "RequestCancelled";
+    this.name = "RequisicaoCancelada";
     this.cancelled = true;
   }
 }
@@ -72,7 +72,7 @@ const PAINEL_INDISPONIVEL = new Set([502, 503, 504]);
  *     sessão (com o token) é outra --, busca o atual e repete UMA vez, sem a
  *     pessoa perceber.
  */
-export class ApiClient {
+export class ApiPainel {
   constructor(baseUrl = "/api") {
     this.baseUrl = baseUrl;
     /** @type {Map<string, AbortController>} requisições em voo, por chave */
@@ -139,7 +139,7 @@ export class ApiClient {
     try {
       return await this._enviarForm(path, form, onProgress);
     } catch (error) {
-      if (!(error instanceof ApiError) || error.codigo !== "csrf") throw error;
+      if (!(error instanceof ErroApi) || error.codigo !== "csrf") throw error;
       // A recusa chega antes de o arquivo ser processado (o servidor confere
       // o token antes do multer), então repetir não duplica nada.
       await this._renovarTokenCsrf();
@@ -180,11 +180,11 @@ export class ApiClient {
         }
         if (xhr.status === 401) this._notifyUnauthorized();
         const { mensagem, codigo } = extractXhrError(xhr);
-        reject(new ApiError(mensagem, xhr.status, codigo));
+        reject(new ErroApi(mensagem, xhr.status, codigo));
       });
-      xhr.addEventListener("error", () => reject(new ApiError("Não foi possível conectar ao servidor.", 0)));
-      xhr.addEventListener("timeout", () => reject(new ApiError("O envio demorou demais e foi cancelado.", 408)));
-      xhr.addEventListener("abort", () => reject(new RequestCancelled()));
+      xhr.addEventListener("error", () => reject(new ErroApi("Não foi possível conectar ao servidor.", 0)));
+      xhr.addEventListener("timeout", () => reject(new ErroApi("O envio demorou demais e foi cancelado.", 408)));
+      xhr.addEventListener("abort", () => reject(new RequisicaoCancelada()));
 
       xhr.send(form);
     });
@@ -204,11 +204,11 @@ export class ApiClient {
       if (!res.ok) {
         if (res.status === 401) this._notifyUnauthorized();
         const { mensagem, codigo } = await this._extractError(res);
-        throw new ApiError(mensagem, res.status, codigo);
+        throw new ErroApi(mensagem, res.status, codigo);
       }
       return await res.blob();
     } catch (error) {
-      if (error.name === "AbortError") throw new ApiError("O download demorou demais e foi cancelado.", 408);
+      if (error.name === "AbortError") throw new ErroApi("O download demorou demais e foi cancelado.", 408);
       throw error;
     } finally {
       clearTimeout(timer);
@@ -233,7 +233,7 @@ export class ApiClient {
     try {
       return await this._requestUmaVez(path, options, opcoes);
     } catch (error) {
-      if (!(error instanceof ApiError) || error.codigo !== "csrf") throw error;
+      if (!(error instanceof ErroApi) || error.codigo !== "csrf") throw error;
       await this._renovarTokenCsrf();
       return this._requestUmaVez(path, options, opcoes);
     }
@@ -241,7 +241,7 @@ export class ApiClient {
 
   async _requestUmaVez(path, options, { key } = {}) {
     // Uma chave = no máximo uma requisição viva. A anterior é abortada, e o
-    // `await` de quem a esperava rejeita com RequestCancelled (ignorado por
+    // `await` de quem a esperava rejeita com RequisicaoCancelada (ignorado por
     // quem chamou), então só a resposta mais nova chega a renderizar.
     if (key) this.cancel(key);
 
@@ -277,13 +277,13 @@ export class ApiClient {
       if (error.name === "AbortError") {
         if (expirou) {
           this._marcarConexao(false);
-          throw new ApiError("O servidor demorou para responder. Tente novamente.", 408);
+          throw new ErroApi("O servidor demorou para responder. Tente novamente.", 408);
         }
-        throw new RequestCancelled();
+        throw new RequisicaoCancelada();
       }
-      if (error instanceof ApiError) throw error;
+      if (error instanceof ErroApi) throw error;
       this._marcarConexao(false);
-      throw new ApiError("Não foi possível conectar ao servidor.", 0);
+      throw new ErroApi("Não foi possível conectar ao servidor.", 0);
     } finally {
       clearTimeout(timer);
       if (key && this.inFlight.get(key) === controller) this.inFlight.delete(key);
@@ -316,7 +316,7 @@ export class ApiClient {
    *
    * Existe para o estado ter UM dono. A faixa de "sem conexão" chegou a se
    * mostrar sozinha nesse evento, e o resultado foi um travamento silencioso:
-   * o `ApiClient` continuava se achando online, então a primeira resposta boa
+   * o `ApiPainel` continuava se achando online, então a primeira resposta boa
    * depois da volta não era uma TROCA de estado, não disparava `conexao:mudou`
    * -- e a faixa ficava na tela para sempre, sobre um app que já estava
    * funcionando. Quem descobre a queda avisa aqui; quem apaga a faixa continua
@@ -352,7 +352,7 @@ export class ApiClient {
     if (!res.ok) {
       if (res.status === 401) this._notifyUnauthorized();
       const { mensagem, codigo } = await this._extractError(res);
-      throw new ApiError(mensagem, res.status, codigo);
+      throw new ErroApi(mensagem, res.status, codigo);
     }
     const texto = await res.text();
     return texto ? JSON.parse(texto) : null;

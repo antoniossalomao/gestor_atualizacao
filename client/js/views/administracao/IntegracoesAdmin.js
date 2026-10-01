@@ -1,6 +1,6 @@
-import { toast } from "../../components/Toast.js";
+import { toast } from "../../components/AvisosRapidos.js";
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
+import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { linhaRegraNumero, rodapeFormulario } from "../../templates/administracao.js";
@@ -39,7 +39,7 @@ export class IntegracoesAdmin extends FormularioRegras {
           <div class="admin-campo-acao">
             <input type="url" class="input" id="regra-webhook" data-regra="discordWebhookUrl"
                    placeholder="https://discord.com/api/webhooks/…" autocomplete="off" spellcheck="false" />
-            <button type="button" class="btn" data-action="testar-discord">${iconHtml("sino")} Enviar teste</button>
+            <button type="button" class="btn" data-action="testar-discord">${iconeHtml("sino")} Enviar teste</button>
           </div>
         </div>
 

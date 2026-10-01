@@ -2,7 +2,7 @@ const SVG_NS = "http://www.w3.org/2000/svg";
 let proximoId = 0;
 
 /** Doze meses de atualizações; pontos reais unidos por retas, sem picos artificiais. */
-export class LineChart {
+export class GraficoDeLinhas {
   /** @param {HTMLElement} container */
   constructor(container) {
     this.container = container;

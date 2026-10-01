@@ -1,10 +1,10 @@
-import { ApiError } from "../../api/ApiClient.js";
+import { ErroApi } from "../../api/ApiPainel.js";
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/Toast.js";
-import { Drawer } from "../../components/Drawer.js";
+import { toast } from "../../components/AvisosRapidos.js";
+import { Gaveta } from "../../components/Gaveta.js";
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
+import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { rotuloPapel } from "../../domain/pessoa.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
@@ -37,7 +37,7 @@ export class UsuariosAdmin extends View {
       ${cabecalhoSecao({
         titulo: "Pessoas e permissões",
         descricao: "Quem entra no sistema, papéis de acesso e ações de conta.",
-        acoes: html`<button type="button" class="btn btn--accent" data-action="nova">${iconHtml("plus")} Nova conta</button>`,
+        acoes: html`<button type="button" class="btn btn--accent" data-action="nova">${iconeHtml("plus")} Nova conta</button>`,
       })}
       <div class="admin-grade">
         <div class="card secao-card">
@@ -73,7 +73,7 @@ export class UsuariosAdmin extends View {
 
     this.lista = this.container.querySelector('[data-role="lista"]');
     this.form = this.container.querySelector('[data-role="form-nova"]');
-    this.drawer = new Drawer(this.form, { titulo: "Nova conta", descricao: "A pessoa entra com o usuário e a senha definidos aqui." });
+    this.drawer = new Gaveta(this.form, { titulo: "Nova conta", descricao: "A pessoa entra com o usuário e a senha definidos aqui." });
 
     this.container.querySelector('[data-action="nova"]').addEventListener("click", () => {
       this.form.reset();
@@ -193,5 +193,5 @@ export class UsuariosAdmin extends View {
 }
 
 function mensagem(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

@@ -23,7 +23,7 @@ trate como incidente: rotacione primeiro, avise depois.
 |---|---|---|
 | Senhas com `bcrypt` | `services/AuthService.js` | nunca se guarda senha legível |
 | Sessão em SQLite, cookie `httpOnly` + `sameSite=lax` | `database/ArmazemDeSessaoSqlite.js`, `Server.js` | JS da página não lê o cookie; reduz CSRF |
-| Token CSRF por sessão em toda escrita da API | `middlewares/protecaoCsrf.js`, `client/js/api/ApiClient.js` | outra página aberta no navegador não altera nada em nome de quem está logado, nem por formulário multipart |
+| Token CSRF por sessão em toda escrita da API | `middlewares/protecaoCsrf.js`, `client/js/api/ApiPainel.js` | outra página aberta no navegador não altera nada em nome de quem está logado, nem por formulário multipart |
 | Limite de tentativas de login | `middlewares/LimitadorDeLogin.js` | força bruta contra senha fraca |
 | Papéis (RBAC) por subárvore de rota | `middlewares/exigirPapel.js`, `routes/index.js` | padrão fechado: rota nova nasce protegida |
 | CSP sem `script-src unsafe-inline` | `Server.js` | reduz o estrago de um XSS |

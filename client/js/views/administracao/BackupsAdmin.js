@@ -1,9 +1,9 @@
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/Toast.js";
-import { emptyState } from "../../components/estadoVazio.js";
+import { toast } from "../../components/AvisosRapidos.js";
+import { estadoVazio } from "../../components/estadoVazio.js";
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
+import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { linhaBackup } from "../../templates/administracao.js";
@@ -26,7 +26,7 @@ export class BackupsAdmin extends View {
       ${cabecalhoSecao({
         titulo: "Backups e recuperação",
         descricao: "Cópias automáticas do banco, conferência de integridade e restauração do sistema.",
-        acoes: html`<a class="btn" href="/api/backups/atual/download" download>${iconHtml("download")} Baixar o banco de agora</a>`,
+        acoes: html`<a class="btn" href="/api/backups/atual/download" download>${iconeHtml("download")} Baixar o banco de agora</a>`,
       })}
       <div class="admin-grade-vertical">
         <section class="card secao-card">
@@ -98,7 +98,7 @@ export class BackupsAdmin extends View {
 
     if (this.backups.length === 0) {
       this.conteudo.replaceChildren(
-        emptyState({
+        estadoVazio({
           titulo: "Nenhuma cópia ainda",
           descricao: "A primeira cópia é realizada na próxima vez que o servidor iniciar. Até lá, use \"Baixar o banco de agora\".",
           icone: "backups",

@@ -1,6 +1,6 @@
 import { html } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
-import { formatarDataHora, tempoRelativo } from "../utils/date.js";
+import { iconeHtml } from "../utils/icones.js";
+import { formatarDataHora, tempoRelativo } from "../utils/data.js";
 import { iniciais, rotuloPapel, descricaoPapel } from "../domain/pessoa.js";
 import { descreverAparelho } from "../domain/aparelho.js";
 
@@ -64,7 +64,7 @@ export function linhaSessao(s) {
     .join(" · ");
   return html`
     <li class="cfg-sessao${s.atual ? " is-atual" : ""}">
-      <span class="cfg-sessao__icone" aria-hidden="true">${iconHtml(aparelho.movel ? "celular" : "temaSistema")}</span>
+      <span class="cfg-sessao__icone" aria-hidden="true">${iconeHtml(aparelho.movel ? "celular" : "temaSistema")}</span>
       <div class="cfg-sessao__texto">
         <strong>${aparelho.rotulo}${s.atual && html` <span class="badge badge--success">Este aparelho</span>`}</strong>
         <span title="${s.desde ? `Entrou em ${formatarDataHora(s.desde)}` : ""}">${quando || "Sessão aberta antes desta versão do Gestor"}</span>
@@ -141,7 +141,7 @@ export function listaAtalhos(atalhos) {
 
 /**
  * Resultados da busca de ajustes. Cada um leva à aba certa e acende a linha.
- * @param {Array<{aba: string, id: string, titulo: string, ajuda?: string, caminho: string, icone: Parameters<typeof iconHtml>[0]}>} resultados
+ * @param {Array<{aba: string, id: string, titulo: string, ajuda?: string, caminho: string, icone: Parameters<typeof iconeHtml>[0]}>} resultados
  * @param {string} termo
  */
 export function resultadosBusca(resultados, termo) {
@@ -159,13 +159,13 @@ export function resultadosBusca(resultados, termo) {
         (r) => html`
           <li>
             <button type="button" class="cfg-resultado" data-aba="${r.aba}" data-ajuste="${r.id}">
-              <span class="cfg-resultado__icone" aria-hidden="true">${iconHtml(r.icone)}</span>
+              <span class="cfg-resultado__icone" aria-hidden="true">${iconeHtml(r.icone)}</span>
               <span class="cfg-resultado__texto">
                 <strong>${r.titulo}</strong>
                 ${r.ajuda && html`<span>${r.ajuda}</span>`}
               </span>
               <span class="cfg-resultado__caminho">${r.caminho}</span>
-              <span class="cfg-resultado__seta" aria-hidden="true">${iconHtml("seta")}</span>
+              <span class="cfg-resultado__seta" aria-hidden="true">${iconeHtml("seta")}</span>
             </button>
           </li>`
       )}

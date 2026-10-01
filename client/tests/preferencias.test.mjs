@@ -1,7 +1,7 @@
 /*
- * Preferências pessoais (app/appearance.js) e a busca da tela Configurações.
+ * Preferências pessoais (app/aparencia.js) e a busca da tela Configurações.
  *
- * `appearance.js` fala com o localStorage e com o <html>. Aqui os dois são
+ * `aparencia.js` fala com o localStorage e com o <html>. Aqui os dois são
  * trocados por versões mínimas ANTES de importar o módulo -- o que se testa é
  * a regra (que valor é aceito, o que o perfil muda, o que sai no arquivo), e
  * não o navegador.
@@ -39,7 +39,7 @@ globalThis.CustomEvent ??= class CustomEvent {
   }
 };
 
-const { aparencia, PERFIS } = await import("../js/app/appearance.js");
+const { aparencia, PERFIS } = await import("../js/app/aparencia.js");
 const { normalizarBusca, casaBusca, filtrarPorBusca } = await import("../js/utils/busca.js");
 
 const NOVAS = ["fonte", "largura", "foco", "dicasAtalho", "periodoAtualizacoes", "confirmarSaida", "duracaoAvisos", "contadorNoTitulo"];
@@ -156,7 +156,7 @@ test("Preferências - toda preferência tem um controle na tela", () => {
   const naTela = new Set([...fonte.matchAll(/chaves: \[([^\]]*)\]/g)].flatMap((m) => [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1])));
   const existentes = Object.keys(aparencia.padrao());
   for (const chave of existentes) assert.ok(naTela.has(chave), `"${chave}" não tem controle em Configurações`);
-  for (const chave of naTela) assert.ok(existentes.includes(chave), `ajustes.js aponta para "${chave}", que não existe em appearance.js`);
+  for (const chave of naTela) assert.ok(existentes.includes(chave), `ajustes.js aponta para "${chave}", que não existe em aparencia.js`);
 });
 
 test("Busca de ajustes", async (t) => {

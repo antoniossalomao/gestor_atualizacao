@@ -9,7 +9,7 @@ const { tokensIguais } = require("./exigirAgente");
  *
  * Como funciona: cada sessão logada tem um token aleatório guardado nela
  * (`req.session.csrf`). O servidor entrega o token no cabeçalho de resposta
- * X-CSRF-Token de toda chamada à API feita com sessão; o ApiClient guarda o
+ * X-CSRF-Token de toda chamada à API feita com sessão; o ApiPainel guarda o
  * último que viu e o devolve no mesmo cabeçalho em todo POST/PUT/PATCH/DELETE.
  * Outra origem não lê resposta nossa (sem CORS, o navegador não deixa), então
  * não tem como saber o token -- e sem ele a escrita é recusada com 403 antes
@@ -71,9 +71,9 @@ function protecaoCsrf(req, res, next) {
 
   const enviado = req.get(CABECALHO);
   if (enviado && tokensIguais(enviado, token)) return next();
-  // `codigo` é o que o ApiClient usa para distinguir esta recusa de um 403
+  // `codigo` é o que o ApiPainel usa para distinguir esta recusa de um 403
   // de permissão: nesta, ele busca o token atual e repete o pedido uma vez
-  // (ver ApiClient). A mensagem só aparece se nem assim der certo.
+  // (ver ApiPainel). A mensagem só aparece se nem assim der certo.
   res.status(403).json({ error: MENSAGEM, codigo: "csrf" });
 }
 

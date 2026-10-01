@@ -3,7 +3,7 @@
  * `d` existe para teste (e para quem precisa de "hoje" de uma data fixa).
  * @param {Date} [d]
  */
-export function todayBR(d = new Date()) {
+export function hojeBR(d = new Date()) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
@@ -23,7 +23,7 @@ export function mascaraDataBR(valor) {
  * viagem até o servidor. A validação que realmente importa (a que decide se o
  * registro é salvo) continua sendo a do backend.
  */
-export function isValidDateBR(texto) {
+export function dataBRValida(texto) {
   if (!texto) return true;
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto);
   if (!m) return false;

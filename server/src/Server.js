@@ -162,7 +162,7 @@ class Server {
     // <head> para client/js/temaInicial.js (ver index.html). style-src
     // precisa de 'unsafe-inline' porque várias views montam HTML com
     // atributo style="" direto (ex.: ClientesView, AtualizacoesView,
-    // BarChart/PieChart) -- CSP não bloqueia style.propriedade via JS, só
+    // GraficoDeBarras/PieChart) -- CSP não bloqueia style.propriedade via JS, só
     // style="" no HTML e <style> inline, então isso não abre brecha nova
     // pra script, só pra CSS. fonts.googleapis.com/gstatic.com liberados
     // porque é de lá que vem a fonte do tema (ver index.html).

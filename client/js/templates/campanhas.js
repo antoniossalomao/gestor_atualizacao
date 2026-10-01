@@ -1,5 +1,5 @@
 import { html, plural } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
+import { iconeHtml } from "../utils/icones.js";
 import { FILTROS_CAMPANHA, SITUACAO_CAMPANHA, seloPrazo, textoProgresso } from "../domain/campanhas.js";
 
 /**
@@ -82,10 +82,10 @@ export function cabecalhoCampanha(c, usuario) {
         ${c.descricao ? html`<p class="campanha__descricao">${c.descricao}</p>` : ""}
       </div>
       <div class="campanha__acoes">
-        <button type="button" class="btn btn--small" data-action="exportar">${iconHtml("download")} Exportar pendentes (.xlsx)</button>
-        ${podeEditar && !encerrada ? html`<button type="button" class="btn btn--small" data-action="editar">${iconHtml("editar")} Editar</button>` : ""}
+        <button type="button" class="btn btn--small" data-action="exportar">${iconeHtml("download")} Exportar pendentes (.xlsx)</button>
+        ${podeEditar && !encerrada ? html`<button type="button" class="btn btn--small" data-action="editar">${iconeHtml("editar")} Editar</button>` : ""}
         ${podeEditar ? html`<button type="button" class="btn btn--small" data-action="${encerrada ? "reabrir" : "encerrar"}">${encerrada ? "Reabrir" : "Encerrar"}</button>` : ""}
-        ${usuario?.role === "admin" ? html`<button type="button" class="btn btn--small btn--danger" data-action="excluir">${iconHtml("alerta")} Excluir</button>` : ""}
+        ${usuario?.role === "admin" ? html`<button type="button" class="btn btn--small btn--danger" data-action="excluir">${iconeHtml("alerta")} Excluir</button>` : ""}
       </div>
     </div>
     <div class="campanha__painel">
@@ -139,13 +139,13 @@ export function celulaSituacaoCampanha(row) {
  * "Agendar" só para quem ainda não está atendido nem agendado.
  */
 export function acoesClienteCampanha(row, { role, encerrada }) {
-  /** @type {Array<[string, Parameters<typeof iconHtml>[0], string]>} */
+  /** @type {Array<[string, Parameters<typeof iconeHtml>[0], string]>} */
   const botoes = [];
   if (role !== "consulta" && !encerrada && row.situacao === "pendente") botoes.push(["agendar", "calendario", "Criar agendamento"]);
   if (role !== "consulta") botoes.push(["acessos", "acessos", "Gerenciar acessos remotos"]);
   botoes.push(["ficha", "olho", "Abrir ficha do cliente"]);
   return html`<div class="row-actions">${botoes.map(
-    ([acao, ico, titulo]) => html`<button type="button" class="btn btn--icon" data-row-action="${acao}" data-id="${row.id}" title="${titulo}" aria-label="${titulo}: ${row.nome}">${iconHtml(ico)}</button>`
+    ([acao, ico, titulo]) => html`<button type="button" class="btn btn--icon" data-row-action="${acao}" data-id="${row.id}" title="${titulo}" aria-label="${titulo}: ${row.nome}">${iconeHtml(ico)}</button>`
   )}</div>`;
 }
 

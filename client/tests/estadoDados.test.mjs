@@ -15,7 +15,7 @@ import assert from "node:assert/strict";
 
 import { EstadoDados, descreverFalha, formatarMomento, grupoDaChave } from "../js/utils/EstadoDados.js";
 
-const cancelado = { cancelled: true, name: "RequestCancelled" };
+const cancelado = { cancelled: true, name: "RequisicaoCancelada" };
 const erro = (status, message = "") => ({ status, message });
 
 test("descreverFalha - separa rede, demora, servidor e recusa", async (t) => {

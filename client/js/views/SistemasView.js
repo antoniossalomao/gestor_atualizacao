@@ -1,14 +1,14 @@
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
-import { blendHex } from "../utils/color.js";
-import { tokenHex } from "../app/theme.js";
-import { debounce } from "../utils/debounce.js";
-import { formatarDataHora, isValidDateBR, mascaraDataBR } from "../utils/date.js";
-import { ApiError } from "../api/ApiClient.js";
+import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
+import { misturarHex } from "../utils/cor.js";
+import { tokenHex } from "../app/tema.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { formatarDataHora, dataBRValida, mascaraDataBR } from "../utils/data.js";
+import { ErroApi } from "../api/ApiPainel.js";
 import { Modal } from "../components/Modal.js";
-import { emptyState } from "../components/estadoVazio.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { escapeHtml, plural } from "../utils/html.js";
-import { prefs } from "../app/prefs.js";
+import { prefs } from "../app/preferencias.js";
 import { filtrarClientesDoSistema } from "../domain/filtrosSistemas.js";
 
 /** Consulta por sistema; a referência oficial só pode ser editada no painel próprio. */
@@ -84,7 +84,7 @@ export class SistemasView extends View {
         <div data-role="table"></div>
       </div>`;
 
-    this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
+    this.table = new TabelaOrdenavel(this.container.querySelector('[data-role="table"]'), {
       ocuparAltura: true,
       columns: [
         { key: "cliente", label: "Cliente" },
@@ -113,7 +113,7 @@ export class SistemasView extends View {
       caption: "Clientes por sistema",
       rowStyle: (row, index) => ({ background: severidadeCor(row.situacao, index) }),
       onSelect: (row) => this.navigate("consulta", { cliente: row.cliente }),
-      emptyNode: () => emptyState({
+      emptyNode: () => estadoVazio({
         titulo: "Nenhum cliente para os filtros",
         descricao: "Ajuste a situação, a busca ou a data. Se o sistema não tiver clientes, vincule-os na tela Clientes.",
         icone: "sistemas",
@@ -142,20 +142,20 @@ export class SistemasView extends View {
       this._salvarFiltros();
       this._filtrarRows();
     });
-    const buscar = debounce(() => {
+    const buscar = aguardarPausa(() => {
       this.busca = this.buscaInput.value.trim();
       this._salvarFiltros();
       this._filtrarRows();
     }, 180);
     this.buscaInput.addEventListener("input", buscar);
-    const consultar = debounce(() => {
+    const consultar = aguardarPausa(() => {
       this.atualizacaoAntesDe = this.dataInput.value.trim();
       this._salvarFiltros();
       this._reloadList();
     }, 300);
     this.dataInput.addEventListener("input", () => {
       this.dataInput.value = mascaraDataBR(this.dataInput.value);
-      const invalida = Boolean(this.dataInput.value) && !isValidDateBR(this.dataInput.value);
+      const invalida = Boolean(this.dataInput.value) && !dataBRValida(this.dataInput.value);
       this.dataInput.setAttribute("aria-invalid", String(invalida));
       if (!invalida) consultar();
     });
@@ -252,7 +252,7 @@ export class SistemasView extends View {
     if (botao.dataset.action === "cancelar") { this._renderOficiais(); return; }
     if (botao.dataset.action !== "salvar") return;
     const data = mascaraDataBR(campo.value.trim());
-    if (data && !isValidDateBR(data)) {
+    if (data && !dataBRValida(data)) {
       campo.setAttribute("aria-invalid", "true");
       campo.focus();
       return;
@@ -279,7 +279,7 @@ export class SistemasView extends View {
       this._filtrarRows();
       return;
     }
-    if (this.atualizacaoAntesDe && !isValidDateBR(this.atualizacaoAntesDe)) return;
+    if (this.atualizacaoAntesDe && !dataBRValida(this.atualizacaoAntesDe)) return;
     this.table.setRefreshing(true);
     try {
       await this.swr(
@@ -340,12 +340,12 @@ export class SistemasView extends View {
 
 function severidadeCor(situacao, index) {
   const base = index % 2 === 0 ? tokenHex("--zebra-a") : tokenHex("--zebra-b");
-  if (situacao === "Nunca atualizado") return blendHex(base, tokenHex("--severidade-alta"), 0.28);
-  if (situacao === "Desatualizado") return blendHex(base, tokenHex("--severidade-alta"), 0.14);
-  if (situacao === "Em dia") return blendHex(base, tokenHex("--severidade-boa"), 0.08);
+  if (situacao === "Nunca atualizado") return misturarHex(base, tokenHex("--severidade-alta"), 0.28);
+  if (situacao === "Desatualizado") return misturarHex(base, tokenHex("--severidade-alta"), 0.14);
+  if (situacao === "Em dia") return misturarHex(base, tokenHex("--severidade-boa"), 0.08);
   return base;
 }
 
 function errorMessage(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

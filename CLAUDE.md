@@ -35,7 +35,7 @@ e confira o que mudou.
 - **Não use `sortBy` da URL direto no SQL.** Use `database/ordenacao.js`.
 - **Não monte HTML com template literal cru.** Use a tag `html` de
   `js/utils/html.js`, que escapa tudo o que é interpolado. Os ícones entram
-  com `iconHtml()`. `confiavel()` só vale para marcação gerada pelo próprio
+  com `iconeHtml()`. `confiavel()` só vale para marcação gerada pelo próprio
   código. `client/tests/html-seguro.test.mjs` trava a contagem por arquivo.
 
 ## Onde colocar arquivo novo

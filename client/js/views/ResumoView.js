@@ -1,10 +1,10 @@
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
-import { Drawer } from "../components/Drawer.js";
-import { BarChart } from "../components/charts/BarChart.js";
-import { LineChart } from "../components/charts/LineChart.js";
+import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
+import { Gaveta } from "../components/Gaveta.js";
+import { GraficoDeBarras } from "../components/graficos/GraficoDeBarras.js";
+import { GraficoDeLinhas } from "../components/graficos/GraficoDeLinhas.js";
 import { html, plural } from "../utils/html.js";
-import { todayBR } from "../utils/date.js";
+import { hojeBR } from "../utils/data.js";
 import { formatarMes, primeiroDiaDoMes, tendenciaMensal, barrasPorSistema, variacaoMesAnterior } from "../domain/resumo.js";
 import { GRUPOS_SITUACAO, totaisSituacao, sistemasQueExplicam } from "../domain/situacao.js";
 import { statTile, deltaTendencia, corpoSituacao } from "../templates/resumo.js";
@@ -95,7 +95,7 @@ export class ResumoView extends View {
         atualizacoes: () => this.navigate("atualizacoes", { desde: "", ate: "" }),
         // O "este mês" do indicador tem que ser o MESMO recorte que o número
         // contou, senão a lista abre com um total diferente do que se clicou.
-        mes: () => this.navigate("atualizacoes", { desde: primeiroDiaDoMes(), ate: todayBR() }),
+        mes: () => this.navigate("atualizacoes", { desde: primeiroDiaDoMes(), ate: hojeBR() }),
         // Levava para a aba Sistemas, que não tem como mostrar "quem está sem
         // atualização" -- o clique abria uma lista que não era a contada.
         semAtualizacao: () => this._listarSemAtualizacao(),
@@ -118,7 +118,7 @@ export class ResumoView extends View {
     this.gavetaEl = this.container.querySelector('[data-role="gaveta-lista"]');
     this.gavetaAjuda = this.gavetaEl.querySelector('[data-role="gaveta-ajuda"]');
     this.gavetaTabela = this.gavetaEl.querySelector('[data-role="gaveta-tabela"]');
-    this.gaveta = new Drawer(this.gavetaEl, { titulo: "Clientes" });
+    this.gaveta = new Gaveta(this.gavetaEl, { titulo: "Clientes" });
     this.gavetaEl.addEventListener("click", (e) => {
       const alvo = e.target.closest("[data-ir]");
       if (!alvo) return;
@@ -127,7 +127,7 @@ export class ResumoView extends View {
       else this.navigate("sistemas", { sistema: alvo.dataset.valor });
     });
 
-    this.respTable = new SortableTable(this.container.querySelector('[data-role="responsaveis"]'), {
+    this.respTable = new TabelaOrdenavel(this.container.querySelector('[data-role="responsaveis"]'), {
       columns: [
         { key: "label", label: "Responsável" },
         { key: "total", label: "Qtde", type: "numeric" },
@@ -137,15 +137,15 @@ export class ResumoView extends View {
       selectable: false,
     });
 
-    this.sistemaChart = new BarChart(this.container.querySelector('[data-role="sistemas"]'), {
+    this.sistemaChart = new GraficoDeBarras(this.container.querySelector('[data-role="sistemas"]'), {
       vazio: "Nenhuma atualização registrada neste mês ainda.",
       // A lista abre com o MESMO recorte do número: o sistema da barra e o
       // mês até hoje. "Outros" junta vários sistemas, que a lista não filtra
       // de uma vez -- abre o mês inteiro.
       aoClicar: (barra) =>
-        this.navigate("atualizacoes", { desde: primeiroDiaDoMes(), ate: todayBR(), sistema: barra.outros ? "" : barra.label }),
+        this.navigate("atualizacoes", { desde: primeiroDiaDoMes(), ate: hojeBR(), sistema: barra.outros ? "" : barra.label }),
     });
-    this.tendenciaChart = new LineChart(this.container.querySelector('[data-role="tendencia"]'));
+    this.tendenciaChart = new GraficoDeLinhas(this.container.querySelector('[data-role="tendencia"]'));
 
   }
 
@@ -264,12 +264,12 @@ export class ResumoView extends View {
 
   /**
    * Uma tabela nova a cada abertura: as três listas têm colunas diferentes,
-   * e o SortableTable fixa as colunas no construtor.
+   * e o TabelaOrdenavel fixa as colunas no construtor.
    */
   _abrirGaveta({ titulo, ajuda, colunas, linhas, chave, vazio }) {
     const alvo = document.createElement("div");
     this.gavetaTabela.replaceChildren(alvo);
-    const tabela = new SortableTable(alvo, { columns: colunas, rowKey: chave, emptyMessage: vazio, selectable: false });
+    const tabela = new TabelaOrdenavel(alvo, { columns: colunas, rowKey: chave, emptyMessage: vazio, selectable: false });
     tabela.setRows(linhas);
     this.gavetaAjuda.textContent = ajuda;
     this.gaveta.setTitulo(titulo);

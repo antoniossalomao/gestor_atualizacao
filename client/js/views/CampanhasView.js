@@ -1,15 +1,15 @@
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
+import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { emptyState } from "../components/estadoVazio.js";
-import { ApiError } from "../api/ApiClient.js";
-import { prefs } from "../app/prefs.js";
-import { debounce } from "../utils/debounce.js";
-import { isValidDateBR, mascaraDataBR, todayBR } from "../utils/date.js";
+import { toast } from "../components/AvisosRapidos.js";
+import { estadoVazio } from "../components/estadoVazio.js";
+import { ErroApi } from "../api/ApiPainel.js";
+import { prefs } from "../app/preferencias.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { dataBRValida, mascaraDataBR, hojeBR } from "../utils/data.js";
 import { baixarBlob } from "../components/arquivos.js";
 import { html } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
+import { iconeHtml } from "../utils/icones.js";
 import { withBusyButton } from "../components/botaoOcupado.js";
 import { filtrarClientesCampanha, tarefaDaCampanha } from "../domain/campanhas.js";
 import {
@@ -59,7 +59,7 @@ export class CampanhasView extends View {
             <button type="button" class="filtro-rapido" data-lista="ativas">Ativas</button>
             <button type="button" class="filtro-rapido" data-lista="encerradas">Encerradas</button>
           </div>
-          ${podeCriar ? html`<button type="button" class="btn btn--accent btn--small" data-action="nova">${iconHtml("plus")} Nova campanha</button>` : ""}
+          ${podeCriar ? html`<button type="button" class="btn btn--accent btn--small" data-action="nova">${iconeHtml("plus")} Nova campanha</button>` : ""}
         </div>
         <div class="campanhas__grade">
           <nav class="campanhas__lista" data-role="lista" aria-label="Campanhas"></nav>
@@ -82,7 +82,7 @@ export class CampanhasView extends View {
     this.filtrosEl = this.container.querySelector('[data-role="filtros"]');
     this.tableEl = this.container.querySelector('[data-role="table"]');
 
-    this.table = new SortableTable(this.tableEl, {
+    this.table = new TabelaOrdenavel(this.tableEl, {
       // Ao lado da lista de campanhas não cabem sete colunas: código e
       // cidade vão embaixo do nome, a versão recebida embaixo da data (a
       // busca e a planilha continuam com tudo). Só as colunas curtas têm
@@ -96,7 +96,7 @@ export class CampanhasView extends View {
       rowKey: (row) => row.id,
       caption: "Clientes da campanha",
       onSelect: () => {},
-      emptyNode: () => emptyState({
+      emptyNode: () => estadoVazio({
         titulo: "Nenhum cliente neste filtro",
         descricao: this.filtro === "pendente" ? "Ninguém pendente: todos atualizados ou já agendados." : "Troque o filtro ou limpe a busca.",
         icone: "busca",
@@ -128,7 +128,7 @@ export class CampanhasView extends View {
       this._salvar();
       this._pintarClientes();
     });
-    const buscar = debounce(() => this._pintarClientes(), 180);
+    const buscar = aguardarPausa(() => this._pintarClientes(), 180);
     this.container.querySelector('[data-role="busca"]').addEventListener("input", (e) => {
       this.busca = /** @type {HTMLInputElement} */ (e.target).value;
       buscar();
@@ -174,7 +174,7 @@ export class CampanhasView extends View {
   async _carregarDetalhe() {
     if (this.selecionadaId == null) {
       this.detalhe = null;
-      this.cabecalhoEl.replaceChildren(emptyState({
+      this.cabecalhoEl.replaceChildren(estadoVazio({
         titulo: this.mostrarEncerradas ? "Nenhuma campanha encerrada" : "Nenhuma campanha ativa",
         descricao: "Uma campanha acompanha quantos clientes já receberam uma versão crítica, como a de uma Nota Técnica da SEFAZ.",
         icone: "campanhas",
@@ -281,7 +281,7 @@ export class CampanhasView extends View {
             sistema: c.sistema,
             responsavel: this.user?.nome || "",
             prioridade: c.prazo ? "Alta" : "Normal",
-            data: todayBR(),
+            data: hojeBR(),
             obs: c.prazo ? `Prazo da campanha: ${c.prazo}` : "",
           });
           toast.success(`Agendamento criado para ${row.nome}.`);
@@ -343,10 +343,10 @@ export class CampanhasView extends View {
         descricao: /** @type {HTMLTextAreaElement} */ (form.querySelector('[data-field="descricao"]')).value.trim(),
         ...(campanha ? {} : { sistema: campo("sistema").value, versaoAlvo: campo("versaoAlvo").value.trim() }),
       };
-      const versaoRuim = !campanha && (!dados.versaoAlvo || !isValidDateBR(dados.versaoAlvo));
+      const versaoRuim = !campanha && (!dados.versaoAlvo || !dataBRValida(dados.versaoAlvo));
       const invalido = !dados.titulo ? ["titulo", "Informe o título."]
         : versaoRuim ? ["versaoAlvo", "Versão-alvo precisa ser uma data dd/mm/aaaa."]
-          : dados.prazo && !isValidDateBR(dados.prazo) ? ["prazo", "Prazo precisa ser uma data dd/mm/aaaa."] : null;
+          : dados.prazo && !dataBRValida(dados.prazo) ? ["prazo", "Prazo precisa ser uma data dd/mm/aaaa."] : null;
       for (const nome of ["titulo", "versaoAlvo", "prazo"]) campo(nome)?.setAttribute("aria-invalid", "false");
       if (invalido) {
         erro.textContent = invalido[1];
@@ -378,7 +378,7 @@ export class CampanhasView extends View {
   }
 }
 
-/** HtmlSeguro -> nó, para as colunas da SortableTable (que pedem Node). */
+/** HtmlSeguro -> nó, para as colunas da TabelaOrdenavel (que pedem Node). */
 function no(marcacao) {
   const t = document.createElement("template");
   t.innerHTML = String(marcacao);
@@ -386,5 +386,5 @@ function no(marcacao) {
 }
 
 function mensagem(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

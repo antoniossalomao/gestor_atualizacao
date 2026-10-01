@@ -1,6 +1,6 @@
-import { aparencia } from "../../app/appearance.js";
+import { aparencia } from "../../app/aparencia.js";
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
+import { iconeHtml } from "../../utils/icones.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { previaTabela } from "../../templates/configuracoes.js";
 import { montarControle } from "./controles.js";
@@ -41,7 +41,7 @@ export class SecaoAjustes {
         // Só aparece quando há o que restaurar (ver `atualizar`): um botão
         // permanentemente sem efeito ensina a ignorá-lo.
         acoes: html`<button type="button" class="btn btn--small btn--ghost" data-action="restaurar-secao" hidden>
-          ${iconHtml("restaurar")} Restaurar esta seção</button>`,
+          ${iconeHtml("restaurar")} Restaurar esta seção</button>`,
       })}
       <div class="cfg-corpo${aba.previa ? " cfg-corpo--com-previa" : ""}">
         <div class="cfg-cartoes" data-role="cartoes"></div>

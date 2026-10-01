@@ -1,6 +1,6 @@
 import { html } from "../../utils/html.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/Toast.js";
+import { toast } from "../../components/AvisosRapidos.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { linhaRegraNumero, rodapeFormulario } from "../../templates/administracao.js";

@@ -1,18 +1,18 @@
 import { ocuparAlturaDisponivel } from "../components/alturaDisponivel.js";
 import { COLUNAS_AGENDAMENTOS, OPCOES_STATUS, FILTRO_ARQUIVADAS, OPCOES_PRIORIDADE } from "../config.js";
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 import { View } from "../app/View.js";
-import { Autocomplete } from "../components/Autocomplete.js";
+import { CampoComSugestoes } from "../components/CampoComSugestoes.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { debounce } from "../utils/debounce.js";
-import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
-import { emptyState } from "../components/estadoVazio.js";
+import { toast } from "../components/AvisosRapidos.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { hojeBR, dataBRValida, mascaraDataBR } from "../utils/data.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { plural, html } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
+import { iconeHtml } from "../utils/icones.js";
 import { marcarOcupado } from "../components/botaoOcupado.js";
-import { prefs } from "../app/prefs.js";
-import { Drawer } from "../components/Drawer.js";
+import { prefs } from "../app/preferencias.js";
+import { Gaveta } from "../components/Gaveta.js";
 import { STATUS_CONCLUIDO } from "../domain/agendamento.js";
 import { colunasKanban } from "../templates/agendamentos.js";
 
@@ -90,14 +90,14 @@ export class AgendamentosView extends View {
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconeHtml("alerta")} Excluir</button>
             <button type="button" class="btn btn--small" data-action="modal-arquivar" hidden>Arquivar</button>
             <span class="form-actions__hint text-muted" data-role="modo"></span>
           </div>
           <div class="form-actions__right">
             <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
-            <button type="button" class="btn btn--ghost" data-action="modal-reabrir" hidden>${iconHtml("atualizar")} Reabrir</button>
-            <button type="button" class="btn btn--ghost" data-action="modal-done" hidden>${iconHtml("check")} Concluir</button>
+            <button type="button" class="btn btn--ghost" data-action="modal-reabrir" hidden>${iconeHtml("atualizar")} Reabrir</button>
+            <button type="button" class="btn btn--ghost" data-action="modal-done" hidden>${iconeHtml("check")} Concluir</button>
             <button type="submit" class="btn btn--accent" data-action="add">Adicionar Tarefa</button>
             <button type="button" class="btn btn--accent" data-action="update" hidden>Salvar Alterações</button>
           </div>
@@ -155,7 +155,7 @@ export class AgendamentosView extends View {
     this._buildFields();
 
     this.form = this.container.querySelector('[data-role="form"]');
-    this.drawer = new Drawer(this.form, {
+    this.drawer = new Gaveta(this.form, {
       titulo: "Agendamento",
       descricao: "Crie ou edite a tarefa mantendo o quadro visível.",
     });
@@ -176,7 +176,7 @@ export class AgendamentosView extends View {
     this.statusFilter.value = this.status;
     if (this.prioridadeFilter) this.prioridadeFilter.value = this.prioridade;
 
-    const reload = debounce(() => {
+    const reload = aguardarPausa(() => {
       this._salvarFiltros();
       this._reloadList();
     }, 200);
@@ -357,16 +357,16 @@ export class AgendamentosView extends View {
         input.setAttribute("aria-describedby", hint.id);
         input.addEventListener("input", () => {
           input.value = mascaraDataBR(input.value);
-          const invalida = Boolean(input.value) && !isValidDateBR(input.value);
+          const invalida = Boolean(input.value) && !dataBRValida(input.value);
           hint.textContent = invalida ? "Formato esperado: dd/mm/aaaa" : "";
           input.setAttribute("aria-invalid", String(invalida));
         });
       }
       this.fields[col.key] = input;
     }
-    this.clienteAutocomplete = new Autocomplete(this.fields.cliente, { values: [] });
-    this.responsavelAutocomplete = new Autocomplete(this.fields.responsavel, { values: [] });
-    this.sistemaAutocomplete = new Autocomplete(this.fields.sistema, { values: [] });
+    this.clienteAutocomplete = new CampoComSugestoes(this.fields.cliente, { values: [] });
+    this.responsavelAutocomplete = new CampoComSugestoes(this.fields.responsavel, { values: [] });
+    this.sistemaAutocomplete = new CampoComSugestoes(this.fields.sistema, { values: [] });
   }
 
   _bindKanbanDragDrop() {
@@ -585,7 +585,7 @@ export class AgendamentosView extends View {
 
       if (this._temFiltro()) {
         wrap.appendChild(
-          emptyState({
+          estadoVazio({
             titulo: "Nenhuma tarefa com esse filtro",
             descricao: "Tente outro termo ou limpe os filtros para ver o quadro completo.",
             icone: "busca",
@@ -594,7 +594,7 @@ export class AgendamentosView extends View {
         );
       } else {
         wrap.appendChild(
-          emptyState({
+          estadoVazio({
             titulo: "Nenhuma tarefa agendada",
             descricao: "Crie a primeira tarefa para organizar o fluxo da equipe.",
             icone: "agendamentos",
@@ -645,7 +645,7 @@ export class AgendamentosView extends View {
       // Num conflito de verdade (outra pessoa mexeu na tarefa), a linha local
       // está velha e continuaria recusada em toda tentativa até um F5. Recarregar
       // traz a revisão atual e o quadro volta a aceitar a mudança.
-      if (err instanceof ApiError && err.status === 409) {
+      if (err instanceof ErroApi && err.status === 409) {
         this._invalidar();
         await this._reloadList();
       }
@@ -818,7 +818,7 @@ export class AgendamentosView extends View {
       Modal.alert("Validação", "Campo 'Tarefa' é obrigatório.", "warning").then(() => this.fields.tarefa.focus());
       return null;
     }
-    if (!isValidDateBR(data.data)) {
+    if (!dataBRValida(data.data)) {
       Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning").then(() => this.fields.data.focus());
       return null;
     }
@@ -940,7 +940,7 @@ export class AgendamentosView extends View {
       for (const col of COLUNAS_AGENDAMENTOS) {
         if (this.fields[col.key]) this.fields[col.key].value = "";
       }
-      if (this.fields.data) this.fields.data.value = todayBR();
+      if (this.fields.data) this.fields.data.value = hojeBR();
       if (this.fields.status) this.fields.status.value = OPCOES_STATUS[0];
       if (this.user && this.fields.responsavel) this.fields.responsavel.value = this.user.nome || "";
     }
@@ -1000,5 +1000,5 @@ function isTypingTarget(el) {
 }
 
 function errorMessage(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

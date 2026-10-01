@@ -1,5 +1,5 @@
-import { settings } from "./prefs.js";
-import { aparencia } from "./appearance.js";
+import { duradouras } from "./preferencias.js";
+import { aparencia } from "./aparencia.js";
 import { emSilencio } from "../domain/notificacoes.js";
 
 /**
@@ -52,7 +52,7 @@ export const notificacoes = {
   },
 
   ligadas() {
-    return this.suportado() && settings.get(CHAVE, false) === true && Notification.permission === "granted";
+    return this.suportado() && duradouras.get(CHAVE, false) === true && Notification.permission === "granted";
   },
 
   /**
@@ -150,7 +150,7 @@ export const notificacoes = {
    */
   async definir(ligar) {
     if (!ligar) {
-      settings.set(CHAVE, false);
+      duradouras.set(CHAVE, false);
       return false;
     }
     if (!this.suportado()) return false;
@@ -158,7 +158,7 @@ export const notificacoes = {
     let permissao = Notification.permission;
     if (permissao === "default") permissao = await Notification.requestPermission();
     const ok = permissao === "granted";
-    settings.set(CHAVE, ok);
+    duradouras.set(CHAVE, ok);
     return ok;
   },
 

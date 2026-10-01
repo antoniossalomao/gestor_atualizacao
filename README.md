@@ -164,15 +164,15 @@ server/                backend (Express + SQLite via better-sqlite3)
 
 client/                front-end (HTML/CSS/JavaScript puro, sem framework nem build)
   index.html             a única página; todo o resto é desenhado por JS dentro dela
-  js/main.js             ponto de entrada: instancia o ApiClient e o App
+  js/main.js             ponto de entrada: instancia o ApiPainel e o App
   js/api/                único lugar que chama fetch
   js/app/                o "esqueleto" do app: App, View, rota, tema, aparência, preferências, cache
   js/components/         peças de UI reaproveitáveis (modal, toast, tabela, paginação...)
-  js/components/charts/  gráficos em SVG escritos à mão (barras e linha)
+  js/components/graficos/  gráficos em SVG escritos à mão (barras e linha)
   js/views/              uma tela por arquivo; views/administracao/ tem uma aba da Administração por arquivo
   js/templates/          marcação das telas, montada com a tag html (escapa tudo), SEM tocar no DOM
   js/domain/             vocabulário do negócio, SEM tocar no DOM (status de agente, relatório, papéis)
-  js/utils/              utilidades genéricas (datas, HTML, cores, ícones, debounce)
+  js/utils/              utilidades genéricas (datas, HTML, cores, ícones, aguardarPausa)
   css/                   theme.css (tokens de cor/tipografia) + components.css (o resto)
   tests/                 testes do que dá pra testar sem navegador
   tsconfig.json          escopo da verificação de tipos (não compila nada -- ver ADR-0006)

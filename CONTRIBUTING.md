@@ -128,7 +128,7 @@ A divisão das pastas segue uma regra só, e três delas **não tocam no DOM**: 
 `npm run check` confere (a `lib` do TypeScript não tem `dom`) e um teste procura
 `document` e `window` por texto.
 
-- **`utils/`** — genérico, não conhece o negócio. `formatarData`, `escapeHtml`, `debounce`.
+- **`utils/`** — genérico, não conhece o negócio. `formatarData`, `escapeHtml`, `aguardarPausa`.
 - **`domain/`** — conhece o negócio. É o que dá para testar no Node sem
   navegador — e por isso é onde a lógica difícil deve morar.
 - **`templates/`** — marcação montada com a tag `html` (que escapa tudo); a view
@@ -144,7 +144,7 @@ DOM?* Se não, é `utils/` (genérico), `domain/` (fala de cliente, atualizaçã
 agente) ou `templates/` (é marcação). *É reaproveitável entre telas?* Se sim,
 `components/`. *É uma tela?* `views/`.
 
-`js/api/ApiClient.js` é o **único** lugar que chama `fetch`. Uma tela nunca
+`js/api/ApiPainel.js` é o **único** lugar que chama `fetch`. Uma tela nunca
 fala HTTP direto — assim autenticação, cancelamento de requisição e tratamento
 de erro têm um lugar só.
 
@@ -154,7 +154,7 @@ de erro têm um lugar só.
   só onde a linguagem/biblioteca impõe (`get`, `set`, `catch`).
 - `.editorconfig` na raiz define indentação e fim de linha. Respeite-o.
 - Classes em `PascalCase.js`, módulos de função solta em `camelCase.js` — a
-  regra que já separa `SortableTable.js` de `date.js`.
+  regra que já separa `TabelaOrdenavel.js` de `data.js`.
 - **Comentário explica *por quê*, não *o quê*.** O código já diz o que faz.
   Este projeto documenta decisão e armadilha: "isto parece redundante mas não
   é, porque X". Esse é o padrão estabelecido — e o mais valioso do repositório.

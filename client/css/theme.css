@@ -179,7 +179,7 @@
 
   /* ==========================================================================
      DENSIDADE DAS TABELAS
-     Escolha do usuário no painel de Configurações (ver js/app/appearance.js),
+     Escolha do usuário no painel de Configurações (ver js/app/aparencia.js),
      aplicada como `data-densidade` no <html> -- mesmo mecanismo do tema.
      Só a altura da linha muda; o tamanho do texto fica igual nos três modos,
      porque encolher a fonte para "caber mais" só troca um problema (rolar) por
@@ -529,7 +529,7 @@
 /* ==========================================================================
    FONTE DA INTERFACE
    "Do sistema" troca a Inter (que vem do Google Fonts) pela Segoe UI do
-   Windows -- ver FONTES em js/app/appearance.js para o porquê. O título
+   Windows -- ver FONTES em js/app/aparencia.js para o porquê. O título
    também troca: a Sora ao lado da Segoe UI parece erro de digitação, não
    escolha de desenho.
    ========================================================================== */

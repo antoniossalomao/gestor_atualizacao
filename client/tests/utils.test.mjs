@@ -12,24 +12,24 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  todayBR,
-  isValidDateBR,
+  hojeBR,
+  dataBRValida,
   formatarDataHora,
   tempoRelativo,
   formatarBytes,
   formatarDuracao,
   mascaraDataBR,
-} from "../js/utils/date.js";
+} from "../js/utils/data.js";
 import { escapeAttr, escapeHtml, html, confiavel, HtmlSeguro, plural } from "../js/utils/html.js";
-import { icon, iconHtml } from "../js/utils/icons.js";
-import { blendHex } from "../js/utils/color.js";
+import { iconeSvg, iconeHtml } from "../js/utils/icones.js";
+import { misturarHex } from "../js/utils/cor.js";
 
-test("utils/date - todayBR", async (t) => {
+test("utils/date - hojeBR", async (t) => {
   await t.test("devolve dd/mm/aaaa com zero à esquerda", () => {
-    const hoje = todayBR();
+    const hoje = hojeBR();
     assert.match(hoje, /^\d{2}\/\d{2}\/\d{4}$/);
     // E o que ela devolve tem que ser aceito pela própria validação.
-    assert.equal(isValidDateBR(hoje), true);
+    assert.equal(dataBRValida(hoje), true);
   });
 });
 
@@ -39,20 +39,20 @@ test("utils/date - mascaraDataBR", () => {
   assert.equal(mascaraDataBR("2109"), "21/09");
 });
 
-test("utils/date - isValidDateBR", async (t) => {
+test("utils/date - dataBRValida", async (t) => {
   await t.test("espelha a regra do backend", () => {
     // Esta função existe só para dar retorno instantâneo no formulário; a
     // validação que decide se salva é a do servidor
     // (server/src/shared/validation.js). Se as duas divergirem, o usuário vê
     // "ok" na tela e toma erro ao salvar -- por isso os casos aqui são os
     // mesmos de tests/shared.test.js do servidor.
-    assert.equal(isValidDateBR(""), true, "vazio é permitido");
-    assert.equal(isValidDateBR("29/02/2024"), true, "2024 é bissexto");
-    assert.equal(isValidDateBR("29/02/2026"), false, "2026 não é");
-    assert.equal(isValidDateBR("31/02/2026"), false, "o Date 'consertaria' para 03/03");
-    assert.equal(isValidDateBR("31/04/2026"), false, "abril tem 30 dias");
-    assert.equal(isValidDateBR("2026-01-01"), false, "formato ISO não passa");
-    assert.equal(isValidDateBR("1/1/2026"), false, "sem zero à esquerda não passa");
+    assert.equal(dataBRValida(""), true, "vazio é permitido");
+    assert.equal(dataBRValida("29/02/2024"), true, "2024 é bissexto");
+    assert.equal(dataBRValida("29/02/2026"), false, "2026 não é");
+    assert.equal(dataBRValida("31/02/2026"), false, "o Date 'consertaria' para 03/03");
+    assert.equal(dataBRValida("31/04/2026"), false, "abril tem 30 dias");
+    assert.equal(dataBRValida("2026-01-01"), false, "formato ISO não passa");
+    assert.equal(dataBRValida("1/1/2026"), false, "sem zero à esquerda não passa");
   });
 });
 
@@ -227,9 +227,9 @@ test("utils/html - tag html", async (t) => {
     assert.equal(texto(confiavel(null)), "");
   });
 
-  await t.test("iconHtml entra como SVG, icon() puro seria escapado", () => {
-    assert.equal(texto(html`${iconHtml("seta")}`), icon("seta"));
-    assert.match(texto(html`${icon("seta")}`), /^&lt;svg/, "é esse escape que o iconHtml evita");
+  await t.test("iconeHtml entra como SVG, iconeSvg() puro seria escapado", () => {
+    assert.equal(texto(html`${iconeHtml("seta")}`), iconeSvg("seta"));
+    assert.match(texto(html`${iconeSvg("seta")}`), /^&lt;svg/, "é esse escape que o iconeHtml evita");
   });
 });
 
@@ -246,17 +246,17 @@ test("utils/html - plural", async (t) => {
   });
 });
 
-test("utils/color - blendHex", async (t) => {
+test("utils/color - misturarHex", async (t) => {
   await t.test("t=0 e t=1 devolvem os extremos", () => {
-    assert.equal(blendHex("#000000", "#ffffff", 0), "rgb(0, 0, 0)");
-    assert.equal(blendHex("#000000", "#ffffff", 1), "rgb(255, 255, 255)");
+    assert.equal(misturarHex("#000000", "#ffffff", 0), "rgb(0, 0, 0)");
+    assert.equal(misturarHex("#000000", "#ffffff", 1), "rgb(255, 255, 255)");
   });
 
   await t.test("t=0.5 fica no meio", () => {
-    assert.equal(blendHex("#000000", "#ffffff", 0.5), "rgb(128, 128, 128)");
+    assert.equal(misturarHex("#000000", "#ffffff", 0.5), "rgb(128, 128, 128)");
   });
 
   await t.test("mistura cada canal separadamente", () => {
-    assert.equal(blendHex("#ff0000", "#0000ff", 0.5), "rgb(128, 0, 128)");
+    assert.equal(misturarHex("#ff0000", "#0000ff", 0.5), "rgb(128, 0, 128)");
   });
 });

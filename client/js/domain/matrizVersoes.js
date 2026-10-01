@@ -1,4 +1,4 @@
-import { tempoRelativo, formatarDataHora } from "../utils/date.js";
+import { tempoRelativo, formatarDataHora } from "../utils/data.js";
 import { versaoRegistrada } from "./relatorio.js";
 
 /**

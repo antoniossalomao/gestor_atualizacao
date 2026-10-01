@@ -1,5 +1,5 @@
 /*
- * Testes do token CSRF no ApiClient (ADR-0011; o servidor está
+ * Testes do token CSRF no ApiPainel (ADR-0011; o servidor está
  * em server/src/middlewares/protecaoCsrf.js e tem os testes dele).
  *
  * O que erra em silêncio se quebrar:
@@ -15,7 +15,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { ApiClient, ApiError } from "../js/api/ApiClient.js";
+import { ApiPainel, ErroApi } from "../js/api/ApiPainel.js";
 
 /** Resposta falsa com cabeçalhos, no formato que `fetch` devolveria. */
 function resposta(status, corpo, token) {
@@ -42,7 +42,7 @@ function simularFetch(respostas) {
   return { pedidos, restaurar: () => (globalThis.fetch = original) };
 }
 
-test("ApiClient - token CSRF nos pedidos com fetch", async (t) => {
+test("ApiPainel - token CSRF nos pedidos com fetch", async (t) => {
   await t.test("guarda o token da resposta e o manda nas escritas, não nas leituras", async () => {
     const { pedidos, restaurar } = simularFetch([
       () => resposta(200, { user: { id: 1 } }, "tok-1"),
@@ -53,7 +53,7 @@ test("ApiClient - token CSRF nos pedidos com fetch", async (t) => {
       () => resposta(204),
     ]);
     try {
-      const api = new ApiClient();
+      const api = new ApiPainel();
       await api.post("/auth/login", { usuario: "a", senha: "b" });
       await api.get("/clientes");
       await api.post("/clientes", { nome: "X" });
@@ -84,7 +84,7 @@ test("ApiClient - token CSRF nos pedidos com fetch", async (t) => {
       () => resposta(201, { id: 5 }, "novo"),
     ]);
     try {
-      const api = new ApiClient();
+      const api = new ApiPainel();
       await api.get("/auth/status");
       const criado = await api.post("/clientes", { nome: "X" });
       assert.deepEqual(criado, { id: 5 });
@@ -109,9 +109,9 @@ test("ApiClient - token CSRF nos pedidos com fetch", async (t) => {
       () => resposta(403, RECUSA_CSRF),
     ]);
     try {
-      const api = new ApiClient();
+      const api = new ApiPainel();
       await assert.rejects(api.post("/clientes", { nome: "X" }), (erro) => {
-        assert.ok(erro instanceof ApiError);
+        assert.ok(erro instanceof ErroApi);
         assert.equal(erro.status, 403);
         assert.equal(erro.codigo, "csrf");
         assert.match(erro.message, /Recarregue/);
@@ -126,7 +126,7 @@ test("ApiClient - token CSRF nos pedidos com fetch", async (t) => {
   await t.test("403 de permissão não é repetido", async () => {
     const { pedidos, restaurar } = simularFetch([() => resposta(403, { error: "Sem permissão." })]);
     try {
-      const api = new ApiClient();
+      const api = new ApiPainel();
       await assert.rejects(api.delete("/clientes/1"), (erro) => erro.status === 403 && erro.codigo === undefined);
       assert.equal(pedidos.length, 1);
     } finally {
@@ -140,7 +140,7 @@ test("ApiClient - token CSRF nos pedidos com fetch", async (t) => {
       () => resposta(201, {}),
     ]);
     try {
-      const api = new ApiClient();
+      const api = new ApiPainel();
       await api.getFile("/atualizacoes/export");
       await api.post("/clientes", {});
       assert.equal(pedidos[1].token, "do-download");
@@ -187,7 +187,7 @@ function simularXhr(respostas) {
   return { pedidos, restaurar: () => (globalThis.XMLHttpRequest = original) };
 }
 
-test("ApiClient - token CSRF no envio de arquivo (XHR)", async (t) => {
+test("ApiPainel - token CSRF no envio de arquivo (XHR)", async (t) => {
   await t.test("manda o token guardado e, se recusado por token velho, renova e reenvia uma vez", async () => {
     const fetchSimulado = simularFetch([
       () => resposta(200, {}, "velho"),
@@ -198,7 +198,7 @@ test("ApiClient - token CSRF no envio de arquivo (XHR)", async (t) => {
       [200, { inserted: 1 }, "novo"],
     ]);
     try {
-      const api = new ApiClient();
+      const api = new ApiPainel();
       await api.get("/auth/status");
       const r = await api.postForm("/atualizacoes/import", new FormData());
       assert.deepEqual(r, { inserted: 1 });
@@ -214,8 +214,8 @@ test("ApiClient - token CSRF no envio de arquivo (XHR)", async (t) => {
   });
 });
 
-test("ApiClient - painel fora do ar atrás do proxy conta como sem conexão (P03)", async (t) => {
-  // O ApiClient avisa a troca de estado por evento no `document`, que o Node
+test("ApiPainel - painel fora do ar atrás do proxy conta como sem conexão (P03)", async (t) => {
+  // O ApiPainel avisa a troca de estado por evento no `document`, que o Node
   // não tem: um de mentira guarda o que foi avisado.
   const avisos = [];
   const documentOriginal = globalThis.document;
@@ -229,7 +229,7 @@ test("ApiClient - painel fora do ar atrás do proxy conta como sem conexão (P03
       () => resposta(200, {}),
     ]);
     try {
-      const api = new ApiClient();
+      const api = new ApiPainel();
       await assert.rejects(api.get("/resumo"), (erro) => erro.status === 502);
       assert.equal(api.online, false, "com o proxy respondendo no lugar do painel, a faixa de 'sem conexão' tem que aparecer");
       await assert.rejects(api.get("/resumo"));
@@ -245,7 +245,7 @@ test("ApiClient - painel fora do ar atrás do proxy conta como sem conexão (P03
     avisos.length = 0;
     const { restaurar } = simularFetch([() => resposta(500, { error: "Erro interno do servidor." })]);
     try {
-      const api = new ApiClient();
+      const api = new ApiPainel();
       await assert.rejects(api.get("/resumo"), (erro) => erro.status === 500);
       assert.equal(api.online, true);
       assert.deepEqual(avisos, []);

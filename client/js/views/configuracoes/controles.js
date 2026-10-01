@@ -1,7 +1,7 @@
-import { theme } from "../../app/theme.js";
-import { aparencia, REALCES, PERFIS } from "../../app/appearance.js";
+import { temaApp } from "../../app/tema.js";
+import { aparencia, REALCES, PERFIS } from "../../app/aparencia.js";
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
+import { iconeHtml } from "../../utils/icones.js";
 import { listaAtalhos } from "../../templates/configuracoes.js";
 
 /**
@@ -213,16 +213,16 @@ function temas(item) {
         <span class="cfg-tema__barra"></span>
         <span class="cfg-tema__corpo"><i></i><i></i><i></i></span>
       </span>
-      <span class="cfg-tema__rotulo">${opcao.rotulo}${iconHtml("check")}</span>`.toString();
+      <span class="cfg-tema__rotulo">${opcao.rotulo}${iconeHtml("check")}</span>`.toString();
     const input = /** @type {HTMLInputElement} */ (label.querySelector("input"));
     input.addEventListener("change", () => {
-      if (input.checked) theme.aplicar(opcao.valor);
+      if (input.checked) temaApp.aplicar(opcao.valor);
     });
     grade.appendChild(label);
   }
 
   const sincronizar = () => {
-    const atual = theme.atual();
+    const atual = temaApp.atual();
     for (const input of grade.querySelectorAll("input")) input.checked = input.value === atual;
   };
   sincronizar();
@@ -286,7 +286,7 @@ function perfis({ aoAplicarPerfil }) {
         <span class="cfg-perfil__amostra cfg-perfil__amostra--${perfil.valor}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span class="cfg-perfil__nome">${perfil.rotulo}</span>
         <span class="cfg-perfil__desc">${perfil.descricao}</span>
-        <span class="cfg-perfil__check" aria-hidden="true">${iconHtml("check")}</span>
+        <span class="cfg-perfil__check" aria-hidden="true">${iconeHtml("check")}</span>
       </button>`
   )}`.toString();
   grade.addEventListener("click", (e) => {

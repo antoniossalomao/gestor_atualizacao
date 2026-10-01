@@ -31,10 +31,10 @@ const TETO = {
   "views/AgenteDetalheModal.js": 2,
   "views/SistemasView.js": 1,
   "main.js": 1,
-  "components/Pagination.js": 1,
+  "components/Paginacao.js": 1,
   "components/Modal.js": 1,
   "components/MenuConta.js": 1,
-  "components/Drawer.js": 1,
+  "components/Gaveta.js": 1,
   "components/ConexaoBanner.js": 1,
   "app/atalhos.js": 1,
 };

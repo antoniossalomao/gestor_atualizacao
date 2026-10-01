@@ -1,5 +1,5 @@
 import { Modal } from "./Modal.js";
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 import { escolherArquivo } from "./arquivos.js";
 import { withBusyButton } from "./botaoOcupado.js";
 import { orientacaoImportacao, previaImportacao, resultadoImportacao } from "../templates/importacao.js";
@@ -19,7 +19,7 @@ import { orientacaoImportacao, previaImportacao, resultadoImportacao } from "../
  */
 export class ImportacaoModal {
   /**
-   * @param {import('../api/ApiClient').ApiClient} api
+   * @param {import('../api/ApiPainel').ApiPainel} api
    * @param {{aoImportar?: (resultado: any) => void}} [opcoes]
    */
   constructor(api, { aoImportar = () => {} } = {}) {
@@ -91,5 +91,5 @@ export class ImportacaoModal {
 }
 
 function mensagem(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

@@ -11,7 +11,7 @@ import { html } from "../../utils/html.js";
  * `aoClicar`, vira um botão de verdade -- o Resumo abre Atualizações já
  * filtrada pelo sistema da barra (A08).
  */
-export class BarChart {
+export class GraficoDeBarras {
   /**
    * @param {HTMLElement} container
    * @param {{color?: string, vazio?: string, aoClicar?: (bar: any) => void}} [opcoes]

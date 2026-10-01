@@ -377,19 +377,19 @@ pelo navegador, sem bundler:
 app/App.js        -- classe raiz: login vs. shell principal, troca de aba, mantém cada View viva
 app/View.js       -- classe base: listeners rastreados (removidos no destroy()) + ciclo
                      stale-while-revalidate
-app/*.js          -- o esqueleto: Router, prefs, SwrCache, theme, appearance, notify, atalhos
-components/*.js   -- peças de UI reaproveitáveis: SortableTable, Pagination, Autocomplete, Modal,
-                     Toast, CommandPalette (Ctrl+K), estadoVazio, ConexaoBanner, MenuConta,
+app/*.js          -- o esqueleto: Roteador, preferencias, CacheSwr, tema, aparencia, notificacoesDoSistema, atalhos
+components/*.js   -- peças de UI reaproveitáveis: TabelaOrdenavel, Paginacao, Autocomplete, Modal,
+                     Toast, PaletaDeComandos (Ctrl+K), estadoVazio, ConexaoBanner, MenuConta,
                      MenuNotificacoes (o sino do cabeçalho); e os pequenos ajudantes que
                      precisam do DOM: elemento (`el`), botaoOcupado, arquivos (baixar/escolher),
                      areaDeTransferencia (copiar), detalhesRetorno
-components/charts -- BarChart, LineChart (SVG escrito à mão)
+components/charts -- GraficoDeBarras, GraficoDeLinhas (SVG escrito à mão)
 domain/*.js       -- vocabulário do negócio, SEM tocar no DOM: agenteStatus, agenteReport,
                      agenteLabels, relatorio, pessoa, notificacoes. É o que dá para testar fora
                      do navegador
 templates/*.js   -- marcação das telas montada com a tag `html` (escapa tudo), SEM tocar no DOM:
                      resumo, administracao, configuracoes, consulta, agendamentos, campanhas, filtros
-utils/*.js        -- utilidades genéricas, SEM tocar no DOM: date, html, color, icons, debounce,
+utils/*.js        -- utilidades genéricas, SEM tocar no DOM: date, html, color, icons, aguardarPausa,
                      busca, estadoDados
 views/*.js        -- uma classe por tela (Resumo, Atualizações, Agendamentos, Clientes, Consultar
                      Cliente, Distribuição, Versões, Sistemas, Administração, Histórico,
@@ -401,11 +401,11 @@ views/configuracoes/ -- as abas das Configurações: ajustes.js (a lista de ajus
 components/TelaComAbas.js -- a moldura de abas sublinhadas que Administração e
                      Configurações usam; templates/secao.js tem o cabeçalho de seção e o
                      título de cartão das duas
-api/ApiClient.js  -- único lugar que chama fetch; todo o resto fala com o servidor por ele
+api/ApiPainel.js  -- único lugar que chama fetch; todo o resto fala com o servidor por ele
 
-app/theme.js + app/appearance.js + views/ConfiguracoesView.js
-             -- as preferências do usuário. theme.js cuida só de claro/escuro/sistema;
-                appearance.js cuida do resto (cor de destaque, tamanho do texto, densidade e
+app/tema.js + app/aparencia.js + views/ConfiguracoesView.js
+             -- as preferências do usuário. tema.js cuida só de claro/escuro/sistema;
+                aparencia.js cuida do resto (cor de destaque, tamanho do texto, densidade e
                 altura das tabelas, linhas por página, animações, fundo, posição e tempo dos
                 avisos, fonte, largura do conteúdo, anel de foco, dicas de atalho, tela
                 inicial, período inicial de Atualizações, lembrar filtros, confirmar ao sair).
@@ -418,7 +418,7 @@ app/theme.js + app/appearance.js + views/ConfiguracoesView.js
                 As preferências são da CONTA: ficam em usuario_preferencias no servidor
                 (GET/PUT /api/preferencias). O localStorage continua sendo escrito, mas como
                 cache -- temaInicial.js roda no <head> e precisa de resposta síncrona, senão a
-                página nasceria no tema errado e trocaria na cara de quem olha. prefs.js
+                página nasceria no tema errado e trocaria na cara de quem olha. preferencias.js
                 (conectarPreferencias) busca as da conta no login e corrige o cache se
                 divergir, e limpa o cache quando quem entra é outra pessoa
 ```
@@ -432,13 +432,13 @@ misturando as cinco categorias -- ver
 
 Cada `View` é instanciada uma única vez (não recriada ao trocar de aba), para não perder o que o
 usuário estava digitando. Toda vez que a aba fica visível, `App.js` chama `view.refresh()`, que
-usa **stale-while-revalidate** (`app/SwrCache.js`): o que já foi buscado aparece na hora, a
+usa **stale-while-revalidate** (`app/CacheSwr.js`): o que já foi buscado aparece na hora, a
 revalidação roda em segundo plano, e a tela só é redesenhada se a resposta for diferente
 (comparação por serialização estável — `JSON.stringify` puro não serve porque o SQLite não
 garante ordem de colunas entre consultas). Escrita numa aba invalida o cache das outras que
 dependem do mesmo dado.
 
-O estado da navegação vive na URL (`#/clientes`, via `app/Router.js`): recarregar mantém a tela
+O estado da navegação vive na URL (`#/clientes`, via `app/Roteador.js`): recarregar mantém a tela
 aberta, e dá para compartilhar o link de uma aba específica.
 
 Toda tela nova deve estender `app/View.js` e usar `this.on(alvo, evento, fn)` em vez de
@@ -466,7 +466,7 @@ faltava.
 |---|---|---|---|
 | 1 | Página sem `<h1>` real | `app/App.js` | `<h1>` que muda por aba, junto com `document.title` |
 | 2 | Lista de clientes parados **nunca era desenhada** — a API devolvia os dados, a tela usava só `.length` | `views/ResumoView.js` | Tabela ordenável, fundo tingido conforme o atraso, indicador vira botão que rola até ela |
-| 3 | **Race condition na busca** — resposta de `"ab"` podia chegar depois da de `"abc"` e sobrescrever a tabela | Todas as telas com busca | `ApiClient` cancela por chave: requisição nova aborta a anterior de mesma chave |
+| 3 | **Race condition na busca** — resposta de `"ab"` podia chegar depois da de `"abc"` e sobrescrever a tabela | Todas as telas com busca | `ApiPainel` cancela por chave: requisição nova aborta a anterior de mesma chave |
 | 4 | **Listeners vazando** — `document.addEventListener("keydown")` nunca removido; após expirar sessão, `Delete` podia excluir por uma tela fantasma | Atualizações, Agendamentos, Clientes | Classe base `View` com `this.on(...)` rastreado e `destroy()` |
 | 5 | Publicar versão sem `try/catch` nem trava de botão | `views/DistribuicaoView.js` | Tratamento de erro, botão travado, mensagem do servidor exibida |
 | 6 | `Escape` num campo apagava os 8 campos do formulário, sem volta | Formulários | Limpa e oferece **Restaurar** num toast |
@@ -530,13 +530,13 @@ SQL sobre a tabela inteira:
 
 #### Fluidez: cache e renderização
 
-`core/SwrCache.js` + `core/View.js` implementam stale-while-revalidate: mostra o que já tem
+`core/CacheSwr.js` + `core/View.js` implementam stale-while-revalidate: mostra o que já tem
 guardado na hora, revalida por trás, redesenha só se mudou. Redesenhar uma tabela idêntica custa um
 pisca visível e a perda da posição de rolagem, sem ganho nenhum. Uma barra fina no topo indica
 revalidação em segundo plano.
 
-Renderização incremental: `SortableTable` reaproveita `<tr>` existentes em vez de reconstruir o
-`<tbody>` inteiro a cada seleção; `Pagination` só troca rótulos e `disabled` em vez de refazer
+Renderização incremental: `TabelaOrdenavel` reaproveita `<tr>` existentes em vez de reconstruir o
+`<tbody>` inteiro a cada seleção; `Paginacao` só troca rótulos e `disabled` em vez de refazer
 `innerHTML` (que antes derrubava o foco pro `body` a cada página); `Autocomplete` passou de um
 listener global por instância (nunca removido) para um único compartilhado com `destroy()`.
 
@@ -803,9 +803,9 @@ varredura): arquivar uma tarefa ainda pendente faria "Reabrir" resetar o status 
 sem necessidade, já que reabrir sempre volta ao primeiro status da lista.
 
 **Gráfico de "Tendência Mensal de Atualizações" (Resumo) virou linha, não mais barras
-horizontais.** Usava o mesmo componente `BarChart` do gráfico "Por Sistema" — bom para comparar
+horizontais.** Usava o mesmo componente `GraficoDeBarras` do gráfico "Por Sistema" — bom para comparar
 categorias, ruim para ler evolução no tempo, porque barra horizontal não tem um eixo
-esquerda→direita representando o tempo. Novo componente `core/LineChart.js` (SVG puro, sem
+esquerda→direita representando o tempo. Novo componente `core/GraficoDeLinhas.js` (SVG puro, sem
 biblioteca): linha suavizada (Catmull-Rom convertido para Bézier cúbica, não segmentos retos
 ponto-a-ponto), área com gradiente — forte perto da linha, sumindo perto da base, o que continua
 legível mesmo com a cor de destaque "Grafite" (dessaturada) —, halo atrás do ponto mais recente, e
@@ -839,14 +839,14 @@ inerte e dois ícones sem rótulo (um deles encerrando a sessão de quem errasse
 pixels), virou `core/MenuConta.js`: avatar com iniciais, tema em três opções escritas por extenso,
 "Atualizar os dados desta tela", Configurações (com `Ctrl + ,` ao lado), Atalhos e Sair.
 
-**`App.recarregarAba()`.** O `SwrCache` torna a troca de aba instantânea e, em troca, não havia
+**`App.recarregarAba()`.** O `CacheSwr` torna a troca de aba instantânea e, em troca, não havia
 como dizer "esqueça o que você guardou e pergunte de novo" — só recarregando a página, que cobra o
 login, a rolagem e a aba aberta. O método invalida o cache e redesenha a aba atual; `_mostrarAba`
 passou a devolver a promessa do `refresh()` para o aviso de "Dados atualizados" só aparecer quando
 a busca de fato terminar. A troca de tema e a mudança de "linhas por página", que faziam isso na
 mão em dois lugares, agora chamam o mesmo método.
 
-**Preferências: um mapa de padrões no lugar de duas listas.** `core/appearance.js` tinha sete
+**Preferências: um mapa de padrões no lugar de duas listas.** `core/aparencia.js` tinha sete
 constantes `PADRAO_*` mais uma lista `CHAVES` escrita à mão para o "Restaurar padrões" — duas
 listas para a mesma coisa, sendo a segunda o lugar clássico de esquecer a preferência nova (e o
 esquecimento só apareceria no dia em que alguém restaurasse os padrões). Um `PADROES` único agora
@@ -865,7 +865,7 @@ trilha e a busca. Mudanças em lote (perfil, importação, restauração) deixar
 `location.reload()`: `_aplicarEmLote()` repinta tema e aparência, pede ao `App` que alinhe o que é
 dele (menu lateral e dados da aba, via `aoMudarVarias`) e remonta os controles do painel, que
 continua aberto. Com o reload fora, `salvarPreferenciasAgora()` — que existia só para o envio
-agrupado não ser morto no meio pelo reload — saiu do `prefs.js`.
+agrupado não ser morto no meio pelo reload — saiu do `preferencias.js`.
 
 **Três preferências novas, todas como atributo no `<html>` + tokens no CSS.** `data-contraste="alto"`
 é escrito **uma vez só**, derivando cada token do próprio tema com `color-mix` (texto misturado com
@@ -882,12 +882,12 @@ precisam continuar pintadas. Contraste e transparência entraram também no `tem
 porque o estado da tecla só muda depois de ela subir — sem isso o aviso ficaria um caractere
 atrasado, sumindo justamente quando a pessoa desliga a tecla para consertar.
 
-**Aviso de conexão perdida.** O `ApiClient` passou a distinguir "o servidor respondeu" (mesmo com
+**Aviso de conexão perdida.** O `ApiPainel` passou a distinguir "o servidor respondeu" (mesmo com
 4xx: quem está fora do ar não recusa nada, não responde) de "não deu para falar com ele" — status 0
 e timeout —, e dispara `conexao:mudou` no `document` **só na troca de estado**. `core/ConexaoBanner.js`
 escuta, põe uma faixa fixa no topo enquanto durar, tenta `/auth/status` a cada 5s e some quando o
 servidor volta, chamando `recarregarAba()` na saída. Quem apaga a faixa não é o `_tentar()`: é o
-próprio evento do `ApiClient`, para haver um caminho só para "voltou" — vale também quando quem
+próprio evento do `ApiPainel`, para haver um caminho só para "voltou" — vale também quando quem
 descobriu foi outra chamada qualquer feita no meio tempo. A faixa fica em `z-index: 1050`, abaixo
 dos modais (1100): uma confirmação aberta continua sendo a coisa mais urgente da tela. Enquanto ela
 existe, cabeçalho e barra lateral descem 44px (`body:has(.conexao-aviso)`), em vez de o conteúdo
@@ -900,7 +900,7 @@ fundo boa parte do dia; a faixa de lembretes só alcança quem está olhando a t
 
 **A faixa de conexão também escuta o `offline` do navegador**, que chega na hora em que o cabo sai,
 sem esperar requisição nenhuma falhar. O primeiro desenho disso tinha um bug que o teste pegou: a
-faixa se mostrava sozinha nesse evento, o `ApiClient` continuava se achando online, e por isso a
+faixa se mostrava sozinha nesse evento, o `ApiPainel` continuava se achando online, e por isso a
 primeira resposta boa depois da volta não era uma TROCA de estado — não disparava `conexao:mudou`, e
 a faixa ficava na tela para sempre sobre um app que já funcionava. O estado ficou com um dono só:
 quem descobre a queda chama `api.marcarOffline()`; quem apaga a faixa continua sendo a resposta do
@@ -1256,7 +1256,7 @@ rodando.
 **Decisão.** O front-end é HTML, CSS e JavaScript puro, com módulos ES nativos do navegador. O que
 está em `client/` é exatamente o que o navegador executa. Sem bundler, sem transpilação, sem
 `node_modules` no front-end. Componentização é feita com classes de JavaScript manipulando o DOM
-diretamente (`components/`, `views/`), e `ApiClient.js` é o único ponto que fala HTTP.
+diretamente (`components/`, `views/`), e `ApiPainel.js` é o único ponto que fala HTTP.
 
 **Consequências.**
 
@@ -1407,7 +1407,7 @@ novo?" — a resposta era sempre "em `core/`", que é o mesmo que não ter respo
 | `views/` | uma tela | tudo |
 | `app/` | o esqueleto que segura o resto | tudo |
 
-`components/charts/` agrupa os três gráficos SVG, que são componentes de uma família só.
+`components/graficos/` agrupa os três gráficos SVG, que são componentes de uma família só.
 
 **Consequências.**
 
@@ -1445,9 +1445,9 @@ não era cumprido. Duas correções:
   tudo.
 - `utils/`, `domain/` e `templates/` passaram a **não tocar no DOM de fato**. Cinco arquivos tocavam:
   `utils/arquivo.js` (baixar e escolher arquivo), `utils/guard.js` (botão ocupado), `utils/html.js`
-  (`el()` e `copyToClipboard`), `utils/color.js` (`tokenHex`) e `domain/agenteReport.js`
+  (`el()` e `copyToClipboard`), `utils/cor.js` (`tokenHex`) e `domain/agenteReport.js`
   (`criarDetalhesRetorno`). Foram para `components/` (`arquivos`, `botaoOcupado`, `elemento`,
-  `areaDeTransferencia`, `detalhesRetorno`) e `app/theme.js`, sem mudar comportamento. O que garante
+  `areaDeTransferencia`, `detalhesRetorno`) e `app/tema.js`, sem mudar comportamento. O que garante
   daqui em diante é o `npm run check` ([ADR-0006](#adr-0006)) e um teste textual em
   `html-seguro.test.mjs`.
 
@@ -1504,7 +1504,7 @@ lia uma propriedade que `VersaoService` nunca teve, e como `fs.existsSync(undefi
 `false` em vez de lançar, o painel de Saúde reportava "0 pacotes, 0 bytes" para sempre, sem erro no
 log (o teste que existia não pegava, porque o dublê de `versoes` declarava a propriedade que o
 objeto real não implementava); quatro anotações JSDoc desatualizadas (`View.js`, `Toast.js`,
-`SortableTable.js`, `ConfiguracoesPanel.js`); uma subtração de datas que só funcionava por coerção
+`TabelaOrdenavel.js`, `ConfiguracoesPanel.js`); uma subtração de datas que só funcionava por coerção
 implícita, e duas comparações que dependiam do mesmo tipo de regra tácita.
 
 **Alternativas consideradas.** Migrar para TypeScript de verdade — descartado: reintroduz o passo
@@ -1920,7 +1920,7 @@ considera "o mesmo site" outros serviços do mesmo domínio.
 - **Fora da regra:** pedido sem usuário na sessão (continua recebendo o 401
   que leva ao login; cobre os agentes C#, que não usam cookie), login e
   configuração inicial.
-- **O `ApiClient` guarda o último token visto e o manda nas escritas**,
+- **O `ApiPainel` guarda o último token visto e o manda nas escritas**,
   inclusive no upload por XHR. Numa recusa com `codigo: "csrf"` (token de
   uma sessão anterior: a pessoa saiu e entrou de novo em outra aba), busca
   o atual em `/auth/status` e repete o pedido uma vez.
@@ -2482,7 +2482,7 @@ O cabeçalho anterior misturava ATUALIZADOR e Gestor de clientes, deixando incer
 
 | Onde | Como |
 |---|---|
-| Símbolo | `simboloMarca()` em `client/js/utils/icons.js`: SVG 32×32, traço 2.6, `currentColor`. Mesmo traçado em `assets/favicon.svg`; ao mudar um, mude o outro. |
+| Símbolo | `simboloMarca()` em `client/js/utils/icones.js`: SVG 32×32, traço 2.6, `currentColor`. Mesmo traçado em `assets/favicon.svg`; ao mudar um, mude o outro. |
 | Quadrado do símbolo | Fundo `--cor-accent` e desenho `--cor-sobre-accent`, no CSS. Nunca fundo embutido no desenho. |
 | Barra lateral aberta | Símbolo 34 px (desenho 24 px) + "Gestor de / Atualizações" em duas linhas, Sora extra 16 px. Sem descritor. |
 | Barra recolhida | Só o símbolo. |
@@ -2958,15 +2958,15 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 | Área | Pontos de entrada |
 |---|---|
 | Marca | `client/js/app/App.js`, `client/index.html`, `client/assets/`, `client/css/theme.css` |
-| Padrões | `client/css/components.css`, `SortableTable.js`, `Drawer.js`, `Modal.js` |
-| Resumo/gráficos | `ResumoView.js`, `components/charts/LineChart.js`, `BarChart.js`, `domain/resumo.js` |
+| Padrões | `client/css/components.css`, `TabelaOrdenavel.js`, `Gaveta.js`, `Modal.js` |
+| Resumo/gráficos | `ResumoView.js`, `components/graficos/GraficoDeLinhas.js`, `GraficoDeBarras.js`, `domain/resumo.js` |
 | Indicadores | `server/src/services/AtualizacaoService.js`, `server/src/database/AtualizacaoRepository.js` |
 | Sistemas | `SistemasView.js`, `SistemaRepository.js`, `ClienteService.js`, `SistemasController.js` |
 | Relatórios | `AtualizacoesView.js`, `components/relatorioModal.js`, `domain/relatorio.js` |
 | Agendamentos | `AgendamentosView.js`, `templates/agendamentos.js`, `AgendamentoService.js`, `AgendamentoRepository.js` |
 | Clientes/Consulta | `ClientesView.js`, `ConsultaView.js`, `AcessosModal.js`, `domain/matrizVersoes.js` |
 | Administração | `AdministracaoView.js`, `views/administracao/`, `templates/administracao.js` |
-| Configurações | `ConfiguracoesView.js`, `views/configuracoes/ajustes.js`, `ContaConfig.js`, `app/appearance.js` |
+| Configurações | `ConfiguracoesView.js`, `views/configuracoes/ajustes.js`, `ContaConfig.js`, `app/aparencia.js` |
 | Regras/banco | `server/src/config/regrasEquipe.js`, `ConfiguracaoSistemaService.js`, `Database.js`, migrações atuais |
 | Campanhas | `CampanhasView.js`, `templates/campanhas.js`, `domain/campanhas.js`, `CampanhaService.js`, `CampanhaRepository.js`, migração 4 |
 | Importação | `components/ImportacaoModal.js`, `templates/importacao.js`, `AtualizacaoService.previaImportacao/importXlsx` |

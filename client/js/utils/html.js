@@ -2,7 +2,7 @@
  * Utilidades de texto/DOM compartilhadas.
  *
  * Antes, `escapeHtml` estava copiado em sete arquivos diferentes (App,
- * AtualizacoesView, ClientesView, SistemasView, UsersPanel, BarChart,
+ * AtualizacoesView, ClientesView, SistemasView, UsersPanel, GraficoDeBarras,
  * DistribuicaoView...). Sete cópias da mesma função é sete lugares para
  * esquecer de corrigir quando uma delas estiver errada -- agora existe uma só.
  */
@@ -91,7 +91,7 @@ function interpolar(valor) {
 
 /**
  * Marca uma string como HTML confiável, para a tag `html` não escapá-la.
- * Só para marcação que o PRÓPRIO código produziu (o `<svg>` de `icon()`, por
+ * Só para marcação que o PRÓPRIO código produziu (o `<svg>` de `iconeSvg()`, por
  * exemplo) -- nunca para algo que veio da API ou de um campo de formulário.
  * O nome é para chamar atenção numa revisão: cada `confiavel(` é um lugar
  * onde a garantia da tag foi suspensa de propósito.

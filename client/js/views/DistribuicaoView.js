@@ -1,18 +1,18 @@
 import { View } from "../app/View.js";
-import { icon } from "../utils/icons.js";
-import { toast } from "../components/Toast.js";
+import { iconeSvg } from "../utils/icones.js";
+import { toast } from "../components/AvisosRapidos.js";
 import { Modal } from "../components/Modal.js";
-import { emptyState } from "../components/estadoVazio.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { escapeAttr, escapeHtml, plural } from "../utils/html.js";
 import { copyToClipboard } from "../components/areaDeTransferencia.js";
-import { formatarDataHora, tempoRelativo } from "../utils/date.js";
-import { notificacoes } from "../app/notify.js";
-import { aparencia } from "../app/appearance.js";
+import { formatarDataHora, tempoRelativo } from "../utils/data.js";
+import { notificacoes } from "../app/notificacoesDoSistema.js";
+import { aparencia } from "../app/aparencia.js";
 import { faseLabel } from "../domain/agenteLabels.js";
 import { relatorioRetornosTexto } from "../domain/agenteReport.js";
 import { classificarRetorno, agruparRetornos } from "../domain/agenteStatus.js";
 import { AgenteDetalheModal } from "./AgenteDetalheModal.js";
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 
 const RESULTADOS = {
   sucesso: "badge--success", erro: "badge--danger", pendencias: "badge--warning",
@@ -55,7 +55,7 @@ export class DistribuicaoView extends View {
         <p>Visão geral dos agentes</p>
         <div class="distribution-topbar__actions">
           <button type="button" class="btn btn--small btn--ghost distribution-refresh-button" data-action="refresh"
-                  aria-label="Atualizar dados" title="Atualizar dados">${icon("atualizar")}</button>
+                  aria-label="Atualizar dados" title="Atualizar dados">${iconeSvg("atualizar")}</button>
         </div>
       </div>
 
@@ -66,7 +66,7 @@ export class DistribuicaoView extends View {
           <div><h2 class="card__title">Retornos recentes</h2><p class="distribution-section__description">Um resumo por agente. Erros e mensagens ficam nos detalhes.</p></div>
           <div class="distribution-section__actions">
             <span class="result-count" data-role="logs-count" aria-live="polite"></span>
-            <button type="button" class="btn btn--small btn--ghost" data-action="copy-report">${icon("copiar")} Copiar relatório</button>
+            <button type="button" class="btn btn--small btn--ghost" data-action="copy-report">${iconeSvg("copiar")} Copiar relatório</button>
           </div>
         </div>
         <div class="toolbar distribution-report-filters">
@@ -255,7 +255,7 @@ export class DistribuicaoView extends View {
     ];
     this.container.querySelector('[data-role="indicators"]').innerHTML = `
       ${metrics.map((metric) => `<div class="card distribution-metric distribution-metric--${metric.tone}">
-        <div class="distribution-metric__head"><span>${metric.label}</span>${icon(metric.icon)}</div>
+        <div class="distribution-metric__head"><span>${metric.label}</span>${iconeSvg(metric.icon)}</div>
         <strong>${metric.value}</strong><small>${metric.hint}</small>
       </div>`).join("")}`;
   }
@@ -282,7 +282,7 @@ export class DistribuicaoView extends View {
 
     if (!groups.length) {
       list.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: this.logs.length ? "Nenhum retorno com esse filtro" : "Nenhum retorno ainda",
           descricao: this.logs.length ? "Tente mudar a busca ou o último resultado." : "As mensagens aparecerão quando um agente se comunicar.",
           icone: this.logs.length ? "busca" : "historico",
@@ -309,7 +309,7 @@ export class DistribuicaoView extends View {
         : result.tipo === "desconhecido" ? "O agente enviou um retorno sem resultado reconhecido."
         : `Atualização em andamento${log.fase ? ` · ${faseLabel(log.fase)}` : ""}.`;
       item.innerHTML = `
-        <div class="distribution-return__icon">${icon(result.tipo === "sucesso" ? "check" : ["erro", "pendencias"].includes(result.tipo) ? "alerta" : "relogio")}</div>
+        <div class="distribution-return__icon">${iconeSvg(result.tipo === "sucesso" ? "check" : ["erro", "pendencias"].includes(result.tipo) ? "alerta" : "relogio")}</div>
         <div class="distribution-return__body">
           <div class="distribution-return__heading">
             <h3>${escapeHtml(log.empresa || log.cnpj)}</h3>
@@ -321,7 +321,7 @@ export class DistribuicaoView extends View {
         </div>
         <div class="distribution-return__actions">
           <time data-role="when"></time>
-          <button type="button" class="btn btn--small" data-action="details">Detalhes ${icon("seta")}</button>
+          <button type="button" class="btn btn--small" data-action="details">Detalhes ${iconeSvg("seta")}</button>
         </div>
       `;
       const when = item.querySelector('[data-role="when"]');
@@ -392,7 +392,7 @@ export class DistribuicaoView extends View {
       cell.colSpan = 7;
       cell.className = "table-empty";
       cell.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: all.length ? "Nenhum agente com esse filtro" : "Nenhum agente comunicou ainda",
           descricao: all.length ? "Tente mudar a busca ou os filtros." : "Assim que o Atualizador rodar num cliente, ele aparecerá aqui.",
           icone: all.length ? "busca" : "distribuicao",
@@ -490,12 +490,12 @@ export class DistribuicaoView extends View {
       const identificador = encodeURIComponent(String(agent.cnpj || "").trim());
       const result = await this.api.delete(`/versoes/agentes/${identificador}`);
       const total = Number(result?.retornosExcluidos) || 0;
-      if (total === 0) throw new ApiError("O servidor não removeu nenhum retorno. Reinicie o serviço web e tente novamente.", 409);
+      if (total === 0) throw new ErroApi("O servidor não removeu nenhum retorno. Reinicie o serviço web e tente novamente.", 409);
       toast.success(`Agente excluído (${plural(total, "retorno")} removido${total === 1 ? "" : "s"}).`);
       this.cache?.invalidar("distribuicao:");
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível excluir", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível excluir", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
       button.disabled = false;
     }
   }
@@ -521,7 +521,7 @@ export class DistribuicaoView extends View {
     } catch (error) {
       await Modal.alert(
         pausar ? "Não foi possível pausar" : "Não foi possível retomar",
-        error instanceof ApiError ? error.message : "Erro inesperado.",
+        error instanceof ErroApi ? error.message : "Erro inesperado.",
         "error"
       );
       button.disabled = false;

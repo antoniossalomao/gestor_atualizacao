@@ -45,7 +45,7 @@ const INDISPONIVEL = new Set([502, 503, 504]);
  * - 401: a sessão acabou, e quem cuida disso é a volta para o login.
  *
  * Recebe o erro por "formato" (status, cancelled), não pela classe, para não
- * depender do ApiClient.
+ * depender do ApiPainel.
  *
  * @param {any} erro
  * @returns {{tipo: "conexao"|"tempo"|"servidor"|"recusa"|"inesperado", texto: string} | null}

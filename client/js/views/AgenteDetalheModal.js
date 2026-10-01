@@ -1,11 +1,11 @@
 import { Modal } from "../components/Modal.js";
 import { escapeHtml } from "../utils/html.js";
 import { copyToClipboard } from "../components/areaDeTransferencia.js";
-import { formatarDataHora, tempoRelativo, formatarDuracao } from "../utils/date.js";
-import { emptyState } from "../components/estadoVazio.js";
+import { formatarDataHora, tempoRelativo, formatarDuracao } from "../utils/data.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { faseLabel } from "../domain/agenteLabels.js";
-import { ApiError } from "../api/ApiClient.js";
-import { toast } from "../components/Toast.js";
+import { ErroApi } from "../api/ApiPainel.js";
+import { toast } from "../components/AvisosRapidos.js";
 import { relatorioRetornosTexto } from "../domain/agenteReport.js";
 import { criarDetalhesRetorno } from "../components/detalhesRetorno.js";
 import { classificarRetorno } from "../domain/agenteStatus.js";
@@ -18,7 +18,7 @@ const LIMITE_RETORNOS = 300;
  */
 export class AgenteDetalheModal {
   /**
-   * @param {import('../api/ApiClient').ApiClient} api
+   * @param {import('../api/ApiPainel').ApiPainel} api
    * @param {{cnpj:string, empresa:string, maquina?:string}} agente
    * @param {{somenteErros?:boolean, sistema?:string}} opcoes
    */
@@ -97,9 +97,9 @@ export class AgenteDetalheModal {
       this.list.setAttribute("aria-busy", "false");
       this.box.querySelector('[data-role="summary"]').textContent = "Retornos indisponíveis";
       this.list.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: "Não foi possível carregar os retornos",
-          descricao: err instanceof ApiError ? err.message : "Erro inesperado.",
+          descricao: err instanceof ErroApi ? err.message : "Erro inesperado.",
           icone: "distribuicao",
           acao: { label: "Tentar novamente", onClick: () => this._reload() },
         })
@@ -151,7 +151,7 @@ export class AgenteDetalheModal {
 
     if (!total) {
       this.list.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: this.logs.length ? "Nenhum retorno neste filtro" : "Nenhum retorno ainda",
           descricao: this.logs.length ? "Não há erros ou pendências entre os retornos selecionados." : "Os retornos aparecerão aqui quando o agente se comunicar.",
           icone: this.logs.length ? "busca" : "historico",

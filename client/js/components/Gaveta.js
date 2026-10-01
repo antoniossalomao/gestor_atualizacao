@@ -5,7 +5,7 @@ import { Modal } from "./Modal.js";
  * ele só é movido para uma camada flutuante, então listeners e referências de
  * formulário não se perdem ao abrir e fechar.
  */
-export class Drawer {
+export class Gaveta {
   /**
    * @param {HTMLElement} conteudo
    * @param {{titulo: string, descricao?: string, aoFechar?: () => void}} opcoes

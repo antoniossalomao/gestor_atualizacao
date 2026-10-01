@@ -1,4 +1,4 @@
-import { formatarDataHora, formatarDuracao } from "../utils/date.js";
+import { formatarDataHora, formatarDuracao } from "../utils/data.js";
 import { faseLabel } from "./agenteLabels.js";
 
 const RE_SCRIPT = /^Falha ao aplicar script de atualização '([^']+)' \((\d+)\/(\d+) do pacote; (\d+) scripts? já estavam aplicados antes deste lote\)\.\s*Verificação prévia:\s*([\s\S]*?)\s*Erro retornado pelo isql:\s*([\s\S]*)$/i;

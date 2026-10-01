@@ -1,7 +1,7 @@
-import { ApiError } from "../../api/ApiClient.js";
+import { ErroApi } from "../../api/ApiPainel.js";
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/Toast.js";
+import { toast } from "../../components/AvisosRapidos.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { alteracoesRegras } from "../../domain/administracao.js";
 
@@ -131,5 +131,5 @@ export class FormularioRegras extends View {
 }
 
 export function mensagem(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

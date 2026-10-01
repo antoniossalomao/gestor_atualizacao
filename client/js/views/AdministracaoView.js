@@ -1,5 +1,5 @@
 import { View } from "../app/View.js";
-import { prefs } from "../app/prefs.js";
+import { prefs } from "../app/preferencias.js";
 import { TelaComAbas } from "../components/TelaComAbas.js";
 import { cabecalhoSecao } from "../templates/secao.js";
 import { HistoricoView } from "./HistoricoView.js";

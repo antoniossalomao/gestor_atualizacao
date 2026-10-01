@@ -22,7 +22,7 @@
  */
 const MAX_AGE_PADRAO_MS = 5 * 60 * 1000;
 
-export class SwrCache {
+export class CacheSwr {
   constructor({ maxAgeMs = MAX_AGE_PADRAO_MS } = {}) {
     this.maxAgeMs = maxAgeMs;
     /** @type {Map<string, {valor: any, serializado: string, em: number}>} */

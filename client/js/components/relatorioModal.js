@@ -1,8 +1,8 @@
 import { Modal } from "./Modal.js";
 import { html } from "../utils/html.js";
 import { copyToClipboard } from "./areaDeTransferencia.js";
-import { toast } from "./Toast.js";
-import { aparencia } from "../app/appearance.js";
+import { toast } from "./AvisosRapidos.js";
+import { aparencia } from "../app/aparencia.js";
 
 /**
  * Janela de relatórios com abas curtas, prévia rolável e rodapé estável (I09).

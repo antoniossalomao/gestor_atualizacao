@@ -23,7 +23,7 @@ import { ehResponsavel } from "./pessoa.js";
  * @typedef {object} Notificacao
  * @property {string} chave identificador estável do grupo
  * @property {"erro"|"alerta"} tom o quanto aquilo grita
- * @property {string} icone nome no conjunto de ícones (ver utils/icons.js)
+ * @property {string} icone nome no conjunto de ícones (ver utils/icones.js)
  * @property {string} titulo a frase contada, com o número dentro
  * @property {string} detalhe quem, por extenso, até onde couber
  * @property {number} quantidade o que entra no contador do sino

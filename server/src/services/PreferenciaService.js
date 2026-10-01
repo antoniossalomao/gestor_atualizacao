@@ -22,7 +22,7 @@ const SIM_NAO = (v) => typeof v === "boolean";
  * comportamento (horário silencioso, o que o sino conta, como o relatório
  * abre -- planejamento 13.4). As demais continuam livres dentro das regras
  * gerais: o front-end valida as de aparência na importação (ver VALIDOS em
- * client/js/app/appearance.js), e uma preferência de aparência inválida só
+ * client/js/app/aparencia.js), e uma preferência de aparência inválida só
  * cai no padrão.
  */
 const FORMATOS = {
@@ -47,7 +47,7 @@ const FORMATOS = {
  * na hora errada: trocar de maquina, usar outro navegador ou limpar os dados
  * do site devolvia o app aos padroes, e num computador compartilhado as
  * escolhas de uma pessoa recebiam a seguinte. Agora o servidor e a fonte da
- * verdade e o localStorage e so um cache -- ver client/js/app/prefs.js, que
+ * verdade e o localStorage e so um cache -- ver client/js/app/preferencias.js, que
  * explica por que o cache continua existindo.
  *
  * O conjunto e gravado inteiro, nunca chave a chave: e assim que a tela

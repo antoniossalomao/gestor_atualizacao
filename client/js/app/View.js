@@ -1,7 +1,7 @@
-import { RequestCancelled } from "../api/ApiClient.js";
+import { RequisicaoCancelada } from "../api/ApiPainel.js";
 import { EstadoDados } from "../utils/EstadoDados.js";
 import { el } from "../components/elemento.js";
-import { icon } from "../utils/icons.js";
+import { iconeSvg } from "../utils/icones.js";
 
 /**
  * Quanto uma revalidação precisa demorar para valer a pena avisar.
@@ -29,15 +29,15 @@ const ATRASO_INDICADOR_MS = 180;
  *
  * **2. Carregamento instantâneo entre abas.** `this.swr(...)` implementa o
  * ciclo "mostra o que tem guardado, revalida por trás, redesenha só se mudou"
- * (ver SwrCache) e ainda cuida do indicador de atualização em segundo plano
+ * (ver CacheSwr) e ainda cuida do indicador de atualização em segundo plano
  * e do aviso de dados desatualizados quando a busca falha (ver
  * utils/EstadoDados.js).
  */
 export class View {
   /**
    * @param {HTMLElement} container
-   * @param {import('../api/ApiClient').ApiClient} api
-   * @param {{user?: object, cache?: import('./SwrCache').SwrCache, navigate?: (aba: string, params?: object) => void}} ctx
+   * @param {import('../api/ApiPainel').ApiPainel} api
+   * @param {{user?: object, cache?: import('./CacheSwr').CacheSwr, navigate?: (aba: string, params?: object) => void}} ctx
    *
    * `navigate` recebe DOIS argumentos, nao um: o destino e um objeto opcional de
    * filtros pre-aplicados na aba de destino (ver App.switchTab). A anotacao antiga
@@ -136,7 +136,7 @@ export class View {
       return frescos;
     } catch (erro) {
       // Cancelamento não é falha: outra busca, mais nova, tomou o lugar desta.
-      if (erro instanceof RequestCancelled) return guardado;
+      if (erro instanceof RequisicaoCancelada) return guardado;
       // A tela diz que o dado é velho, de quando, e por quê -- antes o dado
       // velho ficava na tela em silêncio, parecendo atual.
       const avisado = !this._destruido && this._estadoDados.falhou(chave, erro);
@@ -207,7 +207,7 @@ export class View {
     }
     if (!this._avisoDados) {
       this._avisoDados = el("div", { class: "dados-aviso", role: "status" }, [
-        el("span", { class: "dados-aviso__icone", "aria-hidden": "true", html: icon("alerta") }),
+        el("span", { class: "dados-aviso__icone", "aria-hidden": "true", html: iconeSvg("alerta") }),
         el("span", { class: "dados-aviso__texto" }, [el("strong", { dataset: { role: "titulo" } }), el("span", { dataset: { role: "detalhe" } })]),
         el("button", { type: "button", class: "btn btn--small", text: "Tentar novamente", onclick: () => this._tentarDeNovo() }),
       ]);

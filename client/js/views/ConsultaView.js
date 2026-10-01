@@ -1,12 +1,12 @@
 import { View } from "../app/View.js";
-import { debounce } from "../utils/debounce.js";
-import { emptyState } from "../components/estadoVazio.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { plural, html } from "../utils/html.js";
 import { copyToClipboard } from "../components/areaDeTransferencia.js";
-import { toast } from "../components/Toast.js";
-import { iconHtml } from "../utils/icons.js";
+import { toast } from "../components/AvisosRapidos.js";
+import { iconeHtml } from "../utils/icones.js";
 import { relatorioDeAtualizacao, haQuantoTempo } from "../domain/relatorio.js";
-import { tempoRelativo, formatarDataHora } from "../utils/date.js";
+import { tempoRelativo, formatarDataHora } from "../utils/data.js";
 import { montarMatrizVersoes } from "../domain/matrizVersoes.js";
 import { cartaoAcesso, CABECALHO_MATRIZ, linhaMatrizVersoes } from "../templates/consulta.js";
 
@@ -47,7 +47,7 @@ export class ConsultaView extends View {
     this.countLabel = this.container.querySelector('[data-role="count"]');
     this.detailBox = this.container.querySelector('[data-role="detail"]');
 
-    this.searchInput.addEventListener("input", debounce(() => this._filterMatches(), 200));
+    this.searchInput.addEventListener("input", aguardarPausa(() => this._filterMatches(), 200));
     // Setas percorrem a lista de resultados sem tirar a mão do campo de busca.
     this.searchInput.addEventListener("keydown", (e) => this._navegarResultados(e));
     // Uma vez o foco DENTRO da lista (o `primeiro.focus()` logo abaixo leva
@@ -97,7 +97,7 @@ export class ConsultaView extends View {
     this.matchesBox.replaceChildren();
     if (this.currentMatches.length === 0) {
       this.matchesBox.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: termo ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado",
           descricao: termo ? `Nada casa com "${this.searchInput.value.trim()}".` : "Cadastre clientes na aba Clientes.",
           icone: termo ? "busca" : "clientes",
@@ -175,7 +175,7 @@ export class ConsultaView extends View {
 
   _renderDetailVazio() {
     this.detailBox.replaceChildren(
-      emptyState({
+      estadoVazio({
         titulo: "Selecione um cliente",
         descricao: "Busque à esquerda, ou use Ctrl+K e digite o nome de qualquer lugar do sistema.",
         icone: "consulta",
@@ -243,7 +243,7 @@ export class ConsultaView extends View {
     resumoPanel.appendChild(cadastro);
 
     const acessosBox = this.detailBox.querySelector('[data-role="acessos"]');
-    if (acessos.length === 0) acessosBox.appendChild(emptyState({ titulo: "Nenhum acesso remoto", descricao: "Cadastre os acessos na tela Clientes.", icone: "acessos" }));
+    if (acessos.length === 0) acessosBox.appendChild(estadoVazio({ titulo: "Nenhum acesso remoto", descricao: "Cadastre os acessos na tela Clientes.", icone: "acessos" }));
     for (const acesso of acessos) {
       const card = document.createElement("article");
       card.className = "access-card";
@@ -270,7 +270,7 @@ export class ConsultaView extends View {
     const caixa = this.detailBox.querySelector('[data-role="ultima"]');
     if (!historico || historico.length === 0) {
       caixa.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: "Nenhuma atualização registrada",
           descricao: `Nada foi registrado para ${cliente.nome} ainda.`,
           icone: "atualizacoes",
@@ -295,7 +295,7 @@ export class ConsultaView extends View {
       topoLinha.innerHTML = html`
         <strong style="font-size:var(--txt-base);">${registro.data || "Sem data"} — ${registro.sistema || "Sistema não informado"}</strong>
         <button type="button" class="btn btn--small btn--ghost" data-action="copiar-chamado" data-index="${indice}" title="Copiar chamado formatado para área de transferência">
-          ${iconHtml("copiar")} Copiar Chamado
+          ${iconeHtml("copiar")} Copiar Chamado
         </button>
       `;
       grid.appendChild(topoLinha);
@@ -334,7 +334,7 @@ export class ConsultaView extends View {
 
     if (linhas.length === 0 && fixos.length === 0) {
       container.replaceChildren(
-        emptyState({
+        estadoVazio({
           titulo: "Nenhum sistema associado",
           descricao: "Este cliente não possui sistemas vinculados nem registros prévios.",
           icone: "sistemas",
