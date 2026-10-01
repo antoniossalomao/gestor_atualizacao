@@ -155,3 +155,13 @@ export function pendenciasPorAba(pendencias) {
   for (const p of pendencias) porAba[p.aba] = (porAba[p.aba] || 0) + 1;
   return porAba;
 }
+
+/**
+ * Sistemas atualizáveis e ativos sem versão oficial cadastrada: ficam como
+ * "Sem versão oficial" em todo cliente e não contam contra ninguém -- quem
+ * esqueceu de cadastrar a versão não percebe que o sistema saiu da conta.
+ * @param {Array<{nome: string, ativo?: number|boolean, controlaVersao?: number|boolean, ultimaVersao?: string|null}>} catalogo
+ */
+export function sistemasSemReferencia(catalogo) {
+  return (catalogo || []).filter((s) => s.ativo && s.controlaVersao && !s.ultimaVersao).map((s) => s.nome);
+}

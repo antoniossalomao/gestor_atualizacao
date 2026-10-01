@@ -86,6 +86,13 @@ export class AdministracaoView extends View {
       if (alvo instanceof HTMLElement) this.tela.mostrar(alvo.dataset.irAba);
     });
     this._ultimaConferencia = 0;
+    // Quem resolve uma pendência (fez uma cópia, por exemplo) pede para a
+    // faixa conferir de novo agora, em vez de mostrar o aviso velho por até
+    // um minuto.
+    this.on(document, "administracao:conferir", () => {
+      this._ultimaConferencia = 0;
+      this._conferirPendencias();
+    });
   }
 
   /**

@@ -158,6 +158,47 @@ export function gavetaConta() {
     </div>`;
 }
 
+/** Até quantos nomes a conferência mostra antes de "e mais N". */
+const NOMES_NA_CONFERENCIA = 8;
+
+/**
+ * As duas linhas da conferência de cadastros, cada uma com a conta, os
+ * primeiros nomes e o atalho para onde se corrige.
+ * @param {{clientesSemSistema: Array<{nome: string}>, sistemasSemReferencia: string[]}} dados
+ */
+export function conferenciaCadastros({ clientesSemSistema, sistemasSemReferencia }) {
+  const linha = ({ titulo, vazio, ajuda, nomes, botao }) => html`
+    <div class="cfg-group admin-conferencia">
+      <div class="cfg-group__labels">
+        <span class="cfg-group__title">${titulo}
+          <span class="badge ${nomes.length ? "badge--warning" : "badge--success"}">${nomes.length || "Nenhum"}</span></span>
+        <span class="cfg-group__help">${nomes.length ? ajuda : vazio}</span>
+        ${
+          nomes.length > 0 &&
+          html`<span class="admin-conferencia__nomes">${nomes.slice(0, NOMES_NA_CONFERENCIA).join(", ")}${
+            nomes.length > NOMES_NA_CONFERENCIA ? ` e mais ${nomes.length - NOMES_NA_CONFERENCIA}` : ""
+          }</span>`
+        }
+      </div>
+      ${nomes.length > 0 && botao}
+    </div>`;
+  return html`
+    ${linha({
+      titulo: "Clientes sem nenhum sistema",
+      vazio: "Todo cliente tem ao menos um sistema marcado.",
+      ajuda: "Ficam fora da situação de versão e do Resumo. Marque os sistemas no cadastro do cliente.",
+      nomes: clientesSemSistema.map((c) => c.nome),
+      botao: html`<button type="button" class="btn btn--small" data-ir="clientes">${iconeHtml("clientes")} Abrir Clientes</button>`,
+    })}
+    ${linha({
+      titulo: "Sistemas atualizáveis sem versão oficial",
+      vazio: "Todo sistema atualizável tem versão oficial cadastrada.",
+      ajuda: "Aparecem como \"Sem versão oficial\" e não contam contra ninguém. Cadastre a versão em Sistemas › Versões oficiais, ou marque como Fixo.",
+      nomes: sistemasSemReferencia,
+      botao: html`<button type="button" class="btn btn--small" data-ir="sistemas">${iconeHtml("sistemas")} Abrir Sistemas</button>`,
+    })}`;
+}
+
 /**
  * Conteúdo de uma `<tr>` da tabela de backups.
  * @param {{arquivo: string, label: string, data?: string|null, tamanhoBytes?: number, integro?: boolean}} b

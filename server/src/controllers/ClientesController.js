@@ -8,6 +8,10 @@ class ClientesController {
     this.clienteService = clienteService;
   }
 
+  semSistema = (_req, res) => {
+    res.json(this.clienteService.semSistema());
+  };
+
   list = (req, res) => {
     res.json(this.clienteService.list(req.query.search || "", lerPaginacao(req.query)));
   };

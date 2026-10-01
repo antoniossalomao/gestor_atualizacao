@@ -437,3 +437,17 @@ test("Administração - pendências por aba", async () => {
   assert.deepEqual(pendenciasPorAba([{ aba: "backups" }, { aba: "integracoes" }, { aba: "backups" }]), { backups: 2, integracoes: 1 });
   assert.deepEqual(pendenciasPorAba([]), {});
 });
+
+test("Administração - sistemas sem versão oficial", async () => {
+  const { sistemasSemReferencia } = await import("../js/domain/administracao.js");
+  const catalogo = [
+    { nome: "B_Vendas", ativo: 1, controlaVersao: 1, ultimaVersao: "2026-09-01" },
+    { nome: "B_NFe", ativo: 1, controlaVersao: 1, ultimaVersao: "" },
+    { nome: "Suporte", ativo: 1, controlaVersao: 0, ultimaVersao: null },
+    { nome: "Antigo", ativo: 0, controlaVersao: 1, ultimaVersao: null },
+    { nome: "DFe", ativo: 1, controlaVersao: 1, ultimaVersao: null },
+  ];
+  // Fixo e inativo não entram: não têm versão para acompanhar.
+  assert.deepEqual(sistemasSemReferencia(catalogo), ["B_NFe", "DFe"]);
+  assert.deepEqual(sistemasSemReferencia(null), []);
+});

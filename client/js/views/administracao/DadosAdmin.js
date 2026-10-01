@@ -7,6 +7,9 @@ import { iconeHtml } from "../../utils/icones.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { baixarBlob } from "../../components/arquivos.js";
 import { ImportacaoModal } from "../../components/ImportacaoModal.js";
+import { conferenciaCadastros } from "../../templates/administracao.js";
+import { sistemasSemReferencia } from "../../domain/administracao.js";
+import { mensagem } from "./FormularioRegras.js";
 
 /**
  * Seção Dados da Administração:
@@ -55,34 +58,11 @@ export class DadosAdmin extends View {
 
         <section class="card secao-card">
           ${tituloCartao({
-            titulo: "Base de dados e integridade",
-            descricao: "Cópia direta do banco de dados operacional SQLite e atalhos para validação de cadastros.",
+            titulo: "Conferência de cadastros",
+            descricao: "O que fica fora da conta de situação sem ninguém perceber.",
           })}
-          <div class="cfg-linhas">
-            <div class="cfg-group">
-              <div class="cfg-group__labels">
-                <span class="cfg-group__title">Baixar banco de dados de agora</span>
-                <span class="cfg-group__help">Cópia do arquivo SQLite com todas as tabelas, configurações e usuários no estado exato deste momento.</span>
-              </div>
-              <a class="btn btn--small" href="/api/backups/atual/download" download>
-                ${iconeHtml("download")} Baixar banco (.sqlite)
-              </a>
-            </div>
-
-            <div class="cfg-group">
-              <div class="cfg-group__labels">
-                <span class="cfg-group__title">Conferência de cadastros</span>
-                <span class="cfg-group__help">Verifique clientes sem sistemas vinculados ou sistemas sem versão oficial cadastrada.</span>
-              </div>
-              <div class="form-actions">
-                <button type="button" class="btn btn--small" data-action="ir-clientes">
-                  ${iconeHtml("users")} Ver clientes
-                </button>
-                <button type="button" class="btn btn--small" data-action="ir-sistemas">
-                  ${iconeHtml("sistemas")} Ver sistemas
-                </button>
-              </div>
-            </div>
+          <div class="cfg-linhas" data-role="conferencia">
+            <p class="text-muted admin-conferencia__carregando">Conferindo…</p>
           </div>
         </section>
       </div>`;
@@ -99,13 +79,30 @@ export class DadosAdmin extends View {
       this._importar();
     });
 
-    this.container.querySelector('[data-action="ir-clientes"]')?.addEventListener("click", () => {
-      this.navigate("clientes");
+    // Os botões da conferência são redesenhados a cada `refresh`: um ouvinte
+    // só, no contêiner.
+    this.container.querySelector('[data-role="conferencia"]').addEventListener("click", (e) => {
+      const alvo = /** @type {HTMLElement} */ (e.target).closest("[data-ir]");
+      if (!(alvo instanceof HTMLElement)) return;
+      if (alvo.dataset.ir === "operacao") this.navigate("administracao", { aba: "operacao" });
+      else this.navigate(alvo.dataset.ir);
     });
+  }
 
-    this.container.querySelector('[data-action="ir-sistemas"]')?.addEventListener("click", () => {
-      this.navigate("sistemas");
-    });
+  /**
+   * Antes, "Conferência de cadastros" eram dois botões que só abriam
+   * Clientes e Sistemas -- a pessoa tinha que procurar sozinha. Agora a
+   * conta vem pronta, com os nomes.
+   */
+  async refresh() {
+    const alvo = /** @type {HTMLElement} */ (this.container.querySelector('[data-role="conferencia"]'));
+    try {
+      const [semSistema, catalogo] = await Promise.all([this.api.get("/clientes/sem-sistema"), this.api.get("/sistemas/catalogo")]);
+      alvo.innerHTML = conferenciaCadastros({ clientesSemSistema: semSistema, sistemasSemReferencia: sistemasSemReferencia(catalogo) }).toString();
+    } catch (err) {
+      if (err?.cancelled) return;
+      alvo.innerHTML = html`<p class="text-muted admin-conferencia__carregando">Não foi possível conferir agora: ${mensagem(err)}</p>`.toString();
+    }
   }
 
   async _exportar(botao) {

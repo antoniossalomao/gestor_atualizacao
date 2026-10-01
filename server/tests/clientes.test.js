@@ -316,3 +316,24 @@ test("Classificação do sistema: marcar como dependente do B_Vendas (A13)", () 
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+test("ClienteService - clientes sem nenhum sistema (Administração › Dados)", () => {
+  const env = ambiente();
+  try {
+    env.service.addSistema("B_Sumir", USUARIO);
+    env.service.create({ nome: "Zeta Ltda", sistemas: [] }, USUARIO);
+    env.service.create({ nome: "alfa ME", sistemas: [] }, USUARIO);
+    env.service.create({ nome: "Com Sistema", sistemas: ["B_Vendas"] }, USUARIO);
+    env.service.create({ nome: "Fica Sem", sistemas: ["B_Sumir"] }, USUARIO);
+    // Remover o único sistema de um cliente o deixa sem nenhum -- o caso que
+    // ninguém via, porque o cliente some de toda conta de situação.
+    env.service.removerSistema("B_Sumir", USUARIO);
+    assert.deepEqual(
+      env.service.semSistema().map((c) => c.nome),
+      ["alfa ME", "Fica Sem", "Zeta Ltda"],
+      "só quem não tem sistema, em ordem alfabética sem diferenciar maiúscula"
+    );
+  } finally {
+    env.cleanup();
+  }
+});

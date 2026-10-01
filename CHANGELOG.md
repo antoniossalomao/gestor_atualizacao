@@ -15,6 +15,12 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Backups e Dados — F4 (01/10/2026):**
+  - **Fazer cópia agora:** novo botão em Backups (`POST /api/backups`, só admin, com o mesmo limitador dos downloads). Serve para antes de uma importação grande ou de reclassificar sistemas, já que a cópia automática só acontece quando o servidor inicia. A cópia é conferida, entra na mesma retenção, fica registrada na Auditoria e atualiza a faixa de pendências na hora.
+  - **Conferência de cadastros (Dados):** antes eram só dois botões que abriam Clientes e Sistemas. Agora mostra quantos e quais clientes estão sem nenhum sistema (`GET /api/clientes/sem-sistema`) e quais sistemas atualizáveis estão sem versão oficial. Os dois casos ficam fora da conta de situação sem ninguém perceber.
+  - **Botão repetido:** saiu de Dados o "Baixar banco de agora", que já está em Backups.
+- **Correção — a retenção podia apagar uma cópia nova (01/10/2026):** com dez ou mais cópias no mesmo segundo, os nomes com sufixo eram ordenados como texto ("_10" antes de "_2"). Além disso, `nomeLivre` reaproveitava o nome da cópia mais antiga depois que ela era apagada. Nos dois casos, a poda seguinte apagava uma das cópias mais novas. Rara na subida do servidor, possível com o botão novo, e foi o teste dele que mostrou. A ordem agora é cronológica (`compararBackups`), e o sufixo novo vem sempre depois do maior já usado.
+
 - **Aviso de alteração não salva — F7 (01/10/2026):** trocar de tela já não perdia nada, porque as telas ficam montadas. Perdia-se ao recarregar ou fechar a página e ao sair da conta, que desmonta o app. Agora, com uma regra da equipe alterada e não salva, uma gaveta de Pessoas preenchida ou uma senha/nome digitados em Minha conta:
   - recarregar ou fechar a página dispara o aviso do navegador;
   - "Sair da conta" pergunta "Sair sem salvar?" e lista o que vai se perder.

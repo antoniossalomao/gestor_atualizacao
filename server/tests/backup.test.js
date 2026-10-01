@@ -282,3 +282,29 @@ test("a Saúde mostra a data da última cópia de um banco de verdade", () => {
     env.cleanup();
   }
 });
+
+test("cópia pela tela: só admin, entra na retenção e fica no Histórico", () => {
+  const env = ambiente();
+  try {
+    const operador = { id: 99, nome: "Op", usuario: "op", role: "operador" };
+    assert.throws(() => env.service.criar(operador), /Apenas administradores/);
+
+    // Retenção padrão (10): doze pedidos seguidos deixam só as dez mais novas.
+    const feitas = [];
+    for (let i = 0; i < 12; i++) feitas.push(env.service.criar(env.admin).arquivo);
+    assert.equal(new Set(feitas).size, 12, "cada pedido gera um arquivo novo, mesmo no mesmo segundo");
+    const restantes = env.service.list().map((b) => b.arquivo);
+    assert.equal(restantes.length, 10, "a cópia pela tela entra na mesma retenção das automáticas");
+    assert.ok(restantes.includes(feitas[11]), "a mais nova fica");
+    assert.ok(!restantes.includes(feitas[0]), "a mais antiga sai");
+
+    const nova = env.service.criar(env.admin);
+    assert.equal(nova.integro, true);
+    assert.ok(nova.data, "volta com a data, para a tela mostrar");
+
+    const historico = env.db.historico.list({}).rows.map((l) => l.descricao);
+    assert.ok(historico.some((d) => /Cópia do banco feita pela tela/.test(d)), historico.join("\n"));
+  } finally {
+    env.cleanup();
+  }
+});

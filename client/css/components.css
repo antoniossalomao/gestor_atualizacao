@@ -7570,6 +7570,21 @@ h1, h2, h3, strong {
   border-radius: var(--raio);
 }
 
+.admin-conferencia .cfg-group__title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.admin-conferencia__nomes {
+  margin-top: var(--sp-1);
+  color: var(--cor-texto);
+  font-size: var(--txt-sm);
+}
+.admin-conferencia__carregando {
+  margin: 0;
+  padding: var(--sp-4) 0;
+}
+
 .admin-pessoas {
   display: flex;
   flex-direction: column;

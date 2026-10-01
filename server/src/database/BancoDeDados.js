@@ -624,7 +624,7 @@ class BancoDeDados {
    * restauracao de continuar.
    */
   _backup() {
-    if (!fs.existsSync(this.path)) return;
+    if (!fs.existsSync(this.path)) return null;
     try {
       // Em modo WAL, o SQLite pode manter escritas recentes só no arquivo
       // "-wal" (ao lado do .db principal), só "mesclando" tudo de volta no
@@ -676,17 +676,23 @@ class BancoDeDados {
       const existentes = fs
         .readdirSync(dir)
         .filter((f) => f.startsWith(`${name}_`) && f.endsWith(ext))
-        .sort();
+        .sort(compararBackups);
       const antigos = existentes.slice(0, Math.max(0, existentes.length - lerRegra(this.configuracoesSistema, "backupsManter")));
       for (const arquivo of antigos) {
         fs.rmSync(path.join(dir, arquivo), { force: true });
         delete verificacoes[arquivo];
       }
       this._salvarVerificacoesBackup(dir, verificacoes);
+      // Devolvido só para quem pede a cópia pela tela ("Fazer cópia agora")
+      // poder dizer qual foi feita e se passou na conferência; a cópia da
+      // subida do servidor ignora o retorno.
+      return { arquivo: arquivoBackup, integro };
     } catch {
       // silencioso de proposito -- ver comentario acima (a checagem de
       // integridade em si NAO e silenciosa, so este envelope de fora, que
-      // cobre falha de disco/permissao ao copiar o arquivo)
+      // cobre falha de disco/permissao ao copiar o arquivo). `null` diz a
+      // quem pediu pela tela que nao houve copia.
+      return null;
     }
   }
 
@@ -752,7 +758,7 @@ class BancoDeDados {
     const arquivos = fs
       .readdirSync(dir)
       .filter((f) => f.startsWith(`${name}_`) && f.endsWith(ext))
-      .sort()
+      .sort(compararBackups)
       .reverse();
     const verificacoes = this._lerVerificacoesBackup(dir);
     return arquivos.map((arquivo) => {
@@ -835,6 +841,25 @@ function formatarCarimbo(stamp) {
 }
 
 /**
+ * Ordem cronológica de dois arquivos de backup. A ordem de texto
+ * (`.sort()`), usada até 01/10/2026, errava com o sufixo de colisão de
+ * `nomeLivre`: "x_10.db" vem antes de "x_2.db" como texto, então com dez ou
+ * mais cópias no mesmo segundo a retenção apagava uma das MAIS NOVAS no lugar
+ * da mais antiga. Raro na subida do servidor, possível com "Fazer cópia
+ * agora" -- e foi um teste dela que mostrou.
+ * @param {string} a @param {string} b
+ */
+function compararBackups(a, b) {
+  const partes = (arquivo) => {
+    const m = /_(\d{8}_\d{6})(?:_(\d+))?\.[^.]+$/.exec(arquivo);
+    return m ? [m[1], Number(m[2] || 0)] : [arquivo, 0];
+  };
+  const [ca, na] = partes(a);
+  const [cb, nb] = partes(b);
+  return ca < cb ? -1 : ca > cb ? 1 : na - nb;
+}
+
+/**
  * O carimbo do nome do arquivo ("20260918_143012") como data ISO, ou `null`
  * se o nome não seguir o padrão. O carimbo é a hora LOCAL do servidor (ver
  * `timestamp`), então é lido como hora local.
@@ -856,14 +881,19 @@ function dataDoCarimbo(stamp) {
  */
 function nomeLivre(dir, name, stamp, ext) {
   const candidato = (sufixo) => `${name}_${stamp}${sufixo}${ext}`;
-  if (!fs.existsSync(path.join(dir, candidato("")))) return candidato("");
-  // O teto existe so para nao virar laco infinito se algo muito estranho
-  // acontecer com o sistema de arquivos; 99 copias no mesmo segundo nao e' um
-  // cenario real.
-  for (let n = 2; n <= 99; n += 1) {
-    if (!fs.existsSync(path.join(dir, candidato(`_${n}`)))) return candidato(`_${n}`);
+  // O próximo número DEPOIS do maior já usado neste segundo, e não o
+  // primeiro buraco: quando a retenção apaga a cópia mais antiga do segundo
+  // (a sem sufixo), reaproveitar o nome dela daria à cópia NOVA o nome que
+  // ordena como a mais velha -- e a poda seguinte apagaria justo ela.
+  const prefixo = `${name}_${stamp}`;
+  let maior = -1;
+  for (const arquivo of fs.existsSync(dir) ? fs.readdirSync(dir) : []) {
+    if (!arquivo.startsWith(prefixo) || !arquivo.endsWith(ext)) continue;
+    const resto = arquivo.slice(prefixo.length, arquivo.length - ext.length);
+    if (resto === "") maior = Math.max(maior, 1);
+    else if (/^_\d+$/.test(resto)) maior = Math.max(maior, Number(resto.slice(1)));
   }
-  return candidato(`_${Date.now()}`);
+  return maior === -1 ? candidato("") : candidato(`_${maior + 1}`);
 }
 
 /** Data/hora atual no formato usado no nome dos arquivos de backup. */

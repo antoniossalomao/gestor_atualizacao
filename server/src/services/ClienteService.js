@@ -30,6 +30,11 @@ class ClienteService {
     return this.db.clientes.names();
   }
 
+  /** Ver ClienteRepository.semSistema. */
+  semSistema() {
+    return this.db.clientes.semSistema();
+  }
+
   opcoesPorCodigo() {
     return this.db.clientes.opcoesPorCodigo();
   }

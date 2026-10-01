@@ -26,7 +26,9 @@ export class BackupsAdmin extends View {
       ${cabecalhoSecao({
         titulo: "Backups e recuperação",
         descricao: "Cópias automáticas do banco, conferência de integridade e restauração do sistema.",
-        acoes: html`<a class="btn" href="/api/backups/atual/download" download>${iconeHtml("download")} Baixar o banco de agora</a>`,
+        acoes: html`
+          <a class="btn" href="/api/backups/atual/download" download>${iconeHtml("download")} Baixar o banco de agora</a>
+          <button type="button" class="btn btn--accent" data-action="fazer-copia">${iconeHtml("backups")} Fazer cópia agora</button>`,
       })}
       <div class="admin-grade-vertical">
         <div data-role="retencao"></div>
@@ -46,6 +48,8 @@ export class BackupsAdmin extends View {
     // que vêm do servidor. Feita à mão, a tela aceitava 1 e 2 cópias, que o
     // servidor recusa (mínimo 3), e só dizia isso depois do clique.
     this.retencao = new RetencaoBackups(this.container.querySelector('[data-role="retencao"]'), this.api, this.ctx);
+
+    this.container.querySelector('[data-action="fazer-copia"]').addEventListener("click", (e) => this._fazerCopia(e.currentTarget));
 
     this.conteudo.addEventListener("click", (e) => {
       const botao = e.target.closest('[data-action="restaurar"]');
@@ -87,6 +91,29 @@ export class BackupsAdmin extends View {
       corpo.appendChild(tr);
     }
     this.conteudo.replaceChildren(tabela);
+  }
+
+  /**
+   * Antes de uma importação grande ou de reclassificar sistemas, a última
+   * cópia automática pode ser de semanas atrás (ela só é feita quando o
+   * servidor inicia).
+   * @param {HTMLButtonElement} botao
+   */
+  async _fazerCopia(botao) {
+    const liberar = marcarOcupado(botao);
+    try {
+      const copia = await this.api.post("/backups");
+      if (copia.integro === false) avisoRapido.erro(`Cópia ${copia.label || copia.arquivo} feita, mas falhou na verificação de integridade.`);
+      else avisoRapido.sucesso(`Cópia ${copia.label || copia.arquivo} feita e conferida.`);
+      // A faixa de pendências da Administração pode estar dizendo "Nenhuma
+      // cópia": ela confere de novo na hora, sem esperar o minuto dela.
+      document.dispatchEvent(new CustomEvent("administracao:conferir"));
+      await this.refresh();
+    } catch (err) {
+      Modal.alert("Não foi possível fazer a cópia", mensagem(err), "error");
+    } finally {
+      liberar();
+    }
   }
 
   destroy() {
@@ -160,7 +187,7 @@ class RetencaoBackups extends FormularioRegras {
       <form class="card secao-card admin-form" data-role="form" novalidate>
         ${tituloCartao({
           titulo: "Política de retenção",
-          descricao: "Uma cópia é feita automaticamente toda vez que o servidor inicia.",
+          descricao: "Uma cópia é feita sozinha toda vez que o servidor inicia; \"Fazer cópia agora\" entra na mesma conta.",
         })}
         ${linhaRegraNumero({
           nome: "backupsManter",
