@@ -23,7 +23,7 @@ const path = require("node:path");
 const os = require("node:os");
 const bcrypt = require("bcryptjs");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AuthService } = require("../src/services/AuthService");
 
@@ -31,7 +31,7 @@ const SENHA = "senha-de-teste-123";
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-auth-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const auth = new AuthService(db, new HistoricoService(db));
   const cleanup = () => {
     try {

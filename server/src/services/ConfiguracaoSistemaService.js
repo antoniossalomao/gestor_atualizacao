@@ -21,7 +21,7 @@ const TOKEN_DE_EXEMPLO = "troque-por-um-token-longo-e-aleatorio";
  */
 class ConfiguracaoSistemaService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} [historico]
    * @param {{tokenAgentes?: string}} [opcoes] a AGENT_API_TOKEN do .env, só
    *   para dizer à tela se ela está configurada -- o valor em si nunca sai

@@ -9,7 +9,7 @@ const { VERSAO_PAINEL } = require("../config/constantes");
 class SaudeService {
   /**
    * @param {{
-   *   db: import('../database/Database').Database,
+   *   db: import("../database/BancoDeDados").BancoDeDados,
    *   backups: import('./BackupService').BackupService,
    *   versoes: import('./VersaoService').VersaoService,
    * }} options

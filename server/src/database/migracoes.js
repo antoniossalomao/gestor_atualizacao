@@ -9,7 +9,7 @@ const { SISTEMA_SUPORTE_BREDAS } = require("../config/constantes");
  * estava.
  *
  * Até a versão 0 o esquema crescia só com `ALTER TABLE ADD COLUMN` em
- * try/catch, repetido a cada boot (ver Database._esquemaLegado). Isso serve
+ * try/catch, repetido a cada boot (ver BancoDeDados._esquemaLegado). Isso serve
  * para acrescentar coluna, mas não para MOVER dados de uma coluna para uma
  * tabela e apagar a coluna -- que é o que a migração 1 faz. Mudança nova de
  * esquema entra aqui, como a próxima versão, nunca de volta no legado.

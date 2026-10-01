@@ -10,7 +10,7 @@
  * (`iniciarAparencia`, alguns milissegundos depois) -- não há tabela nem toast
  * na tela ainda.
  *
- * É um arquivo, e não um <script> inline, para a CSP do Server.js poder
+ * É um arquivo, e não um <script> inline, para a CSP do Servidor.js poder
  * recusar script-src inline: um inline exigiria "unsafe-inline", que anula
  * boa parte da proteção contra XSS.
  */

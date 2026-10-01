@@ -9,7 +9,7 @@ const { ErroDeValidacao, ErroNaoEncontrado, ErroDeConflito } = require("../share
  */
 class AgendamentoService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
    */
   /**

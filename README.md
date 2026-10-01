@@ -151,7 +151,7 @@ package.json           scripts do projeto inteiro (test, check, start) -- ver "C
 
 server/                backend (Express + SQLite via better-sqlite3)
   server.js              ponto de entrada: só lê o .env e manda o Server subir
-  src/Server.js          classe raiz: abre o banco, monta tudo, liga no Express
+  src/Servidor.js          classe raiz: abre o banco, monta tudo, liga no Express
   src/routes/            o mapa de URLs -- o único lugar que sabe qual caminho vai pra qual controller
   src/controllers/       rotas HTTP -- só traduzem requisição em chamada de serviço
   src/services/          regras de negócio
@@ -546,7 +546,7 @@ exigiu nenhuma mudança de rota.
 **O que mudou de fato no código, por causa do endurecimento de CSP feito
 junto (não das majors em si):** o script inline de tema no `<head>` de
 `client/index.html` foi extraído para `client/js/temaInicial.js`, e
-`Server.js`/`exigirAgente.js` ganharam uma CSP sob medida e comparação
+`Servidor.js`/`exigirAgente.js` ganharam uma CSP sob medida e comparação
 de token em tempo constante — ver histórico do git para o antes/depois.
 
 **Deixado de fora, de propósito:** a vulnerabilidade restante do

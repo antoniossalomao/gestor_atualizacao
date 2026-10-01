@@ -37,7 +37,7 @@ const SITUACOES = { concluido: "Concluído", agendado: "Já agendado", pendente:
  */
 class CampanhaService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
    */
   constructor(db, historico) {

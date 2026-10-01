@@ -9,7 +9,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { VersaoService } = require("../src/services/VersaoService");
 const { SaudeService } = require("../src/services/SaudeService");
@@ -17,7 +17,7 @@ const { SaudeService } = require("../src/services/SaudeService");
 function criarAmbiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-saude-"));
   const dbPath = path.join(tmpDir, "gestao.db");
-  const db = new Database(dbPath);
+  const db = new BancoDeDados(dbPath);
   const versoes = new VersaoService(db, new HistoricoService(db));
   const cleanup = () => {
     try {
@@ -86,7 +86,7 @@ test("Saúde Operacional do Sistema - SaudeService", async (t) => {
   }
 });
 
-test("Database - as perguntas de saúde ficam dentro de database/", async (t) => {
+test("BancoDeDados - as perguntas de saúde ficam dentro de database/", async (t) => {
   const env = criarAmbiente();
   try {
     await t.test("verificarIntegridade devolve \"ok\" num banco íntegro", () => {

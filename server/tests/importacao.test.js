@@ -15,8 +15,8 @@ const path = require("node:path");
 const os = require("node:os");
 const ExcelJS = require("exceljs");
 
-const { Database } = require("../src/database/Database");
-const { Server } = require("../src/Server");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
+const { Servidor } = require("../src/Servidor");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AtualizacaoService } = require("../src/services/AtualizacaoService");
 
@@ -31,7 +31,7 @@ async function planilha(linhas) {
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-import-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const servico = new AtualizacaoService(db, new HistoricoService(db), { notifyAtualizacao: async () => {} });
   db.clientes.insert("", "Mercado Central", "Araxá", [db.sistemas.resolver("B_NFe").id], "");
   const cleanup = () => {
@@ -169,7 +169,7 @@ test("Importação - erros de arquivo e de coluna", async (t) => {
 
 test("Importação - permissões da prévia e da importação", async (t) => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-import-http-"));
-  const server = new Server({ port: 0, dbPath: path.join(tmpDir, "gestao.db"), sessionSecret: "x", sessionSecure: false, agentApiToken: "t" });
+  const server = new Servidor({ port: 0, dbPath: path.join(tmpDir, "gestao.db"), sessionSecret: "x", sessionSecure: false, agentApiToken: "t" });
   await server.start();
   const base = `http://127.0.0.1:${server.httpServer.address().port}/api`;
   t.after(async () => {

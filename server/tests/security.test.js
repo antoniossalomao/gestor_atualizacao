@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { AuthService } = require("../src/services/AuthService");
 const { BackupService } = require("../src/services/BackupService");
 const { VersaoService } = require("../src/services/VersaoService");
@@ -14,7 +14,7 @@ const { exigirPapel } = require("../src/middlewares/exigirPapel");
 function criarAmbienteTeste() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-test-"));
   const dbPath = path.join(tmpDir, "gestao.db");
-  const db = new Database(dbPath);
+  const db = new BancoDeDados(dbPath);
   const historico = new HistoricoService(db);
   const auth = new AuthService(db, historico);
   const backups = new BackupService(db, historico);

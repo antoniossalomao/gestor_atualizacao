@@ -11,12 +11,12 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Server } = require("../src/Server");
+const { Servidor } = require("../src/Servidor");
 
 /** Sobe o servidor na porta 0 (o SO escolhe uma livre) e devolve a base URL. */
 async function subirServidor() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-routing-"));
-  const server = new Server({
+  const server = new Servidor({
     port: 0,
     dbPath: path.join(tmpDir, "gestao.db"),
     sessionSecret: "segredo-de-teste",

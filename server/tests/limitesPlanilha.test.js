@@ -17,8 +17,8 @@ const os = require("node:os");
 const zlib = require("node:zlib");
 const ExcelJS = require("exceljs");
 
-const { Database } = require("../src/database/Database");
-const { Server } = require("../src/Server");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
+const { Servidor } = require("../src/Servidor");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AtualizacaoService } = require("../src/services/AtualizacaoService");
 const { contarLinhasXlsx } = require("../src/services/contarLinhasXlsx");
@@ -45,7 +45,7 @@ function linhasValidas(n) {
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-limites-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const servico = new AtualizacaoService(db, new HistoricoService(db), { notifyAtualizacao: async () => {} });
   db.clientes.insert("", "Mercado Central", "Araxá", [db.sistemas.resolver("B_NFe").id], "");
   const cleanup = () => {
@@ -157,7 +157,7 @@ test("Exportação - limite de linhas e filtros", async (t) => {
 
 test("Upload de planilha - recusas do multer respondem com o motivo, não 'Erro interno'", async (t) => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-upload-"));
-  const server = new Server({ port: 0, host: "127.0.0.1", dbPath: path.join(tmpDir, "gestao.db"), sessionSecret: "segredo-de-teste", sessionSecure: false });
+  const server = new Servidor({ port: 0, host: "127.0.0.1", dbPath: path.join(tmpDir, "gestao.db"), sessionSecret: "segredo-de-teste", sessionSecure: false });
   await server.start();
   t.after(async () => {
     await server.stop();

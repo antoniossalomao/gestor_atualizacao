@@ -16,7 +16,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { ConfiguracaoSistemaService, TOKEN_DE_EXEMPLO } = require("../src/services/ConfiguracaoSistemaService");
 const { AgendamentoService } = require("../src/services/AgendamentoService");
@@ -24,7 +24,7 @@ const { AtualizacaoService } = require("../src/services/AtualizacaoService");
 const { NotificacaoService } = require("../src/services/NotificacaoService");
 const { AlertaAgenteService } = require("../src/services/AlertaAgenteService");
 const { REGRAS, validarRegra, converterRegra } = require("../src/config/regrasEquipe");
-const { Server } = require("../src/Server");
+const { Servidor } = require("../src/Servidor");
 
 const ADMIN = { id: 1, nome: "Admin", role: "admin" };
 const OPERADOR = { id: 2, nome: "Operador", role: "operador" };
@@ -32,7 +32,7 @@ const WEBHOOK = "https://discord.com/api/webhooks/123/segredo-do-canal";
 
 function ambiente(opcoes = {}) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-regras-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const historico = new HistoricoService(db);
   const regras = new ConfiguracaoSistemaService(db, historico, opcoes);
   const cleanup = () => {
@@ -290,12 +290,12 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-regras-bkp-"));
     const dbPath = path.join(tmpDir, "gestao.db");
     try {
-      let db = new Database(dbPath);
+      let db = new BancoDeDados(dbPath);
       new ConfiguracaoSistemaService(db, new HistoricoService(db)).atualizar(ADMIN, { backupsManter: 3 });
       db.conn.close();
       // Cada abertura de um banco que já existia faz uma cópia e poda as antigas.
       for (let i = 0; i < 6; i++) {
-        db = new Database(dbPath);
+        db = new BancoDeDados(dbPath);
         db.conn.close();
       }
       const pastaBackups = fs.readdirSync(tmpDir, { withFileTypes: true }).find((e) => e.isDirectory() && /backup/i.test(e.name));
@@ -345,7 +345,7 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
 
 test("Regras - rotas HTTP", async (t) => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-regras-http-"));
-  const server = new Server({
+  const server = new Servidor({
     port: 0,
     dbPath: path.join(tmpDir, "gestao.db"),
     sessionSecret: "segredo-de-teste",

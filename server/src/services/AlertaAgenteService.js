@@ -15,7 +15,7 @@ const SITUACOES_RUINS = new Set(["offline", "erro", "pendencias", "aguardando_au
  */
 class AlertaAgenteService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./VersaoService').VersaoService} versaoService
    * @param {import('./NotificacaoService').NotificacaoService} notifications
    * @param {import('./ConfiguracaoSistemaService').ConfiguracaoSistemaService} configuracaoSistema
@@ -86,7 +86,7 @@ class AlertaAgenteService {
 
   /**
    * Desliga e liga de novo com o webhook e o intervalo de AGORA. Chamado
-   * quando essas regras mudam na tela Administração (ver Server.js). Sem
+   * quando essas regras mudam na tela Administração (ver Servidor.js). Sem
    * isto, configurar o webhook com o servidor já no ar não ligava o alerta
    * até o próximo reinício -- `start()` tinha saído cedo, sem webhook.
    */

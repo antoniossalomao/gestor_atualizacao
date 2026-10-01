@@ -50,7 +50,7 @@ const SISTEMAS_CONHECIDOS = [
 // Nome do sistema marcado automaticamente num cliente quando uma
 // atualizacao registra a observacao correspondente -- ver
 // AtualizacaoService._marcarSuporteBredasSeNecessario e
-// Database._backfillSuporteBredas.
+// BancoDeDados._backfillSuporteBredas.
 const SISTEMA_SUPORTE_BREDAS = "Suporte Bredas";
 const OBS_SUPORTE_BREDAS = "adicionado o suporte bredas";
 

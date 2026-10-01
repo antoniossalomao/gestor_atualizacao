@@ -15,7 +15,7 @@ const NOME_MAX_LENGTH = 80;
  */
 class AuthService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
    */
   constructor(db, historico) {

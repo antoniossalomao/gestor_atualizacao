@@ -68,7 +68,7 @@ O critério não é cobertura: é **toda regra que, se quebrar, erra em silênci
 tem teste**. Permissão, validação de data, ordenação, paginação, roteamento,
 propagação de rename, normalização de nomes.
 
-Testes sobem um `Server`/`Database` de verdade num diretório temporário. Sem
+Testes sobem um `Server`/`BancoDeDados` de verdade num diretório temporário. Sem
 mock de banco. Dois detalhes que já custaram uma rodada vermelha:
 
 - `repositorio.list()` devolve `{ rows, total, page, pageSize }` — **não**

@@ -13,7 +13,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AtualizacaoService } = require("../src/services/AtualizacaoService");
 const { situacaoDoSistema, situacaoDoCliente, contaParaVersao } = require("../src/services/situacaoVersao");
@@ -115,7 +115,7 @@ test("situacaoDoCliente", async (t) => {
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-situacao-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const servico = new AtualizacaoService(db, new HistoricoService(db), { notifyAtualizacao: async () => {} });
   const id = (nome) => db.sistemas.resolver(nome).id;
   const cliente = (nome, sistemas) => db.clientes.insert("", nome, "Marília", sistemas.map(id), "");

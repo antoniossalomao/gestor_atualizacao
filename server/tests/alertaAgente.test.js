@@ -23,13 +23,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { AlertaAgenteService } = require("../src/services/AlertaAgenteService");
 const { ConfiguracaoSistemaService } = require("../src/services/ConfiguracaoSistemaService");
 
 function ambiente(situacaoInicial = "ok") {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-alerta-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
 
   const agente = { cnpj: "C001", empresa: "Mercado Central", situacao: situacaoInicial, ultimoDetalhe: "" };
   const versoes = { painel: () => ({ agentes: [agente] }) };

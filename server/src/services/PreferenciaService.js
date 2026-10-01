@@ -55,7 +55,7 @@ const FORMATOS = {
  * nao mexe em nada aqui.
  */
 class PreferenciaService {
-  /** @param {import('../database/Database').Database} db */
+  /** @param {import("../database/BancoDeDados").BancoDeDados} db */
   constructor(db) {
     this.db = db;
   }

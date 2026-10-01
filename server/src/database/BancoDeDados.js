@@ -22,7 +22,7 @@ const { MIGRACOES, criarVisoes } = require("./migracoes");
  * gestor/database.py -- unico lugar do programa que abre a conexao de
  * verdade; todo o resto fala com o banco atraves dos repositorios.
  */
-class Database {
+class BancoDeDados {
   /** @param {string} dbPath caminho do arquivo gestao.db */
   constructor(dbPath) {
     this.path = path.resolve(dbPath);
@@ -861,4 +861,4 @@ function timestamp() {
   );
 }
 
-module.exports = { Database };
+module.exports = { BancoDeDados };

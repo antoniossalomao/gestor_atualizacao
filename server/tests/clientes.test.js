@@ -18,7 +18,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { ClienteService } = require("../src/services/ClienteService");
 
@@ -26,7 +26,7 @@ const USUARIO = { id: 1, nome: "Teste" };
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-cli-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const service = new ClienteService(db, new HistoricoService(db));
   const cleanup = () => {
     try {
@@ -302,7 +302,7 @@ test("ClienteService - acessos remotos", async (t) => {
 
 test("Classificação do sistema: marcar como dependente do B_Vendas (A13)", () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-dependente-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   try {
     const service = new ClienteService(db, new HistoricoService(db));
     const nfce = db.sistemas.resolver("NFCe");

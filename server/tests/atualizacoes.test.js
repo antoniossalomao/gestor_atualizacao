@@ -18,7 +18,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AtualizacaoService } = require("../src/services/AtualizacaoService");
 const { ClienteService } = require("../src/services/ClienteService");
@@ -32,7 +32,7 @@ function salvarOficial(clientes, nome, data) {
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-atu-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const historico = new HistoricoService(db);
   // `notifications` de propósito ausente: o serviço chama `this.notifications?.`
   // com encadeamento opcional justamente para que uma notificação (ou a falta

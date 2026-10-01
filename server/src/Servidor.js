@@ -4,7 +4,7 @@ const express = require("express");
 const session = require("express-session");
 const helmet = require("helmet");
 
-const { Database } = require("./database/Database");
+const { BancoDeDados } = require("./database/BancoDeDados");
 const { ArmazemDeSessaoSqlite } = require("./database/ArmazemDeSessaoSqlite");
 const { HistoricoService } = require("./services/HistoricoService");
 const { AuthService } = require("./services/AuthService");
@@ -60,7 +60,7 @@ const NAO_SERVIR = [/^\/package(-lock)?\.json$/, /^\/tests(\/|$)/];
  * "App(tk.Tk)" tinha em gestor/main_window.py -- so que aqui nao existe
  * janela nenhuma, o "start()" e o que corresponde ao antigo "mainloop()".
  */
-class Server {
+class Servidor {
   /**
    * @param {{dbPath: string, port: number, host?: string, sessionSecret: string, sessionSecure: boolean, agentApiToken?: string, trustProxy?: boolean, ambiente?: Record<string, string|undefined>}} config
    *   `ambiente` (normalmente process.env) só serve para importar, uma vez, as
@@ -69,7 +69,7 @@ class Server {
    */
   constructor(config) {
     this.config = config;
-    this.db = new Database(config.dbPath);
+    this.db = new BancoDeDados(config.dbPath);
     this.app = express();
     this.app.locals.agentApiToken = config.agentApiToken;
     this._buildServices();
@@ -306,4 +306,4 @@ class Server {
   }
 }
 
-module.exports = { Server };
+module.exports = { Servidor };

@@ -10,7 +10,7 @@ const { SISTEMA_PRINCIPAL } = require("./situacaoVersao");
  */
 class ClienteService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
    */
   constructor(db, historico) {
@@ -113,7 +113,7 @@ class ClienteService {
    * Atualizações/Agendamentos, NÃO oferece "Desfazer": recriar um cliente
    * perde o id antigo e, com o cadastro de Acessos remotos, perde também as
    * credenciais de AnyDesk/Suporte Bredas daquele cliente (apagadas junto
-   * via ON DELETE CASCADE -- ver Database._migrate) -- um "desfazer" que
+   * via ON DELETE CASCADE -- ver BancoDeDados._migrate) -- um "desfazer" que
    * finge ter voltado tudo ao normal, mas silenciosamente perdeu senha de
    * acesso, seria pior que não ter Desfazer nenhum. Por isso a tela usa
    * confirmação antes, igual já fazia para excluir um cliente só.

@@ -14,8 +14,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
-const { Server } = require("../src/Server");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
+const { Servidor } = require("../src/Servidor");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AtualizacaoService } = require("../src/services/AtualizacaoService");
 const { AgendamentoService } = require("../src/services/AgendamentoService");
@@ -25,7 +25,7 @@ const USUARIO = { id: 1, nome: "Teste" };
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-campanhas-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const historico = new HistoricoService(db);
   const atualizacoes = new AtualizacaoService(db, historico, { notifyAtualizacao: async () => {} });
   const agenda = new AgendamentoService(db, historico);
@@ -226,7 +226,7 @@ test("Campanhas - validação", async (t) => {
 
 test("Campanhas - rotas e permissões", async (t) => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-campanhas-http-"));
-  const server = new Server({ port: 0, dbPath: path.join(tmpDir, "gestao.db"), sessionSecret: "segredo-de-teste", sessionSecure: false, agentApiToken: "token-de-teste" });
+  const server = new Servidor({ port: 0, dbPath: path.join(tmpDir, "gestao.db"), sessionSecret: "segredo-de-teste", sessionSecure: false, agentApiToken: "token-de-teste" });
   await server.start();
   const base = `http://127.0.0.1:${server.httpServer.address().port}/api`;
   t.after(async () => {

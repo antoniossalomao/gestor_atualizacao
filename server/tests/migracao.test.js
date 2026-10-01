@@ -15,7 +15,7 @@ const path = require("node:path");
 const os = require("node:os");
 const Sqlite3 = require("better-sqlite3");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { MIGRACOES } = require("../src/database/migracoes");
 
 /** Versão do esquema depois de todas as migrações. */
@@ -59,7 +59,7 @@ function bancoLegado() {
 
 function abrir() {
   const { tmpDir, arquivo } = bancoLegado();
-  const db = new Database(arquivo);
+  const db = new BancoDeDados(arquivo);
   const cleanup = () => {
     try {
       db.conn.close();
@@ -207,11 +207,11 @@ test("Migração 1 - vínculo com o cliente", async (t) => {
 test("Migração 1 - roda uma vez só", () => {
   const { tmpDir, arquivo } = bancoLegado();
   try {
-    const primeira = new Database(arquivo);
+    const primeira = new BancoDeDados(arquivo);
     const linhas = primeira.conn.prepare("SELECT COUNT(*) AS n FROM atualizacao_sistemas").get().n;
     primeira.conn.close();
 
-    const segunda = new Database(arquivo);
+    const segunda = new BancoDeDados(arquivo);
     try {
       assert.equal(segunda.conn.pragma("user_version", { simple: true }), VERSAO_ATUAL);
       assert.equal(segunda.conn.prepare("SELECT COUNT(*) AS n FROM atualizacao_sistemas").get().n, linhas, "nada duplicado ao reabrir");
@@ -252,7 +252,7 @@ test("Migração 3 - banco já existente recebe autoria sem perder dados", () =>
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-migr3-"));
   const arquivo = path.join(tmpDir, "gestao.db");
   try {
-    const inicial = new Database(arquivo);
+    const inicial = new BancoDeDados(arquivo);
     inicial.conn.prepare("INSERT INTO clientes (nome) VALUES (?)").run("Cliente existente");
     inicial.conn.prepare("UPDATE sistemas SET ultima_versao = ? WHERE nome = ?").run("24/09/2026", "B_Vendas");
     inicial.conn.close();
@@ -264,7 +264,7 @@ test("Migração 3 - banco já existente recebe autoria sem perder dados", () =>
     antigo.pragma("user_version = 2");
     antigo.close();
 
-    const migrado = new Database(arquivo);
+    const migrado = new BancoDeDados(arquivo);
     try {
       assert.equal(migrado.conn.pragma("user_version", { simple: true }), VERSAO_ATUAL);
       const colunas = migrado.conn.prepare("PRAGMA table_info(sistemas)").all().map((c) => c.name);
@@ -281,7 +281,7 @@ test("Migração 4 - banco na versão 3 ganha campanhas sem perder dados", () =>
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-migr4-"));
   const arquivo = path.join(tmpDir, "gestao.db");
   try {
-    const inicial = new Database(arquivo);
+    const inicial = new BancoDeDados(arquivo);
     inicial.conn.prepare("INSERT INTO clientes (nome) VALUES (?)").run("Cliente existente");
     inicial.conn.close();
 
@@ -290,7 +290,7 @@ test("Migração 4 - banco na versão 3 ganha campanhas sem perder dados", () =>
     antigo.pragma("user_version = 3");
     antigo.close();
 
-    const migrado = new Database(arquivo);
+    const migrado = new BancoDeDados(arquivo);
     try {
       assert.equal(migrado.conn.pragma("user_version", { simple: true }), VERSAO_ATUAL);
       const colunas = migrado.conn.prepare("PRAGMA table_info(campanhas)").all().map((c) => c.name);
@@ -300,7 +300,7 @@ test("Migração 4 - banco na versão 3 ganha campanhas sem perder dados", () =>
       assert.equal(migrado.conn.pragma("foreign_key_check").length, 0);
     } finally { migrado.conn.close(); }
     // Reabrir não roda a migração de novo (senão o CREATE TABLE falharia).
-    const reaberto = new Database(arquivo);
+    const reaberto = new BancoDeDados(arquivo);
     reaberto.conn.close();
   } finally { fs.rmSync(tmpDir, { recursive: true, force: true }); }
 });
@@ -309,7 +309,7 @@ test("Migração 6 - NFCe e Consignado M2 passam a atualizar junto com o B_Venda
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-migr6-"));
   const arquivo = path.join(tmpDir, "gestao.db");
   try {
-    const inicial = new Database(arquivo);
+    const inicial = new BancoDeDados(arquivo);
     // Os nomes gravados em produção (29/09/2026). O catálogo inicial traz
     // "NFCe" sem o "B_"; o de produção, "B_NFCe" -- a migração acha os dois.
     inicial.conn.prepare("INSERT INTO sistemas (nome, ativo) VALUES ('Consignado M2', 1)").run();
@@ -320,7 +320,7 @@ test("Migração 6 - NFCe e Consignado M2 passam a atualizar junto com o B_Venda
     antigo.pragma("user_version = 5");
     antigo.close();
 
-    const migrado = new Database(arquivo);
+    const migrado = new BancoDeDados(arquivo);
     try {
       assert.equal(migrado.conn.pragma("user_version", { simple: true }), VERSAO_ATUAL);
       const marcados = migrado.conn.prepare("SELECT nome FROM sistemas WHERE atualiza_com_principal = 1 ORDER BY nome").all().map((r) => r.nome);

@@ -21,11 +21,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-repo-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const cleanup = () => {
     try {
       db.conn.close();
@@ -240,7 +240,7 @@ test("AtualizacaoRepository - ordenação por coluna", async (t) => {
   }
 });
 
-test("Database.transacao - escritas de vários repositórios entram juntas ou não entram", async (t) => {
+test("BancoDeDados.transacao - escritas de vários repositórios entram juntas ou não entram", async (t) => {
   const env = ambiente();
   try {
     await t.test("se algo lança no meio, nada do que veio antes fica gravado", () => {

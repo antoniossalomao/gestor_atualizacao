@@ -18,7 +18,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AgendamentoService } = require("../src/services/AgendamentoService");
 const { OPCOES_STATUS } = require("../src/config/constantes");
@@ -29,7 +29,7 @@ const USUARIO = { id: 1, nome: "Teste" };
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-agenda-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const service = new AgendamentoService(db, new HistoricoService(db));
   const cleanup = () => {
     try {

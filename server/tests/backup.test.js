@@ -24,7 +24,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AuthService } = require("../src/services/AuthService");
 const { BackupService } = require("../src/services/BackupService");
@@ -33,7 +33,7 @@ const SENHA = "senha-de-teste-123";
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-bkp-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const historico = new HistoricoService(db);
   const auth = new AuthService(db, historico);
   const admin = { ...auth.setupAdmin({ nome: "Admin", usuario: "admin", senha: SENHA }), usuario: "admin" };

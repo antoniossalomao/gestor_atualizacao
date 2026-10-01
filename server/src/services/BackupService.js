@@ -6,7 +6,7 @@ const { ErroNaoEncontrado, ErroDeValidacao, ErroDePermissao } = require("../shar
  */
 class BackupService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
    * @param {import('../database/ArmazemDeSessaoSqlite').ArmazemDeSessaoSqlite} [sessionStore]
    */

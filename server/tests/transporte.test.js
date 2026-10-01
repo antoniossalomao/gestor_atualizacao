@@ -17,7 +17,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Server } = require("../src/Server");
+const { Servidor } = require("../src/Servidor");
 const { lerTransporte } = require("../src/config/transporte");
 
 test("lerTransporte - combinações do .env", async (t) => {
@@ -71,7 +71,7 @@ test("lerTransporte - combinações do .env", async (t) => {
 /** @param {{sessionSecure: boolean, trustProxy?: boolean}} opcoes */
 async function subirServidor({ sessionSecure, trustProxy }) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-transporte-"));
-  const server = new Server({
+  const server = new Servidor({
     port: 0,
     host: "127.0.0.1",
     dbPath: path.join(tmpDir, "gestao.db"),

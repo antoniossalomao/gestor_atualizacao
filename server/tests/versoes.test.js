@@ -22,7 +22,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { VersaoService } = require("../src/services/VersaoService");
 
@@ -30,7 +30,7 @@ const ADMIN = { id: 1, nome: "Admin", role: "admin" };
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-ver-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const service = new VersaoService(db, new HistoricoService(db));
   const cleanup = () => {
     try {

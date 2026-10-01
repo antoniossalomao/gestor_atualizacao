@@ -19,13 +19,13 @@ const path = require("node:path");
 const os = require("node:os");
 const ExcelJS = require("exceljs");
 
-const { Server } = require("../src/Server");
+const { Servidor } = require("../src/Servidor");
 
 const SENHA = "senha-de-teste-123";
 
 async function subirServidor() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-csrf-"));
-  const server = new Server({
+  const server = new Servidor({
     port: 0,
     host: "127.0.0.1",
     dbPath: path.join(tmpDir, "gestao.db"),

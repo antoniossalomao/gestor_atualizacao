@@ -343,7 +343,7 @@ Sem build step, bundler ou transpilação em nenhum dos dois lados.
 rotas (routes/)  ->  controllers/  ->  services/  ->  database/ (repositórios)  ->  SQLite
 ```
 
-- **`database/`** — uma classe `Database` (conexão, migrações, backup automático) e um
+- **`database/`** — uma classe `BancoDeDados` (conexão, migrações, backup automático) e um
   `Repository` por tabela. **Só aqui existe SQL** — nenhuma outra camada monta uma query
   diretamente.
 - **`services/`** — regras de negócio (validação, propagação de rename, cálculo dos indicadores do
@@ -353,7 +353,7 @@ rotas (routes/)  ->  controllers/  ->  services/  ->  database/ (repositórios) 
   a resposta.
 - **`routes/index.js`** — só o mapeamento verbo HTTP + caminho → método do controller. Rotas de
   `/api/auth/...` não passam pelo middleware `exigirLogin`; todo o resto passa.
-- **`Server.js`** — classe raiz: cria o `Database`, monta serviços/controllers (injeção de
+- **`Servidor.js`** — classe raiz: cria o `BancoDeDados`, monta serviços/controllers (injeção de
   dependência simples, na mão) e configura o Express.
 
 **Por que `better-sqlite3` (síncrono) e não `sqlite3`/`node:sqlite`:** os métodos de repositório
@@ -614,7 +614,7 @@ aparece como "em andamento" em vez de "em dia"/"desatualizado". Aliases em ingl�
 
 #### Migrações de banco desta revisão
 
-Todas idempotentes, rodam a cada boot (`Database._migrate`). `versoes_atualizador` ganhou
+Todas idempotentes, rodam a cada boot (`BancoDeDados._migrate`). `versoes_atualizador` ganhou
 `sistema`, `substituido_em`, `substituido_por`, `tamanho_bytes`; `atualizador_logs` ganhou
 `sistema`, `versao`, `versao_anterior`, `duracao_ms`, `maquina`; índices
 `idx_versoes_sistema`/`idx_atualizador_logs_cnpj`. Um backfill automático deduziu o `sistema` das
@@ -644,7 +644,7 @@ usava os padrões que mudaram.
 
 O que mudou de fato no código, por causa do endurecimento de CSP feito junto: o script inline de
 tema no `<head>` de `client/index.html` foi extraído para `client/js/temaInicial.js`, e
-`Server.js`/`exigirAgente.js` ganharam uma CSP sob medida e comparação de token em tempo
+`Servidor.js`/`exigirAgente.js` ganharam uma CSP sob medida e comparação de token em tempo
 constante.
 
 Deixado de fora de propósito: a vulnerabilidade restante do `npm audit` é em `uuid`, puxada por
@@ -1291,7 +1291,7 @@ pequena: dezenas de milhares de linhas, poucos usuários simultâneos, escrita e
 requisito de alta concorrência de escrita nem de replicação.
 
 **Decisão.** Continuar com SQLite, acessado por `better-sqlite3` — um driver **síncrono**. O
-schema é criado e evoluído em código, por `src/database/Database.js`, na subida do servidor. Não
+schema é criado e evoluído em código, por `src/database/BancoDeDados.js`, na subida do servidor. Não
 há ferramenta de migração externa.
 
 **Consequências.**
@@ -1367,13 +1367,13 @@ serviço importa outro diretamente. Nenhum módulo exporta instância pronta —
 
 **Consequências.**
 
-*Ganhos:* existe um arquivo que mostra o sistema inteiro — ler `Server.js` de cima a baixo revela
+*Ganhos:* existe um arquivo que mostra o sistema inteiro — ler `Servidor.js` de cima a baixo revela
 todos os componentes e quem depende de quem, o que nenhum container oferece; testar é instanciar
 com o que se quiser no lugar (os testes sobem um `Server` completo com banco temporário justamente
 porque montar é barato); ciclo de dependência vira erro na hora de escrever, não em tempo de
 execução; zero mágica — nenhuma resolução por nome, nenhum decorator, nenhum `reflect-metadata`.
 
-*Custos aceitos:* acrescentar um serviço exige editar `Server.js` (é uma linha, e o incômodo é
+*Custos aceitos:* acrescentar um serviço exige editar `Servidor.js` (é uma linha, e o incômodo é
 proporcional ao custo real de acrescentar um serviço, o que é saudável); a ordem de construção
 dentro de `_buildServices()` importa (está explícito no código); uma instância de `BackupService`
 acaba criada duas vezes — inofensivo, mas é o tipo de duplicação que um container evitaria de graça.
@@ -1427,7 +1427,7 @@ para arquivos antigos, em anotações fora do repositório, quebraram.
 **Efeito colateral valioso:** a migração revelou um bug real — um caminho de asset inexistente
 respondia 200 com o `index.html`, porque o fallback de SPA capturava qualquer caminho fora de
 `/api`; o navegador só reclamava depois, com uma mensagem de MIME type que manda procurar no lugar
-errado. Corrigido em `Server.js` e `middlewares/rotaNaoEncontrada.js`, com teste de regressão em
+errado. Corrigido em `Servidor.js` e `middlewares/rotaNaoEncontrada.js`, com teste de regressão em
 `tests/routing.test.js`.
 
 **Alternativas consideradas.** Manter `core/` e só criar subpastas dentro dela — descartado:
@@ -1585,7 +1585,7 @@ aplicada fica em `PRAGMA user_version`. Cada migração roda uma vez, em ordem,
 numa transação. Antes de aplicar qualquer migração pendente, o servidor copia o
 banco para `backups/` e confere a cópia com `integrity_check`; se a cópia falhar,
 a subida é interrompida. O bloco antigo de `ALTER TABLE` virou
-`Database._esquemaLegado` e só roda em banco ainda na versão 0.
+`BancoDeDados._esquemaLegado` e só roda em banco ainda na versão 0.
 
 **Migração 1:**
 
@@ -2967,7 +2967,7 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 | Clientes/Consulta | `ClientesView.js`, `ConsultaView.js`, `AcessosModal.js`, `domain/matrizVersoes.js` |
 | Administração | `AdministracaoView.js`, `views/administracao/`, `templates/administracao.js` |
 | Configurações | `ConfiguracoesView.js`, `views/configuracoes/ajustes.js`, `ContaConfig.js`, `app/aparencia.js` |
-| Regras/banco | `server/src/config/regrasEquipe.js`, `ConfiguracaoSistemaService.js`, `Database.js`, migrações atuais |
+| Regras/banco | `server/src/config/regrasEquipe.js`, `ConfiguracaoSistemaService.js`, `BancoDeDados.js`, migrações atuais |
 | Campanhas | `CampanhasView.js`, `templates/campanhas.js`, `domain/campanhas.js`, `CampanhaService.js`, `CampanhaRepository.js`, migração 4 |
 | Importação | `components/ImportacaoModal.js`, `templates/importacao.js`, `AtualizacaoService.previaImportacao/importXlsx` |
 | Testes | `client/tests/`, `server/tests/` e navegador com dados descartáveis |

@@ -22,7 +22,7 @@ npm run dev              # sobe com reinício automático em http://localhost:30
 
 Na primeira vez, com o banco vazio, o próprio app pede para criar a conta de
 administrador inicial. Não existe seed nem migration a rodar à mão: o schema é
-criado e evoluído por `src/database/Database.js` e `src/database/migracoes.js` na subida.
+criado e evoluído por `src/database/BancoDeDados.js` e `src/database/migracoes.js` na subida.
 
 **Nunca aponte o `DB_PATH` do seu ambiente de desenvolvimento para o
 `gestao.db` de produção.** Use uma cópia. Vários testes e telas gravam de
@@ -38,7 +38,7 @@ npm run test:client       # só o front-end
 node --test server/tests/clientes.test.js   # um arquivo só, ao investigar
 ```
 
-Os testes do servidor sobem um `Database` -- e, em `routing.test.js`, um
+Os testes do servidor sobem um `BancoDeDados` -- e, em `routing.test.js`, um
 `Server` completo numa porta efêmera -- com um banco SQLite descartável num
 diretório temporário. **Não há mock de banco.** Não precisam de rede nem de
 banco pré-existente: se um deles falhar, é o código que quebrou.
@@ -170,7 +170,7 @@ Três coisas quebram silenciosamente e caro:
 2. **Uma rota nova sem `exigirLogin`/`exigirPapel`.** O padrão é fechado: as
    proteções são montadas sobre a subárvore inteira em `routes/index.js`.
    Confira lá ao acrescentar rota.
-3. **HTML montado com dado do usuário sem `escapeHtml`.** A CSP em `Server.js`
+3. **HTML montado com dado do usuário sem `escapeHtml`.** A CSP em `Servidor.js`
    já recusa script inline, mas isso é a segunda linha de defesa, não a
    primeira.
 

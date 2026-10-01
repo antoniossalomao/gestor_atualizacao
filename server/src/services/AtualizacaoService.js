@@ -23,7 +23,7 @@ const MS_POR_DIA = 24 * 60 * 60 * 1000;
  */
 class AtualizacaoService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
    * @param {import('./NotificacaoService').NotificacaoService} [notifications]
    */

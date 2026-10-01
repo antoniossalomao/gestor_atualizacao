@@ -19,7 +19,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Server } = require("../src/Server");
+const { Servidor } = require("../src/Servidor");
 
 const SENHA = "senha-de-teste-123";
 const CHROME_WINDOWS =
@@ -28,7 +28,7 @@ const FIREFOX_LINUX = "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 
 
 async function subirServidor() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-conta-"));
-  const server = new Server({
+  const server = new Servidor({
     port: 0,
     dbPath: path.join(tmpDir, "gestao.db"),
     sessionSecret: "segredo-de-teste",
