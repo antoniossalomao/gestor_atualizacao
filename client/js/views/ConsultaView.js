@@ -198,6 +198,15 @@ export class ConsultaView extends View {
       <section class="client-hub-panel" data-client-panel="versoes" hidden><div data-role="versao-matriz"></div></section>
       <section class="client-hub-panel" data-client-panel="timeline" hidden><div class="client-timeline" data-role="ultima"></div></section>
     `;
+    this._desenharCabecalho(cliente);
+    this._desenharResumo(cliente, historico);
+    this._desenharAcessos(acessos);
+    this._ligarAbasDaFicha();
+    this._desenharMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas);
+    this._desenharLinhaDoTempo(cliente, historico);
+  }
+
+  _desenharCabecalho(cliente) {
     this.detailBox.querySelector(".consulta-detail__name").textContent = cliente.nome;
 
     // Cabeçalho com código, cidade e grupo (quando preenchido). CNPJ removido da ficha.
@@ -209,7 +218,10 @@ export class ConsultaView extends View {
     this.detailBox.querySelector(".consulta-detail__subtitle").textContent =
       subtitulos.length > 0 ? subtitulos.join(" · ") : "Sem informações cadastrais adicionais";
 
-    // Subaba Resumo & Cadastro: resumo compacto + dados cadastrais
+  }
+
+  /** Subaba Resumo & Cadastro: resumo compacto + dados cadastrais. */
+  _desenharResumo(cliente, historico) {
     const resumoPanel = this.detailBox.querySelector('[data-role="resumo-panel"]');
     const ultimaData = historico?.[0]?.data || null;
     const tempoUltima = ultimaData ? haQuantoTempo(ultimaData) : "";
@@ -241,7 +253,9 @@ export class ConsultaView extends View {
       itemDeInformacao("Sistemas contratados", (cliente.sistemas || []).join(", "), true)
     );
     resumoPanel.appendChild(cadastro);
+  }
 
+  _desenharAcessos(acessos) {
     const acessosBox = this.detailBox.querySelector('[data-role="acessos"]');
     if (acessos.length === 0) acessosBox.appendChild(estadoVazio({ titulo: "Nenhum acesso remoto", descricao: "Cadastre os acessos na tela Clientes.", icone: "acessos" }));
     for (const acesso of acessos) {
@@ -257,6 +271,9 @@ export class ConsultaView extends View {
       acessosBox.appendChild(card);
     }
 
+  }
+
+  _ligarAbasDaFicha() {
     this.detailBox.querySelector(".client-hub-tabs").addEventListener("click", (e) => {
       const botao = e.target.closest("[data-client-tab]");
       if (!botao) return;
@@ -264,9 +281,9 @@ export class ConsultaView extends View {
       for (const painel of this.detailBox.querySelectorAll("[data-client-panel]")) painel.hidden = painel.dataset.clientPanel !== botao.dataset.clientTab;
     });
 
-    // Matriz Comparativa de Versões e Telemetria de Agentes
-    this._desenharMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas);
+  }
 
+  _desenharLinhaDoTempo(cliente, historico) {
     const caixa = this.detailBox.querySelector('[data-role="ultima"]');
     if (!historico || historico.length === 0) {
       caixa.appendChild(
