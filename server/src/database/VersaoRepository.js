@@ -58,13 +58,13 @@ class VersaoRepository extends BaseRepository {
   }
 
   insert(data) {
-    const result = this.conn
+    const insercao = this.conn
       .prepare(
         `INSERT INTO ${this.table} (sistema, versao, status, script_url, pacotes_json, observacoes, tamanho_bytes, alcance, codigos_clientes_json, criado_em, criado_por)
          VALUES (@sistema, @versao, 'rascunho', @scriptUrl, @pacotesJson, @observacoes, @tamanhoBytes, @alcance, @codigosClientesJson, @criadoEm, @criadoPor)`
       )
       .run(data);
-    return this.find(result.lastInsertRowid);
+    return this.find(insercao.lastInsertRowid);
   }
 
   update(id, data) {

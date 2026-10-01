@@ -379,11 +379,11 @@ app/View.js       -- classe base: listeners rastreados (removidos no destroy()) 
                      stale-while-revalidate
 app/*.js          -- o esqueleto: Roteador, preferencias, CacheSwr, tema, aparencia, notificacoesDoSistema, atalhos
 components/*.js   -- peças de UI reaproveitáveis: TabelaOrdenavel, Paginacao, Autocomplete, Modal,
-                     Toast, PaletaDeComandos (Ctrl+K), estadoVazio, ConexaoBanner, MenuConta,
+                     AvisosRapidos, PaletaDeComandos (Ctrl+K), estadoVazio, ConexaoBanner, MenuConta,
                      MenuNotificacoes (o sino do cabeçalho); e os pequenos ajudantes que
                      precisam do DOM: elemento (`el`), botaoOcupado, arquivos (baixar/escolher),
                      areaDeTransferencia (copiar), detalhesRetorno
-components/charts -- GraficoDeBarras, GraficoDeLinhas (SVG escrito à mão)
+components/graficos -- GraficoDeBarras, GraficoDeLinhas (SVG escrito à mão)
 domain/*.js       -- vocabulário do negócio, SEM tocar no DOM: agenteStatus, agenteReport,
                      agenteLabels, relatorio, pessoa, notificacoes. É o que dá para testar fora
                      do navegador
@@ -912,7 +912,7 @@ desliga várias vezes ao dia; os outros dezesseis seguem só em Configurações.
 **Atalhos e avisos.** `Ctrl + B` alterna a barra lateral pelo mesmo `_definirSidebar` que o painel
 de Configurações usa (uma preferência, um caminho), e cada aba passou a mostrar seu `Alt+N` num
 `<kbd>` que ocupa o espaço o tempo todo e só muda de opacidade — aparecer do nada empurraria o
-rótulo e mudaria a largura da aba debaixo do cursor. No `Toast`, a duração original passou a ser
+rótulo e mudaria a largura da aba debaixo do cursor. No `AvisosRapidos`, a duração original passou a ser
 guardada na entrada ativa: `mouseleave` reagendava a saída com `DURACAO_MS`, encurtando a janela do
 toast de "Desfazer" (`DURACAO_ACAO_MS`) justamente para quem levou o mouse até ele; `focusin`/
 `focusout` entraram pelo mesmo motivo, já que o botão "Desfazer" é alcançável por Tab.
@@ -1503,7 +1503,7 @@ ferramenta para manter atualizada.
 lia uma propriedade que `VersaoService` nunca teve, e como `fs.existsSync(undefined)` devolve
 `false` em vez de lançar, o painel de Saúde reportava "0 pacotes, 0 bytes" para sempre, sem erro no
 log (o teste que existia não pegava, porque o dublê de `versoes` declarava a propriedade que o
-objeto real não implementava); quatro anotações JSDoc desatualizadas (`View.js`, `Toast.js`,
+objeto real não implementava); quatro anotações JSDoc desatualizadas (`View.js`, `AvisosRapidos.js`,
 `TabelaOrdenavel.js`, `ConfiguracoesPanel.js`); uma subtração de datas que só funcionava por coerção
 implícita, e duas comparações que dependiam do mesmo tipo de regra tácita.
 

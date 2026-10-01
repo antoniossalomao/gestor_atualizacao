@@ -641,8 +641,8 @@ export class VersoesView extends View {
 
     button.disabled = true;
     try {
-      const result = await this.api.post(`/versoes/${item.id}/publicar`);
-      const replaced = result?.substituidas || [];
+      const resposta = await this.api.post(`/versoes/${item.id}/publicar`);
+      const replaced = resposta?.substituidas || [];
       avisoRapido.sucesso(
         replaced.length ? `Versão ${item.versao} no ar. A ${replaced[0].versao} foi substituída.` : `Versão ${item.versao} publicada.`
       );

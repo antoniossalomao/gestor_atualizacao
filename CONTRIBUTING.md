@@ -115,7 +115,7 @@ routes/  ->  controllers/  ->  services/  ->  database/
 
 Regra prática para `shared/`: um arquivo só entra ali quando já tem dois
 consumidores em camadas diferentes. Enquanto tiver um só, ele mora junto de
-quem usa. (`errors.js` está ali porque serviços, controllers e middlewares
+quem usa. (`erros.js` está ali porque serviços, controllers e middlewares
 todos lançam e capturam esses tipos.)
 
 ### Front-end (`client/js/`)

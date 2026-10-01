@@ -1,6 +1,6 @@
 # Ajustes do painel — plano de 30/09/2026
 
-**Estado:** aprovado para execução. Nenhum item foi iniciado.
+**Estado (01/10/2026):** Fases 1 a 4 entregues; Fase 5 em andamento (A18 parcial).
 **Branch:** `ajustes-painel`.
 
 Este plano é independente de `MELHORIAS.md`.
@@ -384,11 +384,13 @@ e `npm run test:navegador` continuam passando.
       `database/`, `shared/` só com dois consumidores; front em `utils/`,
       `domain/`, `templates/`, `components/`, `views/` e `app/`.
 - [x] `domain/`, `templates/` e `utils/` sem nenhum acesso ao DOM.
-- [ ] Nomes de arquivo no mesmo padrão da pasta (classe em PascalCase,
+- [x] Nomes de arquivo no mesmo padrão da pasta (classe em PascalCase,
       módulo de funções em camelCase) e em português.
-      _O padrão está feito (A16). A tradução dos nomes em inglês fica para
-      o A18, pasta por pasta, junto com os identificadores: renomear o
-      arquivo sem renomear a classe deixaria os dois discordando._
+      _Feito no A18, junto com os identificadores (renomear o arquivo sem
+      renomear a classe deixaria os dois discordando). Ficam em inglês só o
+      que a ferramenta ou a convenção impõe: `View`/`views/`, `Modal`,
+      `config.js`, `main.js`, `html.js` (a tag `html`, do CLAUDE.md) e
+      `server.js`._
 - [x] Testes ao lado do que testam e com nomes que digam a regra coberta.
 - [x] Mover o que estiver fora do lugar, sem mudar comportamento.
 
@@ -424,10 +426,10 @@ ficar grande.
       testáveis sem navegador, e não é para virar classe.
 - [ ] **Organização interna:** métodos curtos, nomes que dizem o que fazem,
       nada de função gigante com tudo misturado.
-- [ ] **Comentários:** explicam o **porquê** (armadilha, decisão da equipe,
+- [x] **Comentários:** explicam o **porquê** (armadilha, decisão da equipe,
       bug de produção). Ficam os que já existem e são desse tipo; saem os que
       só repetem o que a linha faz.
-- [ ] **Sem cara de código gerado por IA.** Tirar:
+- [x] **Sem cara de código gerado por IA.** Tirar:
       - comentário que narra o óbvio (`// incrementa o contador`,
         `// Passo 1:`);
       - faixas decorativas de seção e emojis;
@@ -437,7 +439,25 @@ ficar grande.
       - texto de marketing em comentário ("robusto", "eficiente",
         "de forma elegante");
       - inglês fora do que a linguagem impõe.
-- [ ] Rodar a verificação completa ao final de cada pasta.
+- [x] Rodar a verificação completa ao final de cada pasta.
+
+**Andamento (01/10/2026), um commit por assunto, `npm run check` e `npm test` verdes em cada um:**
+
+- Nomes em português: erros, middlewares, constantes, `Servidor`, `BancoDeDados`,
+  componentes, utilitários, avisos rápidos (`avisoRapido.sucesso/erro/informar/desfazer`),
+  cerca de cem métodos e funções, métodos privados e arquivos de teste.
+  `dados` é o conteúdo do formulário/pedido; `data` ficou só para a data.
+- Comentários: saíram a história do app Python/Tkinter, as faixas decorativas, o
+  "o que mudou nesta revisão" (reescrito no presente, com o porquê) e as marcas
+  `I07`… do plano antigo que não existe mais.
+- Métodos longos divididos: `Servidor._configurarExpress`, `SaudeService.obterDiagnostico`,
+  `ConsultaView._desenharDetalhe`.
+- **Falta:** os demais métodos acima de 100 linhas (`App._montarEsqueleto`,
+  `DistribuicaoView._desenharAgentes`, `GraficoDeLinhas.render`, `abrirRelatorio`) — são
+  telas, e o repositório não tem teste de navegador; dividir sem conferir no
+  navegador nos dois temas arrisca regressão silenciosa. Os `_montarDom` são
+  só marcação. Falta também a auditoria de lógica de negócio duplicada entre
+  views e serviços (item de orientação a objetos).
 
 **Aceite:** um desenvolvedor novo lê qualquer arquivo e entende o que faz e
 por que é daquele jeito, sem comentários de enfeite.

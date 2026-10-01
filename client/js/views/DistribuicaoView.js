@@ -488,8 +488,8 @@ export class DistribuicaoView extends View {
     button.disabled = true;
     try {
       const identificador = encodeURIComponent(String(agent.cnpj || "").trim());
-      const result = await this.api.delete(`/versoes/agentes/${identificador}`);
-      const total = Number(result?.retornosExcluidos) || 0;
+      const resposta = await this.api.delete(`/versoes/agentes/${identificador}`);
+      const total = Number(resposta?.retornosExcluidos) || 0;
       if (total === 0) throw new ErroApi("O servidor não removeu nenhum retorno. Reinicie o serviço web e tente novamente.", 409);
       avisoRapido.sucesso(`Agente excluído (${plural(total, "retorno")} removido${total === 1 ? "" : "s"}).`);
       this.cache?.invalidar("distribuicao:");
