@@ -27,6 +27,24 @@ class UsuariosController {
     }
   };
 
+  redefinirSenha = (req, res, next) => {
+    try {
+      this.authService.redefinirSenha(Number(req.params.id), (req.body || {}).senhaNova, req.session.user);
+      res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  encerrarSessoesDe = (req, res, next) => {
+    try {
+      const encerradas = this.authService.encerrarSessoesDe(Number(req.params.id), req.session.user);
+      res.json({ encerradas });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   remove = (req, res, next) => {
     try {
       this.authService.excluirUsuario(Number(req.params.id), req.session.user);

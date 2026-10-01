@@ -8,7 +8,7 @@ import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { rotuloPapel } from "../../domain/pessoa.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
-import { legendaPapeis, linhaUsuario, resumoPapeis } from "../../templates/administracao.js";
+import { gavetaConta, legendaPapeis, linhaUsuario, resumoPapeis } from "../../templates/administracao.js";
 import { contarPapeis } from "../../domain/administracao.js";
 import { filtrarPorBusca } from "../../utils/busca.js";
 
@@ -28,6 +28,9 @@ import { filtrarPorBusca } from "../../utils/busca.js";
  * Rebaixar ou remover alguém derruba as sessões abertas dessa pessoa na hora
  * (AuthService no servidor) -- a tela avisa isso na confirmação.
  */
+/** O mesmo mínimo do servidor (AuthService) e da troca da própria senha. */
+const SENHA_MINIMA = 8;
+
 export class UsuariosAdmin extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
@@ -111,9 +114,10 @@ export class UsuariosAdmin extends View {
       if (select) this._mudarPapel(select);
     });
     this.lista.addEventListener("click", (e) => {
-      const botao = e.target.closest('[data-action="remover"]');
-      if (botao) this._remover(botao);
+      const botao = e.target.closest('[data-action="gerenciar"]');
+      if (botao) this._gerenciar(botao.dataset.id);
     });
+    this._montarGavetaConta();
   }
 
   async refresh() {
@@ -196,8 +200,164 @@ export class UsuariosAdmin extends View {
     }
   }
 
+  _montarGavetaConta() {
+    const conteudo = document.createElement("div");
+    conteudo.innerHTML = gavetaConta().toString();
+    this.container.appendChild(conteudo);
+    this.gavetaConta = new Gaveta(conteudo, {
+      titulo: "Gerenciar conta",
+      // A gaveta só cria a linha de descrição se nascer com uma; é nela que
+      // `_gerenciar` escreve "@usuario · Papel".
+      descricao: "Conta de outra pessoa",
+      // Depois de salvar algo a tabela é redesenhada e o botão que abriu a
+      // gaveta não existe mais; o foco iria para o <body>. Volta para o
+      // "Gerenciar" da mesma pessoa na tabela nova.
+      aoFechar: () =>
+        setTimeout(() => {
+          if (document.activeElement && document.activeElement !== document.body) return;
+          /** @type {HTMLElement|null} */ (this.lista.querySelector(`[data-action="gerenciar"][data-id="${this.alvo?.id}"]`))?.focus();
+        }),
+    });
+    const $ = (seletor) => conteudo.querySelector(seletor);
+    this.conta = {
+      conteudo,
+      nome: /** @type {HTMLInputElement} */ ($('[data-campo="nome"]')),
+      salvarNome: /** @type {HTMLButtonElement} */ ($('[data-action="salvar-nome"]')),
+      senha: /** @type {HTMLInputElement} */ ($('[data-campo="senha"]')),
+      senha2: /** @type {HTMLInputElement} */ ($('[data-campo="senha2"]')),
+      aviso: /** @type {HTMLElement} */ ($('[data-role="aviso-senha"]')),
+      redefinir: /** @type {HTMLButtonElement} */ ($('[data-action="redefinir-senha"]')),
+      textoSessoes: /** @type {HTMLElement} */ ($('[data-role="texto-sessoes"]')),
+      encerrar: /** @type {HTMLButtonElement} */ ($('[data-action="encerrar-sessoes"]')),
+    };
+    const c = this.conta;
+
+    c.nome.addEventListener("input", () => {
+      const limpo = c.nome.value.trim().replace(/\s+/g, " ");
+      c.salvarNome.disabled = !limpo || limpo === this.alvo?.nome;
+    });
+    $('[data-role="form-nome"]').addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!c.salvarNome.disabled) this._salvarNome();
+    });
+
+    // Mesma conferência enquanto se digita da troca da própria senha: diz o
+    // que falta em vez de deixar o botão cinza sem explicação.
+    const conferirSenha = () => {
+      const nova = c.senha.value;
+      const repetida = c.senha2.value;
+      let problema = "";
+      if (nova && nova.length < SENHA_MINIMA) problema = `A senha precisa de pelo menos ${SENHA_MINIMA} caracteres.`;
+      else if (nova && repetida && nova !== repetida) problema = "As duas senhas não são iguais.";
+      c.aviso.textContent = problema;
+      c.aviso.classList.toggle("is-erro", Boolean(problema));
+      c.redefinir.disabled = Boolean(problema) || !nova || !repetida;
+    };
+    c.senha.addEventListener("input", conferirSenha);
+    c.senha2.addEventListener("input", conferirSenha);
+    $('[data-role="form-senha"]').addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!c.redefinir.disabled) this._redefinirSenha();
+    });
+
+    c.encerrar.addEventListener("click", () => this._encerrarSessoes());
+    $('[data-action="remover"]').addEventListener("click", (e) => this._remover(/** @type {HTMLButtonElement} */ (e.currentTarget)));
+  }
+
+  /** @param {string|undefined} id */
+  _gerenciar(id) {
+    const u = this.usuarios.find((x) => String(x.id) === String(id));
+    if (!u) return;
+    this.alvo = u;
+    const c = this.conta;
+    c.nome.value = u.nome;
+    c.salvarNome.disabled = true;
+    c.senha.value = "";
+    c.senha2.value = "";
+    c.aviso.textContent = "";
+    c.redefinir.disabled = true;
+    this._pintarSessoes();
+    this.gavetaConta.setTitulo(u.nome, `@${u.usuario} · ${rotuloPapel(u.role)}`);
+    this.gavetaConta.marcarLimpa();
+    this.gavetaConta.abrir({ foco: c.nome });
+  }
+
+  _pintarSessoes() {
+    const n = this.alvo?.sessoes ?? 0;
+    this.conta.textoSessoes.textContent =
+      n === 0
+        ? "Nenhuma sessão aberta agora."
+        : `${n === 1 ? "1 sessão aberta" : `${n} sessões abertas`}. Encerrar desconecta a pessoa desses aparelhos; a senha continua a mesma.`;
+    this.conta.encerrar.disabled = n === 0;
+  }
+
+  async _salvarNome() {
+    const u = this.alvo;
+    const c = this.conta;
+    const liberar = marcarOcupado(c.salvarNome);
+    try {
+      const atualizado = await this.api.put(`/usuarios/${u.id}`, { nome: c.nome.value });
+      avisoRapido.sucesso(`Nome trocado para "${atualizado.nome}".`);
+      this.alvo = { ...u, nome: atualizado.nome };
+      this.gavetaConta.setTitulo(atualizado.nome, `@${u.usuario} · ${rotuloPapel(u.role)}`);
+      c.nome.value = atualizado.nome;
+      this.gavetaConta.marcarLimpa();
+      await this.refresh();
+    } catch (err) {
+      Modal.alert("Não foi possível trocar o nome", mensagem(err), "warning");
+    } finally {
+      liberar();
+      c.salvarNome.disabled = true;
+    }
+  }
+
+  async _redefinirSenha() {
+    const u = this.alvo;
+    const c = this.conta;
+    const ok = await Modal.confirm(
+      "Redefinir a senha",
+      `"${u.nome}" passa a entrar com a senha nova e é desconectado agora de todos os aparelhos. Combine com a pessoa como ela vai receber a senha.`,
+      { confirmLabel: "Redefinir senha" }
+    );
+    if (!ok) return;
+    const liberar = marcarOcupado(c.redefinir);
+    try {
+      await this.api.put(`/usuarios/${u.id}/senha`, { senhaNova: c.senha.value });
+      c.senha.value = "";
+      c.senha2.value = "";
+      this.gavetaConta.marcarLimpa();
+      avisoRapido.sucesso(`Senha de "${u.nome}" redefinida.`);
+      await this.refresh();
+      this.alvo = this.usuarios.find((x) => x.id === u.id) || u;
+      this._pintarSessoes();
+    } catch (err) {
+      c.aviso.textContent = mensagem(err);
+      c.aviso.classList.add("is-erro");
+    } finally {
+      liberar();
+      c.redefinir.disabled = true;
+    }
+  }
+
+  async _encerrarSessoes() {
+    const u = this.alvo;
+    const liberar = marcarOcupado(this.conta.encerrar);
+    try {
+      const { encerradas } = await this.api.delete(`/usuarios/${u.id}/sessoes`);
+      avisoRapido.sucesso(encerradas === 1 ? `1 sessão de "${u.nome}" encerrada.` : `${encerradas} sessões de "${u.nome}" encerradas.`);
+      await this.refresh();
+      this.alvo = this.usuarios.find((x) => x.id === u.id) || { ...u, sessoes: 0 };
+    } catch (err) {
+      Modal.alert("Não foi possível encerrar as sessões", mensagem(err), "error");
+    } finally {
+      liberar();
+      this._pintarSessoes();
+    }
+  }
+
+  /** @param {HTMLButtonElement} botao */
   async _remover(botao) {
-    const u = this.usuarios.find((x) => String(x.id) === botao.dataset.id);
+    const u = this.alvo;
     if (!u) return;
     const ok = await Modal.confirm(
       "Remover acesso",
@@ -208,16 +368,19 @@ export class UsuariosAdmin extends View {
     const liberar = marcarOcupado(botao);
     try {
       await this.api.delete(`/usuarios/${u.id}`);
+      await this.gavetaConta.fechar({ forcar: true });
       avisoRapido.sucesso(`Acesso de "${u.nome}" removido.`);
       await this.refresh();
     } catch (err) {
-      liberar();
       Modal.alert("Não foi possível remover", mensagem(err), "error");
+    } finally {
+      liberar();
     }
   }
 
   destroy() {
     this.drawer?.destroy();
+    this.gavetaConta?.destroy();
     super.destroy();
   }
 }

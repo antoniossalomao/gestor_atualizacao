@@ -7521,6 +7521,55 @@ h1, h2, h3, strong {
   border-color: var(--status-ok-solido);
 }
 
+/* Gaveta "Gerenciar conta": blocos separados por fio, a remoção por último. */
+.admin-conta {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--sp-2);
+}
+.admin-conta__bloco {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+.admin-conta__bloco:first-child {
+  padding-top: 0;
+}
+.admin-conta__bloco:last-child:not(.admin-conta__bloco--perigo) {
+  border-bottom: 0;
+}
+.admin-conta__bloco h3 {
+  margin: 0;
+  font: var(--peso-forte) var(--txt-md) / 1.3 var(--fonte-display);
+}
+.admin-conta__bloco .field__help {
+  margin: 0;
+}
+.admin-conta__bloco .admin-campo-acao {
+  width: 100%;
+}
+.admin-conta__campos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+  width: 100%;
+}
+.admin-conta__aviso:empty {
+  display: none;
+}
+.admin-conta__aviso {
+  margin: 0;
+}
+.admin-conta__bloco--perigo {
+  margin-top: var(--sp-2);
+  padding: var(--sp-4);
+  border: 1px solid color-mix(in srgb, var(--cor-vermelho) 35%, var(--cor-borda));
+  border-radius: var(--raio);
+}
+
 .admin-pessoas {
   display: flex;
   flex-direction: column;

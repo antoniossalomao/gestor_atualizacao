@@ -575,18 +575,24 @@ test("Administração - textos e formatos", async (t) => {
 test("Administração - linha de usuário", async (t) => {
   const outro = { id: 2, nome: "Bia", usuario: "bia", role: "consulta", ultimo_login: null };
 
-  await t.test("a própria conta: papel só como selo, sem remover", () => {
+  await t.test("a própria conta: papel só como selo, sem gerenciar (senha e sessões são de Minha conta)", () => {
     const html = texto(linhaUsuario({ ...outro, id: 1, role: "admin" }, { ehVoce: true }));
     assert.match(html, /\(você\)/);
-    assert.doesNotMatch(html, /<select|data-action="remover"/);
+    assert.doesNotMatch(html, /<select|data-action="gerenciar"/);
   });
 
-  await t.test("outra conta: papel atual já selecionado, e o botão de remover", () => {
+  await t.test("outra conta: papel atual já selecionado, e o botão que abre a gaveta da conta", () => {
     const html = texto(linhaUsuario(outro, { ehVoce: false }));
     assert.match(html, /<option value="consulta" selected>/);
     assert.doesNotMatch(html, /<option value="admin" selected>/);
-    assert.match(html, /data-action="remover" data-id="2"/);
+    assert.match(html, /data-action="gerenciar" data-id="2"/);
     assert.match(html, /Nunca entrou/);
+  });
+
+  await t.test("sessões abertas aparecem só quando existem, no singular e no plural", () => {
+    assert.doesNotMatch(texto(linhaUsuario({ ...outro, sessoes: 0 }, { ehVoce: false })), /sess/);
+    assert.match(texto(linhaUsuario({ ...outro, sessoes: 1 }, { ehVoce: false })), /1 sessão aberta/);
+    assert.match(texto(linhaUsuario({ ...outro, sessoes: 3 }, { ehVoce: false })), /3 sessões abertas/);
   });
 
   await t.test("último acesso começa com maiúscula sem perder a data completa", () => {

@@ -231,6 +231,10 @@ class ApiRouter {
     api.put("/usuarios/:id", exigirPapel("admin"), usuarios.update);
     api.put("/usuarios/me/senha", usuarios.changeOwnPassword);
     api.delete("/usuarios/:id", exigirPapel("admin"), usuarios.remove);
+    // Ações do administrador sobre OUTRA conta. Depois das rotas de "me"
+    // de propósito, como as outras com ":id".
+    api.put("/usuarios/:id/senha", exigirPapel("admin"), usuarios.redefinirSenha);
+    api.delete("/usuarios/:id/sessoes", exigirPapel("admin"), usuarios.encerrarSessoesDe);
 
     // Versões e Distribuição -- bloqueadas enquanto o Atualizador estiver
     // desativado em Configurações (ver exigirAtualizadorHabilitado); sem

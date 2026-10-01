@@ -71,7 +71,7 @@ export function resumoPapeis(contagem) {
 
 /**
  * Conteúdo de uma `<tr>` da tabela de usuários.
- * @param {{id: number, nome: string, usuario: string, role?: string, ultimo_login?: string|null}} u
+ * @param {{id: number, nome: string, usuario: string, role?: string, ultimo_login?: string|null, sessoes?: number}} u
  * @param {{ehVoce: boolean}} opcoes quem está logado não muda o próprio papel nem se remove por aqui
  */
 export function linhaUsuario(u, { ehVoce }) {
@@ -96,11 +96,66 @@ export function linhaUsuario(u, { ehVoce }) {
             ${PAPEIS.map((p) => html`<option value="${p.valor}" ${p.valor === papel && confiavel("selected")}>${rotuloPapel(p.valor)}</option>`)}
           </select>`
     }</td>
-    <td data-label="Último acesso">${acesso}</td>
+    <td data-label="Último acesso">
+      <div class="admin-pessoa__texto">
+        ${acesso}
+        ${(u.sessoes ?? 0) > 0 && html`<span class="text-muted">${u.sessoes === 1 ? "1 sessão aberta" : `${u.sessoes} sessões abertas`}</span>`}
+      </div>
+    </td>
     <td data-label="" class="admin-tabela__acoes">${
       !ehVoce &&
-      html`<button type="button" class="btn btn--small btn--danger" data-action="remover" data-id="${u.id}">Remover acesso</button>`
+      html`<button type="button" class="btn btn--small" data-action="gerenciar" data-id="${u.id}" aria-label="Gerenciar a conta de ${u.nome}">
+        ${iconeHtml("editar")} Gerenciar</button>`
     }</td>`;
+}
+
+/**
+ * O que vai dentro da gaveta "Gerenciar conta" de outra pessoa. Uma gaveta, e
+ * não quatro botões na linha: nome, senha, sessões e remoção são raros, e
+ * quatro botões em cada uma de quinze linhas viravam uma parede de ações.
+ * A remoção fica por último e separada: é a única que não se desfaz.
+ */
+export function gavetaConta() {
+  return html`
+    <div class="admin-conta">
+      <form class="admin-conta__bloco" data-role="form-nome" novalidate>
+        <h3>Nome</h3>
+        <div class="admin-campo-acao">
+          <input type="text" class="input" id="conta-nome" name="conta-nome" data-campo="nome" maxlength="80" autocomplete="off" aria-label="Nome da pessoa" />
+          <button type="submit" class="btn btn--accent" data-action="salvar-nome" disabled>Salvar</button>
+        </div>
+        <p class="field__help">Aparece no menu, no Histórico e como responsável nos registros novos.</p>
+      </form>
+
+      <form class="admin-conta__bloco" data-role="form-senha" novalidate>
+        <h3>Redefinir a senha</h3>
+        <p class="field__help">Para quem esqueceu a sua. A pessoa é desconectada de todos os aparelhos e entra com a senha nova.</p>
+        <div class="admin-conta__campos">
+          <div class="field">
+            <label class="field__label" for="conta-senha">Senha nova</label>
+            <input type="password" class="input" id="conta-senha" name="conta-senha" data-campo="senha" autocomplete="new-password" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="conta-senha2">Repita</label>
+            <input type="password" class="input" id="conta-senha2" name="conta-senha2" data-campo="senha2" autocomplete="new-password" />
+          </div>
+        </div>
+        <p class="admin-form__estado admin-conta__aviso" data-role="aviso-senha" aria-live="polite"></p>
+        <button type="submit" class="btn" data-action="redefinir-senha" disabled>Redefinir senha</button>
+      </form>
+
+      <section class="admin-conta__bloco">
+        <h3>Sessões abertas</h3>
+        <p class="field__help" data-role="texto-sessoes"></p>
+        <button type="button" class="btn" data-action="encerrar-sessoes">Encerrar todas</button>
+      </section>
+
+      <section class="admin-conta__bloco admin-conta__bloco--perigo">
+        <h3>Remover acesso</h3>
+        <p class="field__help">A pessoa deixa de entrar e é desconectada na hora. O que ela fez continua no Histórico.</p>
+        <button type="button" class="btn btn--danger" data-action="remover">Remover acesso</button>
+      </section>
+    </div>`;
 }
 
 /**
