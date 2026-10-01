@@ -201,3 +201,30 @@ export function textoDiagnostico(dados, situacao, { atualizadorHabilitado, confe
   if (navegador) linhas.push(`Navegador: ${navegador}`);
   return linhas.join("\n");
 }
+
+/**
+ * O que mudou na classificação dos sistemas, para o "Salvar" único da lista.
+ * Antes havia um Salvar por linha: quem reclassificava cinco sistemas
+ * clicava cinco vezes, e uma linha alterada e esquecida não avisava ninguém.
+ *
+ * Só vai o que mudou de verdade -- voltar um sistema para como estava não o
+ * manda ao servidor (cada envio vira uma linha na Auditoria). "Atualiza junto
+ * com o B_Vendas" só existe para atualizável: num sistema que vira Fixo, a
+ * caixa não é enviada.
+ * @param {Array<{id: number, controlaVersao: number|boolean, atualizaComPrincipal?: number|boolean}>} sistemas como estão salvos
+ * @param {Record<string, {controlaVersao: boolean, atualizaComPrincipal?: boolean}>} escolhas como estão na tela, por id
+ * @returns {Array<{id: number, controlaVersao: boolean, atualizaComPrincipal?: boolean}>}
+ */
+export function alteracoesClassificacao(sistemas, escolhas) {
+  const mudancas = [];
+  for (const s of sistemas) {
+    const e = escolhas[String(s.id)];
+    if (!e) continue;
+    const mudouTipo = e.controlaVersao !== Boolean(s.controlaVersao);
+    const temCaixa = e.controlaVersao && e.atualizaComPrincipal !== undefined;
+    const mudouCaixa = temCaixa && e.atualizaComPrincipal !== Boolean(s.atualizaComPrincipal);
+    if (!mudouTipo && !mudouCaixa) continue;
+    mudancas.push({ id: s.id, controlaVersao: e.controlaVersao, ...(temCaixa ? { atualizaComPrincipal: e.atualizaComPrincipal } : {}) });
+  }
+  return mudancas;
+}

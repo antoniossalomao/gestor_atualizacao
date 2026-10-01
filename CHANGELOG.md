@@ -15,6 +15,11 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Classificação dos sistemas em lote — F5 (01/10/2026):** a lista de Administração › Operação ganhou um filtro por nome e passou a ter um "Salvar" e um "Desfazer" só, no pé do cartão, para todas as linhas alteradas. Antes havia um Salvar por linha: reclassificar cinco sistemas eram cinco cliques, e uma linha alterada e esquecida não avisava ninguém.
+  - Só vai ao servidor o que mudou de verdade (`alteracoesClassificacao`, com teste), então voltar uma linha para como estava não gera registro na Auditoria.
+  - Com sistema alterado, a barra fica presa no pé da tela, voltar à aba não apaga as marcações, e sair da conta ou recarregar a página avisa.
+  - Se um sistema falhar ao salvar, os outros continuam salvos e a mensagem diz qual faltou.
+
 - **Diagnóstico, "Copiar para o suporte" — F6 (01/10/2026):** um botão junta a conferência num texto pronto para colar: situação, pendências, versão, Node, tempo no ar, memória, banco, backups, agentes, pacotes e navegador. Antes, o administrador copiava número por número ou mandava um print que não dava para pesquisar. O texto é o mesmo da tela no momento da conferência e não leva nada que dê acesso (só o nome do arquivo do banco, nunca a chave dos agentes). A ajuda da aba Sobre cita o botão.
 
 - **Backups e Dados — F4 (01/10/2026):**

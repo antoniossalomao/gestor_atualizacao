@@ -8391,6 +8391,28 @@ h1, h2, h3, strong {
   transition: background var(--transicao);
 }
 .admin-sistema.is-alterado { background: var(--cor-accent-fraco); }
+/* Linha escondida pelo filtro: `hidden` perde para o `display` da regra acima. */
+.admin-sistema[hidden] { display: none; }
+.admin-sistemas__barra {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+}
+.admin-sistemas__filtro { width: 280px; }
+.admin-sistemas__total { font-size: var(--txt-sm); }
+.admin-sistemas__rodape.is-sujo .admin-form__estado {
+  color: var(--cor-accent);
+  font-weight: var(--peso-forte);
+}
+/* Com sistema marcado e não salvo, a barra fica presa no pé da tela: a
+   lista é longa, e o Salvar no fim dela ficava fora de vista. */
+.admin-sistemas__rodape.is-sujo {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  box-shadow: 0 -6px 16px color-mix(in srgb, var(--cor-texto) 8%, transparent);
+}
 .admin-sistema__nome { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
 .admin-sistema__nome strong { overflow-wrap: anywhere; }
 .admin-sistema__nome small { color: var(--cor-texto-fraco); font-size: var(--txt-sm); }

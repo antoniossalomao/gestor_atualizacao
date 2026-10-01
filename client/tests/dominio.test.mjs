@@ -486,3 +486,39 @@ test("Administração - diagnóstico em texto para o suporte", async (t) => {
     assert.doesNotMatch(off, /Agentes:/);
   });
 });
+
+test("Administração - classificação dos sistemas em lote", async (t) => {
+  const { alteracoesClassificacao } = await import("../js/domain/administracao.js");
+  const salvos = [
+    { id: 1, controlaVersao: 1, atualizaComPrincipal: 0 },
+    { id: 2, controlaVersao: 0, atualizaComPrincipal: 0 },
+    { id: 3, controlaVersao: 1, atualizaComPrincipal: 1 },
+  ];
+
+  await t.test("sem mudança, nada vai ao servidor", () => {
+    assert.deepEqual(alteracoesClassificacao(salvos, {
+      1: { controlaVersao: true, atualizaComPrincipal: false },
+      2: { controlaVersao: false },
+      3: { controlaVersao: true, atualizaComPrincipal: true },
+    }), []);
+  });
+
+  await t.test("só as linhas alteradas, com o que mudou", () => {
+    assert.deepEqual(alteracoesClassificacao(salvos, {
+      1: { controlaVersao: true, atualizaComPrincipal: true },
+      2: { controlaVersao: true, atualizaComPrincipal: false },
+      3: { controlaVersao: true, atualizaComPrincipal: true },
+    }), [
+      { id: 1, controlaVersao: true, atualizaComPrincipal: true },
+      { id: 2, controlaVersao: true, atualizaComPrincipal: false },
+    ]);
+  });
+
+  await t.test("virar Fixo não manda a caixa do B_Vendas (ela some na tela)", () => {
+    assert.deepEqual(alteracoesClassificacao(salvos, { 3: { controlaVersao: false, atualizaComPrincipal: true } }), [{ id: 3, controlaVersao: false }]);
+  });
+
+  await t.test("B_Vendas não tem a caixa: atualizaComPrincipal ausente não conta como mudança", () => {
+    assert.deepEqual(alteracoesClassificacao(salvos, { 1: { controlaVersao: true } }), []);
+  });
+});
