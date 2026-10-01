@@ -45,7 +45,6 @@ export class ContaConfig {
   }
 
   _desenhar() {
-    const ehAdmin = this.opcoes.usuario.role === "admin";
     this.container.innerHTML = html`
       ${cabecalhoSecao({
         titulo: "Conta",
@@ -76,11 +75,11 @@ export class ContaConfig {
                 <label class="field__label" for="cfg-senha-repetida">Repita a nova senha</label>
                 <input type="password" class="input" id="cfg-senha-repetida" data-campo="senhaRepetida" autocomplete="new-password" />
               </div>
+              <!-- O botão na mesma fileira dos campos: num rodapé próprio ele
+                   deixava uma faixa vazia da largura do cartão inteiro. -->
+              <button type="submit" class="btn btn--accent cfg-senha__botao" data-action="trocar-senha" disabled>Trocar senha</button>
             </div>
-            <footer class="admin-form__rodape">
-              <span class="admin-form__estado" data-role="estado-senha" aria-live="polite"></span>
-              <button type="submit" class="btn btn--accent" data-action="trocar-senha" disabled>Trocar senha</button>
-            </footer>
+            <p class="admin-form__estado cfg-senha__estado" data-role="estado-senha" aria-live="polite"></p>
           </form>
         </section>
 
@@ -118,17 +117,6 @@ export class ContaConfig {
           </div>
         </section>
 
-        ${
-          ehAdmin &&
-          html`<button type="button" class="card cfg-link cfg-link--cartao" data-action="administracao">
-            <span class="cfg-link__icon">${iconeHtml("escudo")}</span>
-            <span class="cfg-link__labels">
-              <strong>Administração da equipe</strong>
-              <span>Usuários e papéis, histórico de alterações, regras da equipe, backups e saúde do servidor.</span>
-            </span>
-            <span class="cfg-link__seta">${iconeHtml("seta")}</span>
-          </button>`
-        }
       </div>`.toString();
 
     this._pintarPerfil();
@@ -140,7 +128,6 @@ export class ContaConfig {
     on("exportar", () => this.opcoes.exportar());
     on("importar", () => this.opcoes.importar());
     on("restaurar-tudo", () => this.opcoes.restaurarTudo());
-    on("administracao", () => this.opcoes.navigate("administracao"));
   }
 
   async refresh() {

@@ -195,6 +195,7 @@ export class ConfiguracoesView extends View {
       return new RegrasEquipeConfig(painel, this.api, {
         usuario: this.user,
         navigate: this.navigate,
+        regras: this.ctx.regras || {},
       });
     }
     const acoes = {

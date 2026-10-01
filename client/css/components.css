@@ -2631,6 +2631,138 @@ table.data-table {
 .cfg-previa {
   margin-top: var(--sp-4);
 }
+/* O resto da interface na prévia: texto, selos, campo e botões. */
+.cfg-amostra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  padding: var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-fundo-alt);
+  pointer-events: none;
+  user-select: none;
+}
+.cfg-amostra__texto {
+  margin: 0;
+  font-size: var(--txt-base);
+  line-height: 1.5;
+}
+.cfg-amostra__link {
+  color: var(--cor-accent);
+  font-weight: var(--peso-forte);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cfg-amostra__selos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.cfg-amostra__linha {
+  display: flex;
+  gap: var(--sp-2);
+}
+.cfg-amostra__linha .input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* -- Regras da equipe: o número grande, o que ele faz embaixo -- */
+.cfg-regras {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--sp-3);
+  margin: var(--sp-4) 0 var(--sp-4);
+  padding: 0;
+  list-style: none;
+}
+.cfg-regra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  background: var(--cor-superficie);
+}
+.cfg-regra__titulo {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  font-weight: var(--peso-forte);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.cfg-regra__valor {
+  font: var(--peso-extra) var(--txt-2xl) / 1.15 var(--fonte-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.cfg-regra__texto {
+  flex: 1 1 auto;
+  margin: 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  line-height: 1.5;
+}
+.cfg-regra__editar {
+  align-self: flex-start;
+  margin-top: var(--sp-2);
+  margin-left: calc(-1 * var(--sp-2));
+}
+.cfg-regra__editar svg {
+  width: 14px;
+  height: 14px;
+}
+.cfg-regra.is-destacado {
+  animation: cfg-linha-destaque 2s ease-out;
+}
+
+.cfg-escopo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-4);
+  margin: var(--sp-4) 0 var(--sp-4);
+}
+.cfg-escopo__lado {
+  padding: var(--sp-4);
+  border-radius: var(--raio);
+  background: var(--cor-fundo-alt);
+}
+.cfg-escopo__cabeca {
+  display: flex;
+  gap: var(--sp-3);
+}
+.cfg-escopo__cabeca strong {
+  display: block;
+  font-size: var(--txt-base);
+}
+.cfg-escopo__cabeca span:not(.cfg-escopo__icone) {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+}
+.cfg-escopo__icone {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-accent-fraco);
+  color: var(--cor-accent);
+}
+.cfg-escopo__icone svg {
+  width: 18px;
+  height: 18px;
+}
+.cfg-escopo ul {
+  margin: var(--sp-3) 0 0;
+  padding-left: calc(32px + var(--sp-3) + 1em);
+  color: var(--cor-texto);
+  font-size: var(--txt-sm);
+  line-height: 1.7;
+}
 /* Com `table-layout: fixed`, a largura das colunas sai da primeira linha. */
 .cfg-previa th:nth-child(1) {
   width: 50%;
@@ -2676,6 +2808,28 @@ table.data-table {
   outline: 2px solid transparent;
   outline-offset: 3px;
   animation: cfg-cartao-destaque 2s ease-out;
+}
+
+/* Abas sem prévia (Trabalho diário, Notificações) em duas colunas de
+   cartões quando a tela é larga. Numa coluna só, o rótulo ficava a mais de
+   um palmo do controle que ele descreve, e a aba virava rolagem pura. Em
+   colunas de jornal, e não em grade: os cartões têm alturas muito
+   diferentes, e uma grade deixaria buracos ao lado dos curtos. */
+.cfg-cartoes--colunas {
+  display: block;
+  columns: 2 520px;
+  column-gap: var(--sp-4);
+}
+.cfg-cartoes--colunas > .cfg-cartao {
+  break-inside: avoid;
+  margin-bottom: var(--sp-4);
+}
+
+/* Linha que depende de outra desligada ("Das"/"Até as" do horário
+   silencioso): à vista, mas apagada. */
+.cfg-linha.is-inativo .cfg-group__labels,
+.cfg-linha.is-inativo > :not(.cfg-group__labels) {
+  opacity: 0.5;
 }
 
 /* -- uma linha de ajuste: rótulo à esquerda, controle à direita -- */
@@ -3342,12 +3496,17 @@ table.data-table {
 /* -- conta: senha -- */
 .cfg-senha__campos {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
   gap: var(--sp-4);
-  padding: var(--sp-4) 0;
+  padding: var(--sp-4) 0 var(--sp-2);
 }
-.cfg-senha .admin-form__rodape {
-  margin-bottom: calc(var(--sp-2) * -1);
+/* O aviso ("as duas senhas não são iguais") ocupa a linha só quando existe. */
+.cfg-senha__estado {
+  margin: 0 0 var(--sp-3);
+}
+.cfg-senha__estado:empty {
+  display: none;
 }
 .admin-form__estado.is-erro {
   color: var(--cor-vermelho);
@@ -3985,6 +4144,9 @@ table.data-table {
 @media (max-width: 900px) {
   .cfg-senha__campos {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .cfg-senha__botao {
+    justify-self: end;
   }
 }
 @media (max-width: 760px) {
@@ -7774,7 +7936,9 @@ h1, h2, h3, strong {
 /* Estado que o Gestor só informa (Configurações > Notificações > Permissão
    do navegador). Texto, não interruptor: quem decide é o navegador. */
 .cfg-estado {
-  max-width: 340px;
+  /* Em porcentagem, e não só em px: na coluna de cartões (metade da tela) os
+     340px fixos espremiam o rótulo da linha em duas palavras por linha. */
+  max-width: min(340px, 60%);
   padding: 6px 10px;
   border: 1px solid var(--cor-borda);
   border-left: 3px solid var(--cor-borda-forte);
