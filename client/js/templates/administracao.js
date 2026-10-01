@@ -162,6 +162,28 @@ export function resumoDiagnostico(situacao, conferidoEm) {
 }
 
 /**
+ * A faixa em cima das abas da Administração quando algo precisa de atenção:
+ * uma linha, com o que é e o atalho para a aba. Some quando não há nada (uma
+ * faixa verde "Tudo certo" permanente vira papel de parede).
+ * @param {ReturnType<typeof import("../domain/administracao.js").situacaoDiagnostico>} situacao
+ */
+export function faixaPendencias(situacao) {
+  if (situacao.pendencias.length === 0) return html``;
+  const ABAS = { backups: "Backups", integracoes: "Integrações" };
+  return html`
+    <div class="admin-faixa is-${situacao.tom}" role="status">
+      <span class="admin-faixa__icone" aria-hidden="true">${iconeHtml("alerta")}</span>
+      <strong>${situacao.titulo}</strong>
+      <ul>
+        ${situacao.pendencias.map(
+          (p) => html`<li><button type="button" class="admin-faixa__item is-${p.tom}" data-ir-aba="${p.aba}"
+            title="Abrir ${ABAS[p.aba] || p.aba}">${p.texto}</button></li>`
+        )}
+      </ul>
+    </div>`;
+}
+
+/**
  * Aviso da chave dos agentes, em bloco e com o texto inteiro: num selo
  * arredondado, "Ainda é o valor de exemplo do .env.example..." quebrava em
  * três linhas espremidas na ponta direita da linha.

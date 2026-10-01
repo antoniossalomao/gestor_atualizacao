@@ -431,3 +431,9 @@ test("Administração - situação do Diagnóstico e contagem de papéis", async
     assert.deepEqual(contarPapeis([]), { admin: 0, operador: 0, consulta: 0 });
   });
 });
+
+test("Administração - pendências por aba", async () => {
+  const { pendenciasPorAba } = await import("../js/domain/administracao.js");
+  assert.deepEqual(pendenciasPorAba([{ aba: "backups" }, { aba: "integracoes" }, { aba: "backups" }]), { backups: 2, integracoes: 1 });
+  assert.deepEqual(pendenciasPorAba([]), {});
+});

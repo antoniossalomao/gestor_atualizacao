@@ -7716,6 +7716,60 @@ h1, h2, h3, strong {
   color: var(--cor-vermelho);
 }
 
+/* Faixa de pendências da Administração, entre as abas e o conteúdo. */
+.admin-faixa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+  margin-top: var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--cor-borda);
+  border-left: 3px solid var(--cor-amarelo);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-amarelo-fraco);
+  font-size: var(--txt-sm);
+}
+.admin-faixa.is-perigo {
+  border-left-color: var(--cor-vermelho);
+  background: var(--status-erro-bg);
+}
+.admin-faixa__icone {
+  display: grid;
+  color: var(--cor-amarelo);
+}
+.admin-faixa.is-perigo .admin-faixa__icone {
+  color: var(--cor-vermelho);
+}
+.admin-faixa__icone svg {
+  width: 16px;
+  height: 16px;
+}
+.admin-faixa ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-faixa__item {
+  padding: 2px var(--sp-2);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pilula);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  font: inherit;
+  cursor: pointer;
+}
+.admin-faixa__item:hover {
+  border-color: var(--cor-borda-forte);
+}
+.admin-faixa__item.is-perigo {
+  color: var(--cor-vermelho);
+  font-weight: var(--peso-forte);
+}
+
 /* Topo do Diagnóstico: a frase é o pior bloco, e cada pendência leva à aba
    onde se resolve. */
 .admin-diagnostico {

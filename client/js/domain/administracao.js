@@ -141,3 +141,17 @@ export function contarPapeis(usuarios) {
   for (const u of usuarios || []) contagem[papelNormalizado(u.role)] += 1;
   return contagem;
 }
+
+/**
+ * Quantas pendências cada aba da Administração tem -- o numerozinho ao lado
+ * do nome da aba. Avisos que só apareciam ao abrir o Diagnóstico (chave dos
+ * agentes de exemplo, nenhuma cópia) ficavam semanas sem ninguém ver.
+ * @param {Array<{aba: string}>} pendencias
+ * @returns {Record<string, number>}
+ */
+export function pendenciasPorAba(pendencias) {
+  /** @type {Record<string, number>} */
+  const porAba = {};
+  for (const p of pendencias) porAba[p.aba] = (porAba[p.aba] || 0) + 1;
+  return porAba;
+}

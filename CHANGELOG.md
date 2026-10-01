@@ -15,6 +15,8 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Administração, pendências à vista — F3 (01/10/2026):** quando algo precisa de atenção (nenhuma cópia ou cópia de 7 dias ou mais, banco com falha de integridade, agentes com erro, chave dos agentes ausente ou ainda com o valor de exemplo), uma faixa aparece entre as abas e o conteúdo de qualquer aba da Administração. Cada pendência é um atalho para a aba onde se resolve, e essa aba ganha o contador ao lado do nome. Antes isso só aparecia para quem abrisse o Diagnóstico. A regra é a mesma do Diagnóstico (`situacaoDiagnostico`), e a conferência roda no máximo uma vez por minuto, porque a Saúde executa o `integrity_check` do SQLite.
+
 - **Administração e Configurações, limpeza — F1 (01/10/2026):**
   - A retenção de backups passou a usar o mesmo formulário das outras regras da equipe: Desfazer, aviso de "alteração não salva", e mínimo e máximo vindos do servidor. Feita à mão, a tela aceitava 1 e 2 cópias, que o servidor recusa (o mínimo é 3), e só avisava depois do clique.
   - Os nomes antigos das abas, repetidos duas vezes nas Configurações e uma na Administração, foram para `domain/abas.js`, com um teste que confere se todo alias aponta para uma aba que existe.
