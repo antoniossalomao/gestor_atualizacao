@@ -356,6 +356,10 @@ docker compose up -d --build   # depois de atualizar o código
 docker compose stop        # parar sem apagar nada
 ```
 
+Para atualizar o código em produção, prefira o script: `.\deploy.ps1` (ou dois
+cliques em `deploy.bat`). Ele copia o banco para `..\backups-deploy`, reconstrói
+e espera o container ficar `healthy`. Se o backup falhar, não reconstrói.
+
 Os containers têm `restart: unless-stopped`: voltam sozinhos depois de
 travar e depois de a máquina reiniciar.
 
