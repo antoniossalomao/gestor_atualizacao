@@ -2,8 +2,7 @@
  * Estilos de componentes reutilizáveis: casca da página, cards, botões,
  * campos de formulário, tabelas, badges, toasts, modais, estados vazios.
  * Cada classe aqui é usada por mais de uma tela (ver client/js/views/*.js
- * e nas pastas de client/js) -- equivalente, em espírito, ao "estilista
- * central" que gestor/theme.py era para o app Tkinter.
+ * e nas pastas de client/js).
  *
  * ORGANIZAÇÃO: o arquivo tinha duas seções ("shell atualizado" e "acabamento
  * visual") escritas depois, que SOBRESCREVIAM regras definidas duzentas
@@ -133,7 +132,7 @@
   pointer-events: none;
   opacity: 0;
   transition: opacity var(--dur-rapida) var(--curva-padrao), transform var(--dur-rapida) var(--curva-padrao);
-  z-index: 1000;
+  z-index: var(--camada-cabecalho);
 }
 #app.is-sidebar-collapsed .tab-button[data-tooltip]:hover::after,
 #app.is-sidebar-collapsed .btn--sidebar[data-tooltip]:hover::after {
@@ -437,7 +436,7 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  z-index: 1000;
+  z-index: var(--camada-cabecalho);
   width: 272px;
   padding: var(--sp-2);
   border: 1px solid var(--cor-borda);
@@ -961,28 +960,12 @@ kbd {
   letter-spacing: -0.015em;
 }
 
-.dashboard-intro {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 18px;
-}
 .dashboard-intro__eyebrow {
   color: var(--cor-texto-fraco);
   font-size: var(--txt-2xs);
   font-weight: var(--peso-extra);
   letter-spacing: 0.14em;
   text-transform: uppercase;
-}
-.dashboard-intro h2 {
-  margin: 4px 0 2px;
-  font: var(--peso-forte) 22px/1.2 var(--fonte-display);
-  letter-spacing: -0.015em;
-}
-.dashboard-intro p {
-  margin: 0;
-  color: var(--cor-texto-sub);
-  font-size: var(--txt-base);
 }
 
 /* -- indicadores do topo do Resumo --
@@ -1003,7 +986,7 @@ kbd {
   }
 }
 
-/* Agora é um <button> (ver ResumoView.statTile): zera o visual nativo sem
+/* Agora é um <button> (ver ResumoView.blocoDeNumero): zera o visual nativo sem
    perder o comportamento, do mesmo jeito que .consulta-matches__item faz. */
 .stat-tile {
   position: relative;
@@ -1068,7 +1051,7 @@ kbd {
 }
 
 /* `margin-top: auto` (com o tile em coluna): o número fica no pé do card.
-   "Sem Atendimento Há Mais de 60 Dias" quebra em duas linhas, e com margem
+   "Sem Atualização Há Mais de 60 Dias" quebra em duas linhas, e com margem
    fixa o número dele ficava mais baixo que o dos vizinhos. */
 .stat-tile__value-row {
   display: flex;
@@ -1407,8 +1390,7 @@ textarea:focus {
   outline: none;
 }
 
-input[aria-invalid="true"],
-input:invalid.touched {
+input[aria-invalid="true"] {
   border-color: var(--cor-vermelho);
 }
 
@@ -1440,13 +1422,6 @@ select {
 }
 @media (min-width: 860px) {
   .form-grid--3 { grid-template-columns: repeat(3, 1fr); }
-  .form-grid--4 { grid-template-columns: repeat(4, 1fr); }
-}
-@media (min-width: 1040px) {
-  .form-grid--5 { grid-template-columns: repeat(5, 1fr); }
-}
-@media (min-width: 1180px) {
-  .form-grid--6 { grid-template-columns: repeat(6, 1fr); }
 }
 
 .form-actions {
@@ -1499,11 +1474,6 @@ select {
   gap: 6px;
   font-size: var(--txt-base);
   font-weight: var(--peso-forte);
-}
-
-.users-list__tag {
-  padding: 2px 7px;
-  font-size: var(--txt-2xs);
 }
 
 .users-list__handle {
@@ -1668,12 +1638,18 @@ select {
   flex: 1;
 }
 
-.sistemas-toolbar > button { align-self: flex-end; }
+.sistemas-toolbar > .btn { align-self: flex-end; margin-bottom: 5px; }
+/* Três campos, a contagem e três botões numa linha só a 1366px: com os 200px
+   genéricos, "Versões oficiais" caía sozinho para a linha de baixo. */
+.sistemas-toolbar .field { min-width: 160px; }
+.sistemas-toolbar .field:has(input[type="search"]) { min-width: 200px; flex: 1 1 200px; }
 .sistemas-referencia { margin: 0 0 var(--sp-4); color: var(--cor-texto-sub); font-size: var(--txt-sm); }
-.sistemas-filtros { display: flex; align-items: flex-end; flex-wrap: wrap; gap: var(--sp-3); margin-bottom: var(--sp-4); }
-.sistemas-filtros[hidden], .sistemas-oficiais[hidden] { display: none; }
-.sistemas-filtros .field { max-width: 310px; }
-.sistemas-oficiais { margin-bottom: var(--sp-5); padding: var(--sp-4); border: 1px solid var(--cor-borda); border-radius: var(--raio-md); }
+.sistemas-oficiais[hidden] { display: none; }
+.filtros-painel .field--data { min-width: 0; width: 200px; }
+/* O botão pequeno é mais baixo que o campo; sem a margem, alinhado pela
+   base, ele ficava rente à borda de baixo e parecia solto (A10). */
+.filtros-painel > .btn--small { margin-bottom: 5px; }
+.sistemas-oficiais { margin-bottom: var(--sp-5); padding: var(--sp-4); border: 1px solid var(--cor-borda); border-radius: var(--raio); }
 .sistemas-oficiais__cabecalho, .sistemas-oficiais__row { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); }
 .sistemas-oficiais__cabecalho { margin-bottom: var(--sp-3); }
 .sistemas-oficiais__cabecalho h2 { margin: 0; font-size: var(--txt-lg); }
@@ -1719,7 +1695,7 @@ select {
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 90;
+  z-index: var(--camada-barra);
   display: flex;
   align-items: center;
   gap: var(--sp-3);
@@ -1797,7 +1773,7 @@ select {
   background: rgba(0, 0, 0, 0.15);
 }
 
-/* Painel de filtros recolhível (I07 — datas e presets ficam aqui) */
+/* Painel de filtros recolhível (datas e presets ficam aqui) */
 .filtros-painel {
   display: flex;
   align-items: flex-end;
@@ -1812,7 +1788,7 @@ select {
   width: 132px;
 }
 
-/* Menu dropdown de ações (I08 — "Mais ações") */
+/* Menu dropdown de ações ("Mais ações") */
 .menu-acoes {
   position: relative;
   display: inline-flex;
@@ -1821,12 +1797,12 @@ select {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  z-index: 200;
+  z-index: var(--camada-menu);
   min-width: 210px;
   padding: var(--sp-1) 0;
   background: var(--cor-superficie);
   border: 1px solid var(--cor-borda-forte);
-  border-radius: var(--raio-md);
+  border-radius: var(--raio);
   box-shadow: var(--sombra-flutuante);
 }
 .menu-acoes__lista[hidden] { display: none !important; }
@@ -1860,13 +1836,8 @@ select {
   flex-shrink: 0;
   opacity: 0.75;
 }
-.menu-acoes__separador {
-  height: 1px;
-  background: var(--cor-borda);
-  margin: var(--sp-1) 0;
-}
 
-/* Filtros rápidos discretos (I10 — Agendamentos) */
+/* Filtros rápidos discretos (Agendamentos) */
 .filtros-rapidos {
   display: flex;
   align-items: center;
@@ -1929,6 +1900,27 @@ select {
   overflow-x: hidden;
 }
 
+/* Tabela principal de uma tela (ver components/alturaDisponivel.js): o vh da
+   preferência vira TETO, nunca passando do que sobra na janela -- é isso que
+   acaba com a rolagem dupla (página e tabela juntas). Em "Cheia", ocupa
+   exatamente o que sobra, sem faixa vazia embaixo. */
+.table-scroll[data-ocupa-altura] {
+  max-height: min(var(--altura-tabela), var(--altura-disponivel, var(--altura-tabela)));
+}
+:root[data-altura="cheia"] .table-scroll[data-ocupa-altura] {
+  max-height: none;
+  height: var(--altura-disponivel, var(--altura-tabela));
+}
+/* No celular os filtros sozinhos já passam da janela: uma tabela que rolasse
+   por dentro seria uma rolagem dentro da outra. Quem rola é a página. */
+@media (max-width: 760px) {
+  :root .table-scroll[data-ocupa-altura],
+  :root[data-altura="cheia"] .table-scroll[data-ocupa-altura] {
+    max-height: none;
+    height: auto;
+  }
+}
+
 table.data-table {
   width: 100%;
   table-layout: fixed;
@@ -1951,12 +1943,12 @@ table.data-table {
 .data-table thead th:last-child { border-top-right-radius: 5px; }
 
 /*
- * O cabeçalho ordenável (SortableTable) é um <button> DENTRO do <th> --
+ * O cabeçalho ordenável (TabelaOrdenavel) é um <button> DENTRO do <th> --
  * alcançável por Tab, acionável por Enter. É só esse <button> que vira flex;
  * o <th> continua `display: table-cell` (herdado), porque é isso que faz um
  * <th> participar do layout de tabela.
  *
- * As tabelas que NÃO passam pelo SortableTable (Distribuição, Versões --
+ * As tabelas que NÃO passam pelo TabelaOrdenavel (Distribuição, Versões --
  * `<th>Sistema</th>` escrito direto no HTML, sem nenhum <button> dentro)
  * caem na segunda regra abaixo. Ela tinha `display: flex` também, achando
  * que deixaria os dois tipos de cabeçalho visualmente idênticos -- só que
@@ -2063,7 +2055,7 @@ table.data-table {
   cursor: default;
 }
 
-/* -- seleção múltipla (Shift+clique ou Shift+seta -- ver SortableTable) --
+/* -- seleção múltipla (Shift+clique ou Shift+seta -- ver TabelaOrdenavel) --
    Sem coluna de caixinhas: a linha marcada para o lote se distingue só pelo
    fundo. Tom mais discreto que o `.is-selected` (a linha aberta no
    formulário) de propósito -- são dois estados diferentes que podem valer ao
@@ -2225,7 +2217,7 @@ table.data-table {
   bottom: var(--sp-5);
   /* Acima da gaveta e do modal (ver as camadas em .modal-overlay): em 1000,
      o aviso que sai com a gaveta aberta ficava atrás do fundo desfocado. */
-  z-index: 1400;
+  z-index: var(--camada-notificacao);
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
@@ -2332,8 +2324,8 @@ table.data-table {
    9. MODAIS, PALETA DE COMANDOS, ATALHOS
    ========================================================================== */
 
-/* Camadas, de baixo para cima: faixa de conexão (1050), gaveta e paleta
-   (1200), modal (1300), avisos (1400). O modal tem que ficar ACIMA da gaveta:
+/* Camadas: a escala `--camada-*` fica em theme.css (faixa de conexão,
+   gaveta e paleta, modal, avisos). O modal tem que ficar ACIMA da gaveta:
    ele nasce dela -- "Descartar alterações?", o erro ao salvar, o conflito de
    revisão. Com o modal em 1100, abaixo da gaveta, tudo isso abria ESCONDIDO
    atrás do formulário: Esc e Salvar pareciam não fazer nada, e a pessoa
@@ -2342,7 +2334,7 @@ table.data-table {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1300;
+  z-index: var(--camada-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2473,17 +2465,6 @@ table.data-table {
    flex em coluna) e pareceria uma barra de navegação, não um controle. */
 .relatorio .segmented {
   align-self: flex-start;
-}
-
-textarea.relatorio__texto {
-  min-height: 260px;
-  max-height: min(420px, 50vh);
-  font-family: var(--fonte-mono);
-  font-size: var(--txt-sm);
-  line-height: 1.6;
-  white-space: pre-wrap;
-  overflow: auto;
-  resize: vertical;
 }
 
 
@@ -2732,9 +2713,15 @@ textarea.relatorio__texto {
   gap: var(--sp-2);
 }
 
-.cfg-group__title {
+/* Nível 2 da escala de títulos (ver .secao-head). O nome de um sistema em
+   Administração > Operação e o título de um bloco de Diagnóstico são nomes
+   de configuração também, e seguem a mesma medida. */
+.cfg-group__title,
+.admin-sistema__nome strong,
+.admin-saude__bloco h3 {
+  color: var(--cor-texto);
   font-family: var(--fonte-display);
-  font-size: var(--txt-base);
+  font-size: var(--txt-md);
   font-weight: var(--peso-forte);
 }
 
@@ -2771,7 +2758,7 @@ textarea.relatorio__texto {
 
 .cfg-group__help {
   color: var(--cor-texto-fraco);
-  font-size: var(--txt-xs);
+  font-size: var(--txt-sm);
 }
 
 /* Nove telas não cabem num trilho de opções -- ver `selecao` em
@@ -3572,7 +3559,7 @@ textarea.relatorio__texto {
 .cmdk-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: var(--camada-gaveta);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -3767,7 +3754,7 @@ textarea.relatorio__texto {
  * vista contaria só metade da história -- a pessoa continuaria trabalhando
  * numa tela cujos dados pararam no tempo.
  *
- * Fica ABAIXO do z-index dos modais (1100) de propósito: uma confirmação
+ * Fica ABAIXO da camada dos modais (`--camada-modal`) de propósito: uma confirmação
  * aberta é a coisa mais urgente da tela, e o servidor ter caído não muda isso.
  */
 .conexao-aviso {
@@ -3775,7 +3762,7 @@ textarea.relatorio__texto {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1050;
+  z-index: var(--camada-faixa);
   display: flex;
   align-items: center;
   gap: var(--sp-3);
@@ -3969,7 +3956,7 @@ body:has(.conexao-aviso) .dados-aviso {
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  z-index: 50;
+  z-index: var(--camada-menu);
   display: none;
   max-height: 220px;
   overflow-y: auto;
@@ -5185,21 +5172,6 @@ hr.separator {
   padding-right: 4px;
 }
 
-.version-coverage {
-  padding: 0;
-  overflow: hidden;
-}
-.version-coverage summary {
-  padding: 14px 16px;
-  color: var(--cor-texto-sub);
-  font-size: var(--txt-sm);
-  font-weight: var(--peso-forte);
-  cursor: pointer;
-  user-select: none;
-}
-.version-coverage[open] summary {
-  border-bottom: 1px solid var(--cor-borda);
-}
 .version-coverage__systems {
   display: flex;
   flex-wrap: wrap;
@@ -5334,6 +5306,8 @@ hr.separator {
 .is-boa { --situacao-cor: var(--severidade-boa); }
 .is-alta { --situacao-cor: var(--severidade-alta); }
 .is-media { --situacao-cor: var(--cor-amarelo); }
+/* Aguardando atualização (A07): cinza, não amarelo -- ainda dentro do prazo. */
+.is-neutra { --situacao-cor: var(--cor-texto-fraco); }
 .situacao__parte,
 .situacao__marca {
   background: var(--situacao-cor);
@@ -5456,6 +5430,12 @@ hr.separator {
   font-size: var(--txt-sm);
 }
 
+.card__subtitle {
+  margin: calc(-1 * var(--sp-2)) 0 var(--sp-3);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
+
 .bar-chart {
   display: flex;
   flex-direction: column;
@@ -5464,10 +5444,33 @@ hr.separator {
 
 .bar-chart__row {
   display: grid;
-  grid-template-columns: 132px 1fr 32px;
+  grid-template-columns: 132px 1fr 44px;
   align-items: center;
   gap: var(--sp-3);
   font-size: var(--txt-sm);
+}
+/* Barra clicável (Resumo abre Atualizações filtrada): <button> de verdade,
+   com o visual nativo zerado, para Tab e Enter funcionarem. */
+.bar-chart__row--acao {
+  width: 100%;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  box-sizing: content-box;
+  border: 0;
+  border-radius: var(--raio-pequeno);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--txt-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.bar-chart__row--acao:hover { background: var(--cor-superficie-hover); }
+.bar-chart__vazio {
+  margin: 0;
+  padding: var(--sp-5) 0;
+  color: var(--cor-texto-fraco);
+  text-align: center;
 }
 
 .bar-chart__label {
@@ -5477,24 +5480,39 @@ hr.separator {
   color: var(--cor-texto-sub);
 }
 
+/* O número vem logo depois do fim da barra, e não numa coluna à parte: o
+   olho segue a barra até o fim e encontra o valor ali (A08). */
 .bar-chart__track {
-  height: 10px;
-  overflow: hidden;
-  border-radius: var(--raio-pilula);
-  background: var(--cor-borda);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
 }
 
 .bar-chart__fill {
   display: block;
-  height: 100%;
+  flex: 0 1 auto;
+  height: 10px;
+  min-width: 3px;
+  max-width: calc(100% - 40px);
   border-radius: var(--raio-pilula);
   transition: width var(--dur-lenta) var(--curva-padrao);
 }
 
 .bar-chart__value {
-  text-align: right;
+  flex: 0 0 auto;
   font-weight: var(--peso-extra);
+  font-variant-numeric: tabular-nums;
 }
+
+.bar-chart__variacao {
+  font-size: var(--txt-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--cor-texto-fraco);
+}
+.bar-chart__variacao.is-alta { color: var(--severidade-boa); }
+.bar-chart__variacao.is-baixa { color: var(--severidade-alta); }
 
 /*
  * Linha de tendência (ex.: atualizações por mês). `position: relative` porque
@@ -5536,7 +5554,7 @@ hr.separator {
   font-variant-numeric: tabular-nums;
 }
 
-/* O fill de verdade é o gradiente em <defs> (ver LineChart.render) -- aqui só
+/* O fill de verdade é o gradiente em <defs> (ver GraficoDeLinhas.render) -- aqui só
    as cores DAS PARADAS do gradiente, que view sim resolvem `var()` num
    elemento SVG (diferente de `fill`/`stroke` como atributo cru). Mais forte
    perto da linha, sumindo perto da base: um accent fraco (Grafite, no painel
@@ -5568,19 +5586,6 @@ hr.separator {
 }
 .line-chart__ponto--fim {
   fill: var(--cor-accent-forte);
-}
-
-/* Halo atrás do ponto final (dois círculos concêntricos, ver LineChart) --
-   puxa o olho pro valor mais recente sem depender de quão saturada a cor de
-   destaque é. */
-.line-chart__halo {
-  fill: var(--cor-accent);
-}
-.line-chart__halo--externo {
-  opacity: 0.08;
-}
-.line-chart__halo--interno {
-  opacity: 0.16;
 }
 
 /* Ponto de destaque do hover: nasce escondido (r:0) e cresce -- fica claro
@@ -5645,6 +5650,13 @@ hr.separator {
   background: radial-gradient(circle at 15% 20%, var(--halo-topo), transparent 32%), var(--cor-fundo);
 }
 
+/* Antes do /auth/status voltar (index.html). */
+.auth-screen--carregando {
+  gap: var(--sp-3);
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-base);
+}
+
 /*
  * Painel de marca ao lado do formulário -- só em telas largas (ver o
  * media query abaixo). Estreita, era só o card sozinho boiando no meio de um
@@ -5656,21 +5668,39 @@ hr.separator {
   display: none;
 }
 
+/*
+ * Em tela larga, a tela se divide em duas metades (A12, 30/09/2026): a marca
+ * num painel de verdade, tingido com a cor de destaque, e o formulário na
+ * outra. Antes o "painel" era só texto solto no mesmo fundo do resto, e o
+ * logo e o nome apareciam duas vezes -- a regra que escondia o do cartão
+ * ficava ANTES da regra base dele no arquivo e perdia (ver .auth-card__marca
+ * lá embaixo, agora com a exceção depois da base).
+ * O tingido é color-mix sobre a superfície, e não uma cor fixa: acompanha o
+ * tema claro, o escuro e a cor de destaque escolhida, sem texto branco sobre
+ * azul que o contraste alto não aguentaria.
+ */
 @media (min-width: 900px) {
-  .auth-screen {
-    gap: 64px;
+  .auth-screen:not(.auth-screen--carregando) {
+    display: grid;
+    grid-template-columns: minmax(360px, 5fr) 7fr;
+    align-items: stretch;
+    padding: 0;
   }
   .auth-screen__brand {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: var(--sp-4);
-    width: min(340px, 32vw);
+    padding: var(--sp-8) clamp(32px, 6vw, 96px);
+    border-right: 1px solid var(--cor-borda);
+    background:
+      radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--cor-accent) 26%, transparent), transparent 55%),
+      linear-gradient(165deg, color-mix(in srgb, var(--cor-accent) 14%, var(--cor-superficie)), var(--cor-superficie));
   }
-  /* A marca já aparece inteira no painel ao lado -- repeti-la, pequena, em
-     cima do formulário também seria a mesma informação duas vezes na mesma
-     tela. */
-  .auth-card__logo {
-    display: none;
+  .auth-screen > .auth-card {
+    align-self: center;
+    justify-self: center;
+    margin: var(--sp-8);
   }
 }
 
@@ -5678,53 +5708,55 @@ hr.separator {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 11px;
+  width: 56px;
+  height: 56px;
+  border-radius: 13px;
   background: var(--cor-accent);
   color: var(--cor-sobre-accent);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--cor-accent) 35%, transparent);
 }
 .auth-screen__brand-mark svg {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
 }
 
 .auth-screen__brand-name {
   font-family: var(--fonte-display);
-  font-size: var(--txt-xl);
+  font-size: var(--txt-2xl);
   font-weight: var(--peso-extra);
   letter-spacing: -0.03em;
+  line-height: 1.1;
 }
 
 .auth-screen__brand-tagline {
-  margin: -8px 0 0;
+  margin: -6px 0 0;
   color: var(--cor-texto-sub);
-  font-size: var(--txt-base);
-  max-width: 30ch;
+  font-size: var(--txt-md);
+  max-width: 32ch;
 }
 
 .auth-screen__brand-list {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
-  margin: var(--sp-2) 0 0;
+  margin: var(--sp-4) 0 0;
   padding: 0;
   list-style: none;
 }
 .auth-screen__brand-list li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: var(--cor-texto-sub);
-  font-size: var(--txt-sm);
+  gap: 12px;
+  color: var(--cor-texto);
+  font-size: var(--txt-base);
 }
 .auth-screen__brand-list svg {
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
-  padding: 5px;
-  border-radius: 7px;
-  background: var(--cor-superficie-alta);
+  padding: 7px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--cor-accent) 16%, var(--cor-superficie));
   color: var(--cor-accent);
   box-sizing: content-box;
 }
@@ -5741,21 +5773,40 @@ hr.separator {
   box-shadow: var(--sombra-flutuante);
 }
 
+.auth-card__marca {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+.auth-card__marca-nome {
+  font-family: var(--fonte-display);
+  font-size: var(--txt-md);
+  font-weight: var(--peso-extra);
+  letter-spacing: -0.01em;
+}
+
 .auth-card__logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  margin-bottom: var(--sp-4);
+  width: 40px;
+  height: 40px;
   border-radius: 9px;
   background: var(--cor-accent);
   color: var(--cor-sobre-accent);
 }
 
 .auth-card__logo svg {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
+}
+
+/* Depois da regra base, de propósito (ver o comentário do painel de marca). */
+@media (min-width: 900px) {
+  .auth-card__marca {
+    display: none;
+  }
 }
 
 .auth-card h2 {
@@ -5782,17 +5833,47 @@ hr.separator {
   padding: 11px 14px;
 }
 
+/* O erro ficava colado no rótulo "Usuário" logo abaixo, e parecia ser
+   só daquele campo. Agora tem espaço, borda e um sinal de alerta. */
 .auth-card__error {
   display: none;
-  padding: 9px 12px;
+  margin-bottom: var(--sp-4);
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--cor-vermelho) 40%, transparent);
   border-radius: var(--raio-pequeno);
   background: var(--cor-vermelho-fraco);
   color: var(--cor-vermelho);
   font-size: var(--txt-sm);
+  font-weight: var(--peso-medio);
 }
 
 .auth-card__error.is-visible {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.auth-card__error.is-visible::before {
+  content: "!";
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--cor-vermelho);
+  color: var(--cor-superficie);
+  font-size: 11px;
+  font-weight: var(--peso-extra);
+  line-height: 1;
+}
+
+.auth-card .input[aria-invalid="true"] {
+  border-color: var(--cor-vermelho);
+}
+
+.auth-card form[aria-busy="true"] .input {
+  opacity: 0.7;
 }
 
 /* ==========================================================================
@@ -5987,10 +6068,6 @@ h1, h2, h3, strong {
   .consulta-search {
     width: 100%;
   }
-  .dashboard-intro {
-    flex-direction: column;
-    align-items: flex-start;
-  }
   .version-management-layout,
   .distribution-metrics,
   .version-stats,
@@ -6153,7 +6230,7 @@ h1, h2, h3, strong {
 .drawer-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: var(--camada-gaveta);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -6324,6 +6401,35 @@ h1, h2, h3, strong {
   flex: 1;
   min-height: 120px;
 }
+
+/* O quadro ocupa o que sobra da janela e cada coluna rola por dentro (A06).
+   Antes o quadro tinha 640px mínimos e crescia com a maior coluna: em
+   1366×768 ele passava da janela, e numa coluna cheia a página inteira
+   descia só para alcançar o último cartão. */
+.kanban-board[data-ocupa-altura] {
+  min-height: 0;
+  height: var(--altura-disponivel, auto);
+  align-items: stretch;
+}
+.kanban-board[data-ocupa-altura] .kanban-column {
+  min-height: 0;
+  overflow: hidden;
+}
+.kanban-board[data-ocupa-altura] .kanban-column__cards {
+  min-height: 0;
+  overflow-y: auto;
+  /* O anel de foco e a sombra do cartão não são cortados pela rolagem. */
+  padding: 2px;
+  margin-inline: -2px;
+}
+@media (max-width: 760px) {
+  .kanban-board[data-ocupa-altura] {
+    height: auto;
+    align-items: start;
+  }
+  .kanban-board[data-ocupa-altura] .kanban-column { overflow: visible; }
+  .kanban-board[data-ocupa-altura] .kanban-column__cards { overflow-y: visible; }
+}
 .kanban-empty-placeholder {
   border: 1px dashed var(--cor-borda);
   border-radius: 6px;
@@ -6483,11 +6589,11 @@ h1, h2, h3, strong {
 .client-timeline { border-left: 1px solid var(--cor-borda); padding-left: var(--sp-4); }
 .client-timeline > article { position: relative; margin-bottom: var(--sp-4); }
 .audit-diff { display: grid; gap: var(--sp-2); margin-top: var(--sp-4); }
-.audit-diff__row { display: grid; grid-template-columns: minmax(110px, .7fr) 1fr auto 1fr; gap: var(--sp-3); align-items: center; padding: var(--sp-3); border: 1px solid var(--cor-borda); border-radius: var(--raio-md); }
+.audit-diff__row { display: grid; grid-template-columns: minmax(110px, .7fr) 1fr auto 1fr; gap: var(--sp-3); align-items: center; padding: var(--sp-3); border: 1px solid var(--cor-borda); border-radius: var(--raio); }
 .audit-diff del { color: var(--status-erro-texto); background: var(--status-erro-bg); padding: var(--sp-2); text-decoration-thickness: 2px; }
 .audit-diff ins { color: var(--status-ok-texto); background: var(--status-ok-bg); padding: var(--sp-2); text-decoration: none; }
 .bar-chart__row { position: relative; }
-.bar-chart__row::after { content: attr(data-tooltip); position: absolute; z-index: 20; left: 50%; bottom: calc(100% + 6px); max-width: 260px; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--cor-borda); border-radius: var(--raio-md); background: var(--cor-superficie); box-shadow: var(--sombra-flutuante); color: var(--cor-texto); opacity: 0; transform: translate(-50%, 4px); pointer-events: none; transition: opacity 140ms ease, transform 140ms ease; }
+.bar-chart__row::after { content: attr(data-tooltip); position: absolute; z-index: 20; left: 50%; bottom: calc(100% + 6px); max-width: 260px; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--cor-borda); border-radius: var(--raio); background: var(--cor-superficie); box-shadow: var(--sombra-flutuante); color: var(--cor-texto); opacity: 0; transform: translate(-50%, 4px); pointer-events: none; transition: opacity 140ms ease, transform 140ms ease; }
 .bar-chart__row:hover::after, .bar-chart__row:focus::after { opacity: 1; transform: translate(-50%, 0); }
 .data-table td, .version-chip, time, .result-count { font-variant-numeric: tabular-nums; }
 
@@ -6607,26 +6713,38 @@ h1, h2, h3, strong {
   }
 }
 
-/* -- cabeçalho de cada aba -- */
+/* -- cabeçalho de cada aba --
+
+   Administração e Configurações têm três níveis de texto, e cada um precisa
+   ser reconhecido sem ler (A09, 30/09/2026):
+     1. título da seção -- o h2 da aba (grande, com linha divisória) e o h3 de
+        cada cartão, que divide a aba em assuntos;
+     2. nome da configuração -- .cfg-group__title (médio, em negrito);
+     3. descrição -- .cfg-group__help (pequena, cor secundária).
+   Antes o título do cartão e o nome da configuração saíam com 14px e 13px no
+   mesmo peso, e "Histórico de atualizações" parecia só mais uma linha da
+   lista que ele encabeça. */
 .secao-head {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--sp-4);
   flex-wrap: wrap;
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--cor-borda);
 }
 .secao-head__titulos {
   min-width: 0;
 }
 .secao-head__titulos h2 {
   margin: 0;
-  font: var(--peso-extra) var(--txt-lg) / 1.2 var(--fonte-display);
+  font: var(--peso-extra) var(--txt-xl) / 1.2 var(--fonte-display);
   letter-spacing: -0.02em;
 }
 .secao-head__titulos p {
   margin: var(--sp-1) 0 0;
   color: var(--cor-texto-sub);
-  font-size: var(--txt-sm);
+  font-size: var(--txt-base);
 }
 .secao-head__acoes {
   display: flex;
@@ -6648,7 +6766,10 @@ h1, h2, h3, strong {
   overflow: hidden;
 }
 .secao-card--lateral {
-  padding: var(--sp-4) var(--sp-5);
+  padding: var(--sp-2) var(--sp-5) var(--sp-4);
+}
+.secao-card--lateral > .secao-card__head {
+  margin-bottom: var(--sp-3);
 }
 
 /* Título de um cartão: separa o assunto do cartão das linhas de ajuste. */
@@ -6665,12 +6786,12 @@ h1, h2, h3, strong {
 }
 .secao-card__titulos h3 {
   margin: 0;
-  font: var(--peso-extra) var(--txt-md) / 1.3 var(--fonte-display);
-  letter-spacing: -0.01em;
+  font: var(--peso-extra) var(--txt-lg) / 1.3 var(--fonte-display);
+  letter-spacing: -0.015em;
 }
 .secao-card__titulos p {
   margin: 2px 0 0;
-  color: var(--cor-texto-fraco);
+  color: var(--cor-texto-sub);
   font-size: var(--txt-sm);
 }
 .secao-card__acoes {
@@ -6703,7 +6824,7 @@ h1, h2, h3, strong {
 }
 .admin-papeis dt {
   font-weight: var(--peso-forte);
-  font-size: var(--txt-base);
+  font-size: var(--txt-md);
 }
 .admin-papeis dd {
   margin: 2px 0 0;
@@ -6867,7 +6988,7 @@ h1, h2, h3, strong {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  font: var(--peso-forte) var(--txt-base) / 1.2 var(--fonte-display);
+  line-height: 1.2;
 }
 .admin-saude__icone {
   display: grid;
@@ -7303,8 +7424,23 @@ h1, h2, h3, strong {
 .admin-sistema.is-alterado { background: var(--cor-accent-fraco); }
 .admin-sistema__nome { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
 .admin-sistema__nome strong { overflow-wrap: anywhere; }
-.admin-sistema__nome small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
+.admin-sistema__nome small { color: var(--cor-texto-fraco); font-size: var(--txt-sm); }
 .admin-sistema .segmented { flex: 0 0 auto; }
+.admin-sistema__dependente {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+  cursor: pointer;
+}
+.admin-sistema__dependente[hidden] { display: none; }
+.pela-data {
+  display: block;
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
 
 /* Diagnóstico: título e selo quebram de linha em vez de espremer o título. */
 .admin-saude__bloco header { flex-wrap: wrap; }

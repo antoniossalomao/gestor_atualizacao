@@ -13,7 +13,7 @@
  *
  * Nenhum dos dois gera erro. Por isso o teste.
  *
- * O `VersaoService` e o `NotificationService` sao dubles: o que esta sob teste
+ * O `VersaoService` e o `NotificacaoService` sao dubles: o que esta sob teste
  * e' a MAQUINA DE ESTADOS, nao o calculo da situacao (que e' do painel) nem o
  * envio HTTP.
  */
@@ -23,20 +23,20 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { AlertaAgenteService } = require("../src/services/AlertaAgenteService");
 const { ConfiguracaoSistemaService } = require("../src/services/ConfiguracaoSistemaService");
 
 function ambiente(situacaoInicial = "ok") {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-alerta-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
 
   const agente = { cnpj: "C001", empresa: "Mercado Central", situacao: situacaoInicial, ultimoDetalhe: "" };
   const versoes = { painel: () => ({ agentes: [agente] }) };
   const avisos = [];
   const notifications = {
     webhookUrl: "https://discord.example/webhook",
-    notifyAgenteSituacao: async (payload) => void avisos.push(payload),
+    avisarSituacaoDoAgente: async (payload) => void avisos.push(payload),
   };
 
   const configuracaoSistema = new ConfiguracaoSistemaService(db);
@@ -139,7 +139,7 @@ test("AlertaAgenteService - resistência a falha", async (t) => {
     // ar tiraria o painel do ar junto.
     const env = ambiente("erro");
     try {
-      env.notifications.notifyAgenteSituacao = async () => {
+      env.notifications.avisarSituacaoDoAgente = async () => {
         throw new Error("Discord fora do ar");
       };
       await assert.doesNotReject(() => env.service.verificar());

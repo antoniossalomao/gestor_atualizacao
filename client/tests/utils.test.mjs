@@ -1,9 +1,9 @@
 /*
  * Testes de js/utils/ -- as utilidades genéricas, que não conhecem o negócio.
  *
- * Só entram aqui as funções que NÃO tocam no DOM: `el` e `copyToClipboard`
+ * Só entram aqui as funções que NÃO tocam no DOM: `el` e `copiarParaAreaDeTransferencia`
  * usam `document`, que não existe no Node, e ficam de fora por construção.
- * (`escapeHtml` também usava, e por isso não era testada -- deixou de usar
+ * (`escaparHtml` também usava, e por isso não era testada -- deixou de usar
  * justamente para poder ser, ver utils/html.js.) Essa é
  * exatamente a linha que a divisão de pastas desenhou (ver ADR-0005) -- o que
  * é testável fora do navegador fica separado do que não é.
@@ -12,24 +12,24 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  todayBR,
-  isValidDateBR,
+  hojeBR,
+  dataBRValida,
   formatarDataHora,
   tempoRelativo,
   formatarBytes,
   formatarDuracao,
   mascaraDataBR,
-} from "../js/utils/date.js";
-import { escapeAttr, escapeHtml, html, confiavel, HtmlSeguro, plural } from "../js/utils/html.js";
-import { icon, iconHtml } from "../js/utils/icons.js";
-import { blendHex } from "../js/utils/color.js";
+} from "../js/utils/data.js";
+import { escaparAtributo, escaparHtml, html, confiavel, HtmlSeguro, plural } from "../js/utils/html.js";
+import { iconeSvg, iconeHtml } from "../js/utils/icones.js";
+import { misturarHex } from "../js/utils/cor.js";
 
-test("utils/date - todayBR", async (t) => {
+test("utils/date - hojeBR", async (t) => {
   await t.test("devolve dd/mm/aaaa com zero à esquerda", () => {
-    const hoje = todayBR();
+    const hoje = hojeBR();
     assert.match(hoje, /^\d{2}\/\d{2}\/\d{4}$/);
     // E o que ela devolve tem que ser aceito pela própria validação.
-    assert.equal(isValidDateBR(hoje), true);
+    assert.equal(dataBRValida(hoje), true);
   });
 });
 
@@ -39,20 +39,20 @@ test("utils/date - mascaraDataBR", () => {
   assert.equal(mascaraDataBR("2109"), "21/09");
 });
 
-test("utils/date - isValidDateBR", async (t) => {
+test("utils/date - dataBRValida", async (t) => {
   await t.test("espelha a regra do backend", () => {
     // Esta função existe só para dar retorno instantâneo no formulário; a
     // validação que decide se salva é a do servidor
     // (server/src/shared/validation.js). Se as duas divergirem, o usuário vê
     // "ok" na tela e toma erro ao salvar -- por isso os casos aqui são os
     // mesmos de tests/shared.test.js do servidor.
-    assert.equal(isValidDateBR(""), true, "vazio é permitido");
-    assert.equal(isValidDateBR("29/02/2024"), true, "2024 é bissexto");
-    assert.equal(isValidDateBR("29/02/2026"), false, "2026 não é");
-    assert.equal(isValidDateBR("31/02/2026"), false, "o Date 'consertaria' para 03/03");
-    assert.equal(isValidDateBR("31/04/2026"), false, "abril tem 30 dias");
-    assert.equal(isValidDateBR("2026-01-01"), false, "formato ISO não passa");
-    assert.equal(isValidDateBR("1/1/2026"), false, "sem zero à esquerda não passa");
+    assert.equal(dataBRValida(""), true, "vazio é permitido");
+    assert.equal(dataBRValida("29/02/2024"), true, "2024 é bissexto");
+    assert.equal(dataBRValida("29/02/2026"), false, "2026 não é");
+    assert.equal(dataBRValida("31/02/2026"), false, "o Date 'consertaria' para 03/03");
+    assert.equal(dataBRValida("31/04/2026"), false, "abril tem 30 dias");
+    assert.equal(dataBRValida("2026-01-01"), false, "formato ISO não passa");
+    assert.equal(dataBRValida("1/1/2026"), false, "sem zero à esquerda não passa");
   });
 });
 
@@ -135,47 +135,47 @@ test("utils/date - formatarDuracao", async (t) => {
   });
 });
 
-test("utils/html - escapeAttr", async (t) => {
+test("utils/html - escaparAtributo", async (t) => {
   await t.test("neutraliza o que fecharia o atributo ou a tag", () => {
     // O ponto: um nome de cliente com aspas dentro de um `title="..."` fecha o
     // atributo e o resto do texto vira HTML. É a porta de XSS armazenado mais
     // fácil de esquecer, porque o campo parece inofensivo.
-    assert.equal(escapeAttr('aspas " aqui'), "aspas &quot; aqui");
-    assert.equal(escapeAttr("<script>"), "&lt;script&gt;");
-    assert.equal(escapeAttr("a & b"), "a &amp; b");
+    assert.equal(escaparAtributo('aspas " aqui'), "aspas &quot; aqui");
+    assert.equal(escaparAtributo("<script>"), "&lt;script&gt;");
+    assert.equal(escaparAtributo("a & b"), "a &amp; b");
   });
 
   await t.test("escapa o & primeiro, senão as entidades saem corrompidas", () => {
     // Se "&" fosse substituído por último, o "&" de "&quot;" seria escapado de
     // novo e o resultado sairia "&amp;quot;", que aparece literalmente na tela.
-    assert.equal(escapeAttr('&"'), "&amp;&quot;");
+    assert.equal(escaparAtributo('&"'), "&amp;&quot;");
   });
 
   await t.test("nulo e indefinido viram string vazia", () => {
-    assert.equal(escapeAttr(null), "");
-    assert.equal(escapeAttr(undefined), "");
+    assert.equal(escaparAtributo(null), "");
+    assert.equal(escaparAtributo(undefined), "");
   });
 });
 
-test("utils/html - escapeHtml", async (t) => {
+test("utils/html - escaparHtml", async (t) => {
   await t.test("serve também DENTRO de atributo: escapa aspas duplas e simples", () => {
     // A versão antiga (textContent -> innerHTML do navegador) não escapava
     // aspas. O cartão do kanban a usava em `aria-label="Tarefa ${...}"`, e uma
     // tarefa com `"` no título fechava o atributo antes da hora.
-    assert.equal(escapeHtml('diz "oi"'), "diz &quot;oi&quot;");
-    assert.equal(escapeHtml("d'água"), "d&#39;água");
+    assert.equal(escaparHtml('diz "oi"'), "diz &quot;oi&quot;");
+    assert.equal(escaparHtml("d'água"), "d&#39;água");
   });
 
   await t.test("escapa o que abriria uma tag, e o & primeiro", () => {
-    assert.equal(escapeHtml("<img src=x onerror=alert(1)>"), "&lt;img src=x onerror=alert(1)&gt;");
-    assert.equal(escapeHtml('&"'), "&amp;&quot;");
-    assert.equal(escapeHtml("&amp;"), "&amp;amp;", "texto que PARECE entidade continua sendo texto");
+    assert.equal(escaparHtml("<img src=x onerror=alert(1)>"), "&lt;img src=x onerror=alert(1)&gt;");
+    assert.equal(escaparHtml('&"'), "&amp;&quot;");
+    assert.equal(escaparHtml("&amp;"), "&amp;amp;", "texto que PARECE entidade continua sendo texto");
   });
 
   await t.test("nulo e indefinido viram vazio; número vira texto", () => {
-    assert.equal(escapeHtml(null), "");
-    assert.equal(escapeHtml(undefined), "");
-    assert.equal(escapeHtml(0), "0");
+    assert.equal(escaparHtml(null), "");
+    assert.equal(escaparHtml(undefined), "");
+    assert.equal(escaparHtml(0), "0");
   });
 });
 
@@ -227,9 +227,9 @@ test("utils/html - tag html", async (t) => {
     assert.equal(texto(confiavel(null)), "");
   });
 
-  await t.test("iconHtml entra como SVG, icon() puro seria escapado", () => {
-    assert.equal(texto(html`${iconHtml("seta")}`), icon("seta"));
-    assert.match(texto(html`${icon("seta")}`), /^&lt;svg/, "é esse escape que o iconHtml evita");
+  await t.test("iconeHtml entra como SVG, iconeSvg() puro seria escapado", () => {
+    assert.equal(texto(html`${iconeHtml("seta")}`), iconeSvg("seta"));
+    assert.match(texto(html`${iconeSvg("seta")}`), /^&lt;svg/, "é esse escape que o iconeHtml evita");
   });
 });
 
@@ -246,17 +246,17 @@ test("utils/html - plural", async (t) => {
   });
 });
 
-test("utils/color - blendHex", async (t) => {
+test("utils/color - misturarHex", async (t) => {
   await t.test("t=0 e t=1 devolvem os extremos", () => {
-    assert.equal(blendHex("#000000", "#ffffff", 0), "rgb(0, 0, 0)");
-    assert.equal(blendHex("#000000", "#ffffff", 1), "rgb(255, 255, 255)");
+    assert.equal(misturarHex("#000000", "#ffffff", 0), "rgb(0, 0, 0)");
+    assert.equal(misturarHex("#000000", "#ffffff", 1), "rgb(255, 255, 255)");
   });
 
   await t.test("t=0.5 fica no meio", () => {
-    assert.equal(blendHex("#000000", "#ffffff", 0.5), "rgb(128, 128, 128)");
+    assert.equal(misturarHex("#000000", "#ffffff", 0.5), "rgb(128, 128, 128)");
   });
 
   await t.test("mistura cada canal separadamente", () => {
-    assert.equal(blendHex("#ff0000", "#0000ff", 0.5), "rgb(128, 0, 128)");
+    assert.equal(misturarHex("#ff0000", "#0000ff", 0.5), "rgb(128, 0, 128)");
   });
 });

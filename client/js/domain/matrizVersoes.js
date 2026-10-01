@@ -1,4 +1,4 @@
-import { tempoRelativo, formatarDataHora } from "../utils/date.js";
+import { tempoRelativo, formatarDataHora } from "../utils/data.js";
 import { versaoRegistrada } from "./relatorio.js";
 
 /**
@@ -16,7 +16,7 @@ import { versaoRegistrada } from "./relatorio.js";
  * string inteira como se fosse um "sistema" só, e cada sistema individual
  * (ex.: "B_Vendas" sozinho) nunca batia com o registro combinado -- mesmo
  * instalado, aparecia como "Não instalado". Mesmo critério de split usado no
- * backend (ver splitSystems em AtualizacaoRepository.js).
+ * backend (ver separarSistemas em AtualizacaoRepository.js).
  * @param {string|null|undefined} texto
  * @returns {string[]}
  */
@@ -46,6 +46,7 @@ const ESTADO_POR_SITUACAO = {
  *   estadoBadge: string,
  *   contatoTexto: string,
  *   contatoTitle: string,
+ *   origemData?: string,
  * }} LinhaMatriz
  */
 
@@ -54,9 +55,11 @@ const ESTADO_POR_SITUACAO = {
  * @param {Array<{sistema?: string, versao?: string, data?: string}>|null|undefined} historico
  *   do mais recente para o mais antigo (como vem de /atualizacoes/recent-by-client)
  * @param {{agentes?: any[], ativas?: Array<{sistema: string, versao: string}>}|null|undefined} painelVersoes
+ * @param {Array<{sistema: string, situacao: string, contaNaSituacao?: boolean, pelaDataDe?: string|null}>} [situacaoSistemas]
+ *   a situação de cada sistema pela regra do servidor (/atualizacoes/situacao-cliente)
  * @returns {LinhaMatriz[]} em ordem alfabética de sistema; vazio se o cliente não tem sistema nenhum
  */
-export function montarMatrizVersoes(cliente, historico, painelVersoes) {
+export function montarMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas = []) {
   const registros = historico || [];
   const sistemas = new Set(cliente.sistemas || []);
 
@@ -90,16 +93,19 @@ export function montarMatrizVersoes(cliente, historico, painelVersoes) {
 
       // O que o agente reportou ganha do que alguém digitou à mão: é o que
       // está de fato rodando na máquina. `histReg.versao` é o resumo de TODOS
-      // os sistemas daquele atendimento (ex.: "B_Vendas: 1; B_NFe: 2") -- pega
+      // os sistemas daquela atualização (ex.: "B_Vendas: 1; B_NFe: 2") -- pega
       // a versão deste sistema específico, não a string inteira.
       const instalada = agente?.ultimaVersao || versaoRegistrada(histReg, sistema) || null;
+      const doServidor = situacaoSistemas.find((s) => s.contaNaSituacao && mesmo(s.sistema, sistema));
 
       return {
         sistema,
         instalada,
         publicada: versaoAtiva,
-        ...estado(agente, instalada, versaoAtiva),
+        ...(!agente && doServidor ? estadoPelaRegra(doServidor.situacao) : estado(agente, instalada, versaoAtiva)),
         ...contato(agente, histReg),
+        // A13: dependente do B_Vendas julgado pela data dele.
+        ...(!agente && doServidor?.pelaDataDe ? { origemData: `pela data do ${doServidor.pelaDataDe}` } : {}),
       };
     });
 }
@@ -121,6 +127,26 @@ function estado(agente, instalada, versaoAtiva) {
   return instalada === versaoAtiva
     ? { estadoLabel: "Atualizado", estadoBadge: "badge--success" }
     : { estadoLabel: "Atrasado", estadoBadge: "badge--warning" };
+}
+
+/**
+ * Sem agente, a ficha mostra a MESMA situação do Resumo e da aba Sistemas
+ * (services/situacaoVersao.js no servidor: data da última atualização contra
+ * a versão oficial, com o prazo da equipe). Antes ela comparava a versão
+ * digitada com a publicada pelo Atualizador -- outra regra, que com o
+ * Atualizador pausado dava "Sem publicação" em tudo e contradizia o Resumo.
+ */
+const ESTADO_PELA_REGRA = {
+  "Em dia": { estadoLabel: "Em dia", estadoBadge: "badge--success" },
+  "Aguardando atualização": { estadoLabel: "Aguardando atualização", estadoBadge: "badge--muted" },
+  Desatualizado: { estadoLabel: "Desatualizado", estadoBadge: "badge--warning" },
+  "Nunca atualizado": { estadoLabel: "Nunca atualizado", estadoBadge: "badge--warning" },
+  "Sem referência": { estadoLabel: "Sem versão oficial", estadoBadge: "badge--muted" },
+  "Sem informação": { estadoLabel: "Sem informação", estadoBadge: "badge--warning" },
+};
+
+function estadoPelaRegra(situacao) {
+  return ESTADO_PELA_REGRA[situacao] || { estadoLabel: situacao || "Sem informação", estadoBadge: "badge--muted" };
 }
 
 function contato(agente, histReg) {

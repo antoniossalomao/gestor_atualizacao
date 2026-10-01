@@ -5,8 +5,7 @@ const SAIDA_MS = 140;
 
 /**
  * Diálogos modais no tema do app (aviso / confirmação), em vez do
- * `alert()`/`confirm()` feio e não estilizável do navegador -- mesma ideia
- * de `gestor/dialogs.py` (CustomDialog) no app Tkinter original.
+ * `alert()`/`confirm()` feio e não estilizável do navegador.
  *
  * O `_open` daqui é reaproveitado pelos painéis flutuantes (Backups,
  * Usuários), então tudo que ele faz de acessibilidade vale para eles também:
@@ -22,7 +21,14 @@ const SAIDA_MS = 140;
  *    o "Confirmar" destrutivo. Antes, um `Enter` reflexo confirmava a exclusão.
  */
 export class Modal {
-  /** Mostra um aviso/erro com um único botão "OK". @returns {Promise<void>} */
+  /**
+   * Mostra um aviso/erro com um único botão "OK". @returns {Promise<void>}
+   *
+   * Para pôr o foco num campo depois do aviso, espere a promessa
+   * (`Modal.alert(...).then(() => campo.focus())`). Focar na hora tira o foco
+   * de dentro do aviso ainda aberto e o joga no formulário atrás dele: o Enter
+   * seguinte reenviava o formulário e empilhava outro aviso (A02).
+   */
   static alert(title, message, kind = "info") {
     return new Promise((resolve) => {
       Modal._open({ title, message, kind, question: false, onResolve: () => resolve() });

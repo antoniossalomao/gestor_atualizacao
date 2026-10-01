@@ -1,14 +1,14 @@
 import { View } from "../app/View.js";
-import { prefs } from "../app/prefs.js";
-import { theme } from "../app/theme.js";
-import { aparencia, reaplicarAparencia, PERFIS } from "../app/appearance.js";
+import { prefs } from "../app/preferencias.js";
+import { temaApp } from "../app/tema.js";
+import { aparencia, reaplicarAparencia, PERFIS } from "../app/aparencia.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { TelaComAbas } from "../components/TelaComAbas.js";
 import { html } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
+import { iconeHtml } from "../utils/icones.js";
 import { filtrarPorBusca } from "../utils/busca.js";
-import { baixarTexto, escolherArquivo } from "../utils/arquivo.js";
+import { baixarTexto, escolherArquivo } from "../components/arquivos.js";
 import { resultadosBusca } from "../templates/configuracoes.js";
 import { definirAbas, chavesDaAba } from "./configuracoes/ajustes.js";
 import { SecaoAjustes } from "./configuracoes/SecaoAjustes.js";
@@ -60,7 +60,7 @@ import { RegrasEquipeConfig } from "./configuracoes/RegrasEquipeConfig.js";
 export class ConfiguracoesView extends View {
   /**
    * @param {HTMLElement} container
-   * @param {import('../api/ApiClient').ApiClient} api
+   * @param {import('../api/ApiPainel').ApiPainel} api
    * @param {any} ctx além do de toda view: `abasDoMenu`, `definirSidebar`,
    *   `sincronizarPreferencias` e `aoMudarNome` (ver App._montarAbas)
    */
@@ -71,6 +71,8 @@ export class ConfiguracoesView extends View {
       abasDoMenu: ctx.abasDoMenu || [],
       atualizadorHabilitado: this.atualizadorHabilitado,
       definirSidebar: (recolhida) => ctx.definirSidebar?.(recolhida),
+      regras: ctx.regras || {},
+      versao: ctx.versao || (() => null),
     });
 
     // Migra preferências salvas de chaves antigas para as novas seções
@@ -102,7 +104,7 @@ export class ConfiguracoesView extends View {
       chavePrefs: "configuracoes:aba",
       extra: html`
         <label class="cfg-busca">
-          <span class="cfg-busca__icone" aria-hidden="true">${iconHtml("busca")}</span>
+          <span class="cfg-busca__icone" aria-hidden="true">${iconeHtml("busca")}</span>
           <input type="search" class="input" data-role="busca" placeholder="Buscar um ajuste…"
                  aria-label="Buscar um ajuste" autocomplete="off" spellcheck="false" />
         </label>`,
@@ -200,9 +202,6 @@ export class ConfiguracoesView extends View {
     });
   }
 
-  // ==========================================================================
-  // O QUE ESTÁ FORA DO PADRÃO
-  // ==========================================================================
 
   _atualizarTudo() {
     for (const aba of this.abas) {
@@ -225,9 +224,6 @@ export class ConfiguracoesView extends View {
     }
   }
 
-  // ==========================================================================
-  // MUDANÇAS EM LOTE
-  // ==========================================================================
 
   /**
    * O que fazer depois de mexer em muitas preferências de uma vez (perfil,
@@ -241,7 +237,7 @@ export class ConfiguracoesView extends View {
    * o menu lateral.
    */
   _aplicarEmLote() {
-    theme.aplicar();
+    temaApp.aplicar();
     reaplicarAparencia();
     this.ctx.sincronizarPreferencias?.();
     this._atualizarTudo();
@@ -251,7 +247,7 @@ export class ConfiguracoesView extends View {
     const perfil = PERFIS.find((p) => p.valor === valor);
     if (!perfil || !aparencia.aplicarPerfil(valor)) return;
     this._aplicarEmLote();
-    toast.success(`Perfil "${perfil.rotulo}" aplicado.`);
+    avisoRapido.sucesso(`Perfil "${perfil.rotulo}" aplicado.`);
   }
 
   _restaurarSecao(aba) {
@@ -259,7 +255,7 @@ export class ConfiguracoesView extends View {
     if (chaves.length === 0) return;
     aparencia.restaurarPadroes(chaves);
     this._aplicarEmLote();
-    toast.success(`"${aba.rotulo}" voltou ao padrão.`);
+    avisoRapido.sucesso(`"${aba.rotulo}" voltou ao padrão.`);
   }
 
   async _restaurarTudo() {
@@ -271,12 +267,9 @@ export class ConfiguracoesView extends View {
     if (!ok) return;
     aparencia.restaurarPadroes();
     this._aplicarEmLote();
-    toast.success("Preferências restauradas.");
+    avisoRapido.sucesso("Preferências restauradas.");
   }
 
-  // ==========================================================================
-  // LEVAR PARA OUTRA MÁQUINA
-  // ==========================================================================
 
   _exportar() {
     const agora = new Date();
@@ -286,7 +279,7 @@ export class ConfiguracoesView extends View {
       String(agora.getDate()).padStart(2, "0"),
     ].join("-");
     baixarTexto(JSON.stringify(aparencia.exportar(), null, 2), `preferencias-gestor-${carimbo}.json`);
-    toast.success("Arquivo de preferências salvo.");
+    avisoRapido.sucesso("Arquivo de preferências salvo.");
   }
 
   async _importar() {
@@ -297,7 +290,7 @@ export class ConfiguracoesView extends View {
     try {
       conteudo = JSON.parse(await arquivo.text());
     } catch {
-      toast.error("Arquivo inválido: não é um JSON legível.");
+      avisoRapido.erro("Arquivo inválido: não é um JSON legível.");
       return;
     }
 
@@ -307,21 +300,18 @@ export class ConfiguracoesView extends View {
     } catch (erro) {
       // As mensagens de `importar` são escritas para serem lidas por quem
       // escolheu o arquivo -- repassar direto é melhor que traduzir aqui.
-      toast.error(erro.message);
+      avisoRapido.erro(erro.message);
       return;
     }
 
     this._aplicarEmLote();
-    toast.success(
+    avisoRapido.sucesso(
       resultado.ignoradas > 0
         ? `${resultado.aplicadas} preferências aplicadas. ${resultado.ignoradas} não foram reconhecidas.`
         : `${resultado.aplicadas} preferências aplicadas.`
     );
   }
 
-  // ==========================================================================
-  // BUSCA
-  // ==========================================================================
 
   /**
    * Todos os ajustes de todas as abas, achatados -- inclusive os das abas que

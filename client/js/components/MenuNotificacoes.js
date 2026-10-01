@@ -1,12 +1,12 @@
-import { iconHtml } from "../utils/icons.js";
+import { iconeHtml } from "../utils/icones.js";
 import { html } from "../utils/html.js";
 import { listaNotificacoes } from "../templates/notificacoes.js";
-import { prefs } from "../app/prefs.js";
+import { prefs } from "../app/preferencias.js";
 import { totalDe } from "../domain/notificacoes.js";
 
 /**
  * Quando o usuário deu as notificações por vistas. Fica em `sessionStorage`
- * (ver prefs.js), e é isso que faz a regra ser "até amanhã OU até abrir o app
+ * (ver preferencias.js), e é isso que faz a regra ser "até amanhã OU até abrir o app
  * de novo": fechar a aba esquece, e no dia seguinte a data não bate mais.
  *
  * O nome mudou de "lembretes-fechados-em" junto com o que a chave cobre --
@@ -57,7 +57,7 @@ export class MenuNotificacoes {
     this.container.innerHTML = html`
       <button type="button" class="app-notificacoes__sino" data-role="gatilho"
               aria-haspopup="true" aria-expanded="false" aria-controls="menu-notificacoes">
-        <span class="app-notificacoes__icone" aria-hidden="true">${iconHtml("sino")}</span>
+        <span class="app-notificacoes__icone" aria-hidden="true">${iconeHtml("sino")}</span>
         <span class="app-notificacoes__contador" data-role="contador" aria-hidden="true" hidden>0</span>
       </button>
 
@@ -125,8 +125,8 @@ export class MenuNotificacoes {
    */
   atualizar(notificacoes) {
     this.notificacoes = notificacoes || [];
-    this._renderLista();
-    this._renderContador();
+    this._desenharLista();
+    this._desenharContador();
   }
 
   /** Quantas estão pendentes, tenham sido vistas ou não. */
@@ -144,11 +144,11 @@ export class MenuNotificacoes {
   }
 
   /** A marcação (e o porquê do escape de data-params) está em templates/notificacoes.js. */
-  _renderLista() {
+  _desenharLista() {
     this.lista.innerHTML = listaNotificacoes(this.notificacoes);
   }
 
-  _renderContador() {
+  _desenharContador() {
     const total = this.total();
     const visivel = this.pendentesNaoVistas() > 0;
     this.contador.hidden = !visivel;
@@ -171,7 +171,7 @@ export class MenuNotificacoes {
 
   _marcarVistas() {
     prefs.set(CHAVE_VISTAS, new Date().toDateString());
-    this._renderContador();
+    this._desenharContador();
     this.acoes.aoMarcarVistas?.();
   }
 

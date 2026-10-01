@@ -71,7 +71,7 @@ export function formatarTempoAtivo(segundos) {
 
 /**
  * Papel normalizado: contas antigas ainda podem vir com "user", que é o
- * operador de hoje (ver requireRole no servidor).
+ * operador de hoje (ver exigirPapel no servidor).
  * @param {string|undefined} role
  * @returns {"admin"|"operador"|"consulta"}
  */

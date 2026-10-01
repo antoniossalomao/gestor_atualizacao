@@ -1,17 +1,18 @@
-import { AGENDA_COLUMNS, STATUS_OPTIONS, FILTRO_ARQUIVADAS, PRIORIDADE_OPTIONS } from "../config.js";
-import { ApiError } from "../api/ApiClient.js";
+import { ocuparAlturaDisponivel } from "../components/alturaDisponivel.js";
+import { COLUNAS_AGENDAMENTOS, OPCOES_STATUS, FILTRO_ARQUIVADAS, OPCOES_PRIORIDADE } from "../config.js";
+import { ErroApi } from "../api/ApiPainel.js";
 import { View } from "../app/View.js";
-import { Autocomplete } from "../components/Autocomplete.js";
+import { CampoComSugestoes } from "../components/CampoComSugestoes.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { debounce } from "../utils/debounce.js";
-import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
-import { emptyState } from "../components/EmptyState.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { hojeBR, dataBRValida, mascaraDataBR } from "../utils/data.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { plural, html } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
-import { marcarOcupado } from "../utils/guard.js";
-import { prefs } from "../app/prefs.js";
-import { Drawer } from "../components/Drawer.js";
+import { iconeHtml } from "../utils/icones.js";
+import { marcarOcupado } from "../components/botaoOcupado.js";
+import { prefs } from "../app/preferencias.js";
+import { Gaveta } from "../components/Gaveta.js";
 import { STATUS_CONCLUIDO } from "../domain/agendamento.js";
 import { colunasKanban } from "../templates/agendamentos.js";
 
@@ -56,19 +57,19 @@ export class AgendamentosView extends View {
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "asc";
     this.ordemColunas = this._carregarOrdemColunas();
-    this._buildDom();
+    this._montarDom();
   }
 
   _carregarOrdemColunas() {
-    const salva = prefs.get("agendamentos:colunas", STATUS_OPTIONS);
+    const salva = prefs.get("agendamentos:colunas", OPCOES_STATUS);
     if (Array.isArray(salva)) {
-      const validas = salva.filter((s) => STATUS_OPTIONS.includes(s));
-      for (const s of STATUS_OPTIONS) {
+      const validas = salva.filter((s) => OPCOES_STATUS.includes(s));
+      for (const s of OPCOES_STATUS) {
         if (!validas.includes(s)) validas.push(s);
       }
       return validas;
     }
-    return [...STATUS_OPTIONS];
+    return [...OPCOES_STATUS];
   }
 
   _reordenarColunas(origemStatus, destinoStatus) {
@@ -80,23 +81,23 @@ export class AgendamentosView extends View {
     nova.splice(para, 0, removido);
     this.ordemColunas = nova;
     prefs.set("agendamentos:colunas", nova);
-    this._renderKanban(this.rows);
+    this._desenharKanban(this.rows);
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       <form class="card" data-role="form" novalidate>
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconeHtml("alerta")} Excluir</button>
             <button type="button" class="btn btn--small" data-action="modal-arquivar" hidden>Arquivar</button>
             <span class="form-actions__hint text-muted" data-role="modo"></span>
           </div>
           <div class="form-actions__right">
             <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
-            <button type="button" class="btn btn--ghost" data-action="modal-reabrir" hidden>${iconHtml("atualizar")} Reabrir</button>
-            <button type="button" class="btn btn--ghost" data-action="modal-done" hidden>${iconHtml("check")} Concluir</button>
+            <button type="button" class="btn btn--ghost" data-action="modal-reabrir" hidden>${iconeHtml("atualizar")} Reabrir</button>
+            <button type="button" class="btn btn--ghost" data-action="modal-done" hidden>${iconeHtml("check")} Concluir</button>
             <button type="submit" class="btn btn--accent" data-action="add">Adicionar Tarefa</button>
             <button type="button" class="btn btn--accent" data-action="update" hidden>Salvar Alterações</button>
           </div>
@@ -104,7 +105,7 @@ export class AgendamentosView extends View {
       </form>
 
       <div class="card agendamentos-board-card">
-        <!-- Toolbar: todos os controles na mesma barra (I10) -->
+        <!-- Toolbar: todos os controles na mesma barra -->
         <div class="toolbar">
           <div class="field">
             <label class="field__label" for="age-busca">Buscar</label>
@@ -112,13 +113,13 @@ export class AgendamentosView extends View {
           </div>
           <div class="field">
             <!-- id "age-filtro-*", e não "age-status": esse é o do campo do
-                 formulário (ver _buildFields). Com os dois iguais, o <label>
+                 formulário (ver _montarCampos). Com os dois iguais, o <label>
                  de um apontava para o outro e um dos <select> ficava sem nome
                  para o leitor de tela (achado pelo teste de navegador). -->
             <label class="field__label" for="age-filtro-status">Status</label>
             <select class="input" id="age-filtro-status" data-role="status-filter">
               <option>Todos</option>
-              ${STATUS_OPTIONS.map((s) => html`<option>${s}</option>`)}
+              ${OPCOES_STATUS.map((s) => html`<option>${s}</option>`)}
               <option value="${FILTRO_ARQUIVADAS}">${FILTRO_ARQUIVADAS}</option>
             </select>
           </div>
@@ -126,7 +127,7 @@ export class AgendamentosView extends View {
             <label class="field__label" for="age-filtro-prioridade">Prioridade</label>
             <select class="input" id="age-filtro-prioridade" data-role="prioridade-filter">
               <option value="Todas">Todas</option>
-              ${PRIORIDADE_OPTIONS.slice().reverse().map((p) => html`<option>${p}</option>`)}
+              ${OPCOES_PRIORIDADE.slice().reverse().map((p) => html`<option>${p}</option>`)}
             </select>
           </div>
           <div class="toolbar__clear">
@@ -137,7 +138,7 @@ export class AgendamentosView extends View {
           <button type="button" class="btn btn--accent btn--small" data-action="novo-agendamento">+ Novo Agendamento</button>
         </div>
 
-        <!-- Filtros rápidos discretos (I10) -->
+        <!-- Filtros rápidos discretos -->
         <div class="filtros-rapidos" data-role="filtros-rapidos" aria-label="Filtros rápidos">
           <button type="button" class="filtro-rapido" data-filtro-rapido="minhas">Minhas tarefas</button>
           <button type="button" class="filtro-rapido" data-filtro-rapido="hoje">Hoje</button>
@@ -151,17 +152,18 @@ export class AgendamentosView extends View {
     `;
 
 
-    this._buildFields();
+    this._montarCampos();
 
     this.form = this.container.querySelector('[data-role="form"]');
-    this.drawer = new Drawer(this.form, {
+    this.drawer = new Gaveta(this.form, {
       titulo: "Agendamento",
       descricao: "Crie ou edite a tarefa mantendo o quadro visível.",
     });
 
     this.kanban = this.container.querySelector('[data-role="kanban"]');
+    ocuparAlturaDisponivel(this.kanban);
     this.container.querySelector('[data-action="novo-agendamento"]').addEventListener("click", () => {
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.abrir({ foco: this.fields.tarefa });
     });
 
@@ -174,9 +176,9 @@ export class AgendamentosView extends View {
     this.statusFilter.value = this.status;
     if (this.prioridadeFilter) this.prioridadeFilter.value = this.prioridade;
 
-    const reload = debounce(() => {
+    const reload = aguardarPausa(() => {
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     }, 200);
 
     this.searchInput.addEventListener("input", () => {
@@ -189,19 +191,19 @@ export class AgendamentosView extends View {
       this.status = this.statusFilter.value;
       this._pintarLimparFiltros();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     });
 
     this.prioridadeFilter?.addEventListener("change", () => {
       this.prioridade = this.prioridadeFilter.value;
       this._pintarLimparFiltros();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     });
 
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
-    // -- Filtros rápidos (I10) --
+    // -- Filtros rápidos --
     // Cada botão aplica um recorte semântico claro sem exigir que a pessoa
     // saiba qual campo ajustar. "Minhas tarefas" usa o nome do usuário logado;
     // "Hoje" / "Atrasadas" filtram pela data da tarefa. "Arquivadas" é um
@@ -235,7 +237,7 @@ export class AgendamentosView extends View {
       this._pintarFiltrosRapidos();
       this._pintarLimparFiltros();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     });
 
     this.addBtn = this.form.querySelector('[data-action="add"]');
@@ -249,7 +251,7 @@ export class AgendamentosView extends View {
       this.modalDeleteBtn.addEventListener("click", async () => {
         this.drawer.marcarLimpa();
         await this.drawer.fechar({ forcar: true });
-        this.deleteTask();
+        this.excluirTarefa();
       });
     }
 
@@ -258,7 +260,7 @@ export class AgendamentosView extends View {
     if (this.modalDoneBtn) {
       this.modalDoneBtn.addEventListener("click", async () => {
         this.drawer.fechar({ forcar: true });
-        await this.markDone();
+        await this.marcarConcluida();
       });
     }
 
@@ -271,15 +273,15 @@ export class AgendamentosView extends View {
 
     this.form.addEventListener("submit", (e) => {
       e.preventDefault();
-      this._submit();
+      this._enviar();
     });
-    this.updateBtn?.addEventListener("click", () => this.updateTask());
+    this.updateBtn?.addEventListener("click", () => this.alterarTarefa());
 
     // Ações rápidas e drag-and-drop no quadro Kanban
     this.kanban.addEventListener("click", (e) => this._acaoRapida(e));
-    this._bindKanbanDragDrop();
+    this._ligarArrastarKanban();
 
-    this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
+    this.on(document, "keydown", (e) => this._aoTeclarGlobal(e));
 
     if (this.user?.role === "consulta") {
       this.form.hidden = true;
@@ -288,7 +290,7 @@ export class AgendamentosView extends View {
 
     this._pintarLimparFiltros();
     this._pintarFiltrosRapidos();
-    this.clearForm();
+    this.limparFormulario();
   }
 
   /**
@@ -308,10 +310,10 @@ export class AgendamentosView extends View {
   }
 
 
-  _buildFields() {
+  _montarCampos() {
     const wrap = this.container.querySelector('[data-role="fields"]');
     this.fields = {};
-    for (const col of AGENDA_COLUMNS) {
+    for (const col of COLUNAS_AGENDAMENTOS) {
       const id = `age-${col.key}`;
       const field = document.createElement("div");
       field.className = "field";
@@ -322,11 +324,11 @@ export class AgendamentosView extends View {
       if (col.key === "status") {
         input = document.createElement("select");
         input.className = "input";
-        input.innerHTML = html`${STATUS_OPTIONS.map((s) => html`<option>${s}</option>`)}`;
+        input.innerHTML = html`${OPCOES_STATUS.map((s) => html`<option>${s}</option>`)}`;
       } else if (col.key === "prioridade") {
         input = document.createElement("select");
         input.className = "input";
-        input.innerHTML = html`${PRIORIDADE_OPTIONS.map((p) => html`<option>${p}</option>`)}`;
+        input.innerHTML = html`${OPCOES_PRIORIDADE.map((p) => html`<option>${p}</option>`)}`;
       } else if (col.key === "obs") {
         input = document.createElement("textarea");
         input.className = "input";
@@ -349,25 +351,25 @@ export class AgendamentosView extends View {
       wrap.appendChild(field);
 
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") this.clearForm({ comDesfazer: true });
+        if (e.key === "Escape") this.limparFormulario({ comDesfazer: true });
       });
       if (col.key === "data") {
         input.setAttribute("aria-describedby", hint.id);
         input.addEventListener("input", () => {
           input.value = mascaraDataBR(input.value);
-          const invalida = Boolean(input.value) && !isValidDateBR(input.value);
+          const invalida = Boolean(input.value) && !dataBRValida(input.value);
           hint.textContent = invalida ? "Formato esperado: dd/mm/aaaa" : "";
           input.setAttribute("aria-invalid", String(invalida));
         });
       }
       this.fields[col.key] = input;
     }
-    this.clienteAutocomplete = new Autocomplete(this.fields.cliente, { values: [] });
-    this.responsavelAutocomplete = new Autocomplete(this.fields.responsavel, { values: [] });
-    this.sistemaAutocomplete = new Autocomplete(this.fields.sistema, { values: [] });
+    this.clienteAutocomplete = new CampoComSugestoes(this.fields.cliente, { values: [] });
+    this.responsavelAutocomplete = new CampoComSugestoes(this.fields.responsavel, { values: [] });
+    this.sistemaAutocomplete = new CampoComSugestoes(this.fields.sistema, { values: [] });
   }
 
-  _bindKanbanDragDrop() {
+  _ligarArrastarKanban() {
     this.kanban.addEventListener("dragstart", (e) => {
       const card = e.target.closest(".kanban-card");
       if (card) {
@@ -401,22 +403,7 @@ export class AgendamentosView extends View {
       }
     });
 
-    this.kanban.addEventListener("dragend", () => {
-      for (const c of this.kanban.querySelectorAll(".kanban-card.is-dragging")) {
-        c.classList.remove("is-dragging");
-      }
-      for (const col of this.kanban.querySelectorAll(".kanban-column")) {
-        col.classList.remove("is-drop-target");
-        col.classList.remove("is-col-dragging");
-        col.classList.remove("is-col-target");
-      }
-      setTimeout(() => {
-        this._isDragging = false;
-        this._lastDragEnd = Date.now(); // registrado DEPOIS do timeout: clique falso jamais passa daqui
-        this._draggedCardId = null;
-        this._draggedColStatus = null;
-      }, 80);
-    });
+    this.kanban.addEventListener("dragend", () => this._encerrarArrasto());
 
     this.kanban.addEventListener("dragover", (e) => {
       const col = e.target.closest(".kanban-column");
@@ -457,17 +444,41 @@ export class AgendamentosView extends View {
       if (this._draggedCardId || e.dataTransfer.types.includes("application/x-kanban-card")) {
         const cardId = e.dataTransfer.getData("application/x-kanban-card") || e.dataTransfer.getData("text/plain") || this._draggedCardId;
         const novoStatus = col.dataset.status;
+        // Encerrado aqui, e não só no dragend: o _moverCard redesenha o quadro
+        // na hora, o cartão de origem sai do DOM, e o dragend -- que o
+        // navegador dispara nesse cartão -- não sobe mais até o quadro. Sem
+        // isto _draggedCardId ficava preso, e o próximo arrasto de COLUNA era
+        // tratado como arrasto daquele cartão antigo.
+        this._encerrarArrasto();
         if (cardId && novoStatus && novoStatus !== FILTRO_ARQUIVADAS) {
           this._moverCard(cardId, novoStatus);
         }
       } else if (this._draggedColStatus || e.dataTransfer.types.includes("application/x-kanban-column")) {
         const origemStatus = e.dataTransfer.getData("application/x-kanban-column") || this._draggedColStatus;
         const destinoStatus = col.dataset.status;
+        this._encerrarArrasto();
         if (origemStatus && destinoStatus && origemStatus !== destinoStatus) {
           this._reordenarColunas(origemStatus, destinoStatus);
         }
       }
     });
+  }
+
+  _encerrarArrasto() {
+    for (const c of this.kanban.querySelectorAll(".kanban-card.is-dragging")) {
+      c.classList.remove("is-dragging");
+    }
+    for (const col of this.kanban.querySelectorAll(".kanban-column")) {
+      col.classList.remove("is-drop-target");
+      col.classList.remove("is-col-dragging");
+      col.classList.remove("is-col-target");
+    }
+    this._draggedCardId = null;
+    setTimeout(() => {
+      this._isDragging = false;
+      this._lastDragEnd = Date.now(); // registrado DEPOIS do timeout: clique falso jamais passa daqui
+      this._draggedColStatus = null;
+    }, 80);
   }
 
   async refresh() {
@@ -482,15 +493,15 @@ export class AgendamentosView extends View {
         return { nomes, responsaveis, sistemas };
       },
       ({ nomes, responsaveis, sistemas }) => {
-        this.clienteAutocomplete.setValues(nomes);
-        this.responsavelAutocomplete.setValues(responsaveis);
-        this.sistemaAutocomplete?.setValues(sistemas || []);
+        this.clienteAutocomplete.definirValores(nomes);
+        this.responsavelAutocomplete.definirValores(responsaveis);
+        this.sistemaAutocomplete?.definirValores(sistemas || []);
       }
     );
-    await this._reloadList();
+    await this._recarregarLista();
   }
 
-  async _reloadList() {
+  async _recarregarLista() {
     this.kanban.classList.add("is-refreshing");
     try {
       await this.swr(
@@ -512,7 +523,7 @@ export class AgendamentosView extends View {
           ),
         (resposta) => {
           this.rows = resposta.rows || [];
-          this._renderKanban(this.rows);
+          this._desenharKanban(this.rows);
           const countEl = this.container.querySelector('[data-role="count"]');
           if (countEl) countEl.textContent = plural(resposta.total, "tarefa");
           this._pintarArquivadas(resposta);
@@ -523,7 +534,7 @@ export class AgendamentosView extends View {
     }
   }
 
-  _renderKanban(rows) {
+  _desenharKanban(rows) {
     if (this.status === FILTRO_ARQUIVADAS) {
       const colunas = [
         {
@@ -574,7 +585,7 @@ export class AgendamentosView extends View {
 
       if (this._temFiltro()) {
         wrap.appendChild(
-          emptyState({
+          estadoVazio({
             titulo: "Nenhuma tarefa com esse filtro",
             descricao: "Tente outro termo ou limpe os filtros para ver o quadro completo.",
             icone: "busca",
@@ -583,14 +594,14 @@ export class AgendamentosView extends View {
         );
       } else {
         wrap.appendChild(
-          emptyState({
+          estadoVazio({
             titulo: "Nenhuma tarefa agendada",
             descricao: "Crie a primeira tarefa para organizar o fluxo da equipe.",
             icone: "agendamentos",
             acao: {
               label: "+ Novo Agendamento",
               onClick: () => {
-                this.clearForm();
+                this.limparFormulario();
                 this.drawer.abrir({ foco: this.fields.tarefa });
               },
             },
@@ -617,18 +628,27 @@ export class AgendamentosView extends View {
     const statusAnterior = row.status;
     // Atualização otimista imediata na UI
     row.status = novoStatus;
-    this._renderKanban(this.rows);
+    this._desenharKanban(this.rows);
 
     try {
+      // A resposta traz a `revisao` nova, e é o Object.assign que a guarda na
+      // linha: sem isso a próxima mudança do mesmo cartão sai com a revisão
+      // antiga e o servidor recusa com 409 (ver AgendamentoService.update).
       const atualizado = await this.api.put(`/agendamentos/${row.id}`, { ...row, status: novoStatus });
       if (atualizado) Object.assign(row, atualizado);
       this._invalidar();
-      toast.success(`Tarefa movida para "${novoStatus}".`);
+      avisoRapido.sucesso(`Tarefa movida para "${novoStatus}".`);
     } catch (err) {
-      // Reverte em caso de erro
       row.status = statusAnterior;
-      this._renderKanban(this.rows);
-      Modal.alert("Erro ao mover tarefa", errorMessage(err), "error");
+      this._desenharKanban(this.rows);
+      Modal.alert("Erro ao mover tarefa", mensagemDeErro(err), "error");
+      // Num conflito de verdade (outra pessoa mexeu na tarefa), a linha local
+      // está velha e continuaria recusada em toda tentativa até um F5. Recarregar
+      // traz a revisão atual e o quadro volta a aceitar a mudança.
+      if (err instanceof ErroApi && err.status === 409) {
+        this._invalidar();
+        await this._recarregarLista();
+      }
     }
   }
 
@@ -638,7 +658,7 @@ export class AgendamentosView extends View {
       e.stopPropagation();
       const row = this.rows?.find((item) => String(item.id) === botao.dataset.id);
       if (!row) return;
-      this._loadIntoForm(row);
+      this._carregarNoFormulario(row);
       if (botao.dataset.rowAction === "editar") this.drawer.abrir({ foco: this.fields.tarefa });
       if (botao.dataset.rowAction === "arquivar") await this.arquivar(botao);
       if (botao.dataset.rowAction === "concluir") await this._moverCard(row.id, STATUS_CONCLUIDO);
@@ -655,16 +675,16 @@ export class AgendamentosView extends View {
     if (card && !acabouDeDragar) {
       const row = this.rows?.find((item) => String(item.id) === card.dataset.id);
       if (row) {
-        this._loadIntoForm(row);
+        this._carregarNoFormulario(row);
         this.drawer.abrir({ foco: this.fields.tarefa });
       }
     }
   }
 
   async _avancar(row) {
-    const indice = STATUS_OPTIONS.indexOf(row.status);
-    if (indice < 0 || indice >= STATUS_OPTIONS.length - 1) return;
-    const proximo = STATUS_OPTIONS[indice + 1];
+    const indice = OPCOES_STATUS.indexOf(row.status);
+    if (indice < 0 || indice >= OPCOES_STATUS.length - 1) return;
+    const proximo = OPCOES_STATUS[indice + 1];
     await this._moverCard(row.id, proximo);
   }
 
@@ -678,7 +698,7 @@ export class AgendamentosView extends View {
       if (vendo) {
         this.avisoArquivadas.textContent =
           `Tarefas concluídas há mais de ${plural(arquivarDias, "dia")} saem da lista ativa. ` +
-          `Clique em "Reabrir" em qualquer cartão para trazê-lo de volta como "${STATUS_OPTIONS[0]}".`;
+          `Clique em "Reabrir" em qualquer cartão para trazê-lo de volta como "${OPCOES_STATUS[0]}".`;
       }
     }
   }
@@ -702,7 +722,7 @@ export class AgendamentosView extends View {
     this._pintarLimparFiltros();
     this._pintarFiltrosRapidos();
     this._salvarFiltros();
-    this._reloadList();
+    this._recarregarLista();
   }
 
   _salvarFiltros() {
@@ -716,10 +736,10 @@ export class AgendamentosView extends View {
     });
   }
 
-  _loadIntoForm(row) {
+  _carregarNoFormulario(row) {
     this.selectedId = row.id;
     this.selectedRevision = row.revisao;
-    for (const col of AGENDA_COLUMNS) {
+    for (const col of COLUNAS_AGENDAMENTOS) {
       if (this.fields?.[col.key]) this.fields[col.key].value = row[col.key] ?? "";
     }
     this._pintarModo();
@@ -757,12 +777,12 @@ export class AgendamentosView extends View {
     const liberar = marcarOcupado(this.modalReabrirBtn);
     try {
       const tarefa = await this.api.patch(`/agendamentos/${this.selectedId}/reabrir`);
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
-      toast.success(`"${tarefa.tarefa}" voltou para a lista como "${STATUS_OPTIONS[0]}".`);
+      await this._recarregarLista();
+      avisoRapido.sucesso(`"${tarefa.tarefa}" voltou para a lista como "${OPCOES_STATUS[0]}".`);
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -772,18 +792,18 @@ export class AgendamentosView extends View {
     if (status !== undefined) {
       this.status = status;
       if (this.statusFilter) this.statusFilter.value = status;
-      this._reloadList();
+      this._recarregarLista();
     }
     if (filtro !== undefined) {
       this.busca = filtro;
       if (this.searchInput) this.searchInput.value = filtro;
-      this._reloadList();
+      this._recarregarLista();
     }
     if (novo) {
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.abrir({ foco: this.fields.cliente });
     } else if (cliente) {
-      this.clearForm();
+      this.limparFormulario();
       if (this.fields.cliente) {
         this.fields.cliente.value = cliente;
         this.drawer.abrir({ foco: this.fields.tarefa });
@@ -791,93 +811,91 @@ export class AgendamentosView extends View {
     }
   }
 
-  _readForm() {
-    const data = {};
-    for (const col of AGENDA_COLUMNS) data[col.key] = this.fields[col.key].value.trim();
-    if (!data.tarefa) {
-      Modal.alert("Validação", "Campo 'Tarefa' é obrigatório.", "warning");
-      this.fields.tarefa.focus();
+  _lerFormulario() {
+    const dados = {};
+    for (const col of COLUNAS_AGENDAMENTOS) dados[col.key] = this.fields[col.key].value.trim();
+    if (!dados.tarefa) {
+      Modal.alert("Validação", "Campo 'Tarefa' é obrigatório.", "warning").then(() => this.fields.tarefa.focus());
       return null;
     }
-    if (!isValidDateBR(data.data)) {
-      Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning");
-      this.fields.data.focus();
+    if (!dataBRValida(dados.data)) {
+      Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning").then(() => this.fields.data.focus());
       return null;
     }
-    return data;
+    return dados;
   }
 
-  _submit() {
-    if (this.selectedId == null) this.addTask();
-    else this.updateTask();
+  _enviar() {
+    if (this.selectedId == null) this.adicionarTarefa();
+    else this.alterarTarefa();
   }
 
-  async addTask() {
-    const data = this._readForm();
-    if (!data) return;
+  async adicionarTarefa() {
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
-      await this.api.post("/agendamentos", data);
-      this.clearForm();
+      await this.api.post("/agendamentos", dados);
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
-      toast.success("Tarefa adicionada.");
+      await this._recarregarLista();
+      avisoRapido.sucesso("Tarefa adicionada.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
   }
 
-  async updateTask() {
+  async alterarTarefa() {
     if (this.selectedId == null) return;
-    const data = this._readForm();
-    if (!data) return;
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
-      await this.api.put(`/agendamentos/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
-      this.clearForm();
+      await this.api.put(`/agendamentos/${this.selectedId}`, { ...dados, revisao: this.selectedRevision });
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
-      toast.success("Tarefa atualizada.");
+      await this._recarregarLista();
+      avisoRapido.sucesso("Tarefa atualizada.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
   }
 
-  async deleteTask() {
+  async excluirTarefa() {
     if (this.selectedId == null) return;
     const id = this.selectedId;
     const dadosAntes = {};
-    for (const col of AGENDA_COLUMNS) dadosAntes[col.key] = this.fields[col.key].value.trim();
+    for (const col of COLUNAS_AGENDAMENTOS) dadosAntes[col.key] = this.fields[col.key].value.trim();
 
     try {
       await this.api.delete(`/agendamentos/${id}`);
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
-      toast.undo(`Tarefa "${dadosAntes.tarefa}" excluída.`, async () => {
+      await this._recarregarLista();
+      avisoRapido.desfazer(`Tarefa "${dadosAntes.tarefa}" excluída.`, async () => {
         try {
           await this.api.post("/agendamentos", dadosAntes);
           this._invalidar();
-          await this._reloadList();
-          toast.success("Exclusão desfeita.");
+          await this._recarregarLista();
+          avisoRapido.sucesso("Exclusão desfeita.");
         } catch {
-          toast.error("Não foi possível desfazer a exclusão.");
+          avisoRapido.erro("Não foi possível desfazer a exclusão.");
         }
       });
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     }
   }
 
-  async markDone() {
+  async marcarConcluida() {
     if (this.selectedId == null) return;
     await this._moverCard(this.selectedId, STATUS_CONCLUIDO);
   }
@@ -893,24 +911,24 @@ export class AgendamentosView extends View {
     const liberar = marcarOcupado(botao);
     try {
       await this.api.patch(`/agendamentos/${this.selectedId}/arquivar`);
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
-      toast.success("Tarefa arquivada.");
+      await this._recarregarLista();
+      avisoRapido.sucesso("Tarefa arquivada.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
   }
 
-  clearForm({ comDesfazer = false } = {}) {
+  limparFormulario({ comDesfazer = false } = {}) {
     const antes = {};
     let tinhaConteudo = false;
     if (this.fields) {
-      for (const col of AGENDA_COLUMNS) {
+      for (const col of COLUNAS_AGENDAMENTOS) {
         antes[col.key] = this.fields[col.key]?.value || "";
         if (["tarefa", "cliente"].includes(col.key) && antes[col.key].trim()) tinhaConteudo = true;
       }
@@ -919,11 +937,11 @@ export class AgendamentosView extends View {
     this.selectedId = null;
     this.selectedRevision = null;
     if (this.fields) {
-      for (const col of AGENDA_COLUMNS) {
+      for (const col of COLUNAS_AGENDAMENTOS) {
         if (this.fields[col.key]) this.fields[col.key].value = "";
       }
-      if (this.fields.data) this.fields.data.value = todayBR();
-      if (this.fields.status) this.fields.status.value = STATUS_OPTIONS[0];
+      if (this.fields.data) this.fields.data.value = hojeBR();
+      if (this.fields.status) this.fields.status.value = OPCOES_STATUS[0];
       if (this.user && this.fields.responsavel) this.fields.responsavel.value = this.user.nome || "";
     }
     if (this.form) {
@@ -932,10 +950,10 @@ export class AgendamentosView extends View {
     this._pintarModo();
 
     if (comDesfazer && tinhaConteudo) {
-      toast.undo(
+      avisoRapido.desfazer(
         "Formulário limpo.",
         () => {
-          for (const col of AGENDA_COLUMNS) this.fields[col.key].value = antes[col.key];
+          for (const col of COLUNAS_AGENDAMENTOS) this.fields[col.key].value = antes[col.key];
           this.fields.tarefa.focus();
         },
         "Restaurar"
@@ -947,10 +965,10 @@ export class AgendamentosView extends View {
     this.cache?.invalidar("agendamentos:");
   }
 
-  _onGlobalKeydown(e) {
+  _aoTeclarGlobal(e) {
     if (!this.visivel) return;
-    if (isTypingTarget(e.target)) return;
-    if (e.key === "Delete" && this.selectedId != null) this.deleteTask();
+    if (ehCampoDeTexto(e.target)) return;
+    if (e.key === "Delete" && this.selectedId != null) this.excluirTarefa();
     else if (e.key.toLowerCase() === "n") this.container.querySelector('[data-action="novo-agendamento"]')?.click();
     else if (e.key === "/") {
       e.preventDefault();
@@ -961,7 +979,7 @@ export class AgendamentosView extends View {
         e.preventDefault();
         const row = this.rows?.find((item) => String(item.id) === card.dataset.id);
         if (row) {
-          this._loadIntoForm(row);
+          this._carregarNoFormulario(row);
           this.drawer.abrir({ foco: this.fields.tarefa });
         }
       }
@@ -977,10 +995,10 @@ export class AgendamentosView extends View {
   }
 }
 
-function isTypingTarget(el) {
+function ehCampoDeTexto(el) {
   return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 }
 
-function errorMessage(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+function mensagemDeErro(err) {
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

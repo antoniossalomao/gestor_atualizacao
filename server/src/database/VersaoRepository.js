@@ -39,7 +39,7 @@ class VersaoRepository extends BaseRepository {
    * o pacote do B_VENDAS. O parametro nao e opcional de proposito: obrigar a
    * dizer o sistema impede que a chamada errada volte a existir por descuido.
    */
-  latestPublished(sistema) {
+  ultimaPublicada(sistema) {
     return this.conn
       .prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'publicada' AND sistema = ? ORDER BY id DESC LIMIT 1`)
       .get(sistema);
@@ -58,13 +58,13 @@ class VersaoRepository extends BaseRepository {
   }
 
   insert(data) {
-    const result = this.conn
+    const insercao = this.conn
       .prepare(
         `INSERT INTO ${this.table} (sistema, versao, status, script_url, pacotes_json, observacoes, tamanho_bytes, alcance, codigos_clientes_json, criado_em, criado_por)
          VALUES (@sistema, @versao, 'rascunho', @scriptUrl, @pacotesJson, @observacoes, @tamanhoBytes, @alcance, @codigosClientesJson, @criadoEm, @criadoPor)`
       )
       .run(data);
-    return this.find(result.lastInsertRowid);
+    return this.find(insercao.lastInsertRowid);
   }
 
   update(id, data) {
@@ -77,13 +77,6 @@ class VersaoRepository extends BaseRepository {
          WHERE id = @id`
       )
       .run({ ...data, id });
-    return this.find(id);
-  }
-
-  publish(id, publicadoEm) {
-    this.conn
-      .prepare(`UPDATE ${this.table} SET status = 'publicada', publicado_em = @publicadoEm, substituido_em = NULL, substituido_por = NULL WHERE id = @id`)
-      .run({ id, publicadoEm });
     return this.find(id);
   }
 
@@ -148,21 +141,6 @@ class VersaoRepository extends BaseRepository {
     });
     tx();
     return this.find(anteriorId);
-  }
-
-  /**
-   * Tira de circulacao as versoes indicadas, anotando quando e por qual
-   * versao elas foram substituidas.
-   */
-  substituir(ids, quando, porId) {
-    if (ids.length === 0) return;
-    const stmt = this.conn.prepare(
-      `UPDATE ${this.table} SET status = 'substituida', substituido_em = @quando, substituido_por = @porId WHERE id = @id`
-    );
-    const emLote = this.conn.transaction((lista) => {
-      for (const id of lista) stmt.run({ id, quando, porId });
-    });
-    emLote(ids);
   }
 
   remove(id) {
@@ -308,7 +286,7 @@ class VersaoRepository extends BaseRepository {
       .all({ desde: desde || null });
   }
 
-  addLog(data) {
+  adicionarRegistro(data) {
     this.conn
       .prepare(
         `INSERT INTO atualizador_logs (cnpj, hwid, maquina, sistema, versao, versao_anterior, duracao_ms, fase, status, detalhes, criado_em)

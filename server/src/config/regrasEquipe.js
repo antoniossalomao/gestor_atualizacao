@@ -1,4 +1,4 @@
-const { ValidationError } = require("../shared/errors");
+const { ErroDeValidacao } = require("../shared/erros");
 
 /**
  * As regras que valem para a EQUIPE INTEIRA (não para uma conta): quantos
@@ -52,6 +52,18 @@ const REGRAS = {
     // mas desde o card "Atualização dos Clientes" a regra mede só tempo sem
     // atualização -- versão atrasada é outra conta (services/situacaoVersao.js).
     rotulo: "Dias sem atualização até o cliente entrar na lista do Resumo",
+  },
+  prazoVersaoDias: {
+    chave: "prazo_versao_dias",
+    tipo: "inteiro",
+    // 0 = desatualizado já no dia seguinte à versão oficial (a regra de
+    // antes de 30/09/2026). Não reaproveita `desatualizadoDias`: aquela mede
+    // tempo sem NENHUMA atualização; esta, tempo sem receber a oficial.
+    min: 0,
+    max: 365,
+    padrao: 60,
+    publica: true,
+    rotulo: "Dias após a versão oficial até o cliente contar como desatualizado",
   },
   agendamentoArquivarDias: {
     chave: "agendamento_arquivar_dias",
@@ -111,10 +123,10 @@ const REGRAS = {
  */
 function validarRegra(nome, valor) {
   const regra = REGRAS[nome];
-  if (!regra) throw new ValidationError(`Regra desconhecida: ${nome}.`);
+  if (!regra) throw new ErroDeValidacao(`Regra desconhecida: ${nome}.`);
 
   if (regra.tipo === "booleano") {
-    if (typeof valor !== "boolean") throw new ValidationError(`"${regra.rotulo}" precisa ser sim ou não.`);
+    if (typeof valor !== "boolean") throw new ErroDeValidacao(`"${regra.rotulo}" precisa ser sim ou não.`);
     return valor;
   }
 
@@ -123,7 +135,7 @@ function validarRegra(nome, valor) {
     // Number("") é 0, então o vazio precisa ser recusado antes.
     const n = typeof valor === "string" && valor.trim() !== "" ? Number(valor) : valor;
     if (typeof n !== "number" || !Number.isInteger(n) || n < regra.min || n > regra.max) {
-      throw new ValidationError(`"${regra.rotulo}" precisa ser um número inteiro entre ${regra.min} e ${regra.max}.`);
+      throw new ErroDeValidacao(`"${regra.rotulo}" precisa ser um número inteiro entre ${regra.min} e ${regra.max}.`);
     }
     return n;
   }
@@ -135,16 +147,22 @@ function validarRegra(nome, valor) {
   try {
     url = new URL(texto);
   } catch {
-    throw new ValidationError(`"${regra.rotulo}" não é um endereço válido.`);
+    throw new ErroDeValidacao(`"${regra.rotulo}" não é um endereço válido.`);
   }
   if (!regra.protocolos.includes(url.protocol)) {
-    throw new ValidationError(`"${regra.rotulo}" precisa começar com ${regra.protocolos.map((p) => `${p}//`).join(" ou ")}.`);
+    throw new ErroDeValidacao(`"${regra.rotulo}" precisa começar com ${regra.protocolos.map((p) => `${p}//`).join(" ou ")}.`);
   }
   if (regra.hosts && !regra.hosts.includes(url.hostname)) {
-    throw new ValidationError(`"${regra.rotulo}" precisa ser um endereço do Discord (discord.com).`);
+    throw new ErroDeValidacao(`"${regra.rotulo}" precisa ser um endereço do Discord (discord.com).`);
   }
   // Sem barra no fim: a URL pública é concatenada com "/api/..." e sairia "//api".
-  return nome === "publicUrl" ? texto.replace(/\/+$/, "") : texto;
+  // Laço, e não `replace(/\/+$/)`: a regex volta a tentar a partir de cada
+  // barra de uma fileira longa que não termina o texto, tempo quadrático
+  // (alerta de ReDoS do CodeQL).
+  if (nome !== "publicUrl") return texto;
+  let fim = texto.length;
+  while (fim > 0 && texto[fim - 1] === "/") fim -= 1;
+  return texto.slice(0, fim);
 }
 
 /**

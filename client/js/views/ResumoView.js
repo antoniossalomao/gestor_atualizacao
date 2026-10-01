@@ -1,18 +1,17 @@
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
-import { Drawer } from "../components/Drawer.js";
-import { BarChart } from "../components/charts/BarChart.js";
-import { LineChart } from "../components/charts/LineChart.js";
+import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
+import { Gaveta } from "../components/Gaveta.js";
+import { GraficoDeBarras } from "../components/graficos/GraficoDeBarras.js";
+import { GraficoDeLinhas } from "../components/graficos/GraficoDeLinhas.js";
 import { html, plural } from "../utils/html.js";
-import { todayBR } from "../utils/date.js";
-import { formatarMes, primeiroDiaDoMes, tendenciaMensal } from "../domain/resumo.js";
-import { GRUPOS_SITUACAO, totaisSituacao, sistemasQueExplicam } from "../domain/situacao.js";
-import { statTile, deltaTendencia, corpoSituacao } from "../templates/resumo.js";
+import { hojeBR } from "../utils/data.js";
+import { formatarMes, primeiroDiaDoMes, tendenciaMensal, barrasPorSistema, variacaoMesAnterior } from "../domain/resumo.js";
+import { GRUPOS_SITUACAO, totaisSituacao, descreverSistemasQueExplicam } from "../domain/situacao.js";
+import { blocoDeNumero, deltaTendencia, corpoSituacao } from "../templates/resumo.js";
 
 /**
- * Aba Resumo: indicadores gerais. Equivalente de gestor/views/resumo.py -- a
- * diferença é que os cálculos moram no backend (AtualizacaoService.resumo()),
- * então esta classe só cuida de desenhar o que a API devolve.
+ * Aba Resumo: indicadores gerais. Os cálculos moram no backend
+ * (AtualizacaoService.resumo()); esta classe só desenha o que a API devolve.
  */
 /**
  * Era "Parados Há Mais de N Dias", e o card ao lado chamava de "em dia" quem
@@ -21,7 +20,7 @@ import { statTile, deltaTendencia, corpoSituacao } from "../templates/resumo.js"
  * atualização registrada.
  * @param {number|undefined} dias
  */
-function rotuloSemAtendimento(dias) {
+function rotuloSemAtualizacao(dias) {
   return dias ? `Sem Atualização Há Mais de ${dias} Dias` : "Sem Atualização Recente";
 }
 
@@ -30,16 +29,16 @@ export class ResumoView extends View {
     super(container, api, ctx);
     /** Regra da equipe; o /resumo confirma o valor a cada carga (ver _render). */
     this.desatualizadoDias = ctx?.regras?.desatualizadoDias;
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       <div class="stat-tiles">
-        ${statTile("clientes", "clientes", "Clientes", "Ver clientes")}
-        ${statTile("atualizacoes", "atualizacoes", "Atualizações", "Ver histórico")}
-        ${statTile("mes", "calendario", "Atualizações Este Mês", "Ver o mês")}
-        ${statTile("semAtendimento", "alerta", rotuloSemAtendimento(this.desatualizadoDias), "Ver a lista")}
+        ${blocoDeNumero("clientes", "clientes", "Clientes", "Ver clientes")}
+        ${blocoDeNumero("atualizacoes", "atualizacoes", "Atualizações", "Ver histórico")}
+        ${blocoDeNumero("mes", "calendario", "Atualizações Este Mês", "Ver o mês")}
+        ${blocoDeNumero("semAtualizacao", "alerta", rotuloSemAtualizacao(this.desatualizadoDias), "Ver a lista")}
       </div>
 
       <!--
@@ -74,6 +73,7 @@ export class ResumoView extends View {
         </div>
         <div class="card">
           <h2 class="card__title">Atualizações Por Sistema Este Mês</h2>
+          <p class="card__subtitle">Clientes atualizados em cada sistema. ▲▼ contra o mesmo período do mês anterior; clique para ver a lista.</p>
           <div data-role="sistemas"></div>
         </div>
       </div>
@@ -94,10 +94,10 @@ export class ResumoView extends View {
         atualizacoes: () => this.navigate("atualizacoes", { desde: "", ate: "" }),
         // O "este mês" do indicador tem que ser o MESMO recorte que o número
         // contou, senão a lista abre com um total diferente do que se clicou.
-        mes: () => this.navigate("atualizacoes", { desde: primeiroDiaDoMes(), ate: todayBR() }),
+        mes: () => this.navigate("atualizacoes", { desde: primeiroDiaDoMes(), ate: hojeBR() }),
         // Levava para a aba Sistemas, que não tem como mostrar "quem está sem
-        // atendimento" -- o clique abria uma lista que não era a contada.
-        semAtendimento: () => this._listarSemAtendimento(),
+        // atualização" -- o clique abria uma lista que não era a contada.
+        semAtualizacao: () => this._listarSemAtualizacao(),
       };
       rotas[tile.dataset.stat]?.();
     });
@@ -117,7 +117,7 @@ export class ResumoView extends View {
     this.gavetaEl = this.container.querySelector('[data-role="gaveta-lista"]');
     this.gavetaAjuda = this.gavetaEl.querySelector('[data-role="gaveta-ajuda"]');
     this.gavetaTabela = this.gavetaEl.querySelector('[data-role="gaveta-tabela"]');
-    this.gaveta = new Drawer(this.gavetaEl, { titulo: "Clientes" });
+    this.gaveta = new Gaveta(this.gavetaEl, { titulo: "Clientes" });
     this.gavetaEl.addEventListener("click", (e) => {
       const alvo = e.target.closest("[data-ir]");
       if (!alvo) return;
@@ -126,7 +126,7 @@ export class ResumoView extends View {
       else this.navigate("sistemas", { sistema: alvo.dataset.valor });
     });
 
-    this.respTable = new SortableTable(this.container.querySelector('[data-role="responsaveis"]'), {
+    this.respTable = new TabelaOrdenavel(this.container.querySelector('[data-role="responsaveis"]'), {
       columns: [
         { key: "label", label: "Responsável" },
         { key: "total", label: "Qtde", type: "numeric" },
@@ -136,8 +136,15 @@ export class ResumoView extends View {
       selectable: false,
     });
 
-    this.sistemaChart = new BarChart(this.container.querySelector('[data-role="sistemas"]'));
-    this.tendenciaChart = new LineChart(this.container.querySelector('[data-role="tendencia"]'));
+    this.sistemaChart = new GraficoDeBarras(this.container.querySelector('[data-role="sistemas"]'), {
+      vazio: "Nenhuma atualização registrada neste mês ainda.",
+      // A lista abre com o MESMO recorte do número: o sistema da barra e o
+      // mês até hoje. "Outros" junta vários sistemas, que a lista não filtra
+      // de uma vez -- abre o mês inteiro.
+      aoClicar: (barra) =>
+        this.navigate("atualizacoes", { desde: primeiroDiaDoMes(), ate: hojeBR(), sistema: barra.outros ? "" : barra.label }),
+    });
+    this.tendenciaChart = new GraficoDeLinhas(this.container.querySelector('[data-role="tendencia"]'));
 
   }
 
@@ -160,34 +167,46 @@ export class ResumoView extends View {
   }
 
   _render(resumo) {
-    this._setStat("clientes", resumo.totalClientes);
-    this._setStat("atualizacoes", resumo.totalAtualizacoes);
-    this._setStat("mes", resumo.mesCount);
-    this._setStat("semAtendimento", resumo.semAtendimento.length);
+    this._definirNumero("clientes", resumo.totalClientes);
+    this._definirNumero("atualizacoes", resumo.totalAtualizacoes);
+    this._definirNumero("mes", resumo.mesCount);
+    this._definirNumero("semAtualizacao", resumo.semAtualizacao.length);
     // O limite é regra da equipe e pode ter mudado desde que a tela abriu: o
     // rótulo usa o número com que o servidor MONTOU esta lista, não o que a
     // tela tinha guardado -- os dois não podem se contradizer.
     if (resumo.desatualizadoDias) {
-      this.container.querySelector('[data-stat="semAtendimento"] [data-role="rotulo"]').textContent =
-        rotuloSemAtendimento(resumo.desatualizadoDias);
+      this.container.querySelector('[data-stat="semAtualizacao"] [data-role="rotulo"]').textContent =
+        rotuloSemAtualizacao(resumo.desatualizadoDias);
     }
-    this._setDelta("mes", tendenciaMensal(resumo.mesAtualComparavel, resumo.mesAnteriorComparavel));
+    this._definirVariacao("mes", tendenciaMensal(resumo.mesAtualComparavel, resumo.mesAnteriorComparavel));
 
-    const semAtendimentoTile = this.container.querySelector('[data-stat="semAtendimento"]');
-    semAtendimentoTile.classList.toggle("is-alert", resumo.semAtendimento.length > 0);
+    const semAtualizacaoTile = this.container.querySelector('[data-stat="semAtualizacao"]');
+    semAtualizacaoTile.classList.toggle("is-alert", resumo.semAtualizacao.length > 0);
 
     this.resumo = resumo;
-    this.situacaoEl.innerHTML = corpoSituacao(totaisSituacao(resumo.situacaoClientes), resumo.situacaoClientes.sistemasMaisAtrasados);
+    this.situacaoEl.innerHTML = corpoSituacao(totaisSituacao(resumo.situacaoClientes), resumo.situacaoClientes.sistemasMaisAtrasados, resumo.prazoVersaoDias ?? null);
 
-    this.respTable.setRows(resumo.porResponsavel);
-    this.sistemaChart.render(resumo.atualizadosMesPorSistema);
+    this.respTable.definirLinhas(resumo.porResponsavel);
+    const barras = barrasPorSistema(resumo.atualizadosMesPorSistema);
+    this.sistemaChart.render(
+      // Zerado este mês, com atualização só no mês anterior: não vale uma
+      // barra, mas conta para o estado vazio não mentir que "nada aconteceu".
+      barras.some((b) => b.total > 0)
+        ? barras.map((b) => ({
+            label: b.label,
+            total: b.total,
+            dica: b.outros ? `Outros (${b.sistemas.join(", ")}): ${b.total}` : `${b.label}: ${plural(b.total, "cliente")} este mês, ${b.anterior} no mesmo período do mês anterior`,
+            variacao: { ...variacaoMesAnterior(b.diferenca), dica: `${b.anterior} no mesmo período do mês anterior` },
+          }))
+        : []
+    );
     this.container.querySelector('[data-role="tendencia-atual"]').textContent = `${plural(resumo.mesCount, "atualização")} neste mês (parcial)`;
     this.tendenciaChart.render(
       (resumo.atualizacoesPorMes || []).map((item) => ({ label: formatarMes(item.mes), total: item.total, parcial: item.mes === (resumo.atualizacoesPorMes || []).at(-1)?.mes }))
     );
   }
 
-  /** @param {string} chave em_dia | desatualizado | pendente */
+  /** @param {string} chave em_dia | aguardando | desatualizado */
   _listarGrupo(chave) {
     const grupo = GRUPOS_SITUACAO.find((g) => g.chave === chave);
     const clientes = this.resumo?.situacaoClientes?.[chave] || [];
@@ -197,18 +216,18 @@ export class ResumoView extends View {
       colunas: [
         { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
         { key: "cidade", label: "Cidade" },
-        { key: "sistemas", label: chave === "desatualizado" ? "Sistemas atrasados" : chave === "pendente" ? "O que falta" : "Sistemas" },
+        { key: "sistemas", label: { desatualizado: "Sistemas atrasados", aguardando: "Sistemas aguardando" }[chave] || "Sistemas" },
       ],
-      linhas: clientes.map((c) => ({ nome: c.nome, cidade: c.cidade, sistemas: sistemasQueExplicam(chave, c.sistemas, c.decididoPor) })),
+      linhas: clientes.map((c) => ({ nome: c.nome, cidade: c.cidade, sistemas: descreverSistemasQueExplicam(c.explicam) })),
       chave: (row) => row.nome,
       vazio: "Nenhum cliente nesta situação.",
     });
   }
 
-  _listarSemAtendimento() {
-    const clientes = this.resumo?.semAtendimento || [];
+  _listarSemAtualizacao() {
+    const clientes = this.resumo?.semAtualizacao || [];
     this._abrirGaveta({
-      titulo: `${rotuloSemAtendimento(this.resumo?.desatualizadoDias)} — ${plural(clientes.length, "cliente")}`,
+      titulo: `${rotuloSemAtualizacao(this.resumo?.desatualizadoDias)} — ${plural(clientes.length, "cliente")}`,
       ajuda: "Tempo desde a última atualização registrada. Não diz se as versões estão em dia: isso está no card Atualização dos Clientes.",
       colunas: [
         { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
@@ -244,13 +263,13 @@ export class ResumoView extends View {
 
   /**
    * Uma tabela nova a cada abertura: as três listas têm colunas diferentes,
-   * e o SortableTable fixa as colunas no construtor.
+   * e o TabelaOrdenavel fixa as colunas no construtor.
    */
   _abrirGaveta({ titulo, ajuda, colunas, linhas, chave, vazio }) {
     const alvo = document.createElement("div");
     this.gavetaTabela.replaceChildren(alvo);
-    const tabela = new SortableTable(alvo, { columns: colunas, rowKey: chave, emptyMessage: vazio, selectable: false });
-    tabela.setRows(linhas);
+    const tabela = new TabelaOrdenavel(alvo, { columns: colunas, rowKey: chave, emptyMessage: vazio, selectable: false });
+    tabela.definirLinhas(linhas);
     this.gavetaAjuda.textContent = ajuda;
     this.gaveta.setTitulo(titulo);
     this.gaveta.abrir();
@@ -268,12 +287,12 @@ export class ResumoView extends View {
     return botao;
   }
 
-  _setStat(key, value) {
+  _definirNumero(key, value) {
     this.container.querySelector(`[data-stat="${key}"] .stat-tile__value`).textContent = String(value);
   }
 
   /** @param {{pct: number, tendencia: "alta"|"baixa"|"neutra"}|null} tendencia */
-  _setDelta(key, tendencia) {
+  _definirVariacao(key, tendencia) {
     const el = this.container.querySelector(`[data-stat="${key}"] [data-role="delta"]`);
     if (!tendencia) {
       el.hidden = true;

@@ -16,11 +16,11 @@ import assert from "node:assert/strict";
 
 import { STATUS_CONCLUIDO, estaAtrasada } from "../js/domain/agendamento.js";
 import { cartaoKanban, colunasKanban, slugStatus } from "../js/templates/agendamentos.js";
-import { chipsFiltroAtualizacoes, htmlChips } from "../js/templates/filtros.js";
+import { chipsFiltroAtualizacoes, chipsHtml } from "../js/templates/filtros.js";
 import { splitSistemas, montarMatrizVersoes } from "../js/domain/matrizVersoes.js";
 import { cartaoAcesso, linhaMatrizVersoes } from "../js/templates/consulta.js";
-import { formatarMes, primeiroDiaDoMes, tendenciaMensal } from "../js/domain/resumo.js";
-import { statTile, deltaTendencia, corpoSituacao } from "../js/templates/resumo.js";
+import { formatarMes, primeiroDiaDoMes, tendenciaMensal, barrasPorSistema, variacaoMesAnterior } from "../js/domain/resumo.js";
+import { blocoDeNumero, deltaTendencia, corpoSituacao } from "../js/templates/resumo.js";
 import { listaNotificacoes, itemNotificacao } from "../js/templates/notificacoes.js";
 import { alteracoesRegras, descreverChaveAgentes, formatarTempoAtivo, papelNormalizado } from "../js/domain/administracao.js";
 import { linhaUsuario, linhaBackup, blocosSaude, linhaRegraNumero } from "../js/templates/administracao.js";
@@ -35,10 +35,13 @@ test("Sistemas: situação e busca filtram clientes sem mudar seus dados", () =>
     { cliente: "Água Azul", cidade: "Uberaba", situacao: "Em dia" },
     { cliente: "Loja B", cidade: "Araxá", situacao: "Desatualizado" },
     { cliente: "Loja C", cidade: "Uberlândia", situacao: "Sem referência" },
+    { cliente: "Loja D", cidade: "Araxá", situacao: "Aguardando atualização" },
   ];
   assert.deepEqual(filtrarClientesDoSistema(rows, "Em dia", "agua"), [rows[0]]);
   assert.deepEqual(filtrarClientesDoSistema(rows, "Desatualizados", "araxá"), [rows[1]]);
-  assert.deepEqual(filtrarClientesDoSistema(rows, "Sem informação"), [rows[2]]);
+  assert.deepEqual(filtrarClientesDoSistema(rows, "Sem versão oficial"), [rows[2]]);
+  assert.deepEqual(filtrarClientesDoSistema(rows, "Aguardando atualização"), [rows[3]], "aguardando não cai em Desatualizados");
+  assert.deepEqual(filtrarClientesDoSistema([{ cliente: "Nova", cidade: "", situacao: "Nunca atualizado" }], "Desatualizados").length, 1, "nunca atualizado é desatualizado");
   assert.equal(rows[0].situacao, "Em dia");
 });
 
@@ -103,7 +106,7 @@ test("Agendamentos - cartão do kanban", async (t) => {
   await t.test("título e cliente digitados não viram HTML, em nenhum dos três lugares", () => {
     const html = texto(cartaoKanban({ ...base, tarefa: MALICIOSO, cliente: MALICIOSO }, "operador", { agora: AGORA }));
     semInjecao(html);
-    // O aria-label era o lugar vulnerável: escapeHtml antigo, sem aspas.
+    // O aria-label era o lugar vulnerável: escaparHtml antigo, sem aspas.
     assert.equal(atributo(html, "aria-label"), `Tarefa ${MALICIOSO}`);
     assert.equal(atributo(html, "title"), MALICIOSO);
   });
@@ -196,6 +199,12 @@ test("Atualizações - chips de filtro ativo", async (t) => {
     ]);
   });
 
+  await t.test("o sistema vindo do gráfico do Resumo vira chip, para o filtro não ficar invisível (A08)", () => {
+    const chips = chipsFiltroAtualizacoes({ busca: "", responsavel: "Todos", sistema: "B_Vendas", desde: "01/09/2026", ate: "30/09/2026" });
+    assert.deepEqual(chips.map((c) => c.id), ["sistema", "periodo"]);
+    assert.equal(chips[0].label, "Sistema: B_Vendas");
+  });
+
   await t.test("período com uma ponta só é dito por extenso", () => {
     assert.equal(chipsFiltroAtualizacoes({ desde: "01/09/2026" })[0].label, "Período: A partir de 01/09/2026");
     assert.equal(chipsFiltroAtualizacoes({ ate: "23/09/2026" })[0].label, "Período: Até 23/09/2026");
@@ -204,7 +213,7 @@ test("Atualizações - chips de filtro ativo", async (t) => {
   await t.test("o termo buscado aparece escapado no chip", () => {
     // A busca é repetida na tela literalmente -- é o texto livre mais fácil de
     // esquecer que passa por um innerHTML.
-    const html = texto(htmlChips(chipsFiltroAtualizacoes({ busca: MALICIOSO })));
+    const html = texto(chipsHtml(chipsFiltroAtualizacoes({ busca: MALICIOSO })));
     semInjecao(html);
     assert.match(html, /data-chip="busca"/);
   });
@@ -253,6 +262,28 @@ test("Consultar Cliente - matriz de versões", async (t) => {
     assert.equal(por.B_Vendas.estadoLabel, "Atrasado");
     assert.equal(por.B_Ordem.estadoLabel, "Sem publicação", "nada publicado não é 'atrasado'");
     assert.equal(por.B_NFe.contatoTexto, "20/09/2026");
+  });
+
+  await t.test("sem agente, a situação do servidor manda -- a mesma do Resumo e de Sistemas (A07)", () => {
+    const situacao = [
+      { sistema: "B_Vendas", situacao: "Aguardando atualização", contaNaSituacao: true },
+      { sistema: "B_NFe", situacao: "Desatualizado", contaNaSituacao: true },
+      { sistema: "B_Ordem", situacao: "Sem referência", contaNaSituacao: true },
+    ];
+    const linhas = montarMatrizVersoes({ nome: "Mercado X", sistemas: ["B_Vendas", "B_Ordem", "B_NFe"] }, [], painel, situacao);
+    const por = Object.fromEntries(linhas.map((l) => [l.sistema, l]));
+    assert.equal(por.B_Vendas.estadoLabel, "Aguardando atualização");
+    assert.equal(por.B_Vendas.estadoBadge, "badge--muted", "neutro: ainda dentro do prazo");
+    assert.equal(por.B_NFe.estadoLabel, "Desatualizado");
+    assert.equal(por.B_Ordem.estadoLabel, "Sem versão oficial");
+  });
+
+  await t.test("dependente do B_Vendas diz que a situação veio da data dele (A13)", () => {
+    const [linha] = montarMatrizVersoes({ nome: "Z", sistemas: ["NFCe"] }, [], painel, [
+      { sistema: "NFCe", situacao: "Em dia", contaNaSituacao: true, pelaDataDe: "B_Vendas" },
+    ]);
+    assert.equal(linha.origemData, "pela data do B_Vendas");
+    assert.match(texto(linhaMatrizVersoes(linha)), /pela data do B_Vendas/);
   });
 
   await t.test("publicada mas nunca registrada: 'Não instalado'", () => {
@@ -407,8 +438,8 @@ test("Resumo - card de situação: número principal e proporção por sistema",
     foraDaAvaliacao: 0,
     grupos: [
       { chave: "em_dia", rotulo: "Em dia", severidade: "boa", descricao: "", total: 72, pct: 20 },
+      { chave: "aguardando", rotulo: "Aguardando atualização", severidade: "neutra", descricao: "", total: 99, pct: 27 },
       { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "", total: 197, pct: 54 },
-      { chave: "pendente", rotulo: "Verificação pendente", severidade: "media", descricao: "", total: 99, pct: 27 },
     ],
   };
   const m = texto(corpoSituacao(totais, [
@@ -417,6 +448,8 @@ test("Resumo - card de situação: número principal e proporção por sistema",
   ]));
   assert.match(m, /situacao__hero">20%</, "o percentual em dia é o número principal");
   assert.match(m, /72 de 368 clientes/);
+  assert.match(texto(corpoSituacao(totais, [], 60)), /desatualizado 60 dias depois da versão oficial/, "o card diz o prazo que a conta usou (A07)");
+  assert.doesNotMatch(m, /depois da versão oficial/, "sem prazo informado (servidor antigo), não inventa um");
   assert.match(m, /196 de 250/, "a contagem vem com o denominador");
   assert.match(m, /width: 78%/, "a mini-barra é atrasados sobre quem usa o sistema");
   assert.doesNotMatch(m, /<img/);
@@ -432,7 +465,7 @@ test("Resumo - datas e indicadores", async (t) => {
   });
 
   await t.test("indicador é um <button> com o destino por escrito", () => {
-    const html = texto(statTile("mes", "calendario", "Atualizações Este Mês", "Ver o mês"));
+    const html = texto(blocoDeNumero("mes", "calendario", "Atualizações Este Mês", "Ver o mês"));
     assert.match(html, /^\s*<button type="button" class="card stat-tile" data-stat="mes"/);
     assert.match(html, /Ver o mês <svg/);
   });
@@ -745,5 +778,35 @@ test("Configurações - prévia, atalhos e busca", async (t) => {
     const html = texto(resultadosBusca([], MALICIOSO));
     assert.match(html, /Nenhum ajuste/);
     semInjecao(html);
+  });
+});
+
+test("Resumo - gráfico por sistema: no máximo 8 barras, resto em Outros, variação do mês anterior (A08)", async (t) => {
+  const lista = Array.from({ length: 11 }, (_, i) => ({ label: `S${i + 1}`, total: 20 - i, anterior: i }));
+
+  await t.test("8 sistemas pelo nome e os outros três somados", () => {
+    const barras = barrasPorSistema(lista);
+    assert.equal(barras.length, 9);
+    assert.deepEqual(barras.slice(0, 8).map((b) => b.label), ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"]);
+    const outros = barras[8];
+    assert.equal(outros.label, "Outros");
+    assert.equal(outros.outros, true);
+    assert.deepEqual(outros.sistemas, ["S9", "S10", "S11"]);
+    assert.equal(outros.total, 12 + 11 + 10);
+    assert.equal(outros.anterior, 8 + 9 + 10);
+  });
+
+  await t.test("com 8 ou menos, não inventa um Outros", () => {
+    assert.ok(!barrasPorSistema(lista.slice(0, 8)).some((b) => b.outros));
+    assert.deepEqual(barrasPorSistema([]), []);
+  });
+
+  await t.test("diferença e seta contra o mês anterior", () => {
+    const [b] = barrasPorSistema([{ label: "B_Vendas", total: 7, anterior: 10 }]);
+    assert.equal(b.diferenca, -3);
+    assert.deepEqual(variacaoMesAnterior(b.diferenca), { texto: "▼ 3", tendencia: "baixa" });
+    assert.deepEqual(variacaoMesAnterior(4), { texto: "▲ 4", tendencia: "alta" });
+    assert.deepEqual(variacaoMesAnterior(0), { texto: "=", tendencia: "neutra" });
+    assert.equal(barrasPorSistema([{ label: "X", total: 2 }])[0].anterior, 0, "servidor antigo, sem `anterior`: conta como zero");
   });
 });

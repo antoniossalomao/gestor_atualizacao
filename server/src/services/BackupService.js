@@ -1,14 +1,14 @@
 const bcrypt = require("bcryptjs");
-const { NotFoundError, ValidationError, ForbiddenError } = require("../shared/errors");
+const { ErroNaoEncontrado, ErroDeValidacao, ErroDePermissao } = require("../shared/erros");
 
 /**
  * Camada sobre Database para a tela de Backups e proteção de restauração.
  */
 class BackupService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
-   * @param {import('../database/SqliteSessionStore').SqliteSessionStore} [sessionStore]
+   * @param {import('../database/ArmazemDeSessaoSqlite').ArmazemDeSessaoSqlite} [sessionStore]
    */
   constructor(db, historico, sessionStore = null) {
     this.db = db;
@@ -16,22 +16,22 @@ class BackupService {
     this.sessionStore = sessionStore;
   }
 
-  setSessionStore(sessionStore) {
+  definirArmazemDeSessao(sessionStore) {
     this.sessionStore = sessionStore;
   }
 
   list() {
-    return this.db.listBackups();
+    return this.db.listarBackups();
   }
 
-  getBackupPath(arquivo) {
+  caminhoDoBackup(arquivo) {
     const existe = this.list().some((b) => b.arquivo === arquivo);
-    if (!existe) throw new NotFoundError("Backup não encontrado.");
-    return this.db.getBackupPath(arquivo);
+    if (!existe) throw new ErroNaoEncontrado("Backup não encontrado.");
+    return this.db.caminhoDoBackup(arquivo);
   }
 
-  getCurrentDbPath() {
-    return this.db.getCurrentDbPath();
+  caminhoDoBancoAtual() {
+    return this.db.caminhoDoBancoAtual();
   }
 
   /**
@@ -46,26 +46,26 @@ class BackupService {
    */
   restore(arquivo, usuario, { senha, confirmacao } = {}) {
     if (!usuario || usuario.role !== "admin") {
-      throw new ForbiddenError("Apenas administradores podem restaurar backups.");
+      throw new ErroDePermissao("Apenas administradores podem restaurar backups.");
     }
 
     if ((confirmacao || "").trim() !== "RESTAURAR") {
-      throw new ValidationError('Confirmação inválida. Digite exatamente a palavra "RESTAURAR" em maiúsculas.');
+      throw new ErroDeValidacao('Confirmação inválida. Digite exatamente a palavra "RESTAURAR" em maiúsculas.');
     }
 
     if (!senha) {
-      throw new ValidationError("Informe sua senha atual de administrador para autorizar a restauração.");
+      throw new ErroDeValidacao("Informe sua senha atual de administrador para autorizar a restauração.");
     }
 
-    const usuarioBanco = this.db.usuarios.findByUsuario(usuario.usuario);
+    const usuarioBanco = this.db.usuarios.buscarPorUsuario(usuario.usuario);
     if (!usuarioBanco || !bcrypt.compareSync(senha, usuarioBanco.senha_hash)) {
-      throw new ValidationError("Senha de administrador incorreta.");
+      throw new ErroDeValidacao("Senha de administrador incorreta.");
     }
 
     const existe = this.list().some((b) => b.arquivo === arquivo);
-    if (!existe) throw new NotFoundError("Backup não encontrado.");
+    if (!existe) throw new ErroNaoEncontrado("Backup não encontrado.");
 
-    this.db.restoreFrom(arquivo);
+    this.db.restaurarDe(arquivo);
 
     // Invalida sessões ativas para evitar incompatibilidade com dados do banco restaurado
     if (this.sessionStore && typeof this.sessionStore.clearAll === "function") {

@@ -15,9 +15,9 @@ const SITUACOES_RUINS = new Set(["offline", "erro", "pendencias", "aguardando_au
  */
 class AlertaAgenteService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./VersaoService').VersaoService} versaoService
-   * @param {import('./NotificationService').NotificationService} notifications
+   * @param {import('./NotificacaoService').NotificacaoService} notifications
    * @param {import('./ConfiguracaoSistemaService').ConfiguracaoSistemaService} configuracaoSistema
    */
   constructor(db, versaoService, notifications, configuracaoSistema) {
@@ -45,7 +45,7 @@ class AlertaAgenteService {
 
         if (SITUACOES_RUINS.has(atual)) {
           if (atual !== estadoAnterior) {
-            await this.notifications.notifyAgenteSituacao({
+            await this.notifications.avisarSituacaoDoAgente({
               empresa: agente.empresa,
               situacao: atual,
               detalhe: agente.ultimoDetalhe,
@@ -57,7 +57,7 @@ class AlertaAgenteService {
           // Estava em alerta e saiu dele (nao precisa ter chegado a "ok" --
           // sair de offline/erro pra "pendente"/"desatualizado" ja e' o
           // suficiente pra avisar que o agente voltou a se comunicar).
-          await this.notifications.notifyAgenteSituacao({ empresa: agente.empresa, situacao: atual });
+          await this.notifications.avisarSituacaoDoAgente({ empresa: agente.empresa, situacao: atual });
           this.db.versoes.limparSituacaoAlertada(agente.cnpj);
         }
       }
@@ -86,7 +86,7 @@ class AlertaAgenteService {
 
   /**
    * Desliga e liga de novo com o webhook e o intervalo de AGORA. Chamado
-   * quando essas regras mudam na tela Administração (ver Server.js). Sem
+   * quando essas regras mudam na tela Administração (ver Servidor.js). Sem
    * isto, configurar o webhook com o servidor já no ar não ligava o alerta
    * até o próximo reinício -- `start()` tinha saído cedo, sem webhook.
    */

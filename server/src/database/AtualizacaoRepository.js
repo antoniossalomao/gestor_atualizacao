@@ -1,5 +1,6 @@
 const { BaseRepository } = require("./BaseRepository");
-const { buildOrderBy } = require("../shared/sortHelper");
+const { montarOrdenacao } = require("./ordenacao");
+const { primeiraMaiuscula } = require("../shared/normalizacao");
 
 // Datas sao guardadas como texto "dd/mm/aaaa"; esta expressao SQL as
 // converte para "aaaammdd" para permitir ordenacao cronologica (ordenar o
@@ -19,18 +20,18 @@ function paraOrdenavel(texto) {
 }
 
 /**
- * Campos de um atendimento como a API os entrega. "sistema" não é mais
+ * Campos de uma atualização como a API os entrega. "sistema" não é mais
  * coluna da tabela: vem montado pela visão `atualizacoes_v` a partir de
  * `atualizacao_sistemas` (ver migracoes.js).
  */
-const COLUMNS = ["cliente", "sistema", "versao", "responsavel", "data", "motivo", "maquinas", "obs"];
+const COLUNAS_ATUALIZACOES = ["cliente", "sistema", "versao", "responsavel", "data", "motivo", "maquinas", "obs"];
 
 /** Colunas gravadas na tabela `atualizacoes` em si. */
 const COLUNAS_DA_TABELA = ["cliente", "cliente_id", "versao", "responsavel", "data", "motivo", "maquinas", "obs", "versoes_por_sistema"];
 
 // Sem cliente_id informado, o vínculo sai do nome -- nome exato, senão
 // ignorando caixa e espaço nas pontas (a regra de ClienteRepository.
-// resolverNome). Assim nenhum caminho de gravação deixa um atendimento de um
+// resolverNome). Assim nenhum caminho de gravação deixa uma atualização de um
 // cliente cadastrado sem vínculo só por não ter resolvido o id antes.
 const VALOR = {
   cliente_id:
@@ -38,7 +39,7 @@ const VALOR = {
 };
 const valorDe = (c) => VALOR[c] || `@${c}`;
 
-const LEITURA = `id, ${COLUMNS.join(", ")}, versoes_sistemas, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor`;
+const LEITURA = `id, ${COLUNAS_ATUALIZACOES.join(", ")}, versoes_sistemas, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor`;
 
 /** Colunas que a tela pode pedir para ordenar, e a expressao SQL segura correspondente. */
 const SORT_MAP = {
@@ -53,9 +54,9 @@ const SORT_MAP = {
   obs: "obs COLLATE NOCASE",
 };
 
-// Um atendimento pertence a um cliente pelo id; o nome só decide quando não
-// há vínculo (cliente excluído, ou atendimento lançado para um nome sem
-// cadastro) -- sem esse segundo caso, o relatório de um desses atendimentos
+// Uma atualização pertence a um cliente pelo id; o nome só decide quando não
+// há vínculo (cliente excluído, ou atualização lançada para um nome sem
+// cadastro) -- sem esse segundo caso, o relatório de uma dessas atualizações
 // na tela de Atualizações voltaria vazio.
 const DO_CLIENTE = "(a.cliente_id = (SELECT id FROM clientes WHERE nome = @nome) OR (a.cliente_id IS NULL AND a.cliente = @nome))";
 
@@ -77,18 +78,18 @@ class AtualizacaoRepository extends BaseRepository {
    * @param {string} responsavel "Todos" ou um nome exato
    * @param {{page?: number, pageSize?: number, sortBy?: string, sortDir?: "asc"|"desc"}} paginacao
    */
-  list(search = "", responsavel = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, desde, ate } = {}) {
+  list(search = "", responsavel = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, desde, ate, sistema } = {}) {
     // As clausulas vivem em `_filtros` porque a exportacao precisa exatamente
-    // das mesmas -- ver o comentario em `exportAll`. A comparacao de
+    // das mesmas -- ver o comentario em `exportarTudo`. A comparacao de
     // responsavel ignora maiusculas/minusculas e espacos nas pontas: o filtro
-    // mostra nomes ja normalizados (ver distinctResponsaveis), entao "Camila"
+    // mostra nomes ja normalizados (ver responsaveisDistintos), entao "Camila"
     // escolhido ali precisa achar tambem os salvos como "CAMILA" ou " camila ".
-    const { where, params } = this._filtros(search, responsavel, { desde, ate });
+    const { where, params } = this._filtros(search, responsavel, { desde, ate, sistema });
 
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM atualizacoes_v ${where}`).get(params).total;
 
     const offset = Math.max(0, (page - 1) * pageSize);
-    const orderBy = buildOrderBy(SORT_MAP, sortBy, sortDir, `${DATE_SORT_EXPR} DESC, id DESC`);
+    const orderBy = montarOrdenacao(SORT_MAP, sortBy, sortDir, `${DATE_SORT_EXPR} DESC, id DESC`);
     const sql = `SELECT ${LEITURA} FROM atualizacoes_v ${where} ORDER BY ${orderBy} LIMIT @limit OFFSET @offset`;
     const rows = this.conn.prepare(sql).all({ ...params, limit: pageSize, offset });
     return { rows, total, page, pageSize };
@@ -97,18 +98,18 @@ class AtualizacaoRepository extends BaseRepository {
   /**
    * Nomes distintos já usados no campo Responsável, para o filtro da tela
    * e para as sugestões de autocompletar. Agrupa ignorando maiúsculas/
-   * minúsculas e espaços nas bordas -- mesma regra de countsByResponsavel
+   * minúsculas e espaços nas bordas -- mesma regra de contagemPorResponsavel
    * (sem isso, "Camila", "CAMILA" e "camila" apareciam como três opções
    * diferentes no filtro, em vez de uma só).
    */
-  distinctResponsaveis() {
+  responsaveisDistintos() {
     const rows = this.conn
       .prepare(`SELECT DISTINCT responsavel FROM ${this.table} WHERE responsavel != ''`)
       .all();
     const vistos = new Map();
     for (const { responsavel } of rows) {
       const key = responsavel.trim().toLowerCase();
-      if (key && !vistos.has(key)) vistos.set(key, titleCase(responsavel.trim()));
+      if (key && !vistos.has(key)) vistos.set(key, primeiraMaiuscula(responsavel.trim()));
     }
     return [...vistos.values()].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }
@@ -134,7 +135,7 @@ class AtualizacaoRepository extends BaseRepository {
     return this.conn.prepare(`SELECT ${LEITURA}, versoes_por_sistema FROM atualizacoes_v WHERE id = ?`).get(id);
   }
 
-  /** Versão recebida em cada sistema de um atendimento: [{ id, versao }] na ordem gravada. */
+  /** Versão recebida em cada sistema de uma atualização: [{ id, versao }] na ordem gravada. */
   sistemasDe(id) {
     return this.conn
       .prepare("SELECT sistema_id AS id, versao FROM atualizacao_sistemas WHERE atualizacao_id = ? ORDER BY ordem")
@@ -172,12 +173,12 @@ class AtualizacaoRepository extends BaseRepository {
    * depois de um "selecionar tudo"). Ler aqui, no mesmo instante da exclusao,
    * e' o unico jeito de o que volta ser exatamente o que saiu.
    */
-  findByIds(ids) {
+  buscarPorIds(ids) {
     const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
     if (limpos.length === 0) return [];
     const marcadores = limpos.map(() => "?").join(", ");
     return this.conn
-      .prepare(`SELECT id, ${COLUMNS.join(", ")}, versoes_sistemas FROM atualizacoes_v WHERE id IN (${marcadores})`)
+      .prepare(`SELECT id, ${COLUNAS_ATUALIZACOES.join(", ")}, versoes_sistemas FROM atualizacoes_v WHERE id IN (${marcadores})`)
       .all(...limpos);
   }
 
@@ -190,9 +191,9 @@ class AtualizacaoRepository extends BaseRepository {
    * filtrar. As clausulas sao montadas pelo mesmo helper de `list`, para as
    * duas nunca divergirem.
    */
-  exportAll(search = "", responsavel = "Todos", periodo = {}) {
+  exportarTudo(search = "", responsavel = "Todos", periodo = {}) {
     const { where, params } = this._filtros(search, responsavel, periodo);
-    const sql = `SELECT ${COLUMNS.join(", ")}, versoes_sistemas FROM atualizacoes_v ${where} ORDER BY ${DATE_SORT_EXPR} DESC, id DESC`;
+    const sql = `SELECT ${COLUNAS_ATUALIZACOES.join(", ")}, versoes_sistemas FROM atualizacoes_v ${where} ORDER BY ${DATE_SORT_EXPR} DESC, id DESC`;
     return this.conn.prepare(sql).all(params);
   }
 
@@ -205,8 +206,8 @@ class AtualizacaoRepository extends BaseRepository {
     return this.conn.prepare(`SELECT COUNT(*) AS total FROM atualizacoes_v ${where}`).get(params).total;
   }
 
-  /** Clausula WHERE + parametros compartilhados por `list` e `exportAll`. */
-  _filtros(search, responsavel, { desde = "", ate = "" } = {}) {
+  /** Clausula WHERE + parametros compartilhados por `list` e `exportarTudo`. */
+  _filtros(search, responsavel, { desde = "", ate = "", sistema = "" } = {}) {
     const clauses = [];
     const params = {};
     if (search) {
@@ -233,11 +234,20 @@ class AtualizacaoRepository extends BaseRepository {
       params.ate = fim;
     }
 
+    // Pelo catálogo, e não por `sistema LIKE`: o texto "B_Vendas" também
+    // casaria com "B_Vendas Simples", e a lista mostraria o que o gráfico do
+    // Resumo não contou.
+    if (sistema) {
+      clauses.push(`EXISTS (SELECT 1 FROM atualizacao_sistemas xs JOIN sistemas ss ON ss.id = xs.sistema_id
+        WHERE xs.atualizacao_id = atualizacoes_v.id AND lower(ss.nome) = lower(@sistemaFiltro))`);
+      params.sistemaFiltro = sistema;
+    }
+
     return { where: clauses.length ? `WHERE ${clauses.join(" AND ")}` : "", params };
   }
 
   /** @param {string} monthStr formato "mm/aaaa", ex.: "08/2026" */
-  countForMonth(monthStr, ate) {
+  contarDoMes(monthStr, ate) {
     const row = this.conn
       .prepare(`SELECT COUNT(*) AS total FROM ${this.table} WHERE substr(data, 4, 7) = @mes AND ${DATE_SORT_EXPR} <= @ate`)
       .get({ mes: monthStr, ate: paraOrdenavel(ate) || "99999999" });
@@ -245,7 +255,7 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
-   * Doze meses consecutivos de atendimentos, inclusive os vazios. A data
+   * Doze meses consecutivos de atualizações, inclusive os vazios. A data
    * futura não entra em realizados; cada registro conta uma vez, mesmo que
    * mencione vários sistemas ou só componentes fixos.
    */
@@ -315,22 +325,12 @@ class AtualizacaoRepository extends BaseRepository {
     return Number.isNaN(n) ? 0 : n;
   }
 
-  /** Registro mais recente de um cliente especifico (aba Consultar Cliente). */
-  lastUpdateForClient(nome) {
-    const sql = `
-      SELECT a.data, a.versao, a.motivo, a.responsavel, a.maquinas, a.obs FROM ${this.table} a
-      WHERE ${DO_CLIENTE} ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC LIMIT 1
-    `;
-    return this.conn.prepare(sql).get({ nome }) || null;
-  }
-
   /**
    * As últimas N atualizações de um cliente específico (aba Consultar
-   * Cliente, seção "Histórico recente") -- variante de lastUpdateForClient
-   * que devolve uma lista em vez de um registro só, para dar noção de
+   * Cliente, seção "Histórico recente"), para dar noção de
    * frequência/padrão ao longo do tempo, não só o instante mais recente.
    */
-  recentUpdatesForClient(nome, limit = 5) {
+  atualizacoesRecentesDoCliente(nome, limit = 5) {
     const sql = `
       SELECT a.id, a.data, a.sistema, a.versao, a.motivo, a.responsavel, a.maquinas, a.obs, a.versoes_sistemas FROM atualizacoes_v a
       WHERE ${DO_CLIENTE} ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC LIMIT @limit
@@ -339,7 +339,7 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
-   * Último atendimento de cada cliente EM UM sistema, com a versão que ele
+   * Última atualização de cada cliente EM UM sistema, com a versão que ele
    * recebeu ali: [{ cliente_id, data, versao }]. É o que decide a situação
    * na tela Sistemas.
    */
@@ -357,7 +357,7 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
-   * Último atendimento de TODOS os clientes em cada sistema, de uma vez só:
+   * Última atualização de TODOS os clientes em cada sistema, de uma vez só:
    * [{ cliente_id, sistema_id, data, versao }]. É a mesma escolha de
    * ultimaPorClienteNoSistema, para o Resumo classificar os clientes sem
    * uma consulta por sistema.
@@ -376,7 +376,7 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
-   * Último atendimento de um cliente em cada sistema que já passou por ele:
+   * Última atualização de um cliente em cada sistema que já passou por ele:
    * [{ sistema_id, sistema, data, versao }]. Usado na situação do cliente.
    */
   ultimaPorSistemaDoCliente(nome) {
@@ -395,55 +395,35 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   /**
-   * A atualização mais recente de cada sistema do catálogo ativo, com a
-   * versão registrada nela para aquele sistema.
-   */
-  latestVersionBySystem() {
-    return this.conn
-      .prepare(
-        `SELECT s.nome AS sistema, coalesce(u.versao, 'Não informada') AS versao, coalesce(u.data, 'Não registrada') AS data
-           FROM sistemas s
-           LEFT JOIN (
-             SELECT sistema_id, versao, data FROM (
-               SELECT x.sistema_id, x.versao, a.data,
-                      ROW_NUMBER() OVER (PARTITION BY x.sistema_id ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC) AS n
-                 FROM ${this.table} a JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
-                WHERE a.data != ''
-             ) WHERE n = 1
-           ) u ON u.sistema_id = s.id
-           WHERE s.ativo = 1 AND s.controla_versao = 1
-           ORDER BY s.nome`
-      )
-      .all()
-      .map((r) => ({ ...r, versao: r.versao || "Não informada" }));
-  }
-
-  /**
-   * Quantos clientes (de cada sistema do catálogo ativo) tiveram a ÚLTIMA
-   * atualização daquele sistema neste mês -- só contando quem tem o sistema
-   * marcado no cadastro. Contar linhas pelo texto de "sistema" dava uma sopa
-   * de combinações ("B_Vendas, B_NFe") em vez de um total por sistema.
+   * Quantos clientes (de cada sistema do catálogo ativo) foram atualizados
+   * naquele sistema no mês -- só contando quem tem o sistema marcado no
+   * cadastro. Contar linhas pelo texto de "sistema" dava uma sopa de
+   * combinações ("B_Vendas, B_NFe") em vez de um total por sistema.
+   *
+   * Até 30/09/2026 contava quem teve a ÚLTIMA atualização no mês. Para o mês
+   * corrente dá o mesmo número; para o anterior, não: quem foi atualizado de
+   * novo este mês sumia de lá, e a comparação com o mês anterior (A08)
+   * sairia sempre a favor do mês atual.
    * @param {string} mesStr formato "mm/aaaa"
+   * @param {number} [ateDia] só até este dia do mês (o "mesmo período" do mês anterior)
    */
-  atualizadosNoMesPorSistema(mesStr) {
+  atualizadosNoMesPorSistema(mesStr, ateDia = 31) {
     return this.conn
       .prepare(
-        `SELECT s.nome AS label, COUNT(u.cliente_id) AS total
+        `SELECT s.nome AS label, COUNT(DISTINCT u.cliente_id) AS total
            FROM sistemas s
            LEFT JOIN (
-             SELECT cliente_id, sistema_id, data FROM (
-               SELECT a.cliente_id, x.sistema_id, a.data,
-                      ROW_NUMBER() OVER (PARTITION BY a.cliente_id, x.sistema_id ORDER BY ${DATE_SORT_EXPR} DESC, a.id DESC) AS n
-                 FROM ${this.table} a JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
-                WHERE a.cliente_id IS NOT NULL AND a.data != ''
-             ) WHERE n = 1 AND substr(data, 4, 7) = @mes
+             SELECT a.cliente_id, x.sistema_id
+               FROM ${this.table} a JOIN atualizacao_sistemas x ON x.atualizacao_id = a.id
+              WHERE a.cliente_id IS NOT NULL AND substr(a.data, 4, 7) = @mes
+                AND CAST(substr(a.data, 1, 2) AS INTEGER) <= @ateDia
            ) u ON u.sistema_id = s.id
               AND EXISTS (SELECT 1 FROM cliente_sistemas cs WHERE cs.cliente_id = u.cliente_id AND cs.sistema_id = s.id)
            WHERE s.ativo = 1 AND s.controla_versao = 1
            GROUP BY s.id
           ORDER BY total DESC, s.nome`
       )
-      .all({ mes: mesStr });
+      .all({ mes: mesStr, ateDia });
   }
 
   /**
@@ -462,7 +442,7 @@ class AtualizacaoRepository extends BaseRepository {
    * maiusculas/minusculas e espacos nas bordas (para "Camila", "CAMILA" e
    * " camila " contarem como a mesma pessoa).
    */
-  countsByResponsavel() {
+  contagemPorResponsavel() {
     const raw = this.conn
       .prepare(`SELECT responsavel, COUNT(*) AS qtde FROM ${this.table} WHERE responsavel != '' GROUP BY responsavel`)
       .all();
@@ -470,7 +450,7 @@ class AtualizacaoRepository extends BaseRepository {
     for (const { responsavel, qtde } of raw) {
       const key = responsavel.trim().toLowerCase();
       const atual = merged.get(key);
-      const label = atual ? atual.label : titleCase(responsavel.trim());
+      const label = atual ? atual.label : primeiraMaiuscula(responsavel.trim());
       const total = (atual ? atual.total : 0) + qtde;
       merged.set(key, { label, total });
     }
@@ -478,17 +458,4 @@ class AtualizacaoRepository extends BaseRepository {
   }
 }
 
-/** "a, b, c" -> ["a", "b", "c"] -- o texto de sistemas que a visão monta. */
-function splitSystems(text) {
-  return String(text || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-/** "camila silva" -> "Camila Silva" (equivalente simples de str.title() do Python). */
-function titleCase(text) {
-  return text.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
-}
-
-module.exports = { AtualizacaoRepository, DATE_SORT_EXPR, COLUMNS, titleCase, splitSystems };
+module.exports = { AtualizacaoRepository, DATE_SORT_EXPR };

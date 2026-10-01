@@ -14,7 +14,7 @@
 require("dotenv").config({ quiet: true });
 const path = require("path");
 
-const { Server } = require("./src/Server");
+const { Servidor } = require("./src/Servidor");
 const { problemaNoSegredoDeSessao } = require("./src/config/segredoSessao");
 const { lerTransporte } = require("./src/config/transporte");
 
@@ -59,7 +59,7 @@ const config = {
   trustProxy: transporte.config.trustProxy,
 };
 
-const server = new Server(config);
+const server = new Servidor(config);
 
 server.start().then(() => {
   // Com HTTPS ligado, o endereço que a equipe usa é o do proxy, que o Node

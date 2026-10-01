@@ -93,8 +93,14 @@ const DESTINO_DO_LIXO = "B_Vendas";
  * Separadores que as pessoas usaram de verdade para listar mais de um
  * sistema. O espaço NÃO entra: "B_Pre Pedido", "Suporte Bredas" e "B_Ordem de
  * serviço" têm espaço no próprio nome, e quebrar por espaço os despedaçaria.
+ *
+ * Sem quantificador de propósito: a forma antiga, `\s*(?:…|\s+e\s+|…)\s*`,
+ * deixava o motor tentar cada divisão de uma fileira de espaços entre o
+ * `\s*` de fora e o `\s+` de dentro -- tempo quadrático num texto com
+ * milhares de espaços vindo do formulário (alerta de ReDoS do CodeQL). Os
+ * espaços que sobram nas pontas de cada pedaço saem no `trim` de `resolver`.
  */
-const SEPARADORES = /\s*(?:,|;|\.|\/|\s+e\s+|\s+-\s+)\s*/i;
+const SEPARADORES = /,|;|\.|\/|\se\s|\s-\s/i;
 
 /**
  * Pedaços que são dois sistemas colados sem separador nenhum ("B_NFe
@@ -150,7 +156,7 @@ function normalizarSistemas(texto, catalogo = []) {
 /**
  * Duas pessoas num campo só. "Marcos/Lennon" (10 registros) não é uma grafia
  * diferente de nada -- é uma dupla, e o filtro "Responsável" não sabe lidar
- * com isso. Fica com o Marcos, por decisão de quem conhece os atendimentos.
+ * com isso. Fica com o Marcos, por decisão de quem conhece as atualizações.
  */
 const APELIDOS_RESPONSAVEL = new Map([["MARCOSLENNON", "Marcos"]]);
 
@@ -193,8 +199,23 @@ function canonizarResponsaveis(ocorrencias) {
   return new Map([...grupos].map(([k, { responsavel }]) => [k, responsavel]));
 }
 
+/** "a, b, c" -> ["a", "b", "c"] -- o texto de sistemas que a visão monta. */
+function separarSistemas(text) {
+  return String(text || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+/** "camila silva" -> "Camila Silva". */
+function primeiraMaiuscula(text) {
+  return text.replace(/\w\S*/g, (w) => w[0].toUpperCase() + w.slice(1).toLowerCase());
+}
+
 module.exports = {
   chave,
+  separarSistemas,
+  primeiraMaiuscula,
   normalizarSistemas,
   normalizarResponsavel,
   canonizarResponsaveis,
@@ -205,7 +226,7 @@ module.exports = {
   // Sistemas.
   //
   // "CTe", "DFE", "B_Rat", "B_Vet" e "B_SYNC" também aparecem no histórico e
-  // ficaram DE FORA por decisão de quem conhece os atendimentos: não são
+  // ficaram DE FORA por decisão de quem conhece as atualizações: não são
   // sistemas. Não entram no catálogo e também não são reescritos -- a regra
   // geral de `normalizarSistemas` vale para eles, que é manter intacto o
   // pedaço que não casa com nada.

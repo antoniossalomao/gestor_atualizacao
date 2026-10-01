@@ -1,16 +1,16 @@
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
+import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { emptyState } from "../components/EmptyState.js";
-import { ApiError } from "../api/ApiClient.js";
-import { prefs } from "../app/prefs.js";
-import { debounce } from "../utils/debounce.js";
-import { isValidDateBR, mascaraDataBR, todayBR } from "../utils/date.js";
-import { baixarBlob } from "../utils/arquivo.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
+import { estadoVazio } from "../components/estadoVazio.js";
+import { ErroApi } from "../api/ApiPainel.js";
+import { prefs } from "../app/preferencias.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { dataBRValida, mascaraDataBR, hojeBR } from "../utils/data.js";
+import { baixarBlob } from "../components/arquivos.js";
 import { html } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
-import { withBusyButton } from "../utils/guard.js";
+import { iconeHtml } from "../utils/icones.js";
+import { comBotaoOcupado } from "../components/botaoOcupado.js";
 import { filtrarClientesCampanha, tarefaDaCampanha } from "../domain/campanhas.js";
 import {
   listaCampanhas,
@@ -30,7 +30,7 @@ import { AcessosModal } from "./AcessosModal.js";
  * na 25/09/2026 até o dia 30" -- e o andamento delas.
  *
  * A tela não decide quem está atendido: o servidor calcula a partir dos
- * atendimentos (ver server/src/services/CampanhaService.js). Por isso não
+ * atualizações (ver server/src/services/CampanhaService.js). Por isso não
  * existe botão de "dar baixa": a baixa é registrar a atualização, como
  * sempre, e a campanha só enxerga isso.
  *
@@ -47,10 +47,10 @@ export class CampanhasView extends View {
     this.selecionadaId = salvo.selecionadaId ?? null;
     this.campanhas = [];
     this.detalhe = null;
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     const podeCriar = this.user?.role !== "consulta";
     this.container.innerHTML = String(html`
       <div class="card campanhas">
@@ -59,7 +59,7 @@ export class CampanhasView extends View {
             <button type="button" class="filtro-rapido" data-lista="ativas">Ativas</button>
             <button type="button" class="filtro-rapido" data-lista="encerradas">Encerradas</button>
           </div>
-          ${podeCriar ? html`<button type="button" class="btn btn--accent btn--small" data-action="nova">${iconHtml("plus")} Nova campanha</button>` : ""}
+          ${podeCriar ? html`<button type="button" class="btn btn--accent btn--small" data-action="nova">${iconeHtml("plus")} Nova campanha</button>` : ""}
         </div>
         <div class="campanhas__grade">
           <nav class="campanhas__lista" data-role="lista" aria-label="Campanhas"></nav>
@@ -82,7 +82,7 @@ export class CampanhasView extends View {
     this.filtrosEl = this.container.querySelector('[data-role="filtros"]');
     this.tableEl = this.container.querySelector('[data-role="table"]');
 
-    this.table = new SortableTable(this.tableEl, {
+    this.table = new TabelaOrdenavel(this.tableEl, {
       // Ao lado da lista de campanhas não cabem sete colunas: código e
       // cidade vão embaixo do nome, a versão recebida embaixo da data (a
       // busca e a planilha continuam com tudo). Só as colunas curtas têm
@@ -96,7 +96,7 @@ export class CampanhasView extends View {
       rowKey: (row) => row.id,
       caption: "Clientes da campanha",
       onSelect: () => {},
-      emptyNode: () => emptyState({
+      emptyNode: () => estadoVazio({
         titulo: "Nenhum cliente neste filtro",
         descricao: this.filtro === "pendente" ? "Ninguém pendente: todos atualizados ou já agendados." : "Troque o filtro ou limpe a busca.",
         icone: "busca",
@@ -128,12 +128,18 @@ export class CampanhasView extends View {
       this._salvar();
       this._pintarClientes();
     });
-    const buscar = debounce(() => this._pintarClientes(), 180);
+    const buscar = aguardarPausa(() => this._pintarClientes(), 180);
     this.container.querySelector('[data-role="busca"]').addEventListener("input", (e) => {
       this.busca = /** @type {HTMLInputElement} */ (e.target).value;
       buscar();
     });
     this.tableEl.addEventListener("click", (e) => this._acaoLinha(e));
+  }
+
+  /** "Nova Campanha" da Ação rápida (App._abrirAcoesRapidas) chega aqui com `novo`. */
+  aplicarParams({ novo } = {}) {
+    if (!novo || this.user?.role === "consulta") return;
+    this._abrirFormulario();
   }
 
   async refresh() {
@@ -168,7 +174,7 @@ export class CampanhasView extends View {
   async _carregarDetalhe() {
     if (this.selecionadaId == null) {
       this.detalhe = null;
-      this.cabecalhoEl.replaceChildren(emptyState({
+      this.cabecalhoEl.replaceChildren(estadoVazio({
         titulo: this.mostrarEncerradas ? "Nenhuma campanha encerrada" : "Nenhuma campanha ativa",
         descricao: "Uma campanha acompanha quantos clientes já receberam uma versão crítica, como a de uma Nota Técnica da SEFAZ.",
         icone: "campanhas",
@@ -179,7 +185,7 @@ export class CampanhasView extends View {
       return;
     }
     const id = this.selecionadaId;
-    this.table.setRefreshing(true);
+    this.table.definirRecarregando(true);
     try {
       await this.swr(`campanhas:detalhe:${id}`, () => this.api.get(`/campanhas/${id}`, null, { key: "campanhas:detalhe" }), (d) => {
         if (d.id !== this.selecionadaId) return;
@@ -197,7 +203,7 @@ export class CampanhasView extends View {
       }
       if (!err?.cancelled && !err?.avisadoNaTela) Modal.alert("Erro", mensagem(err), "error");
     } finally {
-      this.table.setRefreshing(false);
+      this.table.definirRecarregando(false);
     }
   }
 
@@ -208,7 +214,7 @@ export class CampanhasView extends View {
     for (const c of clientes) contagens[c.situacao] = (contagens[c.situacao] || 0) + 1;
     this.filtrosEl.innerHTML = String(filtrosCampanha(this.filtro, contagens));
     const linhas = filtrarClientesCampanha(clientes, this.filtro, this.busca);
-    this.table.setRows(linhas);
+    this.table.definirLinhas(linhas);
     this.container.querySelector('[data-role="count"]').textContent = contagemClientes(linhas.length);
   }
 
@@ -217,7 +223,7 @@ export class CampanhasView extends View {
     if (!botao || !this.detalhe) return;
     const c = this.detalhe;
     const acao = botao.dataset.action;
-    if (acao === "exportar") return withBusyButton(botao, () => this._exportar())();
+    if (acao === "exportar") return comBotaoOcupado(botao, () => this._exportar())();
     if (acao === "editar") return this._abrirFormulario(c);
     if (acao === "encerrar") {
       const ok = await Modal.confirm("Encerrar campanha", `Encerrar "${c.titulo}"?\n\nO placar de hoje (${c.atendidos} de ${c.totalClientes} atualizados) fica registrado. As atualizações continuam sendo registradas normalmente, e dá para reabrir depois.`, { confirmLabel: "Encerrar", danger: false });
@@ -233,7 +239,7 @@ export class CampanhasView extends View {
   async _mudar(fazer, sucesso) {
     try {
       await fazer();
-      toast.success(sucesso);
+      avisoRapido.sucesso(sucesso);
       this.cache?.invalidar();
       await this.refresh();
     } catch (err) {
@@ -267,7 +273,7 @@ export class CampanhasView extends View {
       // Cria a tarefa direto, sem abrir o formulário: é o "botão rápido" da
       // campanha. A tarefa leva o sistema da campanha -- é isso que a faz
       // aparecer como "já agendado" aqui (ver CampanhaService).
-      await withBusyButton(botao, async () => {
+      await comBotaoOcupado(botao, async () => {
         try {
           await this.api.post("/agendamentos", {
             tarefa: tarefaDaCampanha(c),
@@ -275,10 +281,10 @@ export class CampanhasView extends View {
             sistema: c.sistema,
             responsavel: this.user?.nome || "",
             prioridade: c.prazo ? "Alta" : "Normal",
-            data: todayBR(),
+            data: hojeBR(),
             obs: c.prazo ? `Prazo da campanha: ${c.prazo}` : "",
           });
-          toast.success(`Agendamento criado para ${row.nome}.`);
+          avisoRapido.sucesso(`Agendamento criado para ${row.nome}.`);
           this.cache?.invalidar();
           await this.refresh();
         } catch (err) {
@@ -337,10 +343,10 @@ export class CampanhasView extends View {
         descricao: /** @type {HTMLTextAreaElement} */ (form.querySelector('[data-field="descricao"]')).value.trim(),
         ...(campanha ? {} : { sistema: campo("sistema").value, versaoAlvo: campo("versaoAlvo").value.trim() }),
       };
-      const versaoRuim = !campanha && (!dados.versaoAlvo || !isValidDateBR(dados.versaoAlvo));
+      const versaoRuim = !campanha && (!dados.versaoAlvo || !dataBRValida(dados.versaoAlvo));
       const invalido = !dados.titulo ? ["titulo", "Informe o título."]
         : versaoRuim ? ["versaoAlvo", "Versão-alvo precisa ser uma data dd/mm/aaaa."]
-          : dados.prazo && !isValidDateBR(dados.prazo) ? ["prazo", "Prazo precisa ser uma data dd/mm/aaaa."] : null;
+          : dados.prazo && !dataBRValida(dados.prazo) ? ["prazo", "Prazo precisa ser uma data dd/mm/aaaa."] : null;
       for (const nome of ["titulo", "versaoAlvo", "prazo"]) campo(nome)?.setAttribute("aria-invalid", "false");
       if (invalido) {
         erro.textContent = invalido[1];
@@ -349,11 +355,11 @@ export class CampanhasView extends View {
         return;
       }
       const salvar = /** @type {HTMLButtonElement} */ (form.querySelector('[data-action="salvar"]'));
-      await withBusyButton(salvar, async () => {
+      await comBotaoOcupado(salvar, async () => {
         try {
           const salva = campanha ? await this.api.put(`/campanhas/${campanha.id}`, dados) : await this.api.post("/campanhas", dados);
           close();
-          toast.success(campanha ? "Campanha atualizada." : "Campanha criada.");
+          avisoRapido.sucesso(campanha ? "Campanha atualizada." : "Campanha criada.");
           this.mostrarEncerradas = Boolean(salva.encerradaEm);
           this.selecionadaId = salva.id;
           this._salvar();
@@ -372,7 +378,7 @@ export class CampanhasView extends View {
   }
 }
 
-/** HtmlSeguro -> nó, para as colunas da SortableTable (que pedem Node). */
+/** HtmlSeguro -> nó, para as colunas da TabelaOrdenavel (que pedem Node). */
 function no(marcacao) {
   const t = document.createElement("template");
   t.innerHTML = String(marcacao);
@@ -380,5 +386,5 @@ function no(marcacao) {
 }
 
 function mensagem(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

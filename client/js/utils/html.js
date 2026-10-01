@@ -1,8 +1,8 @@
 /*
  * Utilidades de texto/DOM compartilhadas.
  *
- * Antes, `escapeHtml` estava copiado em sete arquivos diferentes (App,
- * AtualizacoesView, ClientesView, SistemasView, UsersPanel, BarChart,
+ * Antes, `escaparHtml` estava copiado em sete arquivos diferentes (App,
+ * AtualizacoesView, ClientesView, SistemasView, UsersPanel, GraficoDeBarras,
  * DistribuicaoView...). Sete cópias da mesma função é sete lugares para
  * esquecer de corrigir quando uma delas estiver errada -- agora existe uma só.
  */
@@ -17,13 +17,13 @@ const ENTIDADES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": 
  * argumento de "não divergir do browser". Mas esse caminho só escapa `&`, `<`
  * e `>`, e NÃO escapa aspas: serve para conteúdo, e quebra dentro de
  * atributo. O cartão do kanban fazia exatamente isso
- * (`aria-label="Tarefa ${escapeHtml(row.tarefa)}"`), e uma tarefa com `"` no
+ * (`aria-label="Tarefa ${escaparHtml(row.tarefa)}"`), e uma tarefa com `"` no
  * título fechava o atributo antes da hora. A CSP (sem 'unsafe-inline')
  * barrava um `onmouseover` injetado, mas o HTML saía corrompido do mesmo
  * jeito. A tabela na mão cobre os dois contextos, e de quebra tira o DOM de
  * utils/ -- agora dá para testar no Node.
  */
-export function escapeHtml(text) {
+export function escaparHtml(text) {
   return String(text ?? "").replace(/[&<>"']/g, (c) => ENTIDADES[c]);
 }
 
@@ -52,7 +52,7 @@ export class HtmlSeguro {
  *
  *     el.innerHTML = html`<p title="${row.cliente}">${row.tarefa}</p>`;
  *
- * Por que existe: com `escapeHtml` na mão, a segurança dependia de lembrar de
+ * Por que existe: com `escaparHtml` na mão, a segurança dependia de lembrar de
  * chamar a função em CADA interpolação de CADA template, e um esquecimento não
  * quebra nada visível até o dia em que um cliente se chama `<b>`. Com a tag, o
  * padrão é seguro e o perigoso é o que precisa ser escrito: `confiavel(...)`.
@@ -86,12 +86,12 @@ function interpolar(valor) {
   if (valor == null || valor === false) return "";
   if (valor instanceof HtmlSeguro) return valor.marcacao;
   if (Array.isArray(valor)) return valor.map(interpolar).join("");
-  return escapeHtml(valor);
+  return escaparHtml(valor);
 }
 
 /**
  * Marca uma string como HTML confiável, para a tag `html` não escapá-la.
- * Só para marcação que o PRÓPRIO código produziu (o `<svg>` de `icon()`, por
+ * Só para marcação que o PRÓPRIO código produziu (o `<svg>` de `iconeSvg()`, por
  * exemplo) -- nunca para algo que veio da API ou de um campo de formulário.
  * O nome é para chamar atenção numa revisão: cada `confiavel(` é um lugar
  * onde a garantia da tag foi suspensa de propósito.
@@ -104,7 +104,7 @@ export function confiavel(marcacao) {
 }
 
 /** Escapa texto que vai dentro de um atributo entre aspas duplas. */
-export function escapeAttr(text) {
+export function escaparAtributo(text) {
   return String(text ?? "")
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
@@ -112,66 +112,7 @@ export function escapeAttr(text) {
     .replace(/>/g, "&gt;");
 }
 
-/**
- * Cria um elemento com classe, texto e atributos numa chamada só -- versão
- * enxuta do `document.createElement` + três linhas de configuração que
- * aparecia repetida em todas as views.
- *
- * @param {string} tag
- * @param {{class?: string, text?: string, html?: string, [attr: string]: any}} props
- * @param {Array<Node|string>} children
- */
-export function el(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  for (const [key, value] of Object.entries(props)) {
-    if (value == null || value === false) continue;
-    if (key === "class") node.className = value;
-    else if (key === "text") node.textContent = value;
-    else if (key === "html") node.innerHTML = value;
-    else if (key === "style" && typeof value === "object") Object.assign(node.style, value);
-    else if (key === "dataset") Object.assign(node.dataset, value);
-    else if (key.startsWith("on") && typeof value === "function") node.addEventListener(key.slice(2), value);
-    else node.setAttribute(key, value === true ? "" : String(value));
-  }
-  for (const child of children) node.append(child);
-  return node;
-}
-
 /** Plural simples em português: `plural(1, "cliente")` -> "1 cliente". */
 export function plural(n, singular, pluralForm = `${singular}s`) {
   return `${n} ${n === 1 ? singular : pluralForm}`;
-}
-
-/**
- * Copia texto para a área de transferência. Tenta a API moderna primeiro
- * (`navigator.clipboard`), que só funciona em "contexto seguro" (HTTPS ou
- * localhost) -- este app é rotineiramente acessado por HTTP puro dentro da
- * rede local (ver `SESSION_SECURE=false` no README), onde `navigator.clipboard`
- * nem existe. Cai para o jeito antigo (`execCommand("copy")` numa textarea
- * temporária, fora da tela) nesse caso -- descontinuado, mas ainda funciona
- * em todo navegador relevante e não depende de contexto seguro.
- * @returns {Promise<boolean>} true se copiou
- */
-export async function copyToClipboard(texto) {
-  if (navigator.clipboard && window.isSecureContext) {
-    try {
-      await navigator.clipboard.writeText(texto);
-      return true;
-    } catch {
-      // segue para o fallback abaixo
-    }
-  }
-  try {
-    const textarea = document.createElement("textarea");
-    textarea.value = texto;
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    const ok = document.execCommand("copy");
-    textarea.remove();
-    return ok;
-  } catch {
-    return false;
-  }
 }

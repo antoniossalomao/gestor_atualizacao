@@ -34,7 +34,7 @@ class ConfiguracaoSistemaRepository extends BaseRepository {
    * deixaria a equipe com uma combinação que ninguém escolheu.
    * @param {Array<[string, string]>} pares chave e valor
    */
-  setVarias(pares) {
+  gravarVarias(pares) {
     this.conn.transaction(() => {
       for (const [chave, valor] of pares) this.set(chave, valor);
     })();

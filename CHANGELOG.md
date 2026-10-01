@@ -15,17 +15,56 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
-- **Situação dos clientes pela data do atendimento (29/09/2026):** a versão recebida não decide mais se o cliente está em dia — vale só a data do último atendimento contra a data da versão oficial (ou da versão-alvo, em Campanhas). Quem foi atendido depois da oficial conta como em dia mesmo com uma versão anterior gravada. A coluna "Versão recebida" saiu da aba Sistemas e a marca "(pela data)" saiu das telas. A versão recebida continua gravada e aparece na ficha, no relatório e na exportação da campanha. Revisão registrada na [ADR-0008](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0008).
+- **Alertas de segurança do CodeQL (01/10/2026):** download do banco atual, download de um backup e restauração passam a aceitar até 20 pedidos por IP a cada 15 minutos; o seguinte recebe 429 com "Muitos pedidos de backup seguidos". Sem isso, uma sessão de admin roubada ou um script em laço puxaria cópias do banco inteiro até esgotar disco e banda. Entra a dependência `express-rate-limit` no servidor: o `LimitadorDeLogin` caseiro conta por IP+usuário, específico do login, e o CodeQL só reconhece limitadores de bibliotecas conhecidas. A tela de "Falha ao inicializar o Gestor" passa a escapar a mensagem e a pilha do erro (eram jogadas cruas no `innerHTML`). Duas expressões regulares com tempo quadrático em entrada longa saíram: a que separa a lista de sistemas de uma atualização e a que tira a barra final da URL pública. O workflow de CI ganhou `permissions: contents: read`, o `brace-expansion` (via `nodemon`, só de desenvolvimento) subiu para a versão corrigida, e o `uuid` que o `exceljs` puxa é forçado para a 11.1.1 por `overrides` no `server/package.json` (o `exceljs` mais recente ainda pede `uuid@^8`; o painel não usa a parte do `exceljs` que chama o `uuid`, mas sem isso o alerta do Dependabot não fecha). Os demais alertas são falsos positivos: caminhos de arquivo já restritos à lista de backups ou a `path.basename`, o teste do webhook já restrito aos domínios do Discord, e CSRF e limite do login já cobertos por middlewares próprios que o CodeQL não reconhece.
+
+- **Padrões do código — A18 (01/10/2026, em andamento):** nomes de classes, funções, métodos e arquivos em português no servidor e no cliente (por exemplo `ErroDeValidacao`, `exigirPapel`, `avisoRapido.sucesso`, `Servidor`, `BancoDeDados`, `CacheSwr`, `TabelaOrdenavel`); comentários no presente e sem a história do app original nem marcas de planos que não existem mais; `Servidor`, `SaudeService` e a Ficha 360° divididos em etapas nomeadas. Nada muda para quem usa o painel. O campo `precisaConfigurar` (antes `needsSetup`) da resposta de `/api/auth/status` mudou de nome nos dois lados; o Atualizador Automático não o usa.
+
+- **Auditoria da documentação — A17 (30/09/2026):** README, CONTRIBUTING, SECURITY, CLAUDE.md, o runbook e a documentação consolidada foram conferidos contra o código (links e âncoras, caminhos citados, scripts do npm, variáveis do `.env`, rotas, nomes de tela). Corrigido o que estava falso: o card do Resumo e os filtros de Sistemas ainda citavam "Verificação pendente" e "Nunca atualizado" como grupos; "Administração → Atualizador" e "→ Saúde do servidor" eram abas que hoje se chamam Integrações e Diagnóstico; o runbook mandava consultar uma rota do agente que não existe (`/agente/status`, a real é `/update/status/:cnpj`); o CONTRIBUTING e o CLAUDE.md mandavam rodar um script de testes de navegador que saiu do repositório; a SECURITY dizia que o histórico de dependências estava no CHANGELOG (está no README); e havia contagens de testes e um gráfico de pizza que já não existem. Os 30 links para o `MELHORIAS.md` removido (e para âncoras escritas à mão que quebravam) foram tirados, e os comentários de código que citavam os itens do plano passaram a citar o ADR. Na documentação consolidada entram o ADR-0014 ("atualização" como termo único) e as revisões dos ADRs 0005 e 0006 (as pastas sem DOM) e 0012 (a suíte de navegador foi revogada), além da seção 7.3 sobre o fim do `MELHORIAS.md`.
+
+- **Organização — A16 (30/09/2026):** cada arquivo na pasta que a regra do projeto manda. No front-end, cinco arquivos de `utils/` e `domain/` tocavam o documento (download de arquivo, botão ocupado, `el()`, copiar para a área de transferência, leitura de variável CSS e o bloco visual de retorno do agente) e foram para `components/` e `app/tema.js`; o portão "sem DOM" só parecia existir (o `tsconfig` tinha `dom` nas libs e o teste só olhava `templates/` e `domain/`), e agora o `tsc` roda sem `dom` e o teste cobre `utils/` também. No servidor, `shared/` ficou com `errors` e `normalizacao`, os dois que têm consumidores em camadas diferentes: paginação, ordenação e validação tinham uma camada só e foram morar nela; `separarSistemas` e `primeiraMaiuscula` subiram para a normalização; e os serviços deixaram de usar a conexão direto (`BancoDeDados` ganhou `transacao`, `verificarIntegridade` e `modoDeGravacao`). Sem mudança de comportamento. Os testes seguiram: um arquivo por regra (validação, paginação, ordenação, saúde). Sete arquivos com nome fora do padrão (classe em camelCase, função em PascalCase) e `UsuariosController` e `NotificacaoService` foram renomeados.
+
+- **Limpeza — A15 (30/09/2026):** varredura do repositório atrás de tudo o que não tinha uso. Saíram cinco rotas da API que nem o cliente, nem o Atualizador, nem os testes chamavam: em Atualizações, `last-by-client` e `versoes-por-sistema`; em Agendamentos, `excluir-lote`, `concluir-lote` e `gerar-lote` (sobra de quando a tela era uma tabela, o quadro Kanban não tem seleção múltipla), com o código e os testes que só elas usavam. Saíram também métodos de repositório sem chamador, código do front-end, 12 classes e 10 variáveis de CSS sem uso. `--raio-md` era usada em 4 lugares sem nunca ter sido definida, então os menus "Relatórios" e "Mais ações" de Atualizações, o painel de versões oficiais, a linha do "Antes × Depois" e o tooltip do gráfico de barras ficavam de canto reto; passam a usar `--raio`. O servidor deixou de depender do próprio repositório (`"gestor-de-atualizacoes": "file:.."`, que entrou por engano em 18/09): o Dockerfile ficou mais simples e o atalho circular que essa dependência criava em `server/node_modules` deixou de existir. No CI, o passo de testes de navegador saiu, junto com o script `test:navegador`: a pasta `navegador/` já não está no repositório, então o passo não testava nada.
+- **Tela de login — A12 (30/09/2026):** em tela larga, a tela se divide em duas metades: a marca num painel tingido com a cor de destaque e o formulário na outra. O logo e o nome apareciam duas vezes, porque a regra que escondia os do cartão perdia para a regra base no CSS. No celular fica só o formulário, com o logo e o nome em cima. Ao entrar, o botão diz "Entrando…" e os campos travam até a resposta. O erro ganhou espaço, borda e sinal de alerta, marca os campos em vermelho (e para o leitor de tela) e some ao começar a corrigir. Antes de o app carregar, a página mostra "Carregando o Gestor…" em vez de ficar em branco. Mostrar senha e aviso de Caps Lock continuam; tudo revisto no tema claro e no escuro, sem biblioteca nova.
+
+- **Sobre e ajuda reorganizada — A11 (30/09/2026):** a aba de Configurações passa a ter cinco blocos: versão e novidades; como usar cada tela (só as que a pessoa vê no menu); atalhos de teclado num cartão só, com um título por grupo (antes cada grupo era um cartão solto); como a situação é calculada, item por item e com o prazo que a equipe usa de verdade; e contato e suporte. A versão mostrada vem do servidor e é a mesma do Diagnóstico: havia três números diferentes ("2.0" no Sobre, "2.1.0" fixo no Diagnóstico, "1.0.0" no `package.json`), e agora o `package.json` é a fonte única (2.1.0). O `/auth/status` passou a mandar a versão, e o app busca as regras de novo depois do login (antes, quem entrava pela tela de login ficava sem elas).
+
+- **Filtros da tela Sistemas — A10 (30/09/2026):** a barra segue o padrão de Atualizações: contagem e botões "Filtros" e "Versões oficiais" à direita, "Limpar filtros" quando há situação, busca ou data escolhida, e "Filtros (1)" quando a data está valendo com o painel fechado. No painel, o "Limpar data" fica alinhado ao campo; a dica que havia embaixo saiu, e data inválida fica marcada no próprio campo.
+
+- **Títulos em Administração e Configurações — A09 (30/09/2026):** o título de um cartão ("Histórico de atualizações", "Regras globais") e o nome de cada configuração dentro dele saíam do mesmo tamanho e peso, e o cartão parecia só mais uma linha da lista. Agora são três níveis: título da seção (o da aba, maior e com linha divisória, e o de cada cartão), nome da configuração (médio, em negrito) e descrição (pequena, em cor secundária). Vale em todas as abas das duas telas, inclusive na classificação dos sistemas, nos blocos de Diagnóstico e na legenda dos papéis.
+
+- **Correção do prazo e fim da "Verificação pendente" — A07 (30/09/2026, depois da publicação):** o prazo contava só da data da versão oficial, e o Resumo não mostrava nenhum desatualizado — cliente parado havia quase um ano ficava "aguardando" porque a oficial do B_Vendas era recente. Agora é **desatualizado** também quem teve a última atualização 60 dias ou mais antes da oficial; "aguardando" fica só para quem foi atualizado pouco antes dela, dentro do prazo. **Nunca atualizado conta como desatualizado**: o grupo "Verificação pendente" saiu do card, e o filtro da aba Sistemas troca "Sem informação" por "Sem versão oficial". Vale para todos os sistemas (aba Sistemas, ficha, "Onde estão os atrasos"); o card continua julgando pelo B_Vendas quem o tem. A legenda das situações em Configurações foi reescrita (ainda descrevia a regra pela versão recebida). Revisão no [ADR-0013](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0013).
+
+- **Gráfico "Atualizações por sistema este mês" — A08 (30/09/2026):** barras em ordem decrescente com o número no fim de cada uma e ▲/▼ com a diferença contra o mesmo período do mês anterior. No máximo 8 sistemas; os demais somados em "Outros". Sistemas zerados nos dois meses saem da lista (antes aparecia o catálogo inteiro, quase todo em zero). Clicar numa barra abre Atualizações filtrada pelo sistema e pelo mês, com o filtro visível num chip; sem atualização no mês, o card diz isso. O número passou a contar clientes atualizados no sistema durante o mês (e não só os que tiveram ali a última atualização), para a comparação com o mês anterior ser justa. A listagem, a exportação e o relatório de Atualizações aceitam o filtro `sistema`, pelo nome do catálogo.
+
+- **NFCe e Consignado M2 pela data do B_Vendas — A13 (30/09/2026):** um cliente atualizado no B_Vendas não aparece mais atrasado nesses sistemas só porque a atualização não foi lançada para cada um. Nos clientes que têm B_Vendas, a situação deles usa a data da última atualização do B_Vendas, contra a versão oficial do próprio sistema e o prazo do A07. A aba Sistemas e a ficha avisam "pela data do B_Vendas". A marcação "Atualiza junto com o B_Vendas" fica em Administração › Operação da equipe, e a migração 6 já marca os dois. Registrado no [ADR-0013](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0013).
+
+- **Prazo antes de "desatualizado" — A07 (30/09/2026):** uma versão oficial recém-publicada não deixa mais todos os clientes vermelhos no dia seguinte. Quem ainda não recebeu a versão fica **Aguardando atualização** (cinza) até N dias depois da data da versão oficial, e só então **Desatualizado**. N é a regra nova "Desatualizado depois da versão oficial" em Administração › Operação da equipe (padrão 60; 0 volta à regra estrita). Vale no Resumo, na aba Sistemas (com filtro próprio) e na ficha, que sem agente passou a mostrar a mesma situação do Resumo em vez de comparar com a versão publicada pelo Atualizador. O card "Atualização dos Clientes" diz o prazo usado e perdeu a nota de rodapé que repetia a lista. Campanhas não usam o prazo. Decisão no [ADR-0013](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0013).
+
+- **"Atualização" como termo único — A14 (30/09/2026):** o termo antigo para o registro saiu do projeto inteiro — telas, nomes internos, comentários, documentação e as entradas antigas deste histórico. O registro é uma **atualização**, e a data que importa é a **última atualização**. O contador do Resumo passou a se chamar `semAtualizacao`, e o filtro de data da aba Sistemas usa o parâmetro `atualizacaoAntesDe`; a data que já estava salva no navegador continua valendo. `client/tests/vocabulario.test.mjs` falha se o termo voltar.
+
+- **Tabelas na altura da tela — A06 (30/09/2026):** em Clientes, Atualizações, Sistemas e Agendamentos a altura da tabela deixou de ser um percentual fixo da janela, que não descontava cabeçalho, filtros e paginação. Agora ela é medida pelo espaço que sobra: em "Cheia" vai até o fim da página, sem faixa vazia; em "Alta" e "Média" o percentual vira teto. Em nenhum modo a página e a tabela rolam ao mesmo tempo. No celular só a página rola. No quadro de Agendamentos, cada coluna rola por dentro em vez de esticar a página.
+
+- **"Nova Campanha" na Ação rápida — A05 (30/09/2026):** o atalho Alt+N passa a oferecer Nova Campanha, que abre direto o formulário da campanha. Para quem só consulta, o botão aparece desativado, como os demais.
+
+- **Clientes abre sempre por ID crescente — A04 (30/09/2026):** ao entrar na tela, a lista volta à ordem de cadastro (ID 1, 2, 3…). A ordenação escolhida vale enquanto se está na tela e deixou de ser lembrada na próxima abertura; a busca continua sendo.
+
+- **Regime tributário na Ficha 360° — A03 (30/09/2026):** o regime gravado no cadastro do cliente passa a aparecer na ficha, em Resumo & Cadastro ("—" quando vazio) e no cabeçalho, junto de cidade e grupo.
+
+- **Avisos sobre formulários — A02 (30/09/2026):** nos avisos de campo obrigatório e data inválida (Clientes, Atualizações, Agendamentos e Acessos), o foco ia para o campo *atrás* do aviso ainda aberto: o Enter seguinte reenviava o formulário e empilhava outro aviso, e pelo teclado a tela parecia travada. Agora o foco fica no aviso e volta ao campo quando ele fecha. As camadas da tela (faixa de conexão, gaveta, modal, notificação) passaram a sair de uma escala única de variáveis `--camada-*` em `theme.css`, com teste que recusa número solto e confere a ordem.
+
+- **Quadro de Agendamentos não trava mais na segunda mudança de status — A01 (30/09/2026):** depois de mover uma tarefa (arrastando ou pelo formulário), a mudança seguinte da mesma tarefa — tirá-la de "Em Andamento", por exemplo — era recusada com "Este agendamento foi atualizado por…" com o nome da própria pessoa, e o quadro só voltava a aceitar mudanças com F5. O servidor devolvia a tarefa salva sem a revisão nova, e a tela seguia mandando a antiga. Agora a resposta traz a revisão atual; num conflito de verdade (outra pessoa mexeu), o quadro recarrega sozinho. O arrasto de coluna também deixou de ser confundido com o último cartão arrastado.
+
+- **Situação dos clientes pela data da atualização (29/09/2026):** a versão recebida não decide mais se o cliente está em dia — vale só a data da última atualização contra a data da versão oficial (ou da versão-alvo, em Campanhas). Quem foi atendido depois da oficial conta como em dia mesmo com uma versão anterior gravada. A coluna "Versão recebida" saiu da aba Sistemas e a marca "(pela data)" saiu das telas. A versão recebida continua gravada e aparece na ficha, no relatório e na exportação da campanha. Revisão registrada na [ADR-0008](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0008).
 - **Formulário de campanha:** o campo Descrição não fica mais colado no Cidade.
 
-- **Limites e medição da importação/exportação — P05 (29/09/2026):** medido com `server/ferramentas/medir-planilhas.js` na máquina de produção: importar 20 mil linhas custava 21 s e 1 GB de memória, 50 mil custavam 1,75 GB — o bastante para derrubar o painel de todo mundo, e o limite de 15 MB do upload não impedia (15 MB são ~400 mil linhas). Números completos em [MELHORIAS](docs/MELHORIAS.md), P05.
+- **Limites e medição da importação/exportação — P05 (29/09/2026):** medido com `server/ferramentas/medir-planilhas.js` na máquina de produção: importar 20 mil linhas custava 21 s e 1 GB de memória, 50 mil custavam 1,75 GB — o bastante para derrubar o painel de todo mundo, e o limite de 15 MB do upload não impedia (15 MB são ~400 mil linhas). Números completos no runbook (`docs/OPERACAO.md`, "Lentidão") e em `server/src/config/limitesPlanilha.js`.
   - *Limites*: 5.000 linhas por importação e 10.000 por exportação (`server/src/config/limitesPlanilha.js`), anos de folga sobre o volume real (~1.000 atualizações por ano). Acima disso, a mensagem diz o limite e o que fazer (dividir o arquivo; filtrar por período), e nada é gravado.
   - *Recusa antes de carregar*: a importação conta as linhas direto no zip do .xlsx, sem montar a planilha, e recusa um arquivo grande em ~0,1 s. O leitor em fluxo do ExcelJS, que seria o caminho natural, falha de forma intermitente na versão 4.4.0 e foi descartado.
   - *Importação 2 a 3 vezes mais rápida e com um terço da memória*: o SQL era compilado de novo e o catálogo de sistemas relido a cada linha.
   - *Mensagens*: arquivo grande demais (413) ou de formato errado (400) deixam de responder "Erro interno do servidor"; a exportação recusada passa a aparecer na tela (antes, não acontecia nada); célula com texto formatado deixa de entrar como `[object Object]`.
   - *Testes*: `server/tests/limitesPlanilha.test.js` e um passo em `navegador/atualizacoes.test.mjs`.
 
-- **Testes de navegador — P04 (29/09/2026):** `npm run test:navegador` roda os fluxos completos num Chrome sem janela: login e sessão expirada, atendimentos (criar, editar, conflito de revisão, falha da API no envio, filtro, relatório copiado, excluir e desfazer, exclusão em lote com confirmação), tarefas, campanhas, importação, teclado e foco, nome acessível e rolagem horizontal em 390/768/1280/1440 px, nos dois temas e com zoom de 200%. Sem dependência nova: o Chrome instalado é controlado pelo protocolo de depuração ([ADR-0012](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0012)). Roda no CI.
+- **Testes de navegador — P04 (29/09/2026):** `npm run test:navegador` roda os fluxos completos num Chrome sem janela: login e sessão expirada, atualizações (criar, editar, conflito de revisão, falha da API no envio, filtro, relatório copiado, excluir e desfazer, exclusão em lote com confirmação), tarefas, campanhas, importação, teclado e foco, nome acessível e rolagem horizontal em 390/768/1280/1440 px, nos dois temas e com zoom de 200%. Sem dependência nova: o Chrome instalado é controlado pelo protocolo de depuração ([ADR-0012](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0012)). Roda no CI.
   - *Modal atrás da gaveta*: "Descartar alterações?", o erro ao salvar e o aviso de conflito abriam **escondidos** atrás do formulário (camada 1100 contra 1200). Esc e Salvar pareciam não fazer nada. Agora o modal fica acima da gaveta, e os avisos acima de tudo.
   - *Gaveta e teclado*: ao fechar, o foco volta para quem a abriu (antes caía no começo da página); o Tab circula dentro dela em vez de escapar para a tela de trás; o fundo deixa de engolir o clique seguinte enquanto some.
   - *Login*: os campos ganharam rótulo associado (o leitor de tela anunciava só "caixa de texto") e o erro de senha passa a ser anunciado.
@@ -36,11 +75,11 @@ Para o agente C#, o equivalente é
   - *Um aviso, não uma pilha de toasts*: o toast "Não foi possível carregar os dados desta tela", que voltava a cada tentativa, não aparece mais nas telas que mostram o aviso.
   - *Vale para todas as telas que usam o cache*, porque mora na `View.swr` (`client/js/utils/estadoDados.js`).
   - *Telas que escapavam do aviso*: Clientes e Sistemas buscavam a primeira coisa fora do cache e, com o servidor fora, nem desenhavam o dado guardado; Campanhas e Sistemas abriam um modal de erro por cima. Achado no teste de navegador com o servidor derrubado.
-  - *Faixa de "sem conexão" com o proxy*: com o Caddy da P01, o painel fora do ar respondia 502 pelo proxy e a faixa nunca aparecia. O `ApiClient` passa a contar 502/503/504 como queda.
+  - *Faixa de "sem conexão" com o proxy*: com o Caddy da P01, o painel fora do ar respondia 502 pelo proxy e a faixa nunca aparecia. O `ApiPainel` passa a contar 502/503/504 como queda.
   - *Testes*: `client/tests/estadoDados.test.mjs` e o caso do 502 em `client/tests/apiclient.test.mjs`.
 
 - **Proteção CSRF — P02 (29/09/2026):** toda escrita da API feita com sessão (POST, PUT, PATCH, DELETE, inclusive upload de planilha e de pacote) passa a exigir o token da sessão no cabeçalho `X-CSRF-Token`. Outra página aberta no navegador de quem está logado não consegue mais alterar nada em nome dessa pessoa. Antes, `SameSite=Lax` e "só JSON" barravam o caso comum, mas não um formulário multipart nem os POST sem corpo (publicar versão, sair). Decisão em [ADR-0011](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0011).
-  - *Invisível para quem usa*: o servidor entrega o token em toda resposta com sessão, e o `ApiClient` o devolve sozinho. Se a pessoa entrou de novo em outra aba (sessão nova, token novo), o pedido recusado é repetido uma vez com o token atual. Sessões abertas antes da atualização ganham o token na primeira chamada, sem precisar entrar de novo.
+  - *Invisível para quem usa*: o servidor entrega o token em toda resposta com sessão, e o `ApiPainel` o devolve sozinho. Se a pessoa entrou de novo em outra aba (sessão nova, token novo), o pedido recusado é repetido uma vez com o token atual. Sessões abertas antes da atualização ganham o token na primeira chamada, sem precisar entrar de novo.
   - *Fora da regra*: login e configuração inicial (não há sessão antes deles) e pedidos sem sessão, que continuam recebendo o 401 que leva ao login. Os agentes C# não são afetados.
   - *Testes*: `server/tests/csrf.test.js`, `client/tests/apiclient.test.mjs`; os testes HTTP antigos passam a devolver o token como o navegador.
 
@@ -60,16 +99,16 @@ Para o agente C#, o equivalente é
 
 - **Correções da revisão de código da branch (28/09/2026):**
   - *Importação — duplicidade*: a chave usava o sistema como veio da planilha e na ordem em que veio. "Vendas" não casava com o "B_Vendas" gravado, nem "B_NFe, B_Vendas" com "B_Vendas, B_NFe", e reimportar o mesmo arquivo com "pular duplicidades" duplicava o histórico mesmo assim. Agora os sistemas são resolvidos no catálogo e ordenados, numa função só (`chaveDuplicidade`) usada dos dois lados.
-  - *Importação — planilha sem cabeçalho*: a leitura começava sempre na linha 2, e o primeiro atendimento sumia em silêncio (os dados dele apareciam como "colunas ignoradas"). Sem cabeçalho, a linha 1 já é dado.
+  - *Importação — planilha sem cabeçalho*: a leitura começava sempre na linha 2, e a primeira atualização sumia em silêncio (os dados dela apareciam como "colunas ignoradas"). Sem cabeçalho, a linha 1 já é dado.
   - *Importação — Auditoria*: importação que não gravou nada não registra mais "criar atualização: 0 importados".
-  - *Campanhas*: tarefa "Sem resposta" deixava o cliente como "Já agendado", fora dos pendentes e sem o botão Agendar; agora conta como pendente (a mesma leitura dos lembretes). Encerradas saem da encerrada mais recentemente para a mais antiga (o prazo passava na frente). A lista consulta clientes e atendimentos uma vez por sistema, e não uma vez por campanha.
+  - *Campanhas*: tarefa "Sem resposta" deixava o cliente como "Já agendado", fora dos pendentes e sem o botão Agendar; agora conta como pendente (a mesma leitura dos lembretes). Encerradas saem da encerrada mais recentemente para a mais antiga (o prazo passava na frente). A lista consulta clientes e atualizações uma vez por sistema, e não uma vez por campanha.
   - *Preferências*: um valor fora do formato recusava o conjunto inteiro, e como o cliente envia tudo junto, um valor velho travava em silêncio a sincronização de todas as preferências. Agora só aquele valor é descartado.
   - *Atalhos*: com a aba Campanhas, a Administração virou a 10ª aba e perdia o Alt+9 sem atalho novo (e o comentário dizia que nada mudava). A 10ª aba passa a ser **Alt+0**; o teste do dígito também impede que Alt+Espaço vire "décima aba".
   - *Configurações*: o ouvinte de mudança da permissão de notificação agora se desliga quando a linha sai da tela.
 
 - **Polimento visual após o fechamento do planejamento (28/09/2026):**
   - *Resumo, card "Atualização dos Clientes"*: o "% em dia" virou o número principal, com "N de M clientes" ao lado; a barra ficou mais grossa e mostra o total de cada segmento ao passar o mouse; "Onde estão os atrasos" mostra, para cada sistema, atrasados sobre quantos clientes o usam ("196 de 250"), com mini-barra e %. Antes, "196 clientes" sozinho não dizia se era quase todo mundo. Continuam os três primeiros e "Ver todos" (decisão da seção 5.1 do planejamento). O servidor passou a mandar `clientes` em `sistemasMaisAtrasados`.
-  - *Administração*: cartões de cada seção com espaço entre si (vinham encostados: a classe do contêiner não tinha regra de CSS); rodapé de salvar encaixado no cartão; Classificação dos sistemas em linhas curtas, em duas colunas, com Atualizável/Fixo em botões colados e Salvar só na linha alterada — antes cada sistema tinha seletor e Salvar empilhados; em Dados, "atendimentos" virou "atualizações" e os botões ganharam borda.
+  - *Administração*: cartões de cada seção com espaço entre si (vinham encostados: a classe do contêiner não tinha regra de CSS); rodapé de salvar encaixado no cartão; Classificação dos sistemas em linhas curtas, em duas colunas, com Atualizável/Fixo em botões colados e Salvar só na linha alterada — antes cada sistema tinha seletor e Salvar empilhados; em Dados, "atualizações" virou "atualizações" e os botões ganharam borda.
   - *Tabelas no celular*: em Atualizações e Clientes a coluna Cliente simplesmente não aparecia. Com `table-layout: fixed`, as colunas de largura fixa já passavam da largura da tela, as colunas em % (Cliente, Sistema) ficavam com largura zero, e o contêiner cortava o excesso sem deixar rolar. No celular, a tabela ganha largura mínima e rola na horizontal; as que já viram blocos (Campanhas, Distribuição, prévia da importação) ficam fora.
   - *Atualizações*: o "+ Nova Atualização" quebrava sozinho para uma segunda linha em 1440 px; a barra cabe numa linha.
   - *Agendamentos*: a coluna "Concluído" do quadro ficava cortada à direita (colunas com mínimo de 340 px); com 220 px as quatro cabem a partir de 1280 px.
@@ -81,10 +120,10 @@ Para o agente C#, o equivalente é
   - *Som*: opcional e desligado por padrão; toca quando o número de pendências não vistas cresce (não a cada ciclo de cinco minutos) e quando chega falha de agente. Gerado no navegador, sem arquivo de áudio.
   - *Horário silencioso*: de meia em meia hora, pode virar a noite, pelo relógio do computador (o fuso aparece na tela, sem conversão). Falha de agente é o evento crítico: por padrão passa sem som; desligando, as falhas do período viram um aviso-resumo ao fim do silêncio.
   - *Permissão do navegador*: a tela diz o estado real (permitidas, bloqueadas — com como liberar —, não pedidas, indisponível em HTTP), relido do navegador, e não o que a preferência lembrava.
-  - *Relatório*: aba inicial (Atualização ou Cliente) e "fechar depois de copiar"; o conteúdo do chamado não muda. A aba "Atendimento" virou "Atualização".
+  - *Relatório*: aba inicial (Atualização ou Cliente) e "fechar depois de copiar"; o conteúdo do chamado não muda. A aba "Atualização" virou "Atualização".
   - *Validação das preferências no servidor*: nome de chave com formato (antes qualquer texto virava chave, inclusive `__proto__`) e valor conferido nas chaves que mudam comportamento. O cliente não envia chave antiga fora do formato, para ela não travar a sincronização das demais.
   - *Campanhas, visual*: cartão da altura da tela com lista e detalhe rolando cada um por si; sem campanhas, um só aviso centralizado (antes eram dois, um espremido no canto); Ativas/Encerradas alinhado com "Nova campanha"; placar em painel com o percentual em destaque; prazo não aparece mais duas vezes; busca na linha dos filtros.
-  - *Textos*: "atendimento" virou "atualização" onde aparecia na tela (Administração › Dados e Operação, paleta, ajuda das situações).
+  - *Textos*: "atualização" virou "atualização" onde aparecia na tela (Administração › Dados e Operação, paleta, ajuda das situações).
   - *Testes*: `client/tests/notificacoes.test.mjs`, casos novos em `preferencias.test.mjs` e `historicoPreferencias.test.js`.
 
 - **Revisão do painel, E11 (fechamento do planejamento, 28/09/2026):** Campanhas de atualização, importação com prévia e as últimas pendências de botões e acessibilidade. Com isto, todas as etapas E0–E11 do [planejamento](docs/DOCUMENTACAO_CONSOLIDADA.md#plano-revisao-concluido) estão concluídas.
@@ -93,7 +132,7 @@ Para o agente C#, o equivalente é
   - *Importação de planilha*: virou um fluxo em três passos (orientação do formato → prévia → resultado), em Atualizações › Mais ações e em Administração › Dados. A prévia (`POST /atualizacoes/import/previa`) não grava nada. **Mudança de comportamento:** linha com data fora de dd/mm/aaaa, que antes entrava assim mesmo, agora fica de fora; possíveis duplicidades (mesmo cliente, data e sistemas) são avisadas e puladas por padrão — o caso comum era reenviar o mesmo arquivo. O lote grava numa transação só: antes, uma falha no meio deixava parte do arquivo dentro sem aviso. Arquivos `.xls` (formato antigo) são recusados com mensagem clara: o leitor só entende `.xlsx`. O Histórico registra importadas e ignoradas.
   - *Botões e acessibilidade (seção 6)*: botão processando não parece mais desabilitado (fica legível, com spinner e cursor de progresso); em tela de toque os botões só de ícone passam de 26 para 40 px, sem mudar o desktop; os "×" da gaveta e do relatório ganharam dica; nova trava `client/tests/acessibilidade.test.mjs` (todo `btn--icon` com `aria-label` e `title`). Auditoria no navegador em todas as abas, barra aberta e recolhida: nenhum botão sem nome acessível, largura inteira aproveitada.
   - *Atualizações*: colunas Versão e Data cortavam o ano ("26/09/2…"); passaram a 96 px.
-  - *Ficha do cliente*: "Último atendimento" virou **Última atualização** ("Nenhuma atualização" quando não há), e o cartão **Situação dos sistemas** saiu — repetia, resumido e com defeito ("2 2 pendentes"), o que a subaba Matriz de Versões mostra por sistema. A nota da telemetria dizia que a versão oficial vinha dos atendimentos, o que não é verdade; agora diz que a situação vem das atualizações registradas.
+  - *Ficha do cliente*: "Última atualização" virou **Última atualização** ("Nenhuma atualização" quando não há), e o cartão **Situação dos sistemas** saiu — repetia, resumido e com defeito ("2 2 pendentes"), o que a subaba Matriz de Versões mostra por sistema. A nota da telemetria dizia que a versão oficial vinha das atualizações, o que não é verdade; agora diz que a situação vem das atualizações registradas.
   - *Clientes*: saiu o botão **Copiar acessos** da linha; fica só **Gerenciar acessos**, onde cada identificador tem cópia própria. O papel Consulta, que só via o botão de copiar, consulta os acessos na ficha do cliente (subaba Acessos Remotos).
   - *Testes*: `server/tests/campanhas.test.js`, `server/tests/importacao.test.js` (o importador não tinha nenhum teste), migração 4 em `migracao.test.js`, `client/tests/campanhas.test.mjs` e `acessibilidade.test.mjs`. O teste da migração 3 passou a remover também as campanhas ao simular um banco na versão 2.
 
@@ -112,7 +151,7 @@ Para o agente C#, o equivalente é
   - *Administração (`AdministracaoView`)*: reestruturada em 7 seções por finalidade de operação:
     1. **Pessoas e permissões** (`UsuariosAdmin`): usuários, papéis e gestão de contas;
     2. **Operação** (`OperacaoAdmin`): unificação de prazos (dias até desatualizado e arquivamento de tarefas) e classificação dos sistemas (atualizável vs componente fixo);
-    3. **Dados** (`DadosAdmin`): centralização de exportação completa de atendimentos (.xlsx), importação em lote com validações e download do banco SQLite de agora;
+    3. **Dados** (`DadosAdmin`): centralização de exportação completa de atualizações (.xlsx), importação em lote com validações e download do banco SQLite de agora;
     4. **Integrações** (`IntegracoesAdmin`): alertas externos via Discord Webhook com teste imediato, liga/desliga do Atualizador e conectividade;
     5. **Backups e recuperação** (`BackupsAdmin`): cópias do banco com verificação de integridade, restauração protegida e política configurável de retenção de cópias automáticas;
     6. **Auditoria** (`HistoricoView`): auditoria completa de alterações com cabeçalho limpo e contextualizado;
@@ -130,12 +169,12 @@ Para o agente C#, o equivalente é
 - **Revisão do painel, E7:** ficha do cliente (`ConsultaView`) revisada:
   remoção de referências a CNPJ no subtítulo e nos campos de cadastro; cabeçalho
   compacto exibindo Código, Cidade e Grupo/Rede (quando preenchido); resumo
-  compacto com último atendimento relativo e situação de sistemas; separação clara
+  compacto com última atualização relativa e situação de sistemas; separação clara
   entre sistemas atualizáveis (classificados pela regra oficial do servidor/ADR-0008),
   componentes fixos sem status de atraso e bloco dedicado de telemetria de agentes
   instalados (sem interferir na situação de versão do cliente). Na linha do tempo de
-  atendimentos, adicionado botão para copiar o chamado no formato padrão. O modal de
-  relatórios (`RelatorioModal`) substituiu o seletor por abas curtas (Atendimento e
+  atualizações, adicionado botão para copiar o chamado no formato padrão. O modal de
+  relatórios (`RelatorioModal`) substituiu o seletor por abas curtas (Atualização e
   Cliente), cabeçalho discreto com botão fechar, filtro de histórico recolhível e
   prévia com rodapé estável de ações (Fechar, Imprimir/Salvar PDF e Copiar texto).
 
@@ -149,17 +188,17 @@ Para o agente C#, o equivalente é
   (variantes `btn--primary`, `btn--secondary`, `btn--danger`, altura mínima 38px/32px
   e borda visível); filtros de data recolhíveis em Atualizações com chips visíveis e
   indicador de filtros ativos; e menu "Mais ações" consolidando Exportar recorte e
-  Importar atendimentos com orientações de uso.
+  Importar atualizações com orientações de uso.
 
 - **Revisão do painel, E4:** tendência mensal do Resumo passa a mostrar 12
   meses consecutivos, com zero nos meses vazios e sem contar registros futuros
-  como realizados. A unidade é atendimento registrado; o mês atual é parcial
+  como realizados. A unidade é atualização registrada; o mês atual é parcial
   e a variação usa períodos de igual duração. O gráfico ajusta rótulos à
   largura, usa segmentos retos e oferece leitura por teclado, toque e lista
   textual. O card de situação orienta conforme o tipo de estado vazio.
 
 - **Revisão do painel, E3:** a aba Sistemas separa os filtros de consulta do
-  painel Versões oficiais. A data de consulta agora filtra o último atendimento
+  painel Versões oficiais. A data de consulta agora filtra a última atualização
   e nunca substitui a referência oficial na classificação. A tabela ganhou
   filtros de situação e busca, mostra a oficial e abre a ficha do cliente. O
   gerenciador tem edição por linha, autor e data das alterações futuras e
@@ -171,10 +210,10 @@ Para o agente C#, o equivalente é
 - **Revisão do painel, E2:** componentes fixos saíram do gráfico por sistema,
   da seleção de Sistemas e das referências oficiais. A ficha os reúne em
   Serviços/componentes fixos, sem atraso. A API bloqueia nova referência e
-  lotes de atualização por atraso, enquanto preserva atendimentos e
+  lotes de atualização por atraso, enquanto preserva atualizações e
   referências antigas. A classificação agora é administrada na aba própria,
   com permissão de administrador. Totais e tendência do Resumo passaram a
-  dizer Atendimentos para refletir a contagem de registros, inclusive de
+  dizer Atualizações para refletir a contagem de registros, inclusive de
   instalações e acessos.
 
 - **Revisão do painel, E1:** retirado o comando de converter agendamento em atualização;
@@ -183,7 +222,7 @@ Para o agente C#, o equivalente é
   escuro e a borda visível das ações destrutivas já tinham sido corrigidos nesta etapa.
 
 - **"Em dia" passou a falar de versão, não de tempo parado.** O card "Situação dos
-  Clientes" do Resumo chamava de em dia quem teve qualquer atendimento nos
+  Clientes" do Resumo chamava de em dia quem teve qualquer atualização nos
   últimos 60 dias. Um cliente atendido ontem com a NFe velha aparecia em
   dia, e um sem visita há três meses, mas sem versão nova para receber,
   aparecia desatualizado. Agora há duas coisas separadas:
@@ -201,10 +240,10 @@ Para o agente C#, o equivalente é
   - **A mesma regra vale na aba Sistemas e na ficha.** Antes comparavam a
     versão como texto (`===`), e quem recebeu uma versão mais nova que a
     oficial aparecia como atrasado. Agora a comparação é por data.
-  - **Atendimento sem versão registrada é julgado pela data** do
-    atendimento contra a da oficial, e aparece como "(pela data)". Sem isso,
+  - **Atualização sem versão registrada é julgado pela data** do
+    atualização contra a da oficial, e aparece como "(pela data)". Sem isso,
     348 de 369 clientes de produção ficariam "pendentes", porque os
-    atendimentos de antes da versão oficial não gravaram versão. A versão
+    atualizações de antes da versão oficial não gravaram versão. A versão
     recebida continua "Não informada": nada é gravado retroativamente.
   - Migração 2: `sistemas.controla_versao`. Decisões em
     [ADR-0008](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0008).
@@ -222,14 +261,14 @@ Para o agente C#, o equivalente é
     na imagem: no tema claro virava um quadrado preto, e não acompanhava a
     cor de destaque escolhida nas Configurações. O símbolo (setas em ciclo
     + raio) foi redesenhado em SVG inline (`simboloMarca()` em
-    `utils/icons.js`), com traço pensado para 16 px. O quadrado colorido em
+    `utils/icones.js`), com traço pensado para 16 px. O quadrado colorido em
     volta agora vem do CSS. Há também `favicon.svg`, e o `favicon.png` foi
     refeito a partir dele para as notificações.
 
 - **O banco parou de guardar listas em texto e de ligar cliente pelo nome.**
-  Os sistemas de um atendimento e de um cliente eram texto separado por
+  Os sistemas de uma atualização e de um cliente eram texto separado por
   vírgula ("B_Vendas, B_NFe"), com um JSON de versões por cima, e o cliente
-  de um atendimento/agendamento era o nome dele. Toda tela reinterpretava
+  de uma atualização/agendamento era o nome dele. Toda tela reinterpretava
   esse texto com as mesmas regras de grafia, espalhadas em seis arquivos, e
   o catálogo não garantia nada: `B_NFCe` (100 usos), `B_Sped` (53), `CTe`,
   `B_Rat` e outros estavam no histórico sem existir na tabela de sistemas,
@@ -242,7 +281,7 @@ Para o agente C#, o equivalente é
     agora desativa em vez de apagar. As grafias de um mesmo sistema
     (`B_NFE`/`B_NFe`, `DFE`/`B_DFe`, `NFCe`/`B_NFCe`) viraram um só.
   - **Renomear um cliente** não precisa mais reescrever o nome em outras
-    tabelas para não perder o histórico. Os 57 atendimentos de clientes já
+    tabelas para não perder o histórico. Os 57 atualizações de clientes já
     excluídos ficam com o nome como estava, e passam a pertencer ao cliente
     se alguém cadastrá-lo de novo com esse nome.
   - O esquema passou a mudar por **migrações numeradas**, que rodam uma vez
@@ -254,34 +293,34 @@ Para o agente C#, o equivalente é
     ensaio numa cópia do banco de produção comparou o código antigo com o
     novo: relatório por sistema, Resumo e última versão por sistema saíram
     iguais. A única mudança de resultado, além das grafias corrigidas, é que
-    a quantidade de máquinas de um cliente com dois atendimentos no MESMO
+    a quantidade de máquinas de um cliente com duas atualizações no MESMO
     dia agora vem sempre do último registrado; antes a escolha entre os dois
     era arbitrária.
   - Detalhes e o que ficou de fora de propósito (datas em texto,
     responsável em texto): [ADR-0007](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0007).
 
-- **Sistemas ganhou uma "versão oficial" por sistema, e cada atendimento
+- **Sistemas ganhou uma "versão oficial" por sistema, e cada atualização
   guarda a versão que o cliente recebeu naquela data.** Antes a "versão"
-  de um atendimento era um texto solto, sem ligação com o que estava
-  publicado; agora, ao criar um atendimento, cada sistema informado recebe
+  de uma atualização era um texto solto, sem ligação com o que estava
+  publicado; agora, ao criar uma atualização, cada sistema informado recebe
   uma cópia (`versoes_sistemas`) da versão oficial cadastrada em Sistemas —
-  mas só se ela já existia na data do atendimento (uma versão publicada
+  mas só se ela já existia na data da atualização (uma versão publicada
   depois não é atribuída retroativamente). Editar depois (observações,
   datas) não reaplica versões novas; sistemas acrescentados na edição ficam
-  sem versão, porque só um novo atendimento registra de fato uma
-  atualização. Desfazer uma exclusão preserva as versões que o registro já
+  sem versão, porque só um registro novo grava de fato a versão
+  do dia. Desfazer uma exclusão preserva as versões que o registro já
   tinha, inclusive as legadas (registro com um único sistema, de antes
   dessa mudança). Histórico e importações antigos não recebem a versão
   oficial de volta — não haveria como saber qual era, na época.
   - A tela **Sistemas** ganhou "Em dia" / "Desatualizado" / "Nunca
     atualizado" / "Sem referência" (sem versão oficial cadastrada) / "Sem
-    informação" (tem atendimento, mas sem versão capturada), comparando a
+    informação" (tem atualização, mas sem versão capturada), comparando a
     versão recebida com a oficial em vez de só comparar datas.
   - A ficha do cliente (**Consulta**) ganhou a mesma situação por sistema.
   - **Atualizações** ganhou "Relatório do período" (usa os filtros da tela:
     busca, responsável, datas) com totais por sistema e por responsável,
     prévia, cópia de texto e impressão/PDF — junto dos relatórios de
-    atendimento e de situação do cliente que já existiam. O Excel exportado
+    atualização e de situação do cliente que já existiam. O Excel exportado
     passou a acrescentar resumo, filtros e cabeçalhos formatados numa aba
     além dos registros crus.
   - Ajustes de acabamento depois do primeiro uso: a tela Sistemas perdeu a
@@ -299,7 +338,7 @@ Para o agente C#, o equivalente é
     resumo no meio, porque a coluna é estreita demais para ele. As duas
     passaram a usar `versaoRegistrada()` para pegar a versão de um sistema
     específico — a matriz usa o sistema da própria linha, a grade usa o
-    primeiro sistema listado no atendimento (o resumo inteiro continua
+    primeiro sistema listado na atualização (o resumo inteiro continua
     disponível no title, ao passar o mouse).
   - **A comparação por versão tinha quebrado a consulta "quem está
     desatualizado desde tal dia?"** que a tela Sistemas sempre ofereceu:
@@ -399,8 +438,8 @@ Para o agente C#, o equivalente é
   o `server/.env`, o servidor subia com o segredo de exemplo. Agora o
   container não sobe, e o motivo aparece em `docker compose logs`.
 - **Tag `html` para montar HTML (`utils/html.js`).** Ela escapa todo valor
-  interpolado. O que antes dependia de lembrar do `escapeHtml` em cada
-  interpolação passa a ser o padrão. O próprio `escapeHtml` não escapava
+  interpolado. O que antes dependia de lembrar do `escaparHtml` em cada
+  interpolação passa a ser o padrão. O próprio `escaparHtml` não escapava
   aspas, e o `aria-label` do cartão do kanban quebrava com uma tarefa que
   tivesse `"` no título.
   - Já foram migrados: Agendamentos, Atualizações, Clientes, Consultar
@@ -427,12 +466,12 @@ Para o agente C#, o equivalente é
 
   A causa-raiz por trás do cabeçalho "vazando" era mais geral, e por isso a
   correção foi no componente, não só nesta tela: o cabeçalho ordenável
-  (`SortableTable`) é um `<button>` `display:flex`, e um item flex não
+  (`TabelaOrdenavel`) é um `<button>` `display:flex`, e um item flex não
   encolhe abaixo do tamanho do próprio conteúdo por padrão -- sem
   `min-width: 0` no botão e sem o rótulo estar num `<span>` próprio com
   `text-overflow: ellipsis`, um texto comprido numa coluna estreita
   simplesmente ultrapassava a largura da célula em vez de truncar. Vale
-  para qualquer tabela que use `SortableTable`, não só Atualizações.
+  para qualquer tabela que use `TabelaOrdenavel`, não só Atualizações.
 
 - **O selo vermelho do indicador "Parados" no Resumo mostrava um pedaço de
   cor destacado atrás do ícone.** `.stat-tile__icon` é uma caixa quadrada de
@@ -450,7 +489,7 @@ Para o agente C#, o equivalente é
   resto do que roda no PC. Quatro coisas tiveram que ser resolvidas, e todas
   as quatro falhariam **em silêncio** se tivessem sido ignoradas:
 
-  - **Fuso.** O container roda em UTC por padrão, e `AgendamentoRepository.dueSoon`
+  - **Fuso.** O container roda em UTC por padrão, e `AgendamentoRepository.venceEmBreve`
     monta "hoje" com `getFullYear/getMonth/getDate` — relógio **local**. Das
     21h à meia-noite, horário de Brasília, o servidor já estaria no dia
     seguinte e os agendamentos de amanhã apareceriam como atrasados no sino
@@ -525,7 +564,7 @@ Para o agente C#, o equivalente é
 
 - **O card "Agendamento atrasado" do Resumo nunca apareceu.** `ResumoView` lia
   `lembretes.atrasados`, mas `/agendamentos/lembretes` devolve um **array**
-  puro (ver `AgendamentoRepository.dueSoon`). `undefined || []` virava lista
+  puro (ver `AgendamentoRepository.venceEmBreve`). `undefined || []` virava lista
   vazia, o card não era montado, e nada disso produzia erro no console: um
   aviso que não avisava, desde que foi escrito. A contagem saiu da tela e foi
   para `domain/notificacoes.js`, que não toca no DOM e por isso tem teste —
@@ -535,8 +574,8 @@ Para o agente C#, o equivalente é
   emoji colorido por ícone SVG monocromático.** Os botões usavam glifos de
   emoji (📋 👤 ✏️ 🔑 🔍) como conteúdo do `<button>`; cada sistema operacional
   renderiza emoji com sua própria fonte colorida, destoando do resto da
-  interface, que usa só os ícones de linha de `utils/icons.js`
-  (`stroke="currentColor"`). Trocado por `icon()`, acrescentando os ícones
+  interface, que usa só os ícones de linha de `utils/icones.js`
+  (`stroke="currentColor"`). Trocado por `iconeSvg()`, acrescentando os ícones
   `editar`, `chave` e `converter` ao conjunto existente.
 
 - **Atualização automática da Distribuição concentrada em Configurações.** A
@@ -576,13 +615,13 @@ Para o agente C#, o equivalente é
   "18/09/2026 13:16:25 (2)".
 
 - **O painel de Saúde reportava "0 pacotes, 0 bytes" — sempre.**
-  `SaudeService` lia `this.versoes.packagesDir`, propriedade que `VersaoService`
+  `SaudeService` lia `this.versoes.pastaDosPacotes`, propriedade que `VersaoService`
   **nunca teve**. Como `fs.existsSync(undefined)` devolve `false` em vez de
   lançar, a métrica ficava zerada em silêncio, sem nada no log. O teste que
-  existia não pegava: o dublê de `versoes` declarava `packagesDir`, ou seja, o
+  existia não pegava: o dublê de `versoes` declarava `pastaDosPacotes`, ou seja, o
   teste afirmava uma interface que o objeto real não implementava — e ninguém
   desconfiaria olhando a tela, porque zero é um número plausível demais.
-  Corrigido com um getter `packagesDir` de verdade (que `_caminhoPacote` passou
+  Corrigido com um getter `pastaDosPacotes` de verdade (que `_caminhoPacote` passou
   a reaproveitar), mais um teste que faz a asserção contra a **classe real**, e
   não contra o dublê. Encontrado por verificação estática de tipos.
 
@@ -613,7 +652,7 @@ Para o agente C#, o equivalente é
   depois com "expected a JavaScript module script but the server responded with
   a MIME type of text/html" — mensagem que manda procurar no lugar errado.
   Agora um pedido com extensão de arquivo que não existe dá 404 de verdade
-  (`middlewares/notFoundHandler.js`), e rota de API inexistente responde JSON,
+  (`middlewares/rotaNaoEncontrada.js`), e rota de API inexistente responde JSON,
   não HTML. Encontrado durante a reorganização de pastas do `client/`.
 
 - **`client/package.json` e `client/tests/` eram servidos publicamente** pelo
@@ -676,7 +715,7 @@ Para o agente C#, o equivalente é
   seleciona tudo entre elas): em Agendamentos dá para concluir ou excluir
   várias tarefas de uma vez (com "Desfazer"); em Clientes dá para marcar
   um sistema em vários de uma vez ou excluir vários (sem "Desfazer" aqui
-  — ver comentário em `ClienteService.deleteMany`, a exclusão em lote de
+  — ver comentário em `ClienteService.excluirVarios`, a exclusão em lote de
   cliente também apaga os acessos remotos cadastrados neles).
 - **Changelog em itens na Distribuição**: o campo "Observações" ao
   preparar uma versão virou uma lista de itens (adicionar/remover linha),
@@ -712,7 +751,7 @@ Para o agente C#, o equivalente é
   (todas as atualizações daquele cliente, da mais recente para a mais
   antiga). O botão "Copiar" leva o texto para a área de transferência e
   fecha; se o navegador não deixar copiar (HTTP puro, ver
-  `copyToClipboard` em `client/js/utils/html.js`), o modal fica aberto
+  `copiarParaAreaDeTransferencia` em `client/js/utils/html.js`), o modal fica aberto
   com o texto selecionado em vez de sumir com ele.
 
   Não exigiu campo novo nenhum: o relatório usa só o que já está gravado
@@ -907,7 +946,7 @@ Para o agente C#, o equivalente é
 ### 22/09/2026
 
 - **Dois ajustes no gráfico de "Tendência Mensal de Atualizações"
-  (`LineChart`).** O `cursor: crosshair` no SVG duplicava o crosshair que o
+  (`GraficoDeLinhas`).** O `cursor: crosshair` no SVG duplicava o crosshair que o
   componente já desenha (linha vertical + ponto + tooltip): em telas de
   alto DPI o cursor nativo do SO aparecia como uma cruz grande e sem
   relação com a escala do gráfico. Removido — o overlay próprio já basta.

@@ -15,7 +15,7 @@ class SistemasController {
 
   classificar = (req, res, next) => {
     try {
-      res.json(this.clienteService.classificarSistema(req.params.id, req.body?.controlaVersao, req.session.user));
+      res.json(this.clienteService.classificarSistema(req.params.id, req.body?.controlaVersao, req.session.user, req.body?.atualizaComPrincipal));
     } catch (err) { next(err); }
   };
 
@@ -26,7 +26,7 @@ class SistemasController {
   };
 
   list = (req, res) => {
-    res.json(this.clienteService.listSistemas());
+    res.json(this.clienteService.listarSistemas());
   };
 
   create = (req, res, next) => {
@@ -40,7 +40,7 @@ class SistemasController {
 
   remove = (req, res, next) => {
     try {
-      res.json(this.clienteService.removeSistema(req.params.nome, req.session.user));
+      res.json(this.clienteService.removerSistema(req.params.nome, req.session.user));
     } catch (err) {
       next(err);
     }

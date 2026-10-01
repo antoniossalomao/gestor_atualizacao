@@ -1,11 +1,12 @@
 import { View } from "../app/View.js";
-import { debounce } from "../utils/debounce.js";
-import { emptyState } from "../components/EmptyState.js";
-import { plural, html, copyToClipboard } from "../utils/html.js";
-import { toast } from "../components/Toast.js";
-import { iconHtml } from "../utils/icons.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { estadoVazio } from "../components/estadoVazio.js";
+import { plural, html } from "../utils/html.js";
+import { copiarParaAreaDeTransferencia } from "../components/areaDeTransferencia.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
+import { iconeHtml } from "../utils/icones.js";
 import { relatorioDeAtualizacao, haQuantoTempo } from "../domain/relatorio.js";
-import { tempoRelativo, formatarDataHora } from "../utils/date.js";
+import { tempoRelativo, formatarDataHora } from "../utils/data.js";
 import { montarMatrizVersoes } from "../domain/matrizVersoes.js";
 import { cartaoAcesso, CABECALHO_MATRIZ, linhaMatrizVersoes } from "../templates/consulta.js";
 
@@ -13,7 +14,7 @@ const MAX_SUGESTOES = 50;
 
 /**
  * Aba Consultar Cliente: busca por nome e mostra sistemas + última
- * atualização. Equivalente de gestor/views/consulta.py.
+ * atualização.
  *
  * Ganhou `aplicarParams({ cliente })`: a paleta de comandos (Ctrl+K) lista os
  * clientes cadastrados e abre a ficha direto aqui. Antes, ver a ficha de um
@@ -26,10 +27,10 @@ export class ConsultaView extends View {
     this.allNames = [];
     this.currentMatches = [];
     this.activeName = null;
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       <div class="consulta-layout">
         <div class="card consulta-search">
@@ -46,16 +47,16 @@ export class ConsultaView extends View {
     this.countLabel = this.container.querySelector('[data-role="count"]');
     this.detailBox = this.container.querySelector('[data-role="detail"]');
 
-    this.searchInput.addEventListener("input", debounce(() => this._filterMatches(), 200));
+    this.searchInput.addEventListener("input", aguardarPausa(() => this._filtroCasa(), 200));
     // Setas percorrem a lista de resultados sem tirar a mão do campo de busca.
     this.searchInput.addEventListener("keydown", (e) => this._navegarResultados(e));
     // Uma vez o foco DENTRO da lista (o `primeiro.focus()` logo abaixo leva
     // para lá), as setas paravam de fazer qualquer coisa -- só o Tab movia.
     // Delegado no container em vez de um listener por botão: a lista é
-    // redesenhada inteira a cada busca (ver _filterMatches).
+    // redesenhada inteira a cada busca (ver _filtroCasa).
     this.matchesBox.addEventListener("keydown", (e) => this._navegarNaLista(e));
 
-    this._renderDetailVazio();
+    this._desenharDetalheVazio();
   }
 
   /** Chamado pela paleta de comandos ao escolher um cliente. */
@@ -70,7 +71,7 @@ export class ConsultaView extends View {
       () => this.api.get("/clientes/names", null, { key: "clientes:names" }),
       (nomes) => {
         this.allNames = nomes;
-        this._filterMatches();
+        this._filtroCasa();
       }
     );
 
@@ -79,12 +80,12 @@ export class ConsultaView extends View {
       const alvo = this._clientePendente;
       this._clientePendente = null;
       this.searchInput.value = alvo;
-      this._filterMatches();
-      await this._selectClient(alvo);
+      this._filtroCasa();
+      await this._selecionarCliente(alvo);
     }
   }
 
-  _filterMatches() {
+  _filtroCasa() {
     const termo = this.searchInput.value.trim().toLowerCase();
     const todos = termo ? this.allNames.filter((n) => n.toLowerCase().includes(termo)) : this.allNames;
     this.currentMatches = todos.slice(0, MAX_SUGESTOES);
@@ -96,7 +97,7 @@ export class ConsultaView extends View {
     this.matchesBox.replaceChildren();
     if (this.currentMatches.length === 0) {
       this.matchesBox.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: termo ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado",
           descricao: termo ? `Nada casa com "${this.searchInput.value.trim()}".` : "Cadastre clientes na aba Clientes.",
           icone: termo ? "busca" : "clientes",
@@ -115,7 +116,7 @@ export class ConsultaView extends View {
       item.setAttribute("role", "option");
       item.setAttribute("aria-selected", String(nome === this.activeName));
       item.textContent = nome;
-      item.addEventListener("click", () => this._selectClient(nome));
+      item.addEventListener("click", () => this._selecionarCliente(nome));
       this.matchesBox.appendChild(item);
     }
   }
@@ -125,7 +126,7 @@ export class ConsultaView extends View {
     const primeiro = this.matchesBox.querySelector(".consulta-matches__item");
     if (!primeiro) return;
     e.preventDefault();
-    if (e.key === "Enter") this._selectClient(this.currentMatches[0]);
+    if (e.key === "Enter") this._selecionarCliente(this.currentMatches[0]);
     else primeiro.focus();
   }
 
@@ -149,14 +150,14 @@ export class ConsultaView extends View {
     itens[Math.max(0, proximo)].focus();
   }
 
-  async _selectClient(nome) {
+  async _selecionarCliente(nome) {
     this.activeName = nome;
-    this._filterMatches();
+    this._filtroCasa();
 
     try {
       const cliente = await this.api.get(`/clientes/by-nome/${encodeURIComponent(nome)}`, null, { key: "consulta:cliente" });
       if (!cliente) {
-        toast.error("Cliente não encontrado.");
+        avisoRapido.erro("Cliente não encontrado.");
         return;
       }
       const [historico, painelVersoes, acessos, situacaoSistemas] = await Promise.all([
@@ -165,16 +166,16 @@ export class ConsultaView extends View {
         this.api.get(`/clientes/${cliente.id}/acessos`, null, { key: "consulta:acessos" }).catch(() => []),
         this.api.get(`/atualizacoes/situacao-cliente/${encodeURIComponent(nome)}`, null, { key: "consulta:situacao" }),
       ]);
-      this._renderDetail(cliente, historico, painelVersoes, acessos, situacaoSistemas);
+      this._desenharDetalhe(cliente, historico, painelVersoes, acessos, situacaoSistemas);
     } catch (erro) {
       if (erro?.cancelled) return; // outra seleção, mais nova, tomou o lugar
-      toast.error("Não foi possível carregar os dados deste cliente.");
+      avisoRapido.erro("Não foi possível carregar os dados deste cliente.");
     }
   }
 
-  _renderDetailVazio() {
+  _desenharDetalheVazio() {
     this.detailBox.replaceChildren(
-      emptyState({
+      estadoVazio({
         titulo: "Selecione um cliente",
         descricao: "Busque à esquerda, ou use Ctrl+K e digite o nome de qualquer lugar do sistema.",
         icone: "consulta",
@@ -182,7 +183,7 @@ export class ConsultaView extends View {
     );
   }
 
-  _renderDetail(cliente, historico, painelVersoes, acessos = [], situacaoSistemas = []) {
+  _desenharDetalhe(cliente, historico, painelVersoes, acessos = [], situacaoSistemas = []) {
     this.detailBox.innerHTML = html`
       <div class="consulta-detail__name"></div>
       <div class="consulta-detail__subtitle"></div>
@@ -197,17 +198,30 @@ export class ConsultaView extends View {
       <section class="client-hub-panel" data-client-panel="versoes" hidden><div data-role="versao-matriz"></div></section>
       <section class="client-hub-panel" data-client-panel="timeline" hidden><div class="client-timeline" data-role="ultima"></div></section>
     `;
+    this._desenharCabecalho(cliente);
+    this._desenharResumo(cliente, historico);
+    this._desenharAcessos(acessos);
+    this._ligarAbasDaFicha();
+    this._desenharMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas);
+    this._desenharLinhaDoTempo(cliente, historico);
+  }
+
+  _desenharCabecalho(cliente) {
     this.detailBox.querySelector(".consulta-detail__name").textContent = cliente.nome;
 
-    // Cabeçalho com código, cidade e grupo (quando preenchido). CNPJ removido da ficha (I15).
+    // Cabeçalho com código, cidade e grupo (quando preenchido). CNPJ removido da ficha.
     const subtitulos = [];
     if (cliente.codigo) subtitulos.push(`Código: ${cliente.codigo}`);
     if (cliente.cidade) subtitulos.push(`Cidade: ${cliente.cidade}`);
     if (cliente.grupo) subtitulos.push(`Grupo/Rede: ${cliente.grupo}`);
+    if (cliente.regimeTributario) subtitulos.push(`Regime: ${cliente.regimeTributario}`);
     this.detailBox.querySelector(".consulta-detail__subtitle").textContent =
       subtitulos.length > 0 ? subtitulos.join(" · ") : "Sem informações cadastrais adicionais";
 
-    // Subaba Resumo & Cadastro: resumo compacto + dados cadastrais
+  }
+
+  /** Subaba Resumo & Cadastro: resumo compacto + dados cadastrais. */
+  _desenharResumo(cliente, historico) {
     const resumoPanel = this.detailBox.querySelector('[data-role="resumo-panel"]');
     const ultimaData = historico?.[0]?.data || null;
     const tempoUltima = ultimaData ? haQuantoTempo(ultimaData) : "";
@@ -230,15 +244,20 @@ export class ConsultaView extends View {
     const cadastro = document.createElement("div");
     cadastro.className = "info-grid";
     cadastro.append(
-      infoItem("Código", cliente.codigo),
-      infoItem("Grupo / Rede", cliente.grupo),
-      infoItem("Cidade", cliente.cidade),
-      infoItem("Sistemas contratados", (cliente.sistemas || []).join(", "), true)
+      itemDeInformacao("Código", cliente.codigo),
+      itemDeInformacao("Grupo / Rede", cliente.grupo),
+      itemDeInformacao("Cidade", cliente.cidade),
+      // O regime é gravado pelo cadastro desde a migração 5, mas a ficha não o
+      // mostrava: quem precisava dele tinha que abrir o formulário do cliente.
+      itemDeInformacao("Regime tributário", cliente.regimeTributario),
+      itemDeInformacao("Sistemas contratados", (cliente.sistemas || []).join(", "), true)
     );
     resumoPanel.appendChild(cadastro);
+  }
 
+  _desenharAcessos(acessos) {
     const acessosBox = this.detailBox.querySelector('[data-role="acessos"]');
-    if (acessos.length === 0) acessosBox.appendChild(emptyState({ titulo: "Nenhum acesso remoto", descricao: "Cadastre os acessos na tela Clientes.", icone: "acessos" }));
+    if (acessos.length === 0) acessosBox.appendChild(estadoVazio({ titulo: "Nenhum acesso remoto", descricao: "Cadastre os acessos na tela Clientes.", icone: "acessos" }));
     for (const acesso of acessos) {
       const card = document.createElement("article");
       card.className = "access-card";
@@ -247,11 +266,14 @@ export class ConsultaView extends View {
         const tipo = e.target.closest("[data-copy]")?.dataset.copy;
         if (!tipo) return;
         const valor = tipo === "anydesk" ? acesso.anydesk : (acesso.suporte_bredas || acesso.suporteBredas);
-        if (valor && await copyToClipboard(valor)) toast.success("Acesso copiado.");
+        if (valor && await copiarParaAreaDeTransferencia(valor)) avisoRapido.sucesso("Acesso copiado.");
       });
       acessosBox.appendChild(card);
     }
 
+  }
+
+  _ligarAbasDaFicha() {
     this.detailBox.querySelector(".client-hub-tabs").addEventListener("click", (e) => {
       const botao = e.target.closest("[data-client-tab]");
       if (!botao) return;
@@ -259,13 +281,13 @@ export class ConsultaView extends View {
       for (const painel of this.detailBox.querySelectorAll("[data-client-panel]")) painel.hidden = painel.dataset.clientPanel !== botao.dataset.clientTab;
     });
 
-    // Matriz Comparativa de Versões e Telemetria de Agentes
-    this._renderMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas);
+  }
 
+  _desenharLinhaDoTempo(cliente, historico) {
     const caixa = this.detailBox.querySelector('[data-role="ultima"]');
     if (!historico || historico.length === 0) {
       caixa.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: "Nenhuma atualização registrada",
           descricao: `Nada foi registrado para ${cliente.nome} ainda.`,
           icone: "atualizacoes",
@@ -290,18 +312,18 @@ export class ConsultaView extends View {
       topoLinha.innerHTML = html`
         <strong style="font-size:var(--txt-base);">${registro.data || "Sem data"} — ${registro.sistema || "Sistema não informado"}</strong>
         <button type="button" class="btn btn--small btn--ghost" data-action="copiar-chamado" data-index="${indice}" title="Copiar chamado formatado para área de transferência">
-          ${iconHtml("copiar")} Copiar Chamado
+          ${iconeHtml("copiar")} Copiar Chamado
         </button>
       `;
       grid.appendChild(topoLinha);
 
-      grid.appendChild(infoItem("Data", registro.data));
-      grid.appendChild(infoItem("Sistema", registro.sistema));
-      grid.appendChild(infoItem("Versão", registro.versao));
-      grid.appendChild(infoItem("Atualizado por", registro.responsavel));
-      grid.appendChild(infoItem("Máquinas", registro.maquinas));
-      grid.appendChild(infoItem("Motivo", registro.motivo, true));
-      if (registro.obs) grid.appendChild(infoItem("Obs", registro.obs, true));
+      grid.appendChild(itemDeInformacao("Data", registro.data));
+      grid.appendChild(itemDeInformacao("Sistema", registro.sistema));
+      grid.appendChild(itemDeInformacao("Versão", registro.versao));
+      grid.appendChild(itemDeInformacao("Atualizado por", registro.responsavel));
+      grid.appendChild(itemDeInformacao("Máquinas", registro.maquinas));
+      grid.appendChild(itemDeInformacao("Motivo", registro.motivo, true));
+      if (registro.obs) grid.appendChild(itemDeInformacao("Obs", registro.obs, true));
       caixa.appendChild(grid);
     });
 
@@ -313,23 +335,23 @@ export class ConsultaView extends View {
       if (!reg) return;
       const anterior = historico[idx + 1] || null;
       const textoChamado = relatorioDeAtualizacao(reg, { cliente, anterior });
-      if (await copyToClipboard(textoChamado)) {
-        toast.success("Chamado copiado para a área de transferência.");
+      if (await copiarParaAreaDeTransferencia(textoChamado)) {
+        avisoRapido.sucesso("Chamado copiado para a área de transferência.");
       }
     });
   }
 
   /** As contas estão em domain/matrizVersoes.js e a marcação em templates/consulta.js -- os dois testados. */
-  _renderMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas = []) {
+  _desenharMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas = []) {
     const container = this.detailBox.querySelector('[data-role="versao-matriz"]');
     const fixos = situacaoSistemas.filter((s) => s.fixo);
     const nomesFixos = new Set(fixos.map((s) => s.sistema.toLocaleLowerCase("pt-BR")));
-    const linhas = montarMatrizVersoes(cliente, historico, painelVersoes)
+    const linhas = montarMatrizVersoes(cliente, historico, painelVersoes, situacaoSistemas)
       .filter((linha) => !nomesFixos.has(linha.sistema.toLocaleLowerCase("pt-BR")));
 
     if (linhas.length === 0 && fixos.length === 0) {
       container.replaceChildren(
-        emptyState({
+        estadoVazio({
           titulo: "Nenhum sistema associado",
           descricao: "Este cliente não possui sistemas vinculados nem registros prévios.",
           icone: "sistemas",
@@ -381,7 +403,7 @@ export class ConsultaView extends View {
       container.appendChild(secao);
     }
 
-    // 3. Telemetria de Agentes em bloco próprio (I15)
+    // 3. Telemetria de Agentes em bloco próprio
     const nomeNorm = (cliente.nome || "").trim().toLowerCase();
     const agentes = (painelVersoes?.agentes || []).filter((a) => {
       if (a.empresa && a.empresa.trim().toLowerCase() === nomeNorm) return true;
@@ -425,7 +447,7 @@ export class ConsultaView extends View {
   }
 }
 
-function infoItem(label, value, wide = false) {
+function itemDeInformacao(label, value, wide = false) {
   const div = document.createElement("div");
   div.className = "info-grid__item" + (wide ? " info-grid__item--wide" : "");
   const l = document.createElement("div");

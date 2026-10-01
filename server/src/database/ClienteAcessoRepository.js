@@ -2,15 +2,14 @@ const { BaseRepository } = require("./BaseRepository");
 
 /**
  * Acessos remotos (AnyDesk / Suporte Bredas) cadastrados por máquina de cada
- * cliente -- aba Clientes, botão "Acessos". Tabela nova, sem equivalente no
- * app Python original.
+ * cliente -- aba Clientes, botão "Acessos".
  */
 class ClienteAcessoRepository extends BaseRepository {
   get table() {
     return "cliente_acessos";
   }
 
-  listByCliente(clienteId) {
+  listarPorCliente(clienteId) {
     return this.conn
       .prepare(
         `SELECT id, cliente_id AS clienteId, maquina, anydesk, suporte_bredas AS suporteBredas, observacoes
@@ -21,7 +20,7 @@ class ClienteAcessoRepository extends BaseRepository {
       .all(clienteId);
   }
 
-  getById(id) {
+  obterPorId(id) {
     return (
       this.conn
         .prepare(

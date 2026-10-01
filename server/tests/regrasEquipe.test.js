@@ -16,15 +16,15 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { ConfiguracaoSistemaService, TOKEN_DE_EXEMPLO } = require("../src/services/ConfiguracaoSistemaService");
 const { AgendamentoService } = require("../src/services/AgendamentoService");
 const { AtualizacaoService } = require("../src/services/AtualizacaoService");
-const { NotificationService } = require("../src/services/NotificationService");
+const { NotificacaoService } = require("../src/services/NotificacaoService");
 const { AlertaAgenteService } = require("../src/services/AlertaAgenteService");
 const { REGRAS, validarRegra, converterRegra } = require("../src/config/regrasEquipe");
-const { Server } = require("../src/Server");
+const { Servidor } = require("../src/Servidor");
 
 const ADMIN = { id: 1, nome: "Admin", role: "admin" };
 const OPERADOR = { id: 2, nome: "Operador", role: "operador" };
@@ -32,7 +32,7 @@ const WEBHOOK = "https://discord.com/api/webhooks/123/segredo-do-canal";
 
 function ambiente(opcoes = {}) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-regras-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const historico = new HistoricoService(db);
   const regras = new ConfiguracaoSistemaService(db, historico, opcoes);
   const cleanup = () => {
@@ -111,7 +111,7 @@ test("Regras - leitura e gravação pelo serviço", async (t) => {
   await t.test("conta comum lê só as públicas -- nada de webhook nem URL", () => {
     env.regras.atualizar(ADMIN, { discordWebhookUrl: WEBHOOK });
     const publicas = env.regras.ler();
-    assert.deepEqual(Object.keys(publicas).sort(), ["agendamentoArquivarDias", "atualizadorHabilitado", "desatualizadoDias"]);
+    assert.deepEqual(Object.keys(publicas).sort(), ["agendamentoArquivarDias", "atualizadorHabilitado", "desatualizadoDias", "prazoVersaoDias"]);
     assert.ok(!JSON.stringify(publicas).includes("segredo-do-canal"));
   });
 
@@ -243,7 +243,7 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
   await t.test("Resumo: o limite de 'desatualizado' muda quem entra na lista", () => {
     const env = ambiente();
     try {
-      const atualizacoes = new AtualizacaoService(env.db, env.historico, { notifyAtualizacao: async () => {} }, env.regras);
+      const atualizacoes = new AtualizacaoService(env.db, env.historico, { avisarAtualizacao: async () => {} }, env.regras);
       env.db.conn.prepare("INSERT INTO clientes (codigo, nome) VALUES ('C1', 'Mercado X')").run();
       const quarentaDiasAtras = new Date(Date.now() - 40 * 86400000);
       const data = `${String(quarentaDiasAtras.getDate()).padStart(2, "0")}/${String(quarentaDiasAtras.getMonth() + 1).padStart(2, "0")}/${quarentaDiasAtras.getFullYear()}`;
@@ -251,12 +251,36 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
 
       let resumo = atualizacoes.resumo();
       assert.equal(resumo.desatualizadoDias, 60);
-      assert.ok(!resumo.semAtendimento.some((c) => c.nome === "Mercado X"), "40 dias < 60");
+      assert.ok(!resumo.semAtualizacao.some((c) => c.nome === "Mercado X"), "40 dias < 60");
 
       env.regras.atualizar(ADMIN, { desatualizadoDias: 30 });
       resumo = atualizacoes.resumo();
       assert.equal(resumo.desatualizadoDias, 30, "a tela escreve o rótulo com este número");
-      assert.ok(resumo.semAtendimento.some((c) => c.nome === "Mercado X"), "40 dias > 30");
+      assert.ok(resumo.semAtualizacao.some((c) => c.nome === "Mercado X"), "40 dias > 30");
+    } finally {
+      env.cleanup();
+    }
+  });
+
+  await t.test("Resumo: o prazo depois da versão oficial muda as contagens do card (A07)", () => {
+    const env = ambiente();
+    try {
+      const atualizacoes = new AtualizacaoService(env.db, env.historico, { avisarAtualizacao: async () => {} }, env.regras);
+      atualizacoes.create({ cliente: "Mercado X", sistema: "B_Vendas", data: "01/09/2026" }, null);
+      // Cadastrado com o B_Vendas: a aba Sistemas lista só quem tem o sistema no cadastro.
+      env.db.clientes.insert("C1", "Mercado X", "", [env.db.sistemas.resolver("B_Vendas").id], "");
+      env.db.sistemas.salvarVersao("B_Vendas", "10/09/2026");
+      const hoje = new Date(2026, 9, 10); // 30 dias depois da oficial
+
+      let resumo = atualizacoes.resumo(hoje);
+      assert.equal(resumo.prazoVersaoDias, 60, "o card escreve o prazo com este número");
+      assert.ok(resumo.situacaoClientes.aguardando.some((c) => c.nome === "Mercado X"), "30 dias < 60: aguardando");
+
+      env.regras.atualizar(ADMIN, { prazoVersaoDias: 20 });
+      resumo = atualizacoes.resumo(hoje);
+      assert.ok(resumo.situacaoClientes.desatualizado.some((c) => c.nome === "Mercado X"), "30 dias > 20: desatualizado");
+      assert.equal(atualizacoes.relatorioPorSistema("B_Vendas", "", hoje)[0].situacao, "Desatualizado", "a aba Sistemas usa o mesmo prazo");
+      assert.equal(atualizacoes.situacaoCliente("Mercado X", hoje)[0].situacao, "Desatualizado", "a ficha também");
     } finally {
       env.cleanup();
     }
@@ -266,12 +290,12 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-regras-bkp-"));
     const dbPath = path.join(tmpDir, "gestao.db");
     try {
-      let db = new Database(dbPath);
+      let db = new BancoDeDados(dbPath);
       new ConfiguracaoSistemaService(db, new HistoricoService(db)).atualizar(ADMIN, { backupsManter: 3 });
       db.conn.close();
       // Cada abertura de um banco que já existia faz uma cópia e poda as antigas.
       for (let i = 0; i < 6; i++) {
-        db = new Database(dbPath);
+        db = new BancoDeDados(dbPath);
         db.conn.close();
       }
       const pastaBackups = fs.readdirSync(tmpDir, { withFileTypes: true }).find((e) => e.isDirectory() && /backup/i.test(e.name));
@@ -285,11 +309,11 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
   await t.test("Discord: o webhook é lido a cada envio, não guardado na subida", async () => {
     const env = ambiente();
     try {
-      const notifications = new NotificationService({ webhookUrl: () => env.regras.valor("discordWebhookUrl") });
+      const notifications = new NotificacaoService({ webhookUrl: () => env.regras.valor("discordWebhookUrl") });
       assert.equal(notifications.webhookUrl, "");
       env.regras.atualizar(ADMIN, { discordWebhookUrl: WEBHOOK });
       assert.equal(notifications.webhookUrl, WEBHOOK);
-      assert.deepEqual(await new NotificationService({}).testar(), { ok: false, detalhe: "Nenhum webhook configurado." });
+      assert.deepEqual(await new NotificacaoService({}).testar(), { ok: false, detalhe: "Nenhum webhook configurado." });
     } finally {
       env.cleanup();
     }
@@ -297,7 +321,7 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
 
   await t.test("Alerta de agentes: configurar o webhook com o servidor no ar liga o timer", () => {
     const env = ambiente();
-    const notifications = new NotificationService({ webhookUrl: () => env.regras.valor("discordWebhookUrl") });
+    const notifications = new NotificacaoService({ webhookUrl: () => env.regras.valor("discordWebhookUrl") });
     const alerta = new AlertaAgenteService(env.db, { painel: () => ({ agentes: [] }) }, notifications, env.regras);
     try {
       alerta.start(() => env.regras.valor("alertaAgentesIntervaloMinutos") * 60_000);
@@ -321,7 +345,7 @@ test("Regras - quem usa a regra enxerga a mudança na hora", async (t) => {
 
 test("Regras - rotas HTTP", async (t) => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-regras-http-"));
-  const server = new Server({
+  const server = new Servidor({
     port: 0,
     dbPath: path.join(tmpDir, "gestao.db"),
     sessionSecret: "segredo-de-teste",
@@ -371,6 +395,15 @@ test("Regras - rotas HTTP", async (t) => {
     const comSessao = await (await pedir("/auth/status", { cookie: operador })).json();
     assert.equal(comSessao.regras.desatualizadoDias, 60);
     assert.equal(comSessao.regras.discordWebhookUrl, undefined);
+  });
+
+  await t.test("/auth/status traz a versão do package.json só para quem entrou", async () => {
+    const semSessao = await (await pedir("/auth/status")).json();
+    assert.equal(semSessao.versao, null);
+    const comSessao = await (await pedir("/auth/status", { cookie: operador })).json();
+    assert.equal(comSessao.versao, require("../package.json").version);
+    const saude = await (await pedir("/saude", { cookie: admin })).json();
+    assert.equal(saude.servidor.versao, comSessao.versao, "Diagnóstico e Sobre mostram o mesmo número");
   });
 
   await t.test("operador lê as públicas, mas não a completa nem grava", async () => {

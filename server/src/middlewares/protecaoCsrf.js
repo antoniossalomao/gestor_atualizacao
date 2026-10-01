@@ -1,15 +1,15 @@
 const crypto = require("crypto");
 
-const { tokensIguais } = require("./requireAgent");
+const { tokensIguais } = require("./exigirAgente");
 
 /**
- * Proteção contra CSRF (P02 de docs/MELHORIAS.md): uma página de OUTRA
+ * Proteção contra CSRF (ADR-0011): uma página de OUTRA
  * origem, aberta no navegador de quem está logado, não consegue mandar o
  * painel alterar nada em nome dessa pessoa.
  *
  * Como funciona: cada sessão logada tem um token aleatório guardado nela
  * (`req.session.csrf`). O servidor entrega o token no cabeçalho de resposta
- * X-CSRF-Token de toda chamada à API feita com sessão; o ApiClient guarda o
+ * X-CSRF-Token de toda chamada à API feita com sessão; o ApiPainel guarda o
  * último que viu e o devolve no mesmo cabeçalho em todo POST/PUT/PATCH/DELETE.
  * Outra origem não lê resposta nossa (sem CORS, o navegador não deixa), então
  * não tem como saber o token -- e sem ele a escrita é recusada com 403 antes
@@ -31,7 +31,7 @@ const { tokensIguais } = require("./requireAgent");
  * O que fica de fora, de propósito:
  * - GET/HEAD/OPTIONS: não alteram nada (e não podem passar a alterar).
  * - Pedido sem usuário na sessão: não há o que roubar. As rotas protegidas
- *   respondem 401 logo depois (requireAuth), e a mensagem certa para "sessão
+ *   respondem 401 logo depois (exigirLogin), e a mensagem certa para "sessão
  *   expirada" é essa, não "token inválido". Cobre também os agentes C#
  *   (/api/update/...), que se autenticam por X-Agent-Token e não têm cookie.
  * - Login e configuração inicial: não há sessão logada antes deles, então
@@ -71,9 +71,9 @@ function protecaoCsrf(req, res, next) {
 
   const enviado = req.get(CABECALHO);
   if (enviado && tokensIguais(enviado, token)) return next();
-  // `codigo` é o que o ApiClient usa para distinguir esta recusa de um 403
+  // `codigo` é o que o ApiPainel usa para distinguir esta recusa de um 403
   // de permissão: nesta, ele busca o token atual e repete o pedido uma vez
-  // (ver ApiClient). A mensagem só aparece se nem assim der certo.
+  // (ver ApiPainel). A mensagem só aparece se nem assim der certo.
   res.status(403).json({ error: MENSAGEM, codigo: "csrf" });
 }
 

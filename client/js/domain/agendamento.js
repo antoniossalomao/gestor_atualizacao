@@ -1,7 +1,7 @@
-import { STATUS_OPTIONS } from "../config.js";
+import { OPCOES_STATUS } from "../config.js";
 
 /** O último status do fluxo. Tarefa concluída nunca aparece como vencida. */
-export const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+export const STATUS_CONCLUIDO = OPCOES_STATUS[OPCOES_STATUS.length - 1];
 
 /**
  * True se `dataBR` (dd/mm/aaaa) for anterior a hoje. Data vazia ou mal

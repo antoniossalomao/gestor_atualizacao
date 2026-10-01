@@ -1,14 +1,14 @@
-import { icon, simboloMarca } from "../utils/icons.js";
+import { iconeSvg, simboloMarca } from "../utils/icones.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { SwrCache } from "./SwrCache.js";
-import { Router } from "./router.js";
-import { CommandPalette } from "../components/CommandPalette.js";
-import { ligarAtalhoAjuda, mostrarAtalhos } from "./Shortcuts.js";
-import { theme } from "./theme.js";
-import { settings, conectarPreferencias } from "./prefs.js";
-import { aparencia, reaplicarAparencia } from "./appearance.js";
-import { RequestCancelled } from "../api/ApiClient.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
+import { CacheSwr } from "./CacheSwr.js";
+import { Roteador } from "./Roteador.js";
+import { PaletaDeComandos } from "../components/PaletaDeComandos.js";
+import { ligarAtalhoAjuda, mostrarAtalhos } from "./atalhos.js";
+import { temaApp } from "./tema.js";
+import { duradouras, conectarPreferencias } from "./preferencias.js";
+import { aparencia, reaplicarAparencia } from "./aparencia.js";
+import { RequisicaoCancelada } from "../api/ApiPainel.js";
 import { LoginView } from "../views/LoginView.js";
 import { ResumoView } from "../views/ResumoView.js";
 import { AtualizacoesView } from "../views/AtualizacoesView.js";
@@ -24,7 +24,7 @@ import { VersoesView } from "../views/VersoesView.js";
 import { MenuNotificacoes } from "../components/MenuNotificacoes.js";
 import { MenuConta } from "../components/MenuConta.js";
 import { montarNotificacoes } from "../domain/notificacoes.js";
-import { notificacoes } from "./notify.js";
+import { notificacoes } from "./notificacoesDoSistema.js";
 import { ConexaoBanner } from "../components/ConexaoBanner.js";
 
 /**
@@ -39,7 +39,7 @@ import { ConexaoBanner } from "../components/ConexaoBanner.js";
  * `requerAtualizador: true` marca as abas que só fazem sentido com o
  * Atualizador (agente C#) em uso -- somem da navegação, da paleta de
  * comandos e dos atalhos quando ele está desativado em Configurações (ver
- * `this.tabsAtivas`, calculado em `_onAuthenticated`).
+ * `this.tabsAtivas`, calculado em `_aoAutenticar`).
  *
  * `papel` restringe a aba a um papel (hoje só a Administração, "admin"). É só
  * a navegação: quem garante de verdade é o servidor, que responde 403 às
@@ -91,20 +91,18 @@ const TABS = [
  * cada View viva (só escondida) para não perder o que o usuário estava
  * digitando ao dar uma olhada em outra tela.
  *
- * O que ela ganhou nesta revisão:
+ * O que ela cuida:
  *  - **rota na URL** (`#/clientes`), então recarregar mantém a tela e dá para
  *    mandar link de uma aba específica;
- *  - **cache compartilhado** entre as views (`SwrCache`), que é o que faz a
+ *  - **cache compartilhado** entre as views (`CacheSwr`), que é o que faz a
  *    troca de aba ser instantânea;
- *  - **título de verdade** (`<h1>`) que muda conforme a aba -- antes o
- *    cabeçalho não tinha `h1` nenhum, e a regra de CSS que o estilizava
- *    apontava para um elemento que nunca era criado;
+ *  - **título de verdade** (`<h1>`) que muda conforme a aba;
  *  - **paleta de comandos**, **atalhos numerados** e **tema claro/escuro**;
  *  - **`destroy()` nas views**, para os listeners globais delas não vazarem
  *    quando a sessão expira.
  */
 export class App {
-  /** @param {HTMLElement} root @param {import('../api/ApiClient').ApiClient} api */
+  /** @param {HTMLElement} root @param {import('../api/ApiPainel').ApiPainel} api */
   constructor(root, api) {
     this.root = root;
     this.api = api;
@@ -112,7 +110,7 @@ export class App {
     this.views = new Map();
     this.activeTab = null;
     this.reauthenticating = false;
-    this.cache = new SwrCache();
+    this.cache = new CacheSwr();
     /** @type {Array<() => void>} coisas a desligar quando o shell é desmontado */
     this._cleanups = [];
     /** Abas que já foram abertas ao menos uma vez -- ver a animação em _mostrarAba. */
@@ -123,7 +121,7 @@ export class App {
     // Um 401 em QUALQUER chamada -- não só no carregamento de aba -- leva de
     // volta ao login. Antes, a sessão expirar durante um "Adicionar" só
     // produzia um "Ocorreu um erro inesperado".
-    this.api.onUnauthorized = () => this._showLoginAgain();
+    this.api.onUnauthorized = () => this._mostrarLoginDeNovo();
   }
 
   /** Decide a tela inicial olhando o status de autenticação no servidor. */
@@ -132,7 +130,7 @@ export class App {
     try {
       status = await this.api.get("/auth/status");
     } catch {
-      this._renderFalhaConexao();
+      this._desenharFalhaDeConexao();
       return;
     }
     // Vem do "/auth/status" (não de uma segunda chamada) porque é a
@@ -143,15 +141,16 @@ export class App {
     // Regras públicas da equipe (ex.: quantos dias até "desatualizado"), para
     // as telas explicarem o que mostram. Só vêm com sessão.
     this.regras = status.regras || {};
-    if (status.needsSetup) {
-      new LoginView(this.root, this.api, "setup", (user) => this._onAuthenticated(user));
+    this.versao = status.versao || null;
+    if (status.precisaConfigurar) {
+      new LoginView(this.root, this.api, "setup", (user) => this._aoAutenticar(user));
       return;
     }
     if (!status.user) {
-      new LoginView(this.root, this.api, "login", (user) => this._onAuthenticated(user));
+      new LoginView(this.root, this.api, "login", (user) => this._aoAutenticar(user));
       return;
     }
-    this._onAuthenticated(status.user);
+    this._aoAutenticar(status.user);
   }
 
   /**
@@ -159,11 +158,11 @@ export class App {
    * mandando "recarregue a página" -- deixar o usuário executar a ação em vez
    * de instruí-lo a fazê-la manualmente é sempre melhor.
    */
-  _renderFalhaConexao() {
+  _desenharFalhaDeConexao() {
     this.root.innerHTML = `
       <div class="auth-screen">
         <div class="empty-state">
-          <div class="empty-state__icon">${icon("alerta")}</div>
+          <div class="empty-state__icon">${iconeSvg("alerta")}</div>
           <p class="empty-state__title">Não foi possível conectar ao servidor</p>
           <p class="empty-state__desc">Verifique se o Gestor está rodando e tente de novo.</p>
           <button type="button" class="btn btn--accent" data-action="retry">Tentar novamente</button>
@@ -173,9 +172,19 @@ export class App {
     this.root.querySelector('[data-action="retry"]').addEventListener("click", () => this.start());
   }
 
-  _onAuthenticated(user) {
+  _aoAutenticar(user) {
     this.user = user;
-    this.api.resetUnauthorized();
+    this.api.reiniciarNaoAutorizado();
+    // Quem entrou pela tela de login chegou com o /auth/status de ANTES da
+    // sessão, que não traz regras nem versão (ver AuthController.status) --
+    // e a aba Sobre e ajuda explicaria a situação sem o prazo da equipe.
+    // Preenche o MESMO objeto `this.regras` que as views já receberam.
+    if (!this.versao) {
+      this.api.get("/auth/status").then((s) => {
+        Object.assign(this.regras, s.regras || {});
+        this.versao = s.versao || null;
+      }).catch(() => {});
+    }
     // Calculado uma vez por sessão (não a cada troca de aba): as abas do
     // Atualizador só desaparecem/reaparecem de fato num boot novo do app
     // (login, F5) ou já vêm corretas se o admin tiver acabado de mudar --
@@ -187,18 +196,18 @@ export class App {
     this.tabsNoMenu = this.tabsAtivas.filter((t) => !t.rodape);
 
     // As preferências de apresentação são da CONTA, não do navegador. O
-    // localStorage já pintou a tela (theme-init.js, no <head>, antes do
+    // localStorage já pintou a tela (temaInicial.js, no <head>, antes do
     // primeiro pixel) -- isto busca as da conta e corrige se divergirem, o
     // que é o caso quando a pessoa entra de outra máquina ou quando outra
     // pessoa usou este mesmo navegador antes. Sem `await`: o app não fica
     // esperando por isso para abrir.
     conectarPreferencias(this.api, user, () => {
-      theme.aplicar();
+      temaApp.aplicar();
       reaplicarAparencia();
     });
 
-    this._buildShell();
-    this.router = new Router(
+    this._montarEsqueleto();
+    this.router = new Roteador(
       this.tabsAtivas.map((t) => t.key),
       (rota) => this._mostrarAba(rota)
     );
@@ -219,7 +228,7 @@ export class App {
    * Busca o que alimenta o sino: agendamentos vencidos/de hoje e o painel dos
    * agentes. As duas chamadas juntas, e cada uma com o seu próprio `catch`:
    * com o Atualizador desativado `/versoes/painel` responde 403 (ver
-   * `requireAtualizadorHabilitado`), e uma falha de rede numa delas não pode
+   * `exigirAtualizadorHabilitado`), e uma falha de rede numa delas não pode
    * apagar o que a outra tinha a dizer.
    */
   async _carregarNotificacoes() {
@@ -233,7 +242,7 @@ export class App {
     this._dadosSino = { lembretes, painel };
     this._redesenharSino({ podeTocar: true });
     // Falhas guardadas durante o horário silencioso: o fim do silêncio é
-    // percebido aqui, no ritmo do sino (ver notify.liberarAcumuladas).
+    // percebido aqui, no ritmo do sino (ver notificacoes.liberarAcumuladas).
     notificacoes.liberarAcumuladas();
   }
 
@@ -338,8 +347,8 @@ export class App {
     this._rolagemPorAba.clear();
   }
 
-  _buildShell() {
-    const recolhida = settings.get("sidebarRecolhida", false);
+  _montarEsqueleto() {
+    const recolhida = duradouras.get("sidebarRecolhida", false);
     this.root.className = recolhida ? "is-sidebar-collapsed" : "";
     this.root.innerHTML = `
       <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
@@ -359,7 +368,7 @@ export class App {
              Recolhido" em Configurações diz a mesma coisa por extenso. -->
         <nav class="tabs" role="tablist" aria-label="Telas do sistema"></nav>
         <div class="app-sidebar__footer">
-          <button type="button" class="btn btn--small btn--sidebar" data-action="config" data-tooltip="Configurações">${icon("config")} <span>Configurações</span></button>
+          <button type="button" class="btn btn--small btn--sidebar" data-action="config" data-tooltip="Configurações">${iconeSvg("config")} <span>Configurações</span></button>
         </div>
       </aside>
       <section class="app-shell">
@@ -383,15 +392,14 @@ export class App {
           <div class="app-header__actions">
             <!--
               A busca do cabeçalho não é um campo: é um botão com cara de
-              campo, e o que ele abre é a paleta de comandos. O Ctrl+K existe
-              desde a primeira versão e não aparecia em lugar nenhum da tela --
-              atalho que não aparece é atalho que só quem escreveu o código
-              usa. O estilo dele já estava no CSS há tempos, inclusive o que
-              ele vira no tablet (".app-header__search"); faltava o botão.
+              campo, e o que ele abre é a paleta de comandos. Mostrar o Ctrl+K
+              aqui é o que o torna descobrível: atalho que não aparece é atalho
+              que só quem escreveu o código usa. No tablet o estilo dele muda
+              (".app-header__search").
             -->
             <button type="button" class="btn btn--small app-header__search" data-action="buscar"
                     aria-label="Buscar telas, clientes e ações (Ctrl+K)">
-              ${icon("busca")}<span>Buscar…</span><kbd>Ctrl</kbd><kbd>K</kbd>
+              ${iconeSvg("busca")}<span>Buscar…</span><kbd>Ctrl</kbd><kbd>K</kbd>
             </button>
             <button type="button" class="btn btn--accent btn--small app-header__quick" data-action="acao-rapida"
                     aria-label="Abrir ações rápidas (Alt+N)">+ <span>Ação rápida</span><kbd>Alt+N</kbd></button>
@@ -428,7 +436,7 @@ export class App {
         this._naoVistasAntes = 0;
         this._atualizarTitulo();
       },
-      aoIr: (destino, params) => this.switchTab(destino, params || undefined),
+      aoIr: (destino, params) => this.trocarAba(destino, params || undefined),
     });
     this._cleanups.push(() => this.menuNotificacoes.destroy());
     this._cleanups.push(this._ligarRitmoDasNotificacoes());
@@ -541,14 +549,14 @@ export class App {
       // segundo parado em cima -- e ninguém para em cima de um menu que já
       // sabe usar. Ela ocupa o espaço dela o tempo todo (muda só a opacidade),
       // senão cada aba mudaria de largura quando o mouse passasse.
-      button.innerHTML = `${icon(tab.icon)}<span>${tab.label}</span>${atalho ? `<kbd class="tab-button__atalho">${atalho}</kbd>` : ""}`;
+      button.innerHTML = `${iconeSvg(tab.icon)}<span>${tab.label}</span>${atalho ? `<kbd class="tab-button__atalho">${atalho}</kbd>` : ""}`;
       tabsNav.appendChild(button);
       container.setAttribute("aria-labelledby", `aba-${tab.key}`);
     }
 
     tabsNav.addEventListener("click", (event) => {
       const button = event.target.closest(".tab-button");
-      if (button) this.switchTab(button.dataset.tab);
+      if (button) this.trocarAba(button.dataset.tab);
     });
     // Setas percorrem as abas sem sair do teclado, como manda o padrão ARIA
     // de tablist -- antes, Tab passava por cada uma das nove abas.
@@ -571,9 +579,10 @@ export class App {
       instance: new tab.View(container, this.api, {
         user: this.user,
         cache: this.cache,
-        navigate: (destino, opcoes) => this.switchTab(destino, opcoes),
+        navigate: (destino, opcoes) => this.trocarAba(destino, opcoes),
         atualizadorHabilitado: this.atualizadorHabilitado,
         regras: this.regras,
+        versao: () => this.versao,
         recarregarApp: () => this.recarregarApp(),
         // Só as Configurações usam estes -- são as partes do shell que ela
         // mexe (o menu lateral, o cabeçalho com o nome) sem sair procurando
@@ -594,15 +603,16 @@ export class App {
       ["atualizacoes", "Nova Atualização", "atualizacoes"],
       ["agendamentos", "Novo Agendamento", "agendamentos"],
       ["clientes", "Novo Cliente", "clientes"],
+      ["campanhas", "Nova Campanha", "campanhas"],
       ...(this.atualizadorHabilitado ? [["versoes", "Publicar Nova Versão", "versoes"]] : []),
     ];
     box.innerHTML = `<h3 class="modal-box__title">Ação rápida</h3><p class="modal-box__message">Comece uma tarefa sem perder tempo procurando a tela.</p>
-      <div class="quick-action-list">${itens.map(([aba, label, icone]) => `<button type="button" class="btn" data-tab="${aba}" ${permitida ? "" : "disabled"}>${icon(icone)}<span>${label}</span></button>`).join("")}</div>`;
+      <div class="quick-action-list">${itens.map(([aba, label, icone]) => `<button type="button" class="btn" data-tab="${aba}" ${permitida ? "" : "disabled"}>${iconeSvg(icone)}<span>${label}</span></button>`).join("")}</div>`;
     box.addEventListener("click", (e) => {
       const botao = e.target.closest("[data-tab]");
       if (!botao) return;
       close();
-      this.switchTab(botao.dataset.tab, { novo: true });
+      this.trocarAba(botao.dataset.tab, { novo: true });
     });
     box.querySelector("button:not([disabled])")?.focus();
   }
@@ -627,7 +637,7 @@ export class App {
     if (e.key === "Home") alvo = 0;
     else if (e.key === "End") alvo = this.tabsNoMenu.length - 1;
     else alvo = (indiceAtual + passo + this.tabsNoMenu.length) % this.tabsNoMenu.length;
-    this.switchTab(this.tabsNoMenu[alvo].key);
+    this.trocarAba(this.tabsNoMenu[alvo].key);
     this.root.querySelector(`#aba-${this.tabsNoMenu[alvo].key}`)?.focus();
   }
 
@@ -641,7 +651,7 @@ export class App {
       const indice = e.key === "0" ? 9 : Number(e.key) - 1;
       if (indice >= this.tabsNoMenu.length) return;
       e.preventDefault();
-      this.switchTab(this.tabsNoMenu[indice].key);
+      this.trocarAba(this.tabsNoMenu[indice].key);
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -689,7 +699,7 @@ export class App {
       if (alvo && (alvo.tagName === "INPUT" || alvo.tagName === "TEXTAREA" || alvo.isContentEditable)) return;
       if (document.querySelector(".modal-overlay, .cmdk-overlay")) return;
       e.preventDefault();
-      this._definirSidebar(!settings.get("sidebarRecolhida", false));
+      this._definirSidebar(!duradouras.get("sidebarRecolhida", false));
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
@@ -720,7 +730,7 @@ export class App {
   /**
    * Busca de novo os dados da aba aberta, jogando fora o que estava guardado.
    *
-   * Existe porque o cache torna a troca de aba instantânea (`SwrCache`), e o
+   * Existe porque o cache torna a troca de aba instantânea (`CacheSwr`), e o
    * preço disso é não haver um jeito de dizer "esqueça o que você guardou e
    * pergunte de novo agora" -- que é exatamente o que se quer quando outra
    * pessoa acabou de mexer no mesmo registro do outro lado da sala. Recarregar
@@ -738,7 +748,7 @@ export class App {
     // também passa, justamente quando o que ele mostra está mais velho.
     this._carregarNotificacoes();
     await this._mostrarAba(this.activeTab);
-    if (avisar) toast.success("Dados atualizados.");
+    if (avisar) avisoRapido.sucesso("Dados atualizados.");
   }
 
   /**
@@ -747,11 +757,11 @@ export class App {
    * dados da aba aberta, não a lista de abas que existem. Precisa disto
    * quando `atualizadorHabilitado` muda (ver AtualizadorAdmin): a
    * navegação inteira depende de `this.tabsAtivas`, calculado uma vez em
-   * `_onAuthenticated`.
+   * `_aoAutenticar`.
    *
    * Mesmo caminho de `_logout()` (desmontar + `start()`), só que sem de fato
    * encerrar a sessão -- o cookie continua válido, então `start()` volta
-   * direto para `_onAuthenticated`.
+   * direto para `_aoAutenticar`.
    */
   async recarregarApp() {
     this._desmontar();
@@ -767,7 +777,7 @@ export class App {
         subtitulo: tab.descricao,
         grupo: "Telas",
         icone: tab.icon,
-        executar: () => this.switchTab(tab.key),
+        executar: () => this.trocarAba(tab.key),
       })),
       // Atalhos direto para cada aba da Administração. Cada um leva à tela, e
       // não a um modal solto como antes -- dá para voltar, e o "Fechar" não
@@ -787,7 +797,7 @@ export class App {
             subtitulo,
             grupo: "Administração",
             icone,
-            executar: () => this.switchTab("administracao", { aba }),
+            executar: () => this.trocarAba("administracao", { aba }),
           }))
         : []),
       ...(["operador", "admin"].includes(this.user?.role)
@@ -798,7 +808,7 @@ export class App {
               subtitulo: "Registrar atualização de cliente",
               grupo: "Ações",
               icone: "atualizacoes",
-              executar: () => this.switchTab("atualizacoes", { novo: true }),
+              executar: () => this.trocarAba("atualizacoes", { novo: true }),
             },
             {
               id: "acao:novo-agendamento",
@@ -806,7 +816,7 @@ export class App {
               subtitulo: "Criar agendamento de tarefa ou atualização",
               grupo: "Ações",
               icone: "agendamentos",
-              executar: () => this.switchTab("agendamentos", { novo: true }),
+              executar: () => this.trocarAba("agendamentos", { novo: true }),
             },
           ]
         : []),
@@ -818,7 +828,7 @@ export class App {
               subtitulo: "Filtrar agentes com erros, pendências ou sem contato",
               grupo: "Ações",
               icone: "alerta",
-              executar: () => this.switchTab("distribuicao", { situacao: "erro" }),
+              executar: () => this.trocarAba("distribuicao", { situacao: "erro" }),
             },
           ]
         : []),
@@ -851,19 +861,19 @@ export class App {
         subtitulo: "Descarta o que está em cache e pergunta de novo ao servidor",
         grupo: "Ações", icone: "atualizar", executar: () => this.recarregarAba({ avisar: true }) },
       { id: "acao:tema", titulo: "Alternar tema (claro / escuro / sistema)", grupo: "Ações", icone: "temaClaro",
-        executar: () => theme.alternar() },
+        executar: () => temaApp.alternar() },
       { id: "acao:densidade", titulo: "Alternar densidade das linhas (compacta / padrão)",
         grupo: "Aparência", icone: "tabela",
         executar: () => {
           const compacta = aparencia.densidade() === "compacta";
           aparencia.aplicar({ densidade: compacta ? "padrao" : "compacta" });
-          toast.info(compacta ? "Linhas no tamanho padrão." : "Linhas compactas: cabe mais na tela.");
+          avisoRapido.informar(compacta ? "Linhas no tamanho padrão." : "Linhas compactas: cabe mais na tela.");
         } },
       { id: "acao:contraste", titulo: "Alternar contraste alto", grupo: "Aparência", icone: "acessibilidade",
         executar: () => {
           const alto = aparencia.contraste() === "alto";
           aparencia.aplicar({ contraste: alto ? "normal" : "alto" });
-          toast.info(alto ? "Contraste normal." : "Contraste alto ligado.");
+          avisoRapido.informar(alto ? "Contraste normal." : "Contraste alto ligado.");
         } },
       { id: "acao:atalhos", titulo: "Ver atalhos de teclado", grupo: "Ações", icone: "teclado",
         executar: () => mostrarAtalhos() },
@@ -876,7 +886,7 @@ export class App {
       const [resClientes, resAtivas, resPainel] = await Promise.allSettled([
         this.api.get("/clientes/names", null, { key: "clientes:names" }),
         // Com o Atualizador desativado, "/versoes/*" responde 403 (ver
-        // requireAtualizadorHabilitado no servidor) -- nem vale chamar.
+        // exigirAtualizadorHabilitado no servidor) -- nem vale chamar.
         this.atualizadorHabilitado
           ? this.api.get("/versoes/ativas", null, { key: "cmd:ativas" })
           : Promise.resolve([]),
@@ -895,7 +905,7 @@ export class App {
             subtitulo: "Abrir a ficha e comparação de versões do cliente",
             grupo: "Clientes",
             icone: "clientes",
-            executar: () => this.switchTab("consulta", { cliente: nome }),
+            executar: () => this.trocarAba("consulta", { cliente: nome }),
           });
         }
       }
@@ -908,7 +918,7 @@ export class App {
             subtitulo: "Versão publicada · Filtrar na Distribuição",
             grupo: "Versões Publicadas",
             icone: "versoes",
-            executar: () => this.switchTab("distribuicao", { sistema: v.sistema }),
+            executar: () => this.trocarAba("distribuicao", { sistema: v.sistema }),
           });
         }
       }
@@ -932,7 +942,7 @@ export class App {
             subtitulo: `${ag.ultimoSistema || "Sistema"} · Última: ${ag.ultimaVersao || "—"} · Abrir na Distribuição`,
             grupo: "Incidentes em Agentes",
             icone: "alerta",
-            executar: () => this.switchTab("distribuicao", { busca: ag.empresa || ag.cnpj }),
+            executar: () => this.trocarAba("distribuicao", { busca: ag.empresa || ag.cnpj }),
           });
         }
       }
@@ -940,7 +950,7 @@ export class App {
       return itens;
     };
 
-    this.palette = new CommandPalette(comandosBase, carregarExtras);
+    this.palette = new PaletaDeComandos(comandosBase, carregarExtras);
     this._cleanups.push(this.palette.ligarAtalho());
   }
 
@@ -951,13 +961,13 @@ export class App {
    *   e opcionalmente acende um ajuste dela
    */
   _abrirConfiguracoes(params) {
-    this.switchTab("configuracoes", params);
+    this.trocarAba("configuracoes", params);
   }
 
   /** Recolhe ou abre o menu. Vem de Configurações e do Ctrl + B. */
   _definirSidebar(recolhida) {
     this.root.classList.toggle("is-sidebar-collapsed", recolhida);
-    settings.set("sidebarRecolhida", recolhida);
+    duradouras.set("sidebarRecolhida", recolhida);
     // Avisa quem mostra essa preferência (a tela Configurações, se estiver
     // aberta): pelo Ctrl + B ela muda sem passar por lá.
     reaplicarAparencia();
@@ -977,7 +987,7 @@ export class App {
    * número de linhas por página que estiver valendo.
    */
   _sincronizarComPreferencias() {
-    this.root.classList.toggle("is-sidebar-collapsed", settings.get("sidebarRecolhida", false));
+    this.root.classList.toggle("is-sidebar-collapsed", duradouras.get("sidebarRecolhida", false));
   }
 
   /**
@@ -989,7 +999,7 @@ export class App {
    * @param {string} key
    * @param {object} [params] repassado à view (ex.: qual cliente abrir)
    */
-  switchTab(key, params) {
+  trocarAba(key, params) {
     this._paramsPendentes = params || null;
     if (this.router?.atual() === key) {
       this._mostrarAba(key);
@@ -1065,6 +1075,10 @@ export class App {
     this._atualizarTitulo();
 
     const { instance } = entrada;
+    // Só na ENTRADA na aba, não a cada recarga: `refresh` também roda ao
+    // clicar na aba já aberta e depois de gravar, e aí desfazer o que a pessoa
+    // escolheu na tela seria arrancar a ordenação debaixo dela.
+    if (!mesmaAba && typeof instance.aoEntrar === "function") instance.aoEntrar();
     if (params && typeof instance.aplicarParams === "function") instance.aplicarParams(params);
     if (typeof instance.refresh !== "function") return;
 
@@ -1072,27 +1086,27 @@ export class App {
     // busca terminou para só então confirmar na tela. Quem troca de aba pelo
     // clique continua ignorando o retorno, como sempre ignorou.
     return instance.refresh().catch((error) => {
-      if (error instanceof RequestCancelled) return;
+      if (error instanceof RequisicaoCancelada) return;
       if (error?.status === 401) return; // já tratado por api.onUnauthorized
       // A própria tela já mostra o aviso fixo, com o motivo e "Tentar
       // novamente" (View.swr). Toast em cima seria o mesmo recado duas vezes,
       // e de novo a cada tentativa.
       if (error?.avisadoNaTela) return;
-      toast.error("Não foi possível carregar os dados desta tela.");
+      avisoRapido.erro("Não foi possível carregar os dados desta tela.");
     });
   }
 
-  _showLoginAgain() {
+  _mostrarLoginDeNovo() {
     if (this.reauthenticating) return;
     this.reauthenticating = true;
     this.user = null;
     this._desmontar();
     this.root.className = "";
     this.root.replaceChildren();
-    toast.info("Sua sessão expirou. Entre novamente.");
+    avisoRapido.informar("Sua sessão expirou. Entre novamente.");
     new LoginView(this.root, this.api, "login", (user) => {
       this.reauthenticating = false;
-      this._onAuthenticated(user);
+      this._aoAutenticar(user);
     });
   }
 }

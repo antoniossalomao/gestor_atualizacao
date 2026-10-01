@@ -1,8 +1,8 @@
 import { View } from "../../app/View.js";
-import { toast } from "../../components/Toast.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
-import { marcarOcupado } from "../../utils/guard.js";
+import { iconeHtml } from "../../utils/icones.js";
+import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao } from "../../templates/secao.js";
 import { blocosSaude } from "../../templates/administracao.js";
 import { mensagem } from "./FormularioRegras.js";
@@ -20,7 +20,7 @@ export class SaudeAdmin extends View {
       ${cabecalhoSecao({
         titulo: "Diagnóstico do servidor",
         descricao: "Saúde do processo, integridade do banco de dados e cópias de segurança.",
-        acoes: html`<button type="button" class="btn" data-action="atualizar">${iconHtml("atualizar")} Conferir de novo</button>`,
+        acoes: html`<button type="button" class="btn" data-action="atualizar">${iconeHtml("atualizar")} Conferir de novo</button>`,
       })}
       <div data-role="situacao"></div>
       <div data-role="blocos"></div>`;
@@ -43,7 +43,7 @@ export class SaudeAdmin extends View {
       dados = await this.api.get("/saude");
     } catch (err) {
       if (err?.cancelled) return;
-      toast.error(mensagem(err));
+      avisoRapido.erro(mensagem(err));
       return;
     }
     const saudavel = dados.statusGeral === "saudavel";

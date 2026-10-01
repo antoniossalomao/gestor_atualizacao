@@ -1,11 +1,11 @@
 import { View } from "../app/View.js";
-import { toast } from "../components/Toast.js";
-import { icon } from "../utils/icons.js";
-import { emptyState } from "../components/EmptyState.js";
-import { escapeAttr, escapeHtml, plural } from "../utils/html.js";
-import { formatarDataHora, tempoRelativo, formatarBytes } from "../utils/date.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
+import { iconeSvg } from "../utils/icones.js";
+import { estadoVazio } from "../components/estadoVazio.js";
+import { escaparAtributo, escaparHtml, plural } from "../utils/html.js";
+import { formatarDataHora, tempoRelativo, formatarBytes } from "../utils/data.js";
 import { Modal } from "../components/Modal.js";
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 
 const STATUS = {
   publicada: { texto: "No ar", classe: "badge--success" },
@@ -30,7 +30,7 @@ export class VersoesView extends View {
     this.pilotCodes = new Set();
     this.busca = "";
     this.filtroStatus = "todos";
-    this._buildDom();
+    this._montarDom();
   }
 
   aplicarParams({ novo } = {}) {
@@ -38,11 +38,11 @@ export class VersoesView extends View {
     this.container.querySelector('input, select, textarea')?.focus();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = `
       <div class="toolbar versions-toolbar">
         <div class="toolbar-spacer"></div>
-        <button type="button" class="btn btn--small btn--ghost" data-action="refresh">${icon("atualizar")} Atualizar dados</button>
+        <button type="button" class="btn btn--small btn--ghost" data-action="refresh">${iconeSvg("atualizar")} Atualizar dados</button>
       </div>
 
       <div class="version-management-layout">
@@ -94,7 +94,7 @@ export class VersoesView extends View {
                 </div>
                 <input type="hidden" name="codigosPiloto" data-role="pilot-value" value="[]" />
                 <div class="pilot-picker__search-wrap">
-                  ${icon("busca")}
+                  ${iconeSvg("busca")}
                   <input class="input pilot-picker__search" id="version-pilot-search" type="search" autocomplete="off"
                          placeholder="Digite o código ou nome do cliente" data-role="pilot-search" />
                 </div>
@@ -107,7 +107,7 @@ export class VersoesView extends View {
             <div class="field">
               <span class="field__label" id="version-changelog-label">O que mudou nesta entrega</span>
               <div class="changelog-editor" data-role="changelog-items" aria-labelledby="version-changelog-label"></div>
-              <button type="button" class="btn btn--small btn--ghost" data-action="add-changelog-item">${icon("plus")} Adicionar item</button>
+              <button type="button" class="btn btn--small btn--ghost" data-action="add-changelog-item">${iconeSvg("plus")} Adicionar item</button>
               <textarea name="observacoes" hidden data-role="changelog-value"></textarea>
             </div>
 
@@ -121,7 +121,7 @@ export class VersoesView extends View {
               <span data-role="upload-progress-text">0%</span>
             </div>
 
-            <button class="btn btn--accent" type="submit">${icon("upload")} Enviar versão</button>
+            <button class="btn btn--accent" type="submit">${iconeSvg("upload")} Enviar versão</button>
           </form>
 
           <div class="card version-overview-card">
@@ -188,24 +188,24 @@ export class VersoesView extends View {
       this.form.hidden = true;
     }
 
-    this.form.addEventListener("submit", (event) => this._submit(event));
-    this.systemSelect.addEventListener("change", () => this._updateReplacementWarning());
+    this.form.addEventListener("submit", (event) => this._enviar(event));
+    this.systemSelect.addEventListener("change", () => this._atualizarAvisoDeSubstituicao());
     for (const campo of this.form.querySelectorAll('[name="alcance"]')) campo.addEventListener("change", () => {
       this.form.querySelector('[data-role="pilot-targets"]').hidden = campo.value !== "piloto" || !campo.checked;
-      this._renderPilotPicker();
-      this._updateReplacementWarning();
+      this._desenharSeletorDePiloto();
+      this._atualizarAvisoDeSubstituicao();
     });
-    this.pilotSearch.addEventListener("input", () => this._renderPilotPicker());
-    this.container.querySelector('[data-action="add-changelog-item"]').addEventListener("click", () => this._addChangelogItem("", true));
-    this._resetChangelog();
+    this.pilotSearch.addEventListener("input", () => this._desenharSeletorDePiloto());
+    this.container.querySelector('[data-action="add-changelog-item"]').addEventListener("click", () => this._adicionarItemDeNovidades("", true));
+    this._reiniciarNovidades();
     this.container.querySelector('[data-action="refresh"]').addEventListener("click", () => this.refresh(true));
     this.container.querySelector('[data-role="search"]').addEventListener("input", (event) => {
       this.busca = event.target.value.trim().toLowerCase();
-      this._renderHistory();
+      this._desenharHistorico();
     });
     this.container.querySelector('[data-role="status"]').addEventListener("change", (event) => {
       this.filtroStatus = event.target.value;
-      this._renderHistory();
+      this._desenharHistorico();
     });
   }
 
@@ -224,13 +224,13 @@ export class VersoesView extends View {
         this.systems = systems || [];
         this.versions = versions || [];
         this.clients = clients || [];
-        this._populateSystems();
-        this._renderPilotPicker();
+        this._preencherListaDeSistemas();
+        this._desenharSeletorDePiloto();
         this._render();
       }
     );
 
-    if (showToast && dados) toast.info("Dados de versões atualizados.");
+    if (showToast && dados) avisoRapido.informar("Dados de versões atualizados.");
   }
 
   _render() {
@@ -241,13 +241,13 @@ export class VersoesView extends View {
     const sistemasPublicados = new Set(publicadas.map((v) => v.sistema));
     const semPublicacao = this.systems.filter((s) => !sistemasPublicados.has(s));
 
-    this._renderStats(publicadas.length, rascunhos.length + pilotos.length, substituidas.length, semPublicacao);
-    this._renderPublished([...pilotos, ...publicadas]);
-    this._renderHistory();
-    this._updateReplacementWarning();
+    this._desenharNumeros(publicadas.length, rascunhos.length + pilotos.length, substituidas.length, semPublicacao);
+    this._desenharPublicadas([...pilotos, ...publicadas]);
+    this._desenharHistorico();
+    this._atualizarAvisoDeSubstituicao();
   }
 
-  _renderStats(publicadas, rascunhos, substituidas, semPublicacao) {
+  _desenharNumeros(publicadas, rascunhos, substituidas, semPublicacao) {
     this.container.querySelector('[data-role="stats"]').innerHTML = `
       <div class="version-stat"><span>No ar agora</span><strong>${publicadas}</strong></div>
       <div class="version-stat${rascunhos > 0 ? " version-stat--pending" : ""}"><span>Rascunhos</span><strong>${rascunhos}</strong></div>
@@ -260,7 +260,7 @@ export class VersoesView extends View {
     if (!semPublicacao.length) {
       const ok = document.createElement("div");
       ok.className = "version-coverage__status is-ok";
-      ok.innerHTML = `${icon("check")} <span>Todos os sistemas cadastrados possuem versão publicada ativa.</span>`;
+      ok.innerHTML = `${iconeSvg("check")} <span>Todos os sistemas cadastrados possuem versão publicada ativa.</span>`;
       coverage.appendChild(ok);
       return;
     }
@@ -272,20 +272,20 @@ export class VersoesView extends View {
         ${plural(semPublicacao.length, "sistema")} sem publicação ativa:
       </div>
       <div class="version-coverage__systems">
-        ${semPublicacao.map((s) => `<span class="badge badge--warning">${escapeHtml(s)}</span>`).join("")}
+        ${semPublicacao.map((s) => `<span class="badge badge--warning">${escaparHtml(s)}</span>`).join("")}
       </div>
     `;
     coverage.appendChild(box);
   }
 
-  _renderPublished(versions) {
+  _desenharPublicadas(versions) {
     const list = this.container.querySelector('[data-role="published"]');
     list.replaceChildren();
     this.container.querySelector('[data-role="publishedCount"]').textContent = plural(versions.length, "versão", "versões");
 
     if (!versions.length) {
       list.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: "Nenhuma versão publicada",
           descricao: "Prepare o primeiro pacote no formulário ao lado e publique quando estiver pronto para os agentes.",
           icone: "distribuicao",
@@ -300,8 +300,8 @@ export class VersoesView extends View {
       article.innerHTML = `
         <div class="published-release__header">
           <div class="published-release__identity">
-            <span class="published-release__version">${escapeHtml(item.versao)}</span>
-            <strong class="published-release__system">${escapeHtml(item.sistema || "Sistema não informado")}</strong>
+            <span class="published-release__version">${escaparHtml(item.versao)}</span>
+            <strong class="published-release__system">${escaparHtml(item.sistema || "Sistema não informado")}</strong>
           </div>
           <span class="badge ${item.status === "piloto" ? "badge--info" : "badge--success"}">${item.status === "piloto" ? "Piloto" : "No ar"}</span>
         </div>
@@ -309,12 +309,12 @@ export class VersoesView extends View {
         <div class="published-release__changelog" data-role="changelog"></div>
         <div class="version-timeline">
           <div class="version-timeline__step is-done">
-            <span class="version-timeline__dot">${icon("check")}</span>
+            <span class="version-timeline__dot">${iconeSvg("check")}</span>
             <span class="version-timeline__name">Rascunho</span>
           </div>
           <div class="version-timeline__line is-done"></div>
           <div class="version-timeline__step is-done">
-            <span class="version-timeline__dot">${icon("check")}</span>
+            <span class="version-timeline__dot">${iconeSvg("check")}</span>
             <span class="version-timeline__name">Publicada</span>
           </div>
           <div class="version-timeline__line is-active"></div>
@@ -337,12 +337,12 @@ export class VersoesView extends View {
         meta.textContent += ` · ${item.metricasPiloto.rodando} rodando · ${item.metricasPiloto.semErros} sem erros`;
       }
       meta.title = `Publicada ${tempoRelativo(item.publicadoEm)}`;
-      article.querySelector('[data-role="changelog"]').appendChild(renderChangelog(item.observacoes));
+      article.querySelector('[data-role="changelog"]').appendChild(desenharNovidades(item.observacoes));
       list.appendChild(article);
     }
   }
 
-  _renderHistory() {
+  _desenharHistorico() {
     const body = this.container.querySelector('[data-role="history"]');
     if (!body) return;
     body.replaceChildren();
@@ -365,7 +365,7 @@ export class VersoesView extends View {
       td.colSpan = 8;
       td.className = "table-empty";
       td.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: this.versions.length ? "Nenhuma versão com esse filtro" : "Nenhuma versão cadastrada",
           descricao: this.versions.length
             ? "Tente outro sistema ou selecione um status diferente."
@@ -386,13 +386,13 @@ export class VersoesView extends View {
       const row = document.createElement("tr");
       row.className = "is-readonly";
       row.innerHTML = `
-        <td><strong>${escapeHtml(item.sistema || "—")}</strong></td>
-        <td><span class="version-chip">${escapeHtml(item.versao)}</span></td>
+        <td><strong>${escaparHtml(item.sistema || "—")}</strong></td>
+        <td><span class="version-chip">${escaparHtml(item.versao)}</span></td>
         <td><span class="badge ${status.classe}">${status.texto}</span></td>
-        <td>${item.publicadoEm ? escapeHtml(formatarDataHora(item.publicadoEm)) : "—"}</td>
-        <td class="versions-table__package" title="${escapeAttr(nomesPacotes)}">${escapeHtml(nomesPacotes || "—")}</td>
+        <td>${item.publicadoEm ? escaparHtml(formatarDataHora(item.publicadoEm)) : "—"}</td>
+        <td class="versions-table__package" title="${escaparAtributo(nomesPacotes)}">${escaparHtml(nomesPacotes || "—")}</td>
         <td>${formatarBytes(item.tamanhoBytes)}</td>
-        <td class="versions-table__notes" title="${escapeAttr(observacoes)}">${escapeHtml(observacoes || "Sem notas")}</td>
+        <td class="versions-table__notes" title="${escaparAtributo(observacoes)}">${escaparHtml(observacoes || "Sem notas")}</td>
         <td class="table-actions" data-role="actions"></td>
       `;
       const actions = row.querySelector('[data-role="actions"]');
@@ -404,7 +404,7 @@ export class VersoesView extends View {
         promote.className = "btn btn--small btn--accent";
         promote.textContent = "Promover para geral";
         promote.disabled = !isAdmin;
-        promote.addEventListener("click", () => this._promote(item, promote));
+        promote.addEventListener("click", () => this._promover(item, promote));
         actions.appendChild(promote);
       } else if (item.status !== "publicada") {
         if (isAdmin) {
@@ -412,7 +412,7 @@ export class VersoesView extends View {
           publish.type = "button";
           publish.className = "btn btn--small btn--accent";
           publish.textContent = "Publicar";
-          publish.addEventListener("click", () => this._publish(item, publish));
+          publish.addEventListener("click", () => this._publicar(item, publish));
           actions.appendChild(publish);
         } else {
           const rascunho = document.createElement("span");
@@ -447,18 +447,18 @@ export class VersoesView extends View {
     }
   }
 
-  _populateSystems() {
+  _preencherListaDeSistemas() {
     const current = this.systemSelect.value;
     this.systemSelect.innerHTML =
       `<option value="">Selecione o sistema…</option>` +
-      this.systems.map((system) => `<option value="${escapeAttr(system)}">${escapeHtml(system)}</option>`).join("");
+      this.systems.map((system) => `<option value="${escaparAtributo(system)}">${escaparHtml(system)}</option>`).join("");
     if (this.systems.includes(current)) this.systemSelect.value = current;
     this.container.querySelector('[data-role="system-help"]').textContent = this.systems.length
       ? "Vem do cadastro da aba Sistemas."
       : "Nenhum sistema cadastrado. Cadastre um na aba Clientes antes de enviar.";
   }
 
-  _updateReplacementWarning() {
+  _atualizarAvisoDeSubstituicao() {
     const warning = this.container.querySelector('[data-role="replacement-warning"]');
     const text = this.container.querySelector('[data-role="replacement-text"]');
     const system = this.systemSelect.value;
@@ -476,7 +476,7 @@ export class VersoesView extends View {
       : `O envio cria um rascunho. Esta será a primeira versão publicada de ${system}.`;
   }
 
-  _renderPilotPicker() {
+  _desenharSeletorDePiloto() {
     const selected = this.container.querySelector('[data-role="pilot-selected"]');
     const suggestions = this.container.querySelector('[data-role="pilot-suggestions"]');
     const count = this.container.querySelector('[data-role="pilot-count"]');
@@ -490,14 +490,14 @@ export class VersoesView extends View {
       const cliente = this.clients.find((item) => item.codigo === codigo);
       const chip = document.createElement("span");
       chip.className = "pilot-chip";
-      chip.innerHTML = `<strong>${escapeHtml(codigo)}</strong><span>${escapeHtml(cliente?.nome || "Cliente")}</span>`;
+      chip.innerHTML = `<strong>${escaparHtml(codigo)}</strong><span>${escaparHtml(cliente?.nome || "Cliente")}</span>`;
       const remove = document.createElement("button");
       remove.type = "button";
       remove.setAttribute("aria-label", `Remover ${cliente?.nome || codigo} do grupo piloto`);
       remove.textContent = "×";
       remove.addEventListener("click", () => {
         this.pilotCodes.delete(codigo);
-        this._renderPilotPicker();
+        this._desenharSeletorDePiloto();
       });
       chip.appendChild(remove);
       selected.appendChild(chip);
@@ -520,23 +520,23 @@ export class VersoesView extends View {
       const option = document.createElement("button");
       option.type = "button";
       option.className = "pilot-picker__option";
-      option.innerHTML = `<span><strong>${escapeHtml(cliente.codigo)}</strong><small>${escapeHtml(cliente.nome)}</small></span>${cliente.cidade ? `<em>${escapeHtml(cliente.cidade)}</em>` : ""}<b aria-hidden="true">+</b>`;
+      option.innerHTML = `<span><strong>${escaparHtml(cliente.codigo)}</strong><small>${escaparHtml(cliente.nome)}</small></span>${cliente.cidade ? `<em>${escaparHtml(cliente.cidade)}</em>` : ""}<b aria-hidden="true">+</b>`;
       option.addEventListener("click", () => {
         this.pilotCodes.add(cliente.codigo);
         this.pilotSearch.value = "";
-        this._renderPilotPicker();
+        this._desenharSeletorDePiloto();
         this.pilotSearch.focus();
       });
       suggestions.appendChild(option);
     }
   }
 
-  _resetChangelog() {
+  _reiniciarNovidades() {
     this.changelogItems.replaceChildren();
-    this._addChangelogItem("", false);
+    this._adicionarItemDeNovidades("", false);
   }
 
-  _addChangelogItem(value = "", focus = false) {
+  _adicionarItemDeNovidades(value = "", focus = false) {
     const line = document.createElement("div");
     line.className = "changelog-item";
     const input = document.createElement("input");
@@ -544,7 +544,7 @@ export class VersoesView extends View {
     input.className = "input";
     input.placeholder = "ex.: Corrige cálculo de desconto no orçamento";
     input.value = value;
-    input.addEventListener("input", () => this._syncChangelog());
+    input.addEventListener("input", () => this._sincronizarNovidades());
 
     const remove = document.createElement("button");
     remove.type = "button";
@@ -554,24 +554,24 @@ export class VersoesView extends View {
     remove.textContent = "✕";
     remove.addEventListener("click", () => {
       line.remove();
-      if (!this.changelogItems.children.length) this._addChangelogItem("", false);
-      this._syncChangelog();
+      if (!this.changelogItems.children.length) this._adicionarItemDeNovidades("", false);
+      this._sincronizarNovidades();
     });
 
     line.append(input, remove);
     this.changelogItems.appendChild(line);
     if (focus) input.focus();
-    this._syncChangelog();
+    this._sincronizarNovidades();
   }
 
-  _syncChangelog() {
+  _sincronizarNovidades() {
     const items = [...this.changelogItems.querySelectorAll("input")]
       .map((input) => input.value.trim())
       .filter(Boolean);
     this.changelogValue.value = items.map((item) => `- ${item}`).join("\n");
   }
 
-  async _submit(event) {
+  async _enviar(event) {
     event.preventDefault();
     const formData = new FormData(this.form);
     if (!formData.get("sistema")) {
@@ -587,28 +587,28 @@ export class VersoesView extends View {
 
     const button = this.form.querySelector('button[type="submit"]');
     button.disabled = true;
-    this._showProgress(0);
+    this._mostrarProgresso(0);
     try {
-      await this.api.postForm("/versoes", formData, { onProgress: (percent) => this._showProgress(percent) });
+      await this.api.enviarFormulario("/versoes", formData, { onProgress: (percent) => this._mostrarProgresso(percent) });
       this.form.reset();
       this.pilotCodes.clear();
       this.pilotSearch.value = "";
       this.form.querySelector('[data-role="pilot-targets"]').hidden = true;
-      this._renderPilotPicker();
-      this._resetChangelog();
-      this._updateReplacementWarning();
-      toast.success("Versão enviada como rascunho. Revise e publique no histórico abaixo.");
-      this._invalidateVersions();
+      this._desenharSeletorDePiloto();
+      this._reiniciarNovidades();
+      this._atualizarAvisoDeSubstituicao();
+      avisoRapido.sucesso("Versão enviada como rascunho. Revise e publique no histórico abaixo.");
+      this._invalidarVersoes();
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível salvar", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível salvar", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
     } finally {
       button.disabled = false;
-      this._hideProgress();
+      this._esconderProgresso();
     }
   }
 
-  _showProgress(percent) {
+  _mostrarProgresso(percent) {
     this.uploadProgress.hidden = false;
     const fill = this.uploadProgress.querySelector(".upload-progress__fill");
     const text = this.uploadProgress.querySelector('[data-role="upload-progress-text"]');
@@ -622,13 +622,13 @@ export class VersoesView extends View {
     text.textContent = percent >= 100 ? "Processando no servidor…" : `${percent}%`;
   }
 
-  _hideProgress() {
+  _esconderProgresso() {
     this.uploadProgress.hidden = true;
     this.uploadProgress.classList.remove("is-indeterminate");
     this.uploadProgress.querySelector(".upload-progress__fill").style.width = "0";
   }
 
-  async _publish(item, button) {
+  async _publicar(item, button) {
     const current = this.versions.find((version) => version.status === "publicada" && version.sistema === item.sistema);
     const confirmed = await Modal.confirm(
       "Publicar versão",
@@ -641,15 +641,15 @@ export class VersoesView extends View {
 
     button.disabled = true;
     try {
-      const result = await this.api.post(`/versoes/${item.id}/publicar`);
-      const replaced = result?.substituidas || [];
-      toast.success(
+      const resposta = await this.api.post(`/versoes/${item.id}/publicar`);
+      const replaced = resposta?.substituidas || [];
+      avisoRapido.sucesso(
         replaced.length ? `Versão ${item.versao} no ar. A ${replaced[0].versao} foi substituída.` : `Versão ${item.versao} publicada.`
       );
-      this._invalidateVersions();
+      this._invalidarVersoes();
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível publicar", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível publicar", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
     } finally {
       button.disabled = false;
     }
@@ -669,26 +669,26 @@ export class VersoesView extends View {
     button.disabled = true;
     try {
       await this.api.delete(`/versoes/${item.id}`);
-      toast.success(`Versão ${item.versao} excluída.`);
-      this._invalidateVersions();
+      avisoRapido.sucesso(`Versão ${item.versao} excluída.`);
+      this._invalidarVersoes();
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível excluir", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível excluir", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
       button.disabled = false;
     }
   }
 
-  async _promote(item, button) {
+  async _promover(item, button) {
     const ok = await Modal.confirm("Promover versão piloto", `Liberar ${item.sistema} ${item.versao} para todos os clientes e substituir a produção atual?`, { confirmLabel: "Promover", danger: false });
     if (!ok) return;
     button.disabled = true;
     try {
       await this.api.post(`/versoes/${item.id}/promover`);
-      toast.success("Versão promovida para produção geral.");
-      this._invalidateVersions();
+      avisoRapido.sucesso("Versão promovida para produção geral.");
+      this._invalidarVersoes();
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível promover", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível promover", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
       button.disabled = false;
     }
   }
@@ -699,16 +699,16 @@ export class VersoesView extends View {
     button.disabled = true;
     try {
       const resultado = await this.api.post(`/versoes/${item.id}/rollback`);
-      toast.success(`Rollback concluído. ${resultado.versao.versao} voltou ao ar.`);
-      this._invalidateVersions();
+      avisoRapido.sucesso(`Rollback concluído. ${resultado.versao.versao} voltou ao ar.`);
+      this._invalidarVersoes();
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível reverter", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível reverter", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
       button.disabled = false;
     }
   }
 
-  _invalidateVersions() {
+  _invalidarVersoes() {
     this.cache?.invalidar("versoes:");
     this.cache?.invalidar("distribuicao:");
   }
@@ -722,7 +722,7 @@ function resumoObservacoes(observacoes) {
     .join(" · ");
 }
 
-function renderChangelog(observacoes) {
+function desenharNovidades(observacoes) {
   const linhas = String(observacoes || "")
     .split("\n")
     .map((linha) => linha.trim())

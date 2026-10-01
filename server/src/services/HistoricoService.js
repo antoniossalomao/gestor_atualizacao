@@ -4,7 +4,7 @@
  * sucedida, para deixar registrado quem fez o quê.
  */
 class HistoricoService {
-  /** @param {import('../database/Database').Database} db */
+  /** @param {import("../database/BancoDeDados").BancoDeDados} db */
   constructor(db) {
     this.db = db;
   }

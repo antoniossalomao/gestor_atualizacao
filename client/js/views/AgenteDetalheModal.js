@@ -1,11 +1,13 @@
 import { Modal } from "../components/Modal.js";
-import { copyToClipboard, escapeHtml } from "../utils/html.js";
-import { formatarDataHora, tempoRelativo, formatarDuracao } from "../utils/date.js";
-import { emptyState } from "../components/EmptyState.js";
-import { faseLabel } from "../domain/agenteLabels.js";
-import { ApiError } from "../api/ApiClient.js";
-import { toast } from "../components/Toast.js";
-import { criarDetalhesRetorno, relatorioRetornosTexto } from "../domain/agenteReport.js";
+import { escaparHtml } from "../utils/html.js";
+import { copiarParaAreaDeTransferencia } from "../components/areaDeTransferencia.js";
+import { formatarDataHora, tempoRelativo, formatarDuracao } from "../utils/data.js";
+import { estadoVazio } from "../components/estadoVazio.js";
+import { rotuloDaFase } from "../domain/agenteLabels.js";
+import { ErroApi } from "../api/ApiPainel.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
+import { relatorioRetornosTexto } from "../domain/agenteReport.js";
+import { criarDetalhesRetorno } from "../components/detalhesRetorno.js";
 import { classificarRetorno } from "../domain/agenteStatus.js";
 
 const LIMITE_RETORNOS = 300;
@@ -16,7 +18,7 @@ const LIMITE_RETORNOS = 300;
  */
 export class AgenteDetalheModal {
   /**
-   * @param {import('../api/ApiClient').ApiClient} api
+   * @param {import('../api/ApiPainel').ApiPainel} api
    * @param {{cnpj:string, empresa:string, maquina?:string}} agente
    * @param {{somenteErros?:boolean, sistema?:string}} opcoes
    */
@@ -37,8 +39,8 @@ export class AgenteDetalheModal {
     box.innerHTML = `
       <div class="agente-detalhe__header">
         <p class="agente-detalhe__eyebrow">Retornos do agente</p>
-        <h3 class="modal-box__title" id="agente-detalhe-titulo">${escapeHtml(this.agente.empresa || this.agente.cnpj)}</h3>
-        <p class="modal-box__message agente-detalhe__identity">${escapeHtml(this.agente.cnpj)}${this.agente.maquina ? ` · ${escapeHtml(this.agente.maquina)}` : ""}</p>
+        <h3 class="modal-box__title" id="agente-detalhe-titulo">${escaparHtml(this.agente.empresa || this.agente.cnpj)}</h3>
+        <p class="modal-box__message agente-detalhe__identity">${escaparHtml(this.agente.cnpj)}${this.agente.maquina ? ` · ${escaparHtml(this.agente.maquina)}` : ""}</p>
       </div>
       <div class="agente-detalhe__toolbar">
         <div class="agente-detalhe__filters" role="group" aria-label="Filtrar mensagens">
@@ -64,20 +66,20 @@ export class AgenteDetalheModal {
     box.querySelectorAll("[data-filter]").forEach((button) => {
       button.addEventListener("click", () => {
         this.somenteErros = button.dataset.filter === "problemas";
-        this._renderLogs();
+        this._desenharRegistros();
       });
     });
     box.querySelector('[data-role="sistema"]').addEventListener("change", (event) => {
       this.sistema = event.target.value;
-      this._renderLogs();
+      this._desenharRegistros();
     });
 
     this.list = box.querySelector('[data-role="list"]');
     box.querySelector('[data-action="close"]').focus();
-    await this._reload();
+    await this._recarregar();
   }
 
-  async _reload() {
+  async _recarregar() {
     this.loading = true;
     this.logs = [];
     this.logsFiltrados = [];
@@ -95,11 +97,11 @@ export class AgenteDetalheModal {
       this.list.setAttribute("aria-busy", "false");
       this.box.querySelector('[data-role="summary"]').textContent = "Retornos indisponíveis";
       this.list.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: "Não foi possível carregar os retornos",
-          descricao: err instanceof ApiError ? err.message : "Erro inesperado.",
+          descricao: err instanceof ErroApi ? err.message : "Erro inesperado.",
           icone: "distribuicao",
-          acao: { label: "Tentar novamente", onClick: () => this._reload() },
+          acao: { label: "Tentar novamente", onClick: () => this._recarregar() },
         })
       );
       return;
@@ -117,7 +119,7 @@ export class AgenteDetalheModal {
     const limite = this.box.querySelector('[data-role="limit"]');
     limite.hidden = logs.length < LIMITE_RETORNOS;
     limite.textContent = `Exibindo os ${LIMITE_RETORNOS} retornos mais recentes. Registros anteriores não estão incluídos neste relatório.`;
-    this._renderLogs();
+    this._desenharRegistros();
   }
 
   _atualizarFiltros() {
@@ -130,7 +132,7 @@ export class AgenteDetalheModal {
     this.box.querySelector('[data-role="sistema"]').disabled = this.loading;
   }
 
-  _renderLogs() {
+  _desenharRegistros() {
     this._atualizarFiltros();
     this.logsFiltrados = this.logs.filter((log) => {
       if (this.sistema && log.sistema !== this.sistema) return false;
@@ -149,7 +151,7 @@ export class AgenteDetalheModal {
 
     if (!total) {
       this.list.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: this.logs.length ? "Nenhum retorno neste filtro" : "Nenhum retorno ainda",
           descricao: this.logs.length ? "Não há erros ou pendências entre os retornos selecionados." : "Os retornos aparecerão aqui quando o agente se comunicar.",
           icone: this.logs.length ? "busca" : "historico",
@@ -157,7 +159,7 @@ export class AgenteDetalheModal {
             this.somenteErros = false;
             this.sistema = "";
             this.box.querySelector('[data-role="sistema"]').value = "";
-            this._renderLogs();
+            this._desenharRegistros();
           } } : undefined,
         })
       );
@@ -179,7 +181,7 @@ export class AgenteDetalheModal {
       log.sistema,
       log.versaoAnterior && log.versao ? `${log.versaoAnterior} → ${log.versao}` : log.versao ? `Versão ${log.versao}` : null,
       formatarDuracao(log.duracaoMs) !== "—" ? formatarDuracao(log.duracaoMs) : null,
-      faseLabel(log.fase),
+      rotuloDaFase(log.fase),
     ]
       .filter(Boolean)
       .join(" · ");
@@ -188,10 +190,10 @@ export class AgenteDetalheModal {
       <div class="agent-log__dot${tipo === "erro" ? " is-error" : tipo === "sucesso" ? "" : " is-pending"}" aria-hidden="true"></div>
       <div class="agente-detalhe__body">
         <div class="agente-detalhe__head">
-          <strong class="agente-detalhe__status agente-detalhe__status--${tipo}">${escapeHtml(label)}</strong>
+          <strong class="agente-detalhe__status agente-detalhe__status--${tipo}">${escaparHtml(label)}</strong>
           <time class="agente-detalhe__time" data-role="quando"></time>
         </div>
-        ${contexto ? `<p class="agent-log__ctx">${escapeHtml(contexto)}</p>` : ""}
+        ${contexto ? `<p class="agent-log__ctx">${escaparHtml(contexto)}</p>` : ""}
         <div data-role="relatorio"></div>
       </div>
     `;
@@ -206,7 +208,7 @@ export class AgenteDetalheModal {
 
   async _copiar() {
     if (!this.logsFiltrados?.length) {
-      toast.info("Não há retornos neste filtro para copiar.");
+      avisoRapido.informar("Não há retornos neste filtro para copiar.");
       return;
     }
     const logsRelatorio = this.logsFiltrados.map((log) => ({ ...log, status: classificarRetorno(log).label }));
@@ -214,7 +216,7 @@ export class AgenteDetalheModal {
       titulo: `${this.somenteErros ? "ERROS E PENDÊNCIAS" : "RETORNOS DO AGENTE"} — ${this.agente.empresa || this.agente.cnpj}${this.sistema ? ` · ${this.sistema}` : ""}`,
     });
     if (this.logs.length >= LIMITE_RETORNOS) texto += `\n\nConsulta limitada aos ${LIMITE_RETORNOS} retornos mais recentes do agente.`;
-    if (await copyToClipboard(texto)) toast.success("Relatório copiado.");
-    else toast.error("Não foi possível copiar o relatório.");
+    if (await copiarParaAreaDeTransferencia(texto)) avisoRapido.sucesso("Relatório copiado.");
+    else avisoRapido.erro("Não foi possível copiar o relatório.");
   }
 }

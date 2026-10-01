@@ -1,4 +1,4 @@
-const { parsePaginacao } = require("../shared/pagination");
+const { lerPaginacao } = require("./paginacao");
 
 /** Rota da aba Histórico: lista paginada de quem fez o quê. */
 class HistoricoController {
@@ -9,7 +9,7 @@ class HistoricoController {
 
   list = (req, res) => {
     const { search = "", entidade = "Todos" } = req.query;
-    res.json(this.historicoService.list({ ...parsePaginacao(req.query), search, entidade }));
+    res.json(this.historicoService.list({ ...lerPaginacao(req.query), search, entidade }));
   };
 }
 

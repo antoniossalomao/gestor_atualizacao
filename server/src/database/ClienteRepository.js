@@ -1,5 +1,5 @@
 const { BaseRepository } = require("./BaseRepository");
-const { buildOrderBy } = require("../shared/sortHelper");
+const { montarOrdenacao } = require("./ordenacao");
 
 /** Colunas que a tela pode pedir para ordenar, e a expressao SQL segura correspondente. */
 const SORT_MAP = {
@@ -31,7 +31,7 @@ class ClienteRepository extends BaseRepository {
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM clientes_v ${where}`).get(params).total;
 
     const offset = Math.max(0, (page - 1) * pageSize);
-    const orderBy = buildOrderBy(SORT_MAP, sortBy, sortDir, "nome COLLATE NOCASE ASC");
+    const orderBy = montarOrdenacao(SORT_MAP, sortBy, sortDir, "nome COLLATE NOCASE ASC");
     const rows = this.conn
       .prepare(`SELECT ${LEITURA} FROM clientes_v ${where} ORDER BY ${orderBy} LIMIT @limit OFFSET @offset`)
       .all({ ...params, limit: pageSize, offset });
@@ -73,7 +73,7 @@ class ClienteRepository extends BaseRepository {
   }
 
   /** (id, codigo, nome, cidade) de todos os clientes -- usado no calculo de desatualizados. */
-  allBasic() {
+  todasBasicas() {
     return this.conn.prepare("SELECT id, codigo, nome, cidade FROM clientes").all();
   }
 
@@ -101,7 +101,7 @@ class ClienteRepository extends BaseRepository {
     return this.conn.prepare("SELECT sistema_id FROM cliente_sistemas WHERE cliente_id = ? ORDER BY ordem").all(clienteId).map((r) => r.sistema_id);
   }
 
-  getByNome(nome) {
+  obterPorNome(nome) {
     return this.conn.prepare(`SELECT ${LEITURA} FROM clientes_v WHERE nome = ?`).get(nome) || null;
   }
 
@@ -118,12 +118,12 @@ class ClienteRepository extends BaseRepository {
     );
   }
 
-  getById(id) {
+  obterPorId(id) {
     return this.conn.prepare(`SELECT ${LEITURA} FROM clientes_v WHERE id = ?`).get(id) || null;
   }
 
   /** Os registros completos de uma lista de ids -- usado pelas ações em lote (excluir, adicionar sistema). */
-  findByIds(ids) {
+  buscarPorIds(ids) {
     const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
     if (limpos.length === 0) return [];
     const marcadores = limpos.map(() => "?").join(", ");
@@ -136,11 +136,11 @@ class ClienteRepository extends BaseRepository {
    * True se ja existe outro cliente com esse nome (sem diferenciar
    * maiusculas/minusculas). Dois clientes com o mesmo nome seriam
    * indistinguiveis em toda tela que lista por nome -- e o vinculo de um
-   * atendimento lancado pelo nome (ver resolverNome) escolheria um deles
+   * atualização lançada pelo nome (ver resolverNome) escolheria um deles
    * sem ninguem saber qual.
    * @param {number|null} excludeId ignora este id (usado ao validar uma edicao)
    */
-  nameExists(nome, excludeId = null) {
+  nomeExiste(nome, excludeId = null) {
     if (excludeId != null) {
       const row = this.conn
         .prepare("SELECT COUNT(*) AS total FROM clientes WHERE lower(nome) = lower(?) AND id != ?")
@@ -158,13 +158,13 @@ class ClienteRepository extends BaseRepository {
         this.conn.prepare("INSERT INTO clientes (codigo, nome, cidade, grupo, regime_tributario) VALUES (?, ?, ?, ?, ?)").run(codigo, nome, cidade, grupo, regimeTributario).lastInsertRowid
       );
       this._gravarSistemas(id, sistemaIds);
-      this._adotarAtendimentosSemVinculo(id, nome);
+      this._adotarAtualizacoesSemVinculo(id, nome);
       return id;
     })();
   }
 
   /**
-   * O nome também fica copiado em cada atendimento/agendamento (ver
+   * O nome também fica copiado em cada atualização/agendamento (ver
    * migracoes.js): é o que aparece se o cliente for excluído um dia. Por
    * isso um rename acompanha nos registros ligados a ele -- senão, depois
    * de uma exclusão, o histórico mostraria um nome que ele não usa há anos.
@@ -178,20 +178,20 @@ class ClienteRepository extends BaseRepository {
         this._gravarSistemas(id, sistemaIds);
         this.conn.prepare("UPDATE atualizacoes SET cliente = ? WHERE cliente_id = ?").run(nome, id);
         this.conn.prepare("UPDATE agendamentos SET cliente = ? WHERE cliente_id = ?").run(nome, id);
-        this._adotarAtendimentosSemVinculo(id, nome);
+        this._adotarAtualizacoesSemVinculo(id, nome);
       }
       return resultado.changes;
     })();
   }
 
   /**
-   * Atendimentos e tarefas lançados para um nome que ainda não tinha
+   * Atualizações e tarefas lançadas para um nome que ainda não tinha
    * cadastro passam a pertencer ao cliente quando ele é criado (ou
    * renomeado) com esse nome -- era o que acontecia de graça quando a
    * ligação era só pelo texto, e sem isto a importação de uma planilha
    * antes do cadastro deixaria o histórico dele solto para sempre.
    */
-  _adotarAtendimentosSemVinculo(id, nome) {
+  _adotarAtualizacoesSemVinculo(id, nome) {
     for (const tabela of ["atualizacoes", "agendamentos"]) {
       this.conn
         .prepare(`UPDATE ${tabela} SET cliente_id = ?, cliente = ? WHERE cliente_id IS NULL AND lower(trim(cliente)) = lower(trim(?))`)
@@ -223,7 +223,7 @@ class ClienteRepository extends BaseRepository {
    * marcado não é tocado nem entra na contagem.
    * @returns {number} quantos clientes foram de fato alterados
    */
-  addSistemaToMany(ids, sistemaId) {
+  adicionarSistemaALotes(ids, sistemaId) {
     const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
     return this.conn.transaction(() => limpos.filter((id) => this._marcar(id, sistemaId)).length)();
   }

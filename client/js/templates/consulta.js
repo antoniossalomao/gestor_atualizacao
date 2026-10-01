@@ -48,6 +48,7 @@ export function linhaMatrizVersoes(linha) {
     </td>
     <td data-label="Estado">
       <span class="badge ${linha.estadoBadge}">${linha.estadoLabel}</span>
+      ${linha.origemData ? html`<small class="pela-data">${linha.origemData}</small>` : ""}
     </td>
     <td data-label="Último contato" title="${linha.contatoTitle}">
       ${linha.contatoTexto}

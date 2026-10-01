@@ -7,7 +7,7 @@
  * precisarem mudar, é só lembrar de atualizar os dois lugares.
  */
 
-export const COLUMNS = [
+export const COLUNAS_ATUALIZACOES = [
   { key: "cliente", label: "Cliente" },
   { key: "sistema", label: "Sistema" },
   { key: "versao", label: "Versão" },
@@ -18,7 +18,7 @@ export const COLUMNS = [
   { key: "obs", label: "Obs" },
 ];
 
-export const AGENDA_COLUMNS = [
+export const COLUNAS_AGENDAMENTOS = [
   { key: "tarefa", label: "Tarefa" },
   { key: "cliente", label: "Cliente" },
   { key: "sistema", label: "Sistema" },
@@ -30,19 +30,19 @@ export const AGENDA_COLUMNS = [
   { key: "obs", label: "Obs" },
 ];
 
-export const STATUS_OPTIONS = ["A Fazer", "Em Andamento", "Sem resposta", "Concluído"];
+export const OPCOES_STATUS = ["A Fazer", "Em Andamento", "Sem resposta", "Concluído"];
 
 /** Níveis de prioridade de uma tarefa agendada (ordem crescente de urgência). */
-export const PRIORIDADE_OPTIONS = ["Baixa", "Normal", "Alta", "Urgente"];
+export const OPCOES_PRIORIDADE = ["Baixa", "Normal", "Alta", "Urgente"];
 
 /**
  * Valor do filtro de Status que pede as tarefas arquivadas.
  *
  * NÃO é um status: ninguém marca uma tarefa como "Arquivadas", e por isso
- * ele fica fora de STATUS_OPTIONS (que alimenta o campo do formulário). É um
+ * ele fica fora de OPCOES_STATUS (que alimenta o campo do formulário). É um
  * modo de consulta, e mora no mesmo `<select>` porque é ali que a pessoa já
  * vai procurar. Precisa ser igual ao FILTRO_ARQUIVADAS do backend
- * (server/src/config/constants.js).
+ * (server/src/config/constantes.js).
  */
 export const FILTRO_ARQUIVADAS = "Arquivadas";
 

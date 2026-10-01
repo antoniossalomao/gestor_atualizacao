@@ -7,16 +7,16 @@ arquivo resume só o que é **não óbvio** e o que mais se erra por aqui.
 
 ```bash
 cd web
-npm run check     # tipos (client/js/domain, client/js/utils, server/src/shared)
+npm run check     # tipos e "sem DOM" (client/js/domain, utils, templates; núcleo puro do servidor)
 npm test          # servidor + cliente
 ```
 
 Os dois têm que passar. Não relate conclusão sem ter rodado.
 
-Mexeu em tela, componente ou CSS? Rode também `npm run test:navegador`
-(Chrome sem janela, ~2 min; ver CONTRIBUTING, "Testes de navegador"). Ele já
-achou modal aberto atrás da gaveta e foco perdido ao fechar formulário —
-coisas que `npm test` não enxerga.
+Mexeu em tela, componente ou CSS? O repositório não tem testes de navegador (a
+suíte saiu em 29/09/2026) e `npm test` não enxerga modal aberto atrás da gaveta
+nem foco perdido ao fechar formulário: abra a tela no navegador, nos dois temas,
+e confira o que mudou.
 
 ## O que NÃO fazer
 
@@ -32,10 +32,10 @@ coisas que `npm test` não enxerga.
   corrigir um bug não óbvio, **acrescente** o porquê.
 - **Não escreva em inglês** nomes de domínio, mensagens ao usuário ou
   comentários. Inglês só onde a linguagem impõe (`get`, `catch`, `async`).
-- **Não use `sortBy` da URL direto no SQL.** Use `shared/sortHelper.js`.
+- **Não use `sortBy` da URL direto no SQL.** Use `database/ordenacao.js`.
 - **Não monte HTML com template literal cru.** Use a tag `html` de
   `js/utils/html.js`, que escapa tudo o que é interpolado. Os ícones entram
-  com `iconHtml()`. `confiavel()` só vale para marcação gerada pelo próprio
+  com `iconeHtml()`. `confiavel()` só vale para marcação gerada pelo próprio
   código. `client/tests/html-seguro.test.mjs` trava a contagem por arquivo.
 
 ## Onde colocar arquivo novo
@@ -68,7 +68,7 @@ O critério não é cobertura: é **toda regra que, se quebrar, erra em silênci
 tem teste**. Permissão, validação de data, ordenação, paginação, roteamento,
 propagação de rename, normalização de nomes.
 
-Testes sobem um `Server`/`Database` de verdade num diretório temporário. Sem
+Testes sobem um `Server`/`BancoDeDados` de verdade num diretório temporário. Sem
 mock de banco. Dois detalhes que já custaram uma rodada vermelha:
 
 - `repositorio.list()` devolve `{ rows, total, page, pageSize }` — **não**

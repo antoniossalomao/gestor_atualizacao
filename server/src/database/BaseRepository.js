@@ -8,11 +8,10 @@
  * concentrada num unico lugar, facil de achar e de revisar.
  *
  * Usa "better-sqlite3", que e SINCRONO (nao usa "await" pra ler/escrever
- * no banco) -- diferente da maioria das bibliotecas Node, mas e o mesmo
- * jeito de programar que o "sqlite3" do Python original usava, o que deixa
- * o codigo mais direto de ler e evita uma camada de complexidade (Promises
- * encadeadas) que aqui nao traz beneficio nenhum: o SQLite le do disco tao
- * rapido que "esperar de forma assincrona" nao ajudaria em nada.
+ * no banco) -- diferente da maioria das bibliotecas Node. Isso deixa o codigo
+ * mais direto de ler e evita uma camada de Promises encadeadas que aqui nao
+ * traz beneficio nenhum: o SQLite le do disco tao rapido que "esperar de
+ * forma assincrona" nao ajudaria em nada.
  */
 class BaseRepository {
   /** @param {import('better-sqlite3').Database} conn conexao aberta com o banco */
@@ -77,7 +76,7 @@ class BaseRepository {
    * interpolados no texto do SQL: e' o mesmo cuidado do resto dos
    * repositorios, e aqui a lista vem direto do que o navegador mandou.
    */
-  deleteMany(ids) {
+  excluirVarios(ids) {
     const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
     if (limpos.length === 0) return 0;
     const marcadores = limpos.map(() => "?").join(", ");

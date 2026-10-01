@@ -2,11 +2,11 @@ const { BaseRepository } = require("./BaseRepository");
 const { chave } = require("../shared/normalizacao");
 
 /**
- * Catálogo de sistemas. Cada atendimento e cada cliente aponta para uma
+ * Catálogo de sistemas. Cada atualização e cada cliente aponta para uma
  * linha daqui pelo id (tabelas `atualizacao_sistemas` e `cliente_sistemas`).
  *
  * `ativo = 0` é o sistema que saiu do catálogo mas continua no histórico
- * (CTe, B_Rat...): some das telas de cadastro, e os atendimentos antigos
+ * (CTe, B_Rat...): some das telas de cadastro, e as atualizações antigas
  * continuam apontando para ele. Por isso "excluir" um sistema desativa em
  * vez de apagar -- apagar a linha deixaria órfão tudo o que já foi feito
  * nele, e a chave estrangeira nem deixaria.
@@ -48,15 +48,20 @@ class SistemaRepository extends BaseRepository {
 
   /** Classificação e referência preservada, inclusive dos inativos do histórico. */
   catalogo() {
-    return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, ultima_versao AS ultimaVersao FROM sistemas ORDER BY nome").all();
+    return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, atualiza_com_principal AS atualizaComPrincipal, ultima_versao AS ultimaVersao FROM sistemas ORDER BY nome").all();
   }
 
-  getById(id) {
-    return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, ultima_versao AS ultimaVersao FROM sistemas WHERE id = ?").get(id);
+  obterPorId(id) {
+    return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, atualiza_com_principal AS atualizaComPrincipal, ultima_versao AS ultimaVersao FROM sistemas WHERE id = ?").get(id);
   }
 
   classificar(id, controlaVersao) {
     return this.conn.prepare("UPDATE sistemas SET controla_versao = ? WHERE id = ? AND ativo = 1").run(controlaVersao ? 1 : 0, id).changes;
+  }
+
+  /** Marca o sistema como dependente do B_Vendas (ver migracoes.js, migração 6). */
+  marcarDependente(id, atualizaComPrincipal) {
+    return this.conn.prepare("UPDATE sistemas SET atualiza_com_principal = ? WHERE id = ? AND ativo = 1").run(atualizaComPrincipal ? 1 : 0, id).changes;
   }
 
   /**
@@ -77,7 +82,7 @@ class SistemaRepository extends BaseRepository {
 
   /**
    * Tira um sistema do catálogo: desativa e desmarca de todo cliente. Os
-   * atendimentos antigos continuam apontando para ele. Devolve o id e
+   * atualizações antigas continuam apontando para ele. Devolve o id e
    * quantos clientes perderam a marcação, ou null se não havia um sistema
    * ATIVO com esse nome.
    * @returns {{id: number, clientesAfetados: number} | null}

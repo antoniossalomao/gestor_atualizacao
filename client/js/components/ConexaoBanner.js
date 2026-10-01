@@ -1,4 +1,4 @@
-import { icon } from "../utils/icons.js";
+import { iconeSvg } from "../utils/icones.js";
 
 /** De quanto em quanto tempo tentar de novo enquanto o servidor está fora. */
 const INTERVALO_MS = 5000;
@@ -24,7 +24,7 @@ const INTERVALO_MS = 5000;
  */
 export class ConexaoBanner {
   /**
-   * @param {import('../api/ApiClient').ApiClient} api
+   * @param {import('../api/ApiPainel').ApiPainel} api
    * @param {() => void} aoVoltar chamado quando o servidor responde de novo
    */
   constructor(api, aoVoltar) {
@@ -43,7 +43,7 @@ export class ConexaoBanner {
      * quem apaga a faixa é a resposta do servidor, não o palpite do navegador
      * (o Wi-Fi voltar não quer dizer que o servidor esteja de pé).
      */
-    // Passa pelo `ApiClient`, e não direto no `_mostrar()`: é ele que guarda o
+    // Passa pelo `ApiPainel`, e não direto no `_mostrar()`: é ele que guarda o
     // estado da conexão, e uma faixa que aparecesse por fora dele deixaria o
     // cliente se achando online -- aí a primeira resposta boa depois da volta
     // não seria uma troca de estado, não avisaria ninguém, e a faixa ficaria
@@ -60,7 +60,7 @@ export class ConexaoBanner {
     this.el.className = "conexao-aviso";
     this.el.setAttribute("role", "status");
     this.el.innerHTML = `
-      <span class="conexao-aviso__icone" aria-hidden="true">${icon("alerta")}</span>
+      <span class="conexao-aviso__icone" aria-hidden="true">${iconeSvg("alerta")}</span>
       <span class="conexao-aviso__texto">
         <strong>Sem conexão com o servidor.</strong>
         <span data-role="detalhe">Os dados na tela são os últimos que chegaram. Tentando de novo…</span>
@@ -77,7 +77,7 @@ export class ConexaoBanner {
    * servidor responde. `/auth/status` é a mais barata que existe aqui, e não
    * muda nada do lado de lá.
    *
-   * Quem apaga a faixa não é este método: é o próprio `ApiClient`, que ao
+   * Quem apaga a faixa não é este método: é o próprio `ApiPainel`, que ao
    * receber resposta dispara `conexao:mudou`. Assim existe um caminho só para
    * "voltou", e ele vale também quando quem descobriu foi outra chamada
    * qualquer feita no meio tempo.

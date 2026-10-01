@@ -21,11 +21,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-repo-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const cleanup = () => {
     try {
       db.conn.close();
@@ -69,7 +69,7 @@ test("AtualizacaoRepository - ordenação por data", async (t) => {
 
     await t.test("registro sem data não some da lista", () => {
       // Quase metade do histórico importado de planilha não tem data. Sumir
-      // da listagem seria perder o registro do atendimento na prática.
+      // da listagem seria perder o registro da atualização na prática.
       inserir(env.db, { cliente: "SemData", data: "" });
       const { rows, total } = env.db.atualizacoes.list();
       assert.equal(total, 4);
@@ -156,7 +156,7 @@ test("AtualizacaoRepository - busca e filtro por responsável", async (t) => {
     });
 
     await t.test("a lista de responsáveis distintos agrupa e ordena", () => {
-      const nomes = env.db.atualizacoes.distinctResponsaveis();
+      const nomes = env.db.atualizacoes.responsaveisDistintos();
       assert.deepEqual(nomes, ["Camila", "Marcos"], "uma entrada por pessoa, em ordem");
     });
   } finally {
@@ -234,6 +234,31 @@ test("AtualizacaoRepository - ordenação por coluna", async (t) => {
         env.db.atualizacoes.list("", "Todos", { sortBy: "cliente; DROP TABLE atualizacoes--", sortDir: "asc" })
       );
       assert.equal(env.db.atualizacoes.list().total, 3, "a tabela continua lá");
+    });
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("BancoDeDados.transacao - escritas de vários repositórios entram juntas ou não entram", async (t) => {
+  const env = ambiente();
+  try {
+    await t.test("se algo lança no meio, nada do que veio antes fica gravado", () => {
+      assert.throws(() => env.db.transacao(() => {
+        inserir(env.db, { cliente: "Loja A", sistema: "B_Vendas", data: "01/09/2026" });
+        inserir(env.db, { cliente: "Loja B", sistema: "B_NFe", data: "02/09/2026" });
+        throw new Error("falhou no meio");
+      }), /falhou no meio/);
+      assert.equal(env.db.atualizacoes.count(), 0, "a atualização gravada antes do erro foi desfeita");
+    });
+
+    await t.test("sem erro, tudo entra e o valor de fn é devolvido", () => {
+      const r = env.db.transacao(() => {
+        inserir(env.db, { cliente: "Loja B", sistema: "B_Vendas", data: "02/09/2026" });
+        return "pronto";
+      });
+      assert.equal(r, "pronto");
+      assert.equal(env.db.atualizacoes.count(), 1);
     });
   } finally {
     env.cleanup();

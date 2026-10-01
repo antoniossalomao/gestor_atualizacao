@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
-const { ValidationError, ForbiddenError } = require("../shared/errors");
+const { ErroDeValidacao, ErroDePermissao } = require("../shared/erros");
 
 /** Status que o agente pode reportar, agrupados pelo que significam no painel. */
 const STATUS_SUCESSO = ["OK", "SUCESSO", "ATUALIZADO", "CONCLUIDO"];
@@ -18,12 +18,12 @@ const HORAS_ATE_PENDENTE_DEMORADO = 24;
  * publicada / substituída e monta o contrato consumido pelo Worker C#.
  * Nenhum controller ou view deve duplicar essas regras.
  *
- * Três mudanças estruturais em relação à primeira versão:
+ * Três decisões estruturais:
  *
- * **1. Toda versão pertence a um sistema.** Antes não havia esse campo, e
- * `check()` devolvia "a última publicada" sem olhar sistema nenhum -- o
- * agente do B_NFE podia baixar e instalar o pacote do B_VENDAS. Agora cada
- * sistema tem sua própria linha do tempo.
+ * **1. Toda versão pertence a um sistema.** Sem isso, `check()` devolveria "a
+ * última publicada" sem olhar sistema nenhum -- o agente do B_NFE poderia
+ * baixar e instalar o pacote do B_VENDAS. Cada sistema tem sua própria linha
+ * do tempo.
  *
  * **2. Publicar substitui a anterior do mesmo sistema.** Só existe uma versão
  * no ar por sistema, sempre. A anterior vira `substituida` (e não some do
@@ -46,24 +46,24 @@ class VersaoService {
    *
    * Existe como propriedade publica porque o SaudeService precisa dela para
    * contar os pacotes e somar o tamanho em disco -- e ja tentava le-la como
-   * `this.versoes.packagesDir`, que NAO EXISTIA. `fs.existsSync(undefined)`
+   * `this.versoes.pastaDosPacotes`, que NAO EXISTIA. `fs.existsSync(undefined)`
    * devolve false em vez de lancar, entao o painel de Saude reportava
    * "0 pacotes, 0 bytes" para sempre, sem erro nenhum no log. Encontrado por
    * verificacao estatica de tipos, nao por alguem olhando a tela: o numero
    * zero e' plausivel demais para chamar atencao.
    */
-  get packagesDir() {
+  get pastaDosPacotes() {
     return path.join(path.dirname(this.db.path), "packages");
   }
 
   /** Lista versões para o painel, convertendo o JSON persistido em array. */
   list() {
-    return this.db.versoes.list().map((item) => this._publicItem(item));
+    return this.db.versoes.list().map((item) => this._itemPublico(item));
   }
 
   /** O que está no ar agora, uma linha por sistema. */
   ativas() {
-    return this.db.versoes.publicadasPorSistema().map((item) => this._publicItem(item));
+    return this.db.versoes.publicadasPorSistema().map((item) => this._itemPublico(item));
   }
 
   /** Devolve os retornos dos agentes, com filtros opcionais. */
@@ -86,7 +86,7 @@ class VersaoService {
    */
   _encontrarAgente(cnpj) {
     const identificador = String(cnpj || "").trim();
-    if (!identificador) throw new ValidationError("Informe o identificador do agente.");
+    if (!identificador) throw new ErroDeValidacao("Informe o identificador do agente.");
 
     const somenteDigitos = identificador.replace(/\D/g, "");
     const cnpjNumerico = somenteDigitos.length === 14 && /^[\d.\-/\s]+$/.test(identificador);
@@ -94,7 +94,7 @@ class VersaoService {
       const atual = String(item.cnpj || "").trim();
       return cnpjNumerico ? atual.replace(/\D/g, "") === somenteDigitos : atual === identificador;
     });
-    if (!agente) throw new ValidationError("Agente não encontrado.");
+    if (!agente) throw new ErroDeValidacao("Agente não encontrado.");
     return agente;
   }
 
@@ -107,7 +107,7 @@ class VersaoService {
 
     const retornosExcluidos = this.db.versoes.removerAgente(agente.cnpj);
     if (retornosExcluidos === 0) {
-      throw new ValidationError("Nenhum retorno do agente foi excluído. Atualize a tela e tente novamente.");
+      throw new ErroDeValidacao("Nenhum retorno do agente foi excluído. Atualize a tela e tente novamente.");
     }
     this.historico.registrar(
       usuario,
@@ -232,7 +232,7 @@ class VersaoService {
   /** Resolve um pacote sem permitir que o nome escape da pasta de uploads. */
   download(filename) {
     const filePath = this._caminhoPacote(filename);
-    if (!filePath || !fs.existsSync(filePath)) throw new ValidationError("Pacote não encontrado.");
+    if (!filePath || !fs.existsSync(filePath)) throw new ErroDeValidacao("Pacote não encontrado.");
     return filePath;
   }
 
@@ -240,7 +240,7 @@ class VersaoService {
   async create(input, usuario, file, baseUrl) {
     try {
       if (file) {
-        const hash = await sha256Stream(file.path);
+        const hash = await hashSha256DoArquivo(file.path);
         input = {
           ...input,
           tamanhoBytes: file.size,
@@ -254,14 +254,14 @@ class VersaoService {
           ],
         };
       }
-      const data = this._validate(input);
+      const dados = this._validar(input);
       const item = this.db.versoes.insert({
-        ...data,
+        ...dados,
         criadoEm: new Date().toISOString(),
         criadoPor: usuario?.id || null,
       });
       this.historico.registrar(usuario, "criar", "versao", `Versão ${item.versao} de ${item.sistema} criada`);
-      return this._publicItem(item);
+      return this._itemPublico(item);
     } catch (err) {
       // Limpeza de arquivo órfão quando qualquer falha ocorre antes da persistência
       if (file?.path) {
@@ -278,11 +278,11 @@ class VersaoService {
   /** Atualiza apenas rascunhos; versões publicadas são imutáveis. */
   update(id, input, usuario) {
     const atual = this.db.versoes.find(id);
-    if (!atual) throw new ValidationError("Versão não encontrada.");
-    if (atual.status === "publicada") throw new ValidationError("Uma versão publicada não pode ser alterada.");
-    const item = this.db.versoes.update(id, this._validate({ ...atual, ...input }));
-    this.historico.registrar(usuario, "atualizar", "versao", `Versão ${item.versao} de ${item.sistema} atualizada`, { antes: this._publicItem(atual), depois: this._publicItem(item) });
-    return this._publicItem(item);
+    if (!atual) throw new ErroDeValidacao("Versão não encontrada.");
+    if (atual.status === "publicada") throw new ErroDeValidacao("Uma versão publicada não pode ser alterada.");
+    const item = this.db.versoes.update(id, this._validar({ ...atual, ...input }));
+    this.historico.registrar(usuario, "atualizar", "versao", `Versão ${item.versao} de ${item.sistema} atualizada`, { antes: this._itemPublico(atual), depois: this._itemPublico(item) });
+    return this._itemPublico(item);
   }
 
   /**
@@ -292,22 +292,22 @@ class VersaoService {
    */
   publish(id, usuario) {
     if (usuario && usuario.role !== "admin") {
-      throw new ForbiddenError("Apenas administradores podem publicar versões.");
+      throw new ErroDePermissao("Apenas administradores podem publicar versões.");
     }
     const atual = this.db.versoes.find(id);
-    if (!atual) throw new ValidationError("Versão não encontrada.");
-    if (atual.status !== "rascunho") throw new ValidationError("Somente uma versão em rascunho pode ser publicada.");
-    if (!atual.sistema) throw new ValidationError("Esta versão não tem sistema definido e não pode ser publicada.");
+    if (!atual) throw new ErroDeValidacao("Versão não encontrada.");
+    if (atual.status !== "rascunho") throw new ErroDeValidacao("Somente uma versão em rascunho pode ser publicada.");
+    if (!atual.sistema) throw new ErroDeValidacao("Esta versão não tem sistema definido e não pode ser publicada.");
 
     // Validação preventiva: os arquivos do pacote precisam existir no disco
     const pacotes = JSON.parse(atual.pacotesJson || "[]");
     if (!pacotes || pacotes.length === 0) {
-      throw new ValidationError("Esta versão não possui pacote associado e não pode ser publicada.");
+      throw new ErroDeValidacao("Esta versão não possui pacote associado e não pode ser publicada.");
     }
     for (const pct of pacotes) {
       const caminho = this._caminhoPacote(pct.file);
       if (!caminho || !fs.existsSync(caminho)) {
-        throw new ValidationError(`O arquivo do pacote '${pct.file}' não foi encontrado no disco do servidor.`);
+        throw new ErroDeValidacao(`O arquivo do pacote '${pct.file}' não foi encontrado no disco do servidor.`);
       }
     }
 
@@ -315,7 +315,7 @@ class VersaoService {
     if (atual.alcance === "piloto") {
       const item = this.db.versoes.publicarPiloto(id, new Date().toISOString());
       this.historico.registrar(usuario, "publicar", "versao", `Versão piloto ${item.versao} de ${item.sistema} publicada para ${JSON.parse(item.codigosClientesJson || "[]").length} clientes`);
-      return { versao: this._publicItem(item), substituidas: [] };
+      return { versao: this._itemPublico(item), substituidas: [] };
     }
 
     const anteriores = this.db.versoes.publicadasDoSistemaExceto(atual.sistema, id);
@@ -335,28 +335,28 @@ class VersaoService {
         `Versão ${antiga.versao} de ${antiga.sistema} substituída pela ${item.versao}`
       );
     }
-    return { versao: this._publicItem(item), substituidas: anteriores.map((v) => this._publicItem(v)) };
+    return { versao: this._itemPublico(item), substituidas: anteriores.map((v) => this._itemPublico(v)) };
   }
 
   promover(id, usuario) {
-    if (usuario?.role !== "admin") throw new ForbiddenError("Apenas administradores podem promover versões.");
+    if (usuario?.role !== "admin") throw new ErroDePermissao("Apenas administradores podem promover versões.");
     const atual = this.db.versoes.find(id);
-    if (!atual || atual.status !== "piloto") throw new ValidationError("Esta versão não está em piloto.");
+    if (!atual || atual.status !== "piloto") throw new ErroDeValidacao("Esta versão não está em piloto.");
     const anteriores = this.db.versoes.publicadasDoSistemaExceto(atual.sistema, id);
     const item = this.db.versoes.promoverPiloto(id, new Date().toISOString(), anteriores.map((v) => v.id));
     this.historico.registrar(usuario, "publicar", "versao", `Versão piloto ${item.versao} de ${item.sistema} promovida para produção geral`);
-    return { versao: this._publicItem(item), substituidas: anteriores.map((v) => this._publicItem(v)) };
+    return { versao: this._itemPublico(item), substituidas: anteriores.map((v) => this._itemPublico(v)) };
   }
 
   rollback(id, usuario) {
-    if (usuario?.role !== "admin") throw new ForbiddenError("Apenas administradores podem executar rollback.");
+    if (usuario?.role !== "admin") throw new ErroDePermissao("Apenas administradores podem executar rollback.");
     const atual = this.db.versoes.find(id);
-    if (!atual || atual.status !== "publicada") throw new ValidationError("A versão informada não está em produção.");
+    if (!atual || atual.status !== "publicada") throw new ErroDeValidacao("A versão informada não está em produção.");
     const anterior = this.db.versoes.anteriorSubstituida(id, atual.sistema);
-    if (!anterior) throw new ValidationError("Não há versão anterior disponível para rollback.");
+    if (!anterior) throw new ErroDeValidacao("Não há versão anterior disponível para rollback.");
     const restaurada = this.db.versoes.rollback(id, anterior.id, new Date().toISOString());
     this.historico.registrar(usuario, "atualizar", "versao", `Rollback de ${atual.sistema}: ${atual.versao} para ${anterior.versao}`);
-    return { versao: this._publicItem(restaurada), substituida: this._publicItem(atual) };
+    return { versao: this._itemPublico(restaurada), substituida: this._itemPublico(atual) };
   }
 
   /**
@@ -365,10 +365,10 @@ class VersaoService {
    */
   remove(id, usuario) {
     if (usuario && usuario.role !== "admin") {
-      throw new ForbiddenError("Apenas administradores podem excluir versões.");
+      throw new ErroDePermissao("Apenas administradores podem excluir versões.");
     }
     const atual = this.db.versoes.find(id);
-    if (!atual) throw new ValidationError("Versão não encontrada.");
+    if (!atual) throw new ErroDeValidacao("Versão não encontrada.");
     const eraPublicada = atual.status === "publicada";
 
     for (const pacote of JSON.parse(atual.pacotesJson || "[]")) {
@@ -386,7 +386,7 @@ class VersaoService {
       "excluir",
       "versao",
       `Versão ${atual.versao} de ${atual.sistema} excluída${eraPublicada ? " (estava publicada -- sistema fica sem versão-alvo)" : ""}`,
-      { antes: this._publicItem(atual), depois: null }
+      { antes: this._itemPublico(atual), depois: null }
     );
     return { ok: true, eraPublicada };
   }
@@ -400,7 +400,7 @@ class VersaoService {
    */
   check(cnpj, versaoAtual, sistema) {
     const alvo = String(sistema || "").trim();
-    if (!alvo) throw new ValidationError("Informe o sistema no parâmetro 'sistema'.");
+    if (!alvo) throw new ErroDeValidacao("Informe o sistema no parâmetro 'sistema'.");
 
     // Rede de seguranca: o Worker C# atual consulta GET /update/status/:cnpj
     // ANTES disto e nem chega a chamar check() se estiver pausado, mas um
@@ -415,8 +415,8 @@ class VersaoService {
     const piloto = this.db.versoes.pilotosDoSistema(alvo).find((item) =>
       JSON.parse(item.codigosClientesJson || "[]").some((valor) => normalizarCodigoCliente(valor) === normalizado)
     );
-    const latest = piloto || this.db.versoes.latestPublished(alvo);
-    if (!latest || compareVersions(latest.versao, versaoAtual || "0.0.0") <= 0) {
+    const latest = piloto || this.db.versoes.ultimaPublicada(alvo);
+    if (!latest || compararVersoes(latest.versao, versaoAtual || "0.0.0") <= 0) {
       return { update_available: false, sistema: alvo };
     }
     return {
@@ -433,8 +433,8 @@ class VersaoService {
   log(input) {
     const cnpj = String(input.cnpj || "").trim();
     const status = String(input.status || "").trim().toUpperCase();
-    if (!cnpj || !status) throw new ValidationError("CNPJ e status são obrigatórios.");
-    this.db.versoes.addLog({
+    if (!cnpj || !status) throw new ErroDeValidacao("CNPJ e status são obrigatórios.");
+    this.db.versoes.adicionarRegistro({
       cnpj,
       hwid: String(input.hwid || "").trim(),
       maquina: String(input.maquina || input.machine || "").trim(),
@@ -451,25 +451,25 @@ class VersaoService {
   }
 
   /** Normaliza e valida dados vindos do formulário ou de uma chamada interna. */
-  _validate(input = {}) {
+  _validar(input = {}) {
     const sistema = String(input.sistema || input.system || "").trim();
-    if (!sistema) throw new ValidationError("Escolha a qual sistema esta versão pertence.");
+    if (!sistema) throw new ErroDeValidacao("Escolha a qual sistema esta versão pertence.");
 
     const versao = String(input.versao || input.version || "").trim();
     if (!/^\d+(\.\d+){1,3}([-.][0-9A-Za-z.-]+)?$/.test(versao)) {
-      throw new ValidationError("Informe uma versão válida, como 2026.08.10.");
+      throw new ErroDeValidacao("Informe uma versão válida, como 2026.08.10.");
     }
 
     let pacotes;
     try {
       pacotes = typeof input.pacotes === "string" ? JSON.parse(input.pacotes) : input.pacotes || [];
     } catch {
-      throw new ValidationError("Pacotes precisam estar em JSON válido.");
+      throw new ErroDeValidacao("Pacotes precisam estar em JSON válido.");
     }
-    if (!Array.isArray(pacotes) || pacotes.length === 0) throw new ValidationError("Cadastre pelo menos um pacote.");
+    if (!Array.isArray(pacotes) || pacotes.length === 0) throw new ErroDeValidacao("Cadastre pelo menos um pacote.");
     for (const pacote of pacotes) {
       if (!pacote.file || !pacote.url || !pacote.sha256) {
-        throw new ValidationError("Cada pacote precisa de arquivo, URL e SHA-256.");
+        throw new ErroDeValidacao("Cada pacote precisa de arquivo, URL e SHA-256.");
       }
     }
 
@@ -480,24 +480,24 @@ class VersaoService {
       try {
         valoresCodigos = origemCodigos.trim().startsWith("[") ? JSON.parse(origemCodigos) : origemCodigos.split(/[,;\n]+/);
       } catch {
-        throw new ValidationError("A seleção de clientes do grupo piloto é inválida.");
+        throw new ErroDeValidacao("A seleção de clientes do grupo piloto é inválida.");
       }
     }
     const codigosInformados = (Array.isArray(valoresCodigos) ? valoresCodigos : [])
       .map((valor) => String(valor).trim())
       .filter(Boolean);
     if (alcance === "piloto" && codigosInformados.length === 0) {
-      throw new ValidationError("Selecione ao menos um cliente para o grupo piloto.");
+      throw new ErroDeValidacao("Selecione ao menos um cliente para o grupo piloto.");
     }
     if (codigosInformados.some((codigo) => codigo.length > 80)) {
-      throw new ValidationError("Um código de cliente do grupo piloto é longo demais.");
+      throw new ErroDeValidacao("Um código de cliente do grupo piloto é longo demais.");
     }
 
     const codigosCadastrados = this.db.clientes.codigosExistentes(codigosInformados);
     const mapaCadastrados = new Map(codigosCadastrados.map((codigo) => [codigo.toUpperCase(), codigo]));
     const desconhecidos = codigosInformados.filter((codigo) => !mapaCadastrados.has(codigo.toUpperCase()));
     if (alcance === "piloto" && desconhecidos.length) {
-      throw new ValidationError(`Código de cliente não cadastrado: ${desconhecidos[0]}.`);
+      throw new ErroDeValidacao(`Código de cliente não cadastrado: ${desconhecidos[0]}.`);
     }
     const codigosClientes = [...new Map(codigosInformados.map((codigo) => {
       const canonico = mapaCadastrados.get(codigo.toUpperCase()) || codigo;
@@ -520,10 +520,10 @@ class VersaoService {
   _caminhoPacote(filename) {
     const safeName = path.basename(String(filename || ""));
     if (!safeName || safeName === "." || safeName === "..") return null;
-    return path.join(this.packagesDir, safeName);
+    return path.join(this.pastaDosPacotes, safeName);
   }
 
-  _publicItem(item) {
+  _itemPublico(item) {
     const codigosClientes = JSON.parse(item.codigosClientesJson || "[]");
     const metricasPiloto = item.status === "piloto" ? this.db.versoes.adocaoPiloto(item.sistema, item.versao, codigosClientes) : null;
     return { ...item, pacotes: JSON.parse(item.pacotesJson || "[]"), codigosClientes, metricasPiloto };
@@ -562,7 +562,7 @@ function derivarSituacao({ pausado, online, status, ultimaVersao, alvo, horasSem
 }
 
 /** Calcula o digest do pacote via stream assíncrono para não travar o Event Loop do Node.js. */
-function sha256Stream(filePath) {
+function hashSha256DoArquivo(filePath) {
   return new Promise((resolve, reject) => {
     const hash = crypto.createHash("sha256");
     const stream = fs.createReadStream(filePath);
@@ -574,7 +574,7 @@ function sha256Stream(filePath) {
 }
 
 /** Compara versões numéricas sem depender da ordem lexicográfica das strings. */
-function compareVersions(left, right) {
+function compararVersoes(left, right) {
   const a = String(left).split(/[.-]/).map((part) => Number(part) || 0);
   const b = String(right || "0.0.0").split(/[.-]/).map((part) => Number(part) || 0);
   for (let index = 0; index < Math.max(a.length, b.length); index += 1) {

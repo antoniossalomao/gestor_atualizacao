@@ -1,5 +1,5 @@
 /*
- * P01 -- transporte seguro (docs/MELHORIAS.md). Duas partes:
+ * Transporte seguro (ADR-0010). Duas partes:
  * - lerTransporte: as combinações de SESSION_SECURE/TRUST_PROXY que antes
  *   falhavam em silêncio ("ninguém consegue entrar", cookie por HTTP) agora
  *   recusam a subida, e HTTP puro nunca escuta na rede;
@@ -17,7 +17,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Server } = require("../src/Server");
+const { Servidor } = require("../src/Servidor");
 const { lerTransporte } = require("../src/config/transporte");
 
 test("lerTransporte - combinações do .env", async (t) => {
@@ -71,7 +71,7 @@ test("lerTransporte - combinações do .env", async (t) => {
 /** @param {{sessionSecure: boolean, trustProxy?: boolean}} opcoes */
 async function subirServidor({ sessionSecure, trustProxy }) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-transporte-"));
-  const server = new Server({
+  const server = new Servidor({
     port: 0,
     host: "127.0.0.1",
     dbPath: path.join(tmpDir, "gestao.db"),
@@ -112,7 +112,7 @@ test("Servidor com HTTPS ligado (SESSION_SECURE=true)", async (t) => {
     assert.deepEqual(r.headers.getSetCookie(), []);
 
     const status = await (await fetch(`${base}/api/auth/status`, { headers: PELO_PROXY })).json();
-    assert.equal(status.needsSetup, true, "a conta não pode ter sido criada");
+    assert.equal(status.precisaConfigurar, true, "a conta não pode ter sido criada");
   });
 
   await t.test("a tela também não é servida por HTTP", async () => {

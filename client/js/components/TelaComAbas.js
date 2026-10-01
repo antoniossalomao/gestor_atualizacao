@@ -1,6 +1,6 @@
-import { prefs } from "../app/prefs.js";
+import { prefs } from "../app/preferencias.js";
 import { html } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
+import { iconeHtml } from "../utils/icones.js";
 
 /**
  * Uma tela dividida em abas sublinhadas -- a Administração e as
@@ -21,7 +21,7 @@ export class TelaComAbas {
   /**
    * @param {HTMLElement} container
    * @param {{
-   *   abas: Array<{key: string, rotulo: string, icone: Parameters<typeof iconHtml>[0]}>,
+   *   abas: Array<{key: string, rotulo: string, icone: Parameters<typeof iconeHtml>[0]}>,
    *   rotulo: string,
    *   idBase: string,
    *   chavePrefs: string,
@@ -52,7 +52,7 @@ export class TelaComAbas {
               (a) => html`
                 <button type="button" class="tela-abas__aba" role="tab" id="${idBase}-aba-${a.key}" data-aba="${a.key}"
                         aria-controls="${idBase}-painel-${a.key}" aria-selected="false" tabindex="-1">
-                  ${iconHtml(a.icone)}<span>${a.rotulo}</span><span class="tela-abas__contador" data-role="contador" hidden></span>
+                  ${iconeHtml(a.icone)}<span>${a.rotulo}</span><span class="tela-abas__contador" data-role="contador" hidden></span>
                 </button>`
             )}
           </nav>

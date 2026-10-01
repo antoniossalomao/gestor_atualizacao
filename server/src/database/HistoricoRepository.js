@@ -1,4 +1,4 @@
-const { buildOrderBy } = require("../shared/sortHelper");
+const { montarOrdenacao } = require("./ordenacao");
 
 /** Colunas que a tela pode pedir para ordenar, e a expressao SQL segura correspondente. */
 const SORT_MAP = {
@@ -11,9 +11,6 @@ const SORT_MAP = {
 
 /**
  * Histórico de ações (quem criou/editou/excluiu o quê, e quando).
- * Tabela nova, sem equivalente no app Python original -- lá o uso era
- * individual, então "quem fez" era sempre a mesma pessoa e não precisava
- * ser registrado.
  *
  * Diferente dos outros repositórios, este não herda de BaseRepository:
  * histórico é um registro de fatos que já aconteceram -- não faz sentido
@@ -60,7 +57,7 @@ class HistoricoRepository {
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM historico ${where}`).get(params).total;
 
     const offset = Math.max(0, (page - 1) * pageSize);
-    const orderBy = buildOrderBy(SORT_MAP, sortBy, sortDir, "id DESC");
+    const orderBy = montarOrdenacao(SORT_MAP, sortBy, sortDir, "id DESC");
     const rows = this.conn
       .prepare(`SELECT * FROM historico ${where} ORDER BY ${orderBy} LIMIT @limit OFFSET @offset`)
       .all({ ...params, limit: pageSize, offset });

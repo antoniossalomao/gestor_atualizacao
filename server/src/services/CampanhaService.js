@@ -1,13 +1,13 @@
 const ExcelJS = require("exceljs");
 
-const { STATUS_OPTIONS } = require("../config/constants");
-const { dataValida } = require("../shared/validation");
-const { ValidationError, NotFoundError } = require("../shared/errors");
-const { splitSystems } = require("../database/AtualizacaoRepository");
+const { OPCOES_STATUS } = require("../config/constantes");
+const { dataValida } = require("./validacao");
+const { ErroDeValidacao, ErroNaoEncontrado } = require("../shared/erros");
+const { separarSistemas } = require("../shared/normalizacao");
 const { acharSistema } = require("../database/SistemaRepository");
 const { situacaoDoSistema, contaParaVersao } = require("./situacaoVersao");
 
-const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+const STATUS_CONCLUIDO = OPCOES_STATUS[OPCOES_STATUS.length - 1];
 /** Status em que a tarefa não encaminha mais o cliente (ver abertasComCliente). */
 const STATUS_ENCERRADOS = [STATUS_CONCLUIDO, "Sem resposta"];
 
@@ -22,10 +22,10 @@ const SITUACOES = { concluido: "Concluído", agendado: "Já agendado", pendente:
  * (server/tests/campanhas.test.js):
  *
  *  1. **Atendido é quem cumpre a meta pela regra de sempre.** O último
- *     atendimento do cliente no sistema passa por `situacaoDoSistema`
+ *     atualização do cliente no sistema passa por `situacaoDoSistema`
  *     contra a VERSÃO-ALVO (não contra a oficial de hoje): atendido na data
  *     da versão-alvo ou depois conta (ADR-0008). Não existe "dar baixa"
- *     manual -- a baixa é registrar o atendimento em Atualizações, como
+ *     manual -- a baixa é registrar a atualização em Atualizações, como
  *     sempre. Uma segunda forma de marcar concluído seria um segundo
  *     lugar para a verdade discordar do histórico.
  *  2. **A meta não anda sozinha.** A versão-alvo é copiada na criação, e
@@ -37,7 +37,7 @@ const SITUACOES = { concluido: "Concluído", agendado: "Já agendado", pendente:
  */
 class CampanhaService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
    */
   constructor(db, historico) {
@@ -49,7 +49,7 @@ class CampanhaService {
   list(situacao = "ativas") {
     const filtro = ["ativas", "encerradas", "todas"].includes(situacao) ? situacao : "ativas";
     const agendas = this._agendasAbertas();
-    // Campanhas do mesmo sistema leem os mesmos clientes e atendimentos: uma
+    // Campanhas do mesmo sistema leem os mesmos clientes e atualizações: uma
     // consulta por SISTEMA, e não por campanha.
     const porSistema = new Map();
     return this.db.campanhas.list(filtro).map((c) => ({ ...c, ...this._placar(c, this._clientes(c, agendas, porSistema)) }));
@@ -82,7 +82,7 @@ class CampanhaService {
   encerrar(id, usuario) {
     const { totalClientes, atendidos, titulo } = this.detalhe(id);
     if (this.db.campanhas.encerrar(Number(id), { usuarioNome: usuario?.nome || "", total: totalClientes, atendidos }) === 0) {
-      throw new ValidationError("Esta campanha já está encerrada.");
+      throw new ErroDeValidacao("Esta campanha já está encerrada.");
     }
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${titulo}" encerrada com ${atendidos} de ${totalClientes} cliente(s) atualizado(s)`);
     return this.detalhe(id);
@@ -90,12 +90,12 @@ class CampanhaService {
 
   reabrir(id, usuario) {
     const campanha = this._achar(id);
-    if (this.db.campanhas.reabrir(campanha.id) === 0) throw new ValidationError("Esta campanha não está encerrada.");
+    if (this.db.campanhas.reabrir(campanha.id) === 0) throw new ErroDeValidacao("Esta campanha não está encerrada.");
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${campanha.titulo}" reaberta`);
     return this.detalhe(campanha.id);
   }
 
-  /** Apaga só a campanha: atendimentos e tarefas criados por causa dela continuam. */
+  /** Apaga só a campanha: atualizações e tarefas criadas por causa dela continuam. */
   remove(id, usuario) {
     const campanha = this._achar(id);
     this.db.campanhas.delete(campanha.id);
@@ -137,7 +137,7 @@ class CampanhaService {
 
   _achar(id) {
     const campanha = this.db.campanhas.find(Number(id));
-    if (!campanha) throw new NotFoundError("Esta campanha não existe mais.");
+    if (!campanha) throw new ErroNaoEncontrado("Esta campanha não existe mais.");
     return campanha;
   }
 
@@ -147,19 +147,19 @@ class CampanhaService {
     const prazo = String(input.prazo || "").trim();
     const cidadeInformada = String(input.cidade || "").trim();
     const cidade = cidadeInformada ? [cidadeAtual, ...this.db.clientes.cidades()].find((item) => item.toLocaleLowerCase("pt-BR") === cidadeInformada.toLocaleLowerCase("pt-BR")) : "";
-    if (cidadeInformada && !cidade) throw new ValidationError("Escolha uma cidade cadastrada nos clientes.");
+    if (cidadeInformada && !cidade) throw new ErroDeValidacao("Escolha uma cidade cadastrada nos clientes.");
     const versaoAlvo = String(input.versaoAlvo || "").trim();
-    if (!titulo) throw new ValidationError("Informe o título da campanha.");
-    if (titulo.length > 120) throw new ValidationError("O título pode ter no máximo 120 caracteres.");
-    if (descricao.length > 1000) throw new ValidationError("A descrição pode ter no máximo 1000 caracteres.");
-    if (!dataValida(prazo)) throw new ValidationError("Campo 'Prazo' precisa estar no formato dd/mm/aaaa.");
+    if (!titulo) throw new ErroDeValidacao("Informe o título da campanha.");
+    if (titulo.length > 120) throw new ErroDeValidacao("O título pode ter no máximo 120 caracteres.");
+    if (descricao.length > 1000) throw new ErroDeValidacao("A descrição pode ter no máximo 1000 caracteres.");
+    if (!dataValida(prazo)) throw new ErroDeValidacao("Campo 'Prazo' precisa estar no formato dd/mm/aaaa.");
     if (!nova) return { titulo, descricao, prazo, cidade };
-    if (!versaoAlvo || !dataValida(versaoAlvo)) throw new ValidationError("Campo 'Versão-alvo' precisa estar no formato dd/mm/aaaa.");
+    if (!versaoAlvo || !dataValida(versaoAlvo)) throw new ErroDeValidacao("Campo 'Versão-alvo' precisa estar no formato dd/mm/aaaa.");
     const sistema = this.db.sistemas.resolver(String(input.sistema || ""));
-    if (!sistema || !sistema.ativo) throw new ValidationError("Escolha um sistema do catálogo.");
+    if (!sistema || !sistema.ativo) throw new ErroDeValidacao("Escolha um sistema do catálogo.");
     // Fixos (B_Atualizador, Suporte Bredas) não têm versão para cobrar -- a
     // campanha nunca terminaria, e ficaria todo mundo "pendente" de nada.
-    if (!contaParaVersao(sistema)) throw new ValidationError(`"${sistema.nome}" não controla versão e não pode ter campanha.`);
+    if (!contaParaVersao(sistema)) throw new ErroDeValidacao(`"${sistema.nome}" não controla versão e não pode ter campanha.`);
     return { titulo, descricao, prazo, cidade, versaoAlvo, sistemaId: sistema.id, sistemaNome: sistema.nome };
   }
 
@@ -169,7 +169,7 @@ class CampanhaService {
     /** @type {Map<number, Array<{id:number, tarefa:string, data:string, responsavel:string, sistemas:Set<number>}>>} */
     const porCliente = new Map();
     for (const t of this.db.agendamentos.abertasComCliente(STATUS_ENCERRADOS)) {
-      const sistemas = new Set(splitSystems(t.sistema).map((nome) => acharSistema(catalogo, nome)?.id).filter(Boolean));
+      const sistemas = new Set(separarSistemas(t.sistema).map((nome) => acharSistema(catalogo, nome)?.id).filter(Boolean));
       if (sistemas.size === 0) continue;
       if (!porCliente.has(t.clienteId)) porCliente.set(t.clienteId, []);
       porCliente.get(t.clienteId).push({ id: t.id, tarefa: t.tarefa, data: t.data, responsavel: t.responsavel, sistemas });
@@ -188,6 +188,8 @@ class CampanhaService {
     const { ultimas, cadastro } = porSistema.get(campanha.sistemaId);
     const lista = cadastro.filter((cliente) => !campanha.cidade || (cliente.cidade || "").trim().toLocaleLowerCase("pt-BR") === campanha.cidade.toLocaleLowerCase("pt-BR")).map(({ id, nome, codigo, cidade }) => {
       const registro = ultimas.get(id);
+      // Sem prazo, de propósito: a campanha pergunta "já chegou na meta?", e
+      // o prazo depois da oficial (A07) só adia o "desatualizado" do Resumo.
       const { situacao: frente } = situacaoDoSistema(registro, campanha.versaoAlvo);
       const agendamento = (agendas.get(id) || []).find((t) => t.sistemas.has(campanha.sistemaId));
       const situacao = frente === "Em dia" ? "concluido" : agendamento ? "agendado" : "pendente";

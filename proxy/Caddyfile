@@ -1,4 +1,4 @@
-# Proxy HTTPS na frente do painel (P01 de docs/MELHORIAS.md), usado pelo
+# Proxy HTTPS na frente do painel (ADR-0010), usado pelo
 # docker-compose.yml. Passo a passo na seção "HTTPS" do README.
 
 {

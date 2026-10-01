@@ -1,6 +1,6 @@
-import { icon } from "../utils/icons.js";
-import { escapeHtml } from "../utils/html.js";
-import { theme } from "../app/theme.js";
+import { iconeSvg } from "../utils/icones.js";
+import { escaparHtml } from "../utils/html.js";
+import { temaApp } from "../app/tema.js";
 import { iniciais, rotuloPapel } from "../domain/pessoa.js";
 
 /**
@@ -42,20 +42,20 @@ export class MenuConta {
     this.container.innerHTML = `
       <button type="button" class="app-account__trigger" data-role="gatilho"
               aria-haspopup="true" aria-expanded="false" aria-controls="menu-conta">
-        <span class="app-account__avatar" aria-hidden="true">${escapeHtml(iniciais(nome || usuario))}</span>
+        <span class="app-account__avatar" aria-hidden="true">${escaparHtml(iniciais(nome || usuario))}</span>
         <span class="app-account__nome">
-          <strong>${escapeHtml(nome || usuario)}</strong>
-          <span>@${escapeHtml(usuario)}</span>
+          <strong>${escaparHtml(nome || usuario)}</strong>
+          <span>@${escaparHtml(usuario)}</span>
         </span>
-        <span class="app-account__chevron" aria-hidden="true">${icon("seta")}</span>
+        <span class="app-account__chevron" aria-hidden="true">${iconeSvg("seta")}</span>
       </button>
 
       <div class="app-menu" id="menu-conta" role="menu" data-role="menu" hidden>
         <div class="app-menu__conta">
-          <span class="app-menu__avatar" aria-hidden="true">${escapeHtml(iniciais(nome || usuario))}</span>
+          <span class="app-menu__avatar" aria-hidden="true">${escaparHtml(iniciais(nome || usuario))}</span>
           <span class="app-menu__conta-texto">
-            <strong>${escapeHtml(nome || usuario)}</strong>
-            <span>@${escapeHtml(usuario)} — ${escapeHtml(rotuloPapel(role))}</span>
+            <strong>${escaparHtml(nome || usuario)}</strong>
+            <span>@${escaparHtml(usuario)} — ${escaparHtml(rotuloPapel(role))}</span>
           </span>
         </div>
 
@@ -69,16 +69,16 @@ export class MenuConta {
         <div class="app-menu__sep" role="separator"></div>
 
         <button type="button" class="app-menu__item" role="menuitem" data-acao="atualizar">
-          <span class="app-menu__icon">${icon("atualizar")}</span>
+          <span class="app-menu__icon">${iconeSvg("atualizar")}</span>
           <span>Atualizar os dados desta tela</span>
         </button>
         <button type="button" class="app-menu__item" role="menuitem" data-acao="config">
-          <span class="app-menu__icon">${icon("config")}</span>
+          <span class="app-menu__icon">${iconeSvg("config")}</span>
           <span>Configurações</span>
           <span class="app-menu__atalho"><kbd>Ctrl</kbd><kbd>,</kbd></span>
         </button>
         <button type="button" class="app-menu__item" role="menuitem" data-acao="atalhos">
-          <span class="app-menu__icon">${icon("teclado")}</span>
+          <span class="app-menu__icon">${iconeSvg("teclado")}</span>
           <span>Atalhos de teclado</span>
           <span class="app-menu__atalho"><kbd>?</kbd></span>
         </button>
@@ -86,7 +86,7 @@ export class MenuConta {
         <div class="app-menu__sep" role="separator"></div>
 
         <button type="button" class="app-menu__item app-menu__item--sair" role="menuitem" data-acao="sair">
-          <span class="app-menu__icon">${icon("logout")}</span>
+          <span class="app-menu__icon">${iconeSvg("logout")}</span>
           <span>Sair da conta</span>
         </button>
       </div>
@@ -139,7 +139,7 @@ export class MenuConta {
   /** As três opções de tema, escritas por extenso e marcando qual está valendo. */
   _montarTema() {
     const trilho = this.menu.querySelector('[data-role="tema"]');
-    const atual = theme.atual();
+    const atual = temaApp.atual();
     for (const opcao of [
       { valor: "sistema", rotulo: "Sistema" },
       { valor: "claro", rotulo: "Claro" },
@@ -156,7 +156,7 @@ export class MenuConta {
       texto.textContent = opcao.rotulo;
       label.append(input, texto);
       input.addEventListener("change", () => {
-        if (input.checked) theme.aplicar(opcao.valor);
+        if (input.checked) temaApp.aplicar(opcao.valor);
       });
       trilho.appendChild(label);
     }
@@ -165,7 +165,7 @@ export class MenuConta {
     // comandos. Sem ouvir o evento, o menu voltaria a abrir marcando a opção
     // que valia da última vez que ELE mesmo foi usado.
     this._aoTrocarTema = () => {
-      const marcado = theme.atual();
+      const marcado = temaApp.atual();
       for (const input of trilho.querySelectorAll("input")) input.checked = input.value === marcado;
     };
     document.addEventListener("tema:mudou", this._aoTrocarTema);

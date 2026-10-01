@@ -6,15 +6,17 @@
  */
 
 /**
- * Os três grupos que o card do Resumo mostra, na ordem da barra. A chave é a
+ * Os grupos que o card do Resumo mostra, na ordem da barra. A chave é a
  * mesma que o /resumo devolve em `situacaoClientes`. "sem_atualizaveis" não
  * entra: quem só tem sistema fixo (ou nenhum) fica fora da conta, e aparece
  * só como uma nota embaixo do card.
  */
 export const GRUPOS_SITUACAO = [
   { chave: "em_dia", rotulo: "Em dia", severidade: "boa", descricao: "B_Vendas atualizado na data da versão oficial ou depois (sem B_Vendas: todos os sistemas)." },
-  { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "Última atualização do B_Vendas antes da versão oficial (sem B_Vendas: de algum sistema)." },
-  { chave: "pendente", rotulo: "Verificação pendente", severidade: "media", descricao: "Sem atraso confirmado, mas falta informação para decidir." },
+  // Neutro, e não amarelo: ninguém está errado ainda. É a versão oficial que
+  // acabou de sair, dentro do prazo da equipe (A07).
+  { chave: "aguardando", rotulo: "Aguardando atualização", severidade: "neutra", descricao: "Atualizado pouco antes da versão oficial, que ainda está dentro do prazo da equipe." },
+  { chave: "desatualizado", rotulo: "Desatualizados", severidade: "alta", descricao: "B_Vendas nunca atualizado, ou com a última atualização antes da versão oficial e o prazo vencido (sem B_Vendas: algum sistema assim)." },
 ];
 
 /**
@@ -45,24 +47,13 @@ export function totaisSituacao(situacao) {
 }
 
 /**
- * O que a lista de um grupo mostra na coluna "Sistemas": os sistemas que
- * puseram o cliente naquele grupo. Quem tem B_Vendas foi decidido só por
- * ele (`decididoPor`, ver services/situacaoVersao.js no servidor), então só
- * ele aparece. Sem B_Vendas, um desatualizado lista os atrasados (não os em
- * dia), e um pendente lista os que estão sem informação.
- * @param {string} grupo
- * @param {Array<{sistema: string, situacao: string}>} sistemas
- * @param {string|null} [decididoPor]
+ * Texto da coluna "Sistemas" das listas do Resumo. QUAIS sistemas explicam o
+ * grupo é regra do servidor (`explicam`, em services/situacaoVersao.js);
+ * aqui só se escreve, e quem nunca foi atualizado diz isso.
+ * @param {Array<{sistema: string, situacao: string}>} explicam
  */
-export function sistemasQueExplicam(grupo, sistemas, decididoPor = null) {
-  const relevantes = decididoPor
-    ? sistemas.filter((s) => s.sistema === decididoPor)
-    : grupo === "desatualizado"
-      ? sistemas.filter((s) => s.situacao === "Desatualizado")
-      : grupo === "pendente"
-        ? sistemas.filter((s) => s.situacao !== "Em dia" && s.situacao !== "Desatualizado")
-        : sistemas;
-  return relevantes
-    .map((s) => (grupo === "pendente" ? `${s.sistema}: ${s.situacao.toLowerCase()}` : s.sistema))
+export function descreverSistemasQueExplicam(explicam) {
+  return explicam
+    .map((s) => (s.situacao === "Nunca atualizado" || s.situacao === "Sem informação" ? `${s.sistema} (${s.situacao.toLowerCase()})` : s.sistema))
     .join(", ");
 }

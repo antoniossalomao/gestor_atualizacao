@@ -1,9 +1,7 @@
 /*
  * Tokens visuais do app: cores, tipografia, espaçamento, raio de borda,
- * sombra. Tudo definido como "variável CSS" (--nome-da-variável), a mesma
- * ideia da paleta central em Python (gestor/config.py + gestor/theme.py),
- * só que aqui é o próprio navegador que entende o formato -- qualquer outro
- * arquivo CSS usa `var(--cor-x)` em vez de repetir o valor da cor.
+ * sombra. Tudo definido como "variável CSS" (--nome-da-variável): qualquer
+ * outro arquivo CSS usa `var(--cor-x)` em vez de repetir o valor da cor.
  *
  * ESTE É O ÚNICO ARQUIVO COM COR LITERAL. É essa disciplina que permitiu
  * acrescentar um tema claro sem tocar em nenhum componente: o bloco
@@ -48,7 +46,6 @@
   --cor-amarelo: #fbbf24;
   --cor-amarelo-fraco: rgba(251, 191, 36, 0.12);
   --cor-sobre-accent: #ffffff;
-  --cor-sobre-alerta: #1a1406;
   --cor-sobre-perigo: #ffffff;
 
   /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
@@ -58,12 +55,9 @@
   --status-ok-texto: #a7f3d0;
 
   --status-alerta-bg: rgba(251, 191, 36, 0.10);
-  --status-alerta-borda: rgba(251, 191, 36, 0.25);
   --status-alerta-solido: #fbbf24;
-  --status-alerta-texto: #fde68a;
 
   --status-erro-bg: rgba(248, 113, 113, 0.10);
-  --status-erro-borda: rgba(248, 113, 113, 0.25);
   --status-erro-solido: #f87171;
   --status-erro-texto: #fca5a5;
 
@@ -72,10 +66,6 @@
   --status-info-solido: #3b82f6;
   --status-info-texto: #bfdbfe;
 
-  --status-neutro-bg: rgba(148, 163, 184, 0.10);
-  --status-neutro-borda: rgba(148, 163, 184, 0.20);
-  --status-neutro-solido: #94a3b8;
-  --status-neutro-texto: #cbd5e1;
 
   /* Fundos usados pelas tabelas com linha tingida por severidade (Resumo,
      Sistemas). */
@@ -92,7 +82,6 @@
   --veu-overlay: rgba(8, 10, 14, 0.65);
   --sidebar-fundo: #12151c;
   --halo-topo: transparent;
-  --grade: transparent;
 
   /* ==========================================================================
      TIPOGRAFIA
@@ -139,7 +128,6 @@
   --sp-5: 20px;
   --sp-6: 24px;
   --sp-8: 32px;
-  --sp-10: 40px;
 
   /* Respiro horizontal da área de conteúdo -- um token só, para o cabeçalho e
      o miolo nunca saírem de alinhamento como acontecia antes (o header usava
@@ -172,9 +160,24 @@
   --largura-sidebar: 238px;
   --largura-sidebar-recolhida: 64px;
 
+  /* Camadas da tela inteira, de baixo para cima. Um lugar só para a ordem:
+     com os números soltos em cada regra, o modal chegou a ficar em 1100,
+     ABAIXO da gaveta (1200) de onde ele nasce, e "Descartar alterações?"
+     abria escondido atrás do formulário. Quem precisa de uma camada nova
+     entra nesta escala, não num número novo. O z-index pequeno DENTRO de um
+     componente (1, 2, 20) é local e não entra aqui. */
+  --camada-barra: 90;          /* barra de ações em lote, grudada na tabela */
+  --camada-menu: 200;          /* menus suspensos da página */
+  --camada-cabecalho: 1000;    /* menu do app e dicas da barra lateral */
+  --camada-faixa: 1050;        /* faixa "sem conexão com o servidor" */
+  --camada-gaveta: 1200;       /* gaveta do formulário e paleta de comandos */
+  --camada-modal: 1300;        /* aviso, confirmação e painéis em modal */
+  --camada-notificacao: 1400;  /* toasts, acima até de um modal aberto */
+  --camada-atalho: 2000;       /* "pular para o conteúdo", quando focado */
+
   /* ==========================================================================
      DENSIDADE DAS TABELAS
-     Escolha do usuário no painel de Configurações (ver js/app/appearance.js),
+     Escolha do usuário no painel de Configurações (ver js/app/aparencia.js),
      aplicada como `data-densidade` no <html> -- mesmo mecanismo do tema.
      Só a altura da linha muda; o tamanho do texto fica igual nos três modos,
      porque encolher a fonte para "caber mais" só troca um problema (rolar) por
@@ -327,7 +330,6 @@
   --cor-amarelo: #9a6200;
   --cor-amarelo-fraco: rgba(154, 98, 0, 0.12);
   --cor-sobre-accent: #ffffff;
-  --cor-sobre-alerta: #ffffff;
   --cor-sobre-perigo: #ffffff;
 
   /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
@@ -337,12 +339,9 @@
   --status-ok-texto: #065f46;
 
   --status-alerta-bg: #fffbeb;
-  --status-alerta-borda: #fde68a;
   --status-alerta-solido: #9a6200;
-  --status-alerta-texto: #854d0e;
 
   --status-erro-bg: #fef2f2;
-  --status-erro-borda: #fecdd3;
   --status-erro-solido: #c62f38;
   --status-erro-texto: #991b1b;
 
@@ -351,10 +350,6 @@
   --status-info-solido: #1263d6;
   --status-info-texto: #1e40af;
 
-  --status-neutro-bg: #f1f5f9;
-  --status-neutro-borda: #e2e8f0;
-  --status-neutro-solido: #64748b;
-  --status-neutro-texto: #334155;
 
   --zebra-a: #ffffff;
   --zebra-b: #f5f7fc;
@@ -368,7 +363,6 @@
   --veu-overlay: rgba(16, 25, 42, 0.35);
   --sidebar-fundo: rgba(255, 255, 255, 0.96);
   --halo-topo: transparent;
-  --grade: transparent;
 
   --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 8px 20px -16px rgba(16, 25, 42, 0.2);
   --sombra-flutuante: 0 12px 32px -8px rgba(16, 25, 42, 0.16), 0 4px 12px rgba(16, 25, 42, 0.08);
@@ -404,7 +398,6 @@
     --cor-amarelo: #9a6200;
     --cor-amarelo-fraco: rgba(154, 98, 0, 0.12);
     --cor-sobre-accent: #ffffff;
-    --cor-sobre-alerta: #ffffff;
     --cor-sobre-perigo: #ffffff;
 
     /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
@@ -414,12 +407,9 @@
     --status-ok-texto: #065f46;
 
     --status-alerta-bg: #fffbeb;
-    --status-alerta-borda: #fde68a;
     --status-alerta-solido: #9a6200;
-    --status-alerta-texto: #854d0e;
 
     --status-erro-bg: #fef2f2;
-    --status-erro-borda: #fecdd3;
     --status-erro-solido: #c62f38;
     --status-erro-texto: #991b1b;
 
@@ -428,10 +418,6 @@
     --status-info-solido: #1263d6;
     --status-info-texto: #1e40af;
 
-    --status-neutro-bg: #f1f5f9;
-    --status-neutro-borda: #e2e8f0;
-    --status-neutro-solido: #64748b;
-    --status-neutro-texto: #334155;
 
     --zebra-a: #ffffff;
     --zebra-b: #f5f7fc;
@@ -445,7 +431,6 @@
     --veu-overlay: rgba(16, 25, 42, 0.35);
     --sidebar-fundo: rgba(255, 255, 255, 0.96);
     --halo-topo: transparent;
-    --grade: transparent;
 
     --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 8px 20px -16px rgba(16, 25, 42, 0.2);
     --sombra-flutuante: 0 12px 32px -8px rgba(16, 25, 42, 0.16), 0 4px 12px rgba(16, 25, 42, 0.08);
@@ -482,9 +467,8 @@
   --sombra-card: 0 0 0 1px var(--cor-borda);
   --sombra-card-hover: 0 0 0 1px var(--cor-accent);
 
-  /* A grade de 32px e o halo do topo são decoração, e decoração translúcida é
-     ruído de baixa amplitude -- exatamente o que atrapalha quem ligou o modo. */
-  --grade: transparent;
+  /* O halo do topo é decoração, e decoração translúcida é ruído de baixa
+     amplitude -- exatamente o que atrapalha quem ligou o modo. */
   --halo-topo: transparent;
 }
 
@@ -543,7 +527,7 @@
 /* ==========================================================================
    FONTE DA INTERFACE
    "Do sistema" troca a Inter (que vem do Google Fonts) pela Segoe UI do
-   Windows -- ver FONTES em js/app/appearance.js para o porquê. O título
+   Windows -- ver FONTES em js/app/aparencia.js para o porquê. O título
    também troca: a Sora ao lado da Segoe UI parece erro de digitação, não
    escolha de desenho.
    ========================================================================== */
@@ -708,7 +692,7 @@ a {
   position: absolute;
   top: -100px;
   left: var(--sp-4);
-  z-index: 2000;
+  z-index: var(--camada-atalho);
   padding: 10px 16px;
   border-radius: var(--raio-pequeno);
   background: var(--cor-accent);

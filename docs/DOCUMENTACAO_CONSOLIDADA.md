@@ -5,15 +5,15 @@
 Documento único que reúne, atualiza e substitui todos os relatórios, auditorias, especificações e
 apresentações que existiam soltos em `web/docs/`. Cada afirmação técnica abaixo foi conferida
 contra o código-fonte real em setembro de 2026 — onde um documento antigo dizia uma coisa e o
-código dizia outra, o código venceu, e a divergência está registrada na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então).
+código dizia outra, o código venceu, e a divergência está registrada na [seção 6](#auditoria-ago-set-2026).
 
 | | |
 |---|---|
-| **Versão deste documento** | 1.5 |
-| **Data** | 28 de setembro de 2026 |
+| **Versão deste documento** | 1.6 |
+| **Data** | 30 de setembro de 2026 |
 | **Autor** | Antonio Salomão |
-| **Nesta revisão** | Integrados os ADRs 0007–0009 e o plano concluído; o backlog ativo ficou em `MELHORIAS.md` |
-| **Substitui** | Ver [seção 7 — histórico deste documento](#7-histórico-deste-documento-o-que-foi-consolidado) |
+| **Nesta revisão** | Auditoria do A17 (30/09/2026): links e âncoras, nomes de tela e de pasta, ADR-0014 (vocabulário), revisões dos ADRs 0005, 0006 e 0012, e o fim do `MELHORIAS.md` (seção 7.3) |
+| **Substitui** | Ver [seção 7 — histórico deste documento](#historico-do-documento) |
 
 > ### Este documento é uma fotografia, não a fonte da verdade
 >
@@ -30,7 +30,6 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 > | Onde colocar cada coisa, como testar | `CONTRIBUTING.md` de cada metade |
 > | **Por que** foi feito assim | Seção 4 deste documento (painel web); `atualizador/docs/adr/` (agente C#) |
 > | O que mudou e quando | [`web/CHANGELOG.md`](../CHANGELOG.md) |
-> | O que ainda falta fazer | [`docs/MELHORIAS.md`](MELHORIAS.md) |
 > | O que fazer quando quebra | [`docs/OPERACAO.md`](OPERACAO.md) |
 > | O que ainda pode dar errado no agente | [`atualizador/RISCOS-CONHECIDOS.md`](../../atualizador/RISCOS-CONHECIDOS.md) |
 >
@@ -52,8 +51,8 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 3. [Atualizador Inteligente de ERP — agente local (C#)](#3-atualizador-inteligente-de-erp--agente-local-c)
 4. [Decisões de arquitetura — ADRs do painel web](#4-decisões-de-arquitetura--adrs-do-painel-web)
 5. [Como verificar](#5-como-verificar)
-6. [Auditoria de agosto/set 2026 — o que mudou desde então](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então)
-7. [Histórico deste documento](#7-histórico-deste-documento-o-que-foi-consolidado)
+6. [Auditoria de agosto/set 2026 — o que mudou desde então](#auditoria-ago-set-2026)
+7. [Histórico deste documento](#historico-do-documento)
 8. [Plano de revisão concluído](#8-plano-de-revisão-concluído--24-a-28092026)
 
 ---
@@ -63,7 +62,7 @@ código dizia outra, o código venceu, e a divergência está registrada na [se�
 > Esta seção é o conteúdo que antes vivia em
 > `APRESENTACAO_EXECUTIVA_ATUALIZACAO_ERP.md`, um arquivo à parte pensado para quem vai apresentar
 > o projeto para a diretoria sem entrar em detalhe técnico. Incorporado aqui em 22/09/2026 — ver
-> [seção 7](#7-histórico-deste-documento-o-que-foi-consolidado). Quem só precisa desta parte pode
+> [seção 7](#historico-do-documento). Quem só precisa desta parte pode
 > copiá-la para um documento à parte sem perda: ela não depende do resto do arquivo.
 
 **Gestor de Atualizações + Agente Atualizador ERP** · Bredas Sistemas
@@ -167,7 +166,7 @@ resumo aqui:
 - Canais de distribuição e versões piloto, com promoção para geral e rollback transacional.
 - Controle de concorrência otimista (OCC) — revisões atômicas, impedindo que edições simultâneas
   entre técnicos sobrescrevam dados sem aviso.
-- Ficha 360° do cliente — histórico completo de atendimentos, cópia rápida de acessos remotos,
+- Ficha 360° do cliente — histórico completo de atualizações, cópia rápida de acessos remotos,
   linha do tempo de eventos e matriz comparativa de versões (instalada vs. publicada).
 - Trilha de auditoria visual — log completo (quem criou, editou ou excluiu) com diff visual
   antes/depois campo a campo.
@@ -318,13 +317,13 @@ como um servidor web acessível por várias pessoas ao mesmo tempo, cada uma com
 **Funcionalidades adicionadas em set/2026:**
 
 - **Alerta proativo de agente offline/com erro** (`AlertaAgenteService`) — confere sozinho, a cada
-  N minutos (regra da equipe, padrão 15, em Administração → Atualizador), a situação de cada agente do Atualizador
+  N minutos (regra da equipe, padrão 15, em Administração → Integrações), a situação de cada agente do Atualizador
   automático e avisa o Discord só na *transição* para "offline" (24h+ sem contato) ou "erro" — não
   repete o aviso a cada ciclo enquanto o problema continua.
 - **Tendência mensal de atualizações** (Resumo) — gráfico dos últimos 12 meses.
 - **Grupo/Rede de clientes** — campo opcional para agrupar unidades sob a mesma bandeira.
 - **Conversão de Agendamento em Atualização (removida na E1)** — o botão que pré-preenchia
-  um atendimento a partir da tarefa existiu nesta fase, mas saiu da interface. Os dois registros
+  uma atualização a partir da tarefa existiu nesta fase, mas saiu da interface. Os dois registros
   agora são criados separadamente.
 - **Tempo médio de resolução por responsável** (Resumo) — só conta tarefas criadas depois desta
   métrica existir, pra não inventar uma data que não existe.
@@ -344,7 +343,7 @@ Sem build step, bundler ou transpilação em nenhum dos dois lados.
 rotas (routes/)  ->  controllers/  ->  services/  ->  database/ (repositórios)  ->  SQLite
 ```
 
-- **`database/`** — uma classe `Database` (conexão, migrações, backup automático) e um
+- **`database/`** — uma classe `BancoDeDados` (conexão, migrações, backup automático) e um
   `Repository` por tabela. **Só aqui existe SQL** — nenhuma outra camada monta uma query
   diretamente.
 - **`services/`** — regras de negócio (validação, propagação de rename, cálculo dos indicadores do
@@ -353,8 +352,8 @@ rotas (routes/)  ->  controllers/  ->  services/  ->  database/ (repositórios) 
 - **`controllers/`** — finos de propósito: recebem a requisição, chamam o serviço certo, devolvem
   a resposta.
 - **`routes/index.js`** — só o mapeamento verbo HTTP + caminho → método do controller. Rotas de
-  `/api/auth/...` não passam pelo middleware `requireAuth`; todo o resto passa.
-- **`Server.js`** — classe raiz: cria o `Database`, monta serviços/controllers (injeção de
+  `/api/auth/...` não passam pelo middleware `exigirLogin`; todo o resto passa.
+- **`Servidor.js`** — classe raiz: cria o `BancoDeDados`, monta serviços/controllers (injeção de
   dependência simples, na mão) e configura o Express.
 
 **Por que `better-sqlite3` (síncrono) e não `sqlite3`/`node:sqlite`:** os métodos de repositório
@@ -362,11 +361,11 @@ não usam `await`. Foge do padrão assíncrono comum em Node, mas segue a mesma 
 direto que o `sqlite3` do Python já usava — o SQLite lê do disco rápido o bastante para
 "assíncrono" não trazer benefício, só complexidade.
 
-**Erros:** `shared/errors.js` define `ValidationError` (400) e `NotFoundError` (404) — erros
+**Erros:** `shared/erros.js` define `ErroDeValidacao` (400) e `ErroNaoEncontrado` (404) — erros
 esperados, com mensagem segura de mostrar ao usuário. Qualquer outro erro vira 500 genérico, sem
 vazar detalhe interno.
 
-**Sessão de login:** `database/SqliteSessionStore.js` é uma classe própria (estende
+**Sessão de login:** `database/ArmazemDeSessaoSqlite.js` é uma classe própria (estende
 `session.Store`) que guarda sessões num `sessions.sqlite` separado, usando a mesma
 `better-sqlite3` do resto do app — evita depender de `connect-sqlite3`, que traz `sqlite3` +
 `node-gyp`, cadeia com vulnerabilidades conhecidas de build.
@@ -378,15 +377,20 @@ pelo navegador, sem bundler:
 app/App.js        -- classe raiz: login vs. shell principal, troca de aba, mantém cada View viva
 app/View.js       -- classe base: listeners rastreados (removidos no destroy()) + ciclo
                      stale-while-revalidate
-app/*.js          -- o esqueleto: router, prefs, SwrCache, theme, appearance, notify, Shortcuts
-components/*.js   -- peças de UI reaproveitáveis: SortableTable, Pagination, Autocomplete, Modal,
-                     Toast, CommandPalette (Ctrl+K), EmptyState, ConexaoBanner, MenuConta,
-                     MenuNotificacoes (o sino do cabeçalho)
-components/charts -- PieChart, BarChart, LineChart (SVG escrito à mão)
+app/*.js          -- o esqueleto: Roteador, preferencias, CacheSwr, tema, aparencia, notificacoesDoSistema, atalhos
+components/*.js   -- peças de UI reaproveitáveis: TabelaOrdenavel, Paginacao, Autocomplete, Modal,
+                     AvisosRapidos, PaletaDeComandos (Ctrl+K), estadoVazio, ConexaoBanner, MenuConta,
+                     MenuNotificacoes (o sino do cabeçalho); e os pequenos ajudantes que
+                     precisam do DOM: elemento (`el`), botaoOcupado, arquivos (baixar/escolher),
+                     areaDeTransferencia (copiar), detalhesRetorno
+components/graficos -- GraficoDeBarras, GraficoDeLinhas (SVG escrito à mão)
 domain/*.js       -- vocabulário do negócio, SEM tocar no DOM: agenteStatus, agenteReport,
                      agenteLabels, relatorio, pessoa, notificacoes. É o que dá para testar fora
                      do navegador
-utils/*.js        -- utilidades genéricas: date, html, color, icons, debounce, guard, arquivo
+templates/*.js   -- marcação das telas montada com a tag `html` (escapa tudo), SEM tocar no DOM:
+                     resumo, administracao, configuracoes, consulta, agendamentos, campanhas, filtros
+utils/*.js        -- utilidades genéricas, SEM tocar no DOM: date, html, color, icons, aguardarPausa,
+                     busca, estadoDados
 views/*.js        -- uma classe por tela (Resumo, Atualizações, Agendamentos, Clientes, Consultar
                      Cliente, Distribuição, Versões, Sistemas, Administração, Histórico,
                      Configurações, Login)
@@ -397,11 +401,11 @@ views/configuracoes/ -- as abas das Configurações: ajustes.js (a lista de ajus
 components/TelaComAbas.js -- a moldura de abas sublinhadas que Administração e
                      Configurações usam; templates/secao.js tem o cabeçalho de seção e o
                      título de cartão das duas
-api/ApiClient.js  -- único lugar que chama fetch; todo o resto fala com o servidor por ele
+api/ApiPainel.js  -- único lugar que chama fetch; todo o resto fala com o servidor por ele
 
-app/theme.js + app/appearance.js + views/ConfiguracoesView.js
-             -- as preferências do usuário. theme.js cuida só de claro/escuro/sistema;
-                appearance.js cuida do resto (cor de destaque, tamanho do texto, densidade e
+app/tema.js + app/aparencia.js + views/ConfiguracoesView.js
+             -- as preferências do usuário. tema.js cuida só de claro/escuro/sistema;
+                aparencia.js cuida do resto (cor de destaque, tamanho do texto, densidade e
                 altura das tabelas, linhas por página, animações, fundo, posição e tempo dos
                 avisos, fonte, largura do conteúdo, anel de foco, dicas de atalho, tela
                 inicial, período inicial de Atualizações, lembrar filtros, confirmar ao sair).
@@ -413,8 +417,8 @@ app/theme.js + app/appearance.js + views/ConfiguracoesView.js
                 /api/usuarios/me/sessoes).
                 As preferências são da CONTA: ficam em usuario_preferencias no servidor
                 (GET/PUT /api/preferencias). O localStorage continua sendo escrito, mas como
-                cache -- theme-init.js roda no <head> e precisa de resposta síncrona, senão a
-                página nasceria no tema errado e trocaria na cara de quem olha. prefs.js
+                cache -- temaInicial.js roda no <head> e precisa de resposta síncrona, senão a
+                página nasceria no tema errado e trocaria na cara de quem olha. preferencias.js
                 (conectarPreferencias) busca as da conta no login e corrige o cache se
                 divergir, e limpa o cache quando quem entra é outra pessoa
 ```
@@ -428,13 +432,13 @@ misturando as cinco categorias -- ver
 
 Cada `View` é instanciada uma única vez (não recriada ao trocar de aba), para não perder o que o
 usuário estava digitando. Toda vez que a aba fica visível, `App.js` chama `view.refresh()`, que
-usa **stale-while-revalidate** (`app/SwrCache.js`): o que já foi buscado aparece na hora, a
+usa **stale-while-revalidate** (`app/CacheSwr.js`): o que já foi buscado aparece na hora, a
 revalidação roda em segundo plano, e a tela só é redesenhada se a resposta for diferente
 (comparação por serialização estável — `JSON.stringify` puro não serve porque o SQLite não
 garante ordem de colunas entre consultas). Escrita numa aba invalida o cache das outras que
 dependem do mesmo dado.
 
-O estado da navegação vive na URL (`#/clientes`, via `app/router.js`): recarregar mantém a tela
+O estado da navegação vive na URL (`#/clientes`, via `app/Roteador.js`): recarregar mantém a tela
 aberta, e dá para compartilhar o link de uma aba específica.
 
 Toda tela nova deve estender `app/View.js` e usar `this.on(alvo, evento, fn)` em vez de
@@ -448,6 +452,10 @@ app Tkinter original, só desenhando HTML/CSS em vez de widgets Tkinter.
 
 ### 2.3 Revisão de interface e distribuição — set/2026
 
+> Nas seções 2.3 a 2.9, os caminhos de arquivo são os da época em que cada mudança foi feita. A pasta
+> `core/`, por exemplo, foi dividida depois em `app/`, `components/`, `domain/` e `utils/` (ver o
+> [ADR-0005](#adr-0005)), e alguns arquivos mudaram de lugar ou de nome desde então.
+
 Uma revisão ampla do front-end e do módulo de distribuição corrigiu defeitos, introduziu o modelo
 de "uma versão no ar por sistema" e deu ao painel do Atualizador automático o acompanhamento que
 faltava.
@@ -458,12 +466,12 @@ faltava.
 |---|---|---|---|
 | 1 | Página sem `<h1>` real | `app/App.js` | `<h1>` que muda por aba, junto com `document.title` |
 | 2 | Lista de clientes parados **nunca era desenhada** — a API devolvia os dados, a tela usava só `.length` | `views/ResumoView.js` | Tabela ordenável, fundo tingido conforme o atraso, indicador vira botão que rola até ela |
-| 3 | **Race condition na busca** — resposta de `"ab"` podia chegar depois da de `"abc"` e sobrescrever a tabela | Todas as telas com busca | `ApiClient` cancela por chave: requisição nova aborta a anterior de mesma chave |
+| 3 | **Race condition na busca** — resposta de `"ab"` podia chegar depois da de `"abc"` e sobrescrever a tabela | Todas as telas com busca | `ApiPainel` cancela por chave: requisição nova aborta a anterior de mesma chave |
 | 4 | **Listeners vazando** — `document.addEventListener("keydown")` nunca removido; após expirar sessão, `Delete` podia excluir por uma tela fantasma | Atualizações, Agendamentos, Clientes | Classe base `View` com `this.on(...)` rastreado e `destroy()` |
 | 5 | Publicar versão sem `try/catch` nem trava de botão | `views/DistribuicaoView.js` | Tratamento de erro, botão travado, mensagem do servidor exibida |
 | 6 | `Escape` num campo apagava os 8 campos do formulário, sem volta | Formulários | Limpa e oferece **Restaurar** num toast |
 | 7 | `Enter` amarrado campo a campo, sem `<form>` | Formulários | `<form>` de verdade com `submit` |
-| 8 | **Exportar ignorava os filtros** — filtrar 12 registros e receber um `.xlsx` com 4.000 | `AtualizacoesController`/repositório | `exportAll(search, responsavel)` usa as mesmas cláusulas de `list()` |
+| 8 | **Exportar ignorava os filtros** — filtrar 12 registros e receber um `.xlsx` com 4.000 | `AtualizacoesController`/repositório | `exportarTudo(search, responsavel)` usa as mesmas cláusulas de `list()` |
 | 9 | "Último log" de cada agente era `MAX(id)`, não o mais recente por data | `VersaoRepository.agentes()` | `ROW_NUMBER() OVER (PARTITION BY cnpj ORDER BY criado_em DESC, id DESC)` |
 
 **Exclusão reversível em vez de confirmação:** Atualizações e Agendamentos não pedem mais
@@ -522,17 +530,17 @@ SQL sobre a tabela inteira:
 
 #### Fluidez: cache e renderização
 
-`core/SwrCache.js` + `core/View.js` implementam stale-while-revalidate: mostra o que já tem
+`core/CacheSwr.js` + `core/View.js` implementam stale-while-revalidate: mostra o que já tem
 guardado na hora, revalida por trás, redesenha só se mudou. Redesenhar uma tabela idêntica custa um
 pisca visível e a perda da posição de rolagem, sem ganho nenhum. Uma barra fina no topo indica
 revalidação em segundo plano.
 
-Renderização incremental: `SortableTable` reaproveita `<tr>` existentes em vez de reconstruir o
-`<tbody>` inteiro a cada seleção; `Pagination` só troca rótulos e `disabled` em vez de refazer
+Renderização incremental: `TabelaOrdenavel` reaproveita `<tr>` existentes em vez de reconstruir o
+`<tbody>` inteiro a cada seleção; `Paginacao` só troca rótulos e `disabled` em vez de refazer
 `innerHTML` (que antes derrubava o foco pro `body` a cada página); `Autocomplete` passou de um
 listener global por instância (nunca removido) para um único compartilhado com `destroy()`.
 
-Upload com progresso: `postForm` usa `XMLHttpRequest` em vez de `fetch` (só o XHR expõe
+Upload com progresso: `enviarFormulario` usa `XMLHttpRequest` em vez de `fetch` (só o XHR expõe
 `upload.onprogress`) — pacotes têm dezenas de MB. Timeout de 10 min para upload, 15s para o resto.
 
 #### Navegação
@@ -606,7 +614,7 @@ aparece como "em andamento" em vez de "em dia"/"desatualizado". Aliases em ingl�
 
 #### Migrações de banco desta revisão
 
-Todas idempotentes, rodam a cada boot (`Database._migrate`). `versoes_atualizador` ganhou
+Todas idempotentes, rodam a cada boot (`BancoDeDados._migrate`). `versoes_atualizador` ganhou
 `sistema`, `substituido_em`, `substituido_por`, `tamanho_bytes`; `atualizador_logs` ganhou
 `sistema`, `versao`, `versao_anterior`, `duracao_ms`, `maquina`; índices
 `idx_versoes_sistema`/`idx_atualizador_logs_cnpj`. Um backfill automático deduziu o `sistema` das
@@ -635,8 +643,8 @@ migração (parser de query string, `path-to-regexp`, assinatura de handler de e
 usava os padrões que mudaram.
 
 O que mudou de fato no código, por causa do endurecimento de CSP feito junto: o script inline de
-tema no `<head>` de `client/index.html` foi extraído para `client/js/theme-init.js`, e
-`Server.js`/`requireAgent.js` ganharam uma CSP sob medida e comparação de token em tempo
+tema no `<head>` de `client/index.html` foi extraído para `client/js/temaInicial.js`, e
+`Servidor.js`/`exigirAgente.js` ganharam uma CSP sob medida e comparação de token em tempo
 constante.
 
 Deixado de fora de propósito: a vulnerabilidade restante do `npm audit` é em `uuid`, puxada por
@@ -644,7 +652,7 @@ Deixado de fora de propósito: a vulnerabilidade restante do `npm audit` é em `
 
 **`connect-sqlite3` foi evitado deliberadamente** desde o início do projeto: depende de `sqlite3` +
 `node-gyp`, cadeia com vulnerabilidades conhecidas nas ferramentas de build. As sessões usam uma
-classe própria (`SqliteSessionStore.js`) com a mesma `better-sqlite3` do resto do app.
+classe própria (`ArmazemDeSessaoSqlite.js`) com a mesma `better-sqlite3` do resto do app.
 
 **`.env.bak` esteve commitado no git** (corrigido em set/2026): a regra do `.gitignore` só cobria
 `.env` (nome exato); um `.env.bak` real chegou a ser commitado ("Snapshot antes da migração para
@@ -723,7 +731,7 @@ dois formatos vêm da mesma consulta (o histórico do cliente serve aos dois), e
 formato no modal não vai à rede. Única mudança no backend: `limit=todas` em
 `/atualizacoes/recent-by-client/:nome`, que antes travava em 50.
 
-**Padronização de nomes de sistema e de responsável** (`services/normalizacao.js`). O campo
+**Padronização de nomes de sistema e de responsável** (`shared/normalizacao.js`). O campo
 "Sistema" sempre foi texto livre e tinha acumulado **144 grafias para 14 sistemas** — `B_NFE`
 (342 ocorrências), `B_importaXML` (301), `B_areadocontador e B_importaXML` (203), `B_vendas`,
 `NFCe`, `Sped`. Não era um problema estético: `relatorioPorSistema` compara texto exato, então
@@ -768,7 +776,7 @@ arquivar no escuro.
 Detalhado em [2.2](#22-arquitetura-do-código). Em resumo: viviam só no `localStorage`, e o efeito
 aparecia na hora errada — trocar de máquina ou de navegador devolvia o app aos padrões, e num
 computador compartilhado as escolhas de uma pessoa recebiam a seguinte. O `localStorage` continua
-sendo escrito como **cache**, porque `theme-init.js` roda no `<head>` e precisa de resposta
+sendo escrito como **cache**, porque `temaInicial.js` roda no `<head>` e precisa de resposta
 síncrona; esperar uma requisição ali faria a página nascer no tema errado. Migração é invisível: a
 conta que entra sem nada salvo no servidor sobe o que estava no navegador. O aviso de falhas por
 notificação não acompanha a conta — depende de permissão concedida por aparelho.
@@ -795,9 +803,9 @@ varredura): arquivar uma tarefa ainda pendente faria "Reabrir" resetar o status 
 sem necessidade, já que reabrir sempre volta ao primeiro status da lista.
 
 **Gráfico de "Tendência Mensal de Atualizações" (Resumo) virou linha, não mais barras
-horizontais.** Usava o mesmo componente `BarChart` do gráfico "Por Sistema" — bom para comparar
+horizontais.** Usava o mesmo componente `GraficoDeBarras` do gráfico "Por Sistema" — bom para comparar
 categorias, ruim para ler evolução no tempo, porque barra horizontal não tem um eixo
-esquerda→direita representando o tempo. Novo componente `core/LineChart.js` (SVG puro, sem
+esquerda→direita representando o tempo. Novo componente `core/GraficoDeLinhas.js` (SVG puro, sem
 biblioteca): linha suavizada (Catmull-Rom convertido para Bézier cúbica, não segmentos retos
 ponto-a-ponto), área com gradiente — forte perto da linha, sumindo perto da base, o que continua
 legível mesmo com a cor de destaque "Grafite" (dessaturada) —, halo atrás do ponto mais recente, e
@@ -831,14 +839,14 @@ inerte e dois ícones sem rótulo (um deles encerrando a sessão de quem errasse
 pixels), virou `core/MenuConta.js`: avatar com iniciais, tema em três opções escritas por extenso,
 "Atualizar os dados desta tela", Configurações (com `Ctrl + ,` ao lado), Atalhos e Sair.
 
-**`App.recarregarAba()`.** O `SwrCache` torna a troca de aba instantânea e, em troca, não havia
+**`App.recarregarAba()`.** O `CacheSwr` torna a troca de aba instantânea e, em troca, não havia
 como dizer "esqueça o que você guardou e pergunte de novo" — só recarregando a página, que cobra o
 login, a rolagem e a aba aberta. O método invalida o cache e redesenha a aba atual; `_mostrarAba`
 passou a devolver a promessa do `refresh()` para o aviso de "Dados atualizados" só aparecer quando
 a busca de fato terminar. A troca de tema e a mudança de "linhas por página", que faziam isso na
 mão em dois lugares, agora chamam o mesmo método.
 
-**Preferências: um mapa de padrões no lugar de duas listas.** `core/appearance.js` tinha sete
+**Preferências: um mapa de padrões no lugar de duas listas.** `core/aparencia.js` tinha sete
 constantes `PADRAO_*` mais uma lista `CHAVES` escrita à mão para o "Restaurar padrões" — duas
 listas para a mesma coisa, sendo a segunda o lugar clássico de esquecer a preferência nova (e o
 esquecimento só apareceria no dia em que alguém restaurasse os padrões). Um `PADROES` único agora
@@ -857,7 +865,7 @@ trilha e a busca. Mudanças em lote (perfil, importação, restauração) deixar
 `location.reload()`: `_aplicarEmLote()` repinta tema e aparência, pede ao `App` que alinhe o que é
 dele (menu lateral e dados da aba, via `aoMudarVarias`) e remonta os controles do painel, que
 continua aberto. Com o reload fora, `salvarPreferenciasAgora()` — que existia só para o envio
-agrupado não ser morto no meio pelo reload — saiu do `prefs.js`.
+agrupado não ser morto no meio pelo reload — saiu do `preferencias.js`.
 
 **Três preferências novas, todas como atributo no `<html>` + tokens no CSS.** `data-contraste="alto"`
 é escrito **uma vez só**, derivando cada token do próprio tema com `color-mix` (texto misturado com
@@ -867,19 +875,19 @@ precisou. `data-transparencia="reduzida"` desliga o `backdrop-filter` da barra l
 cabeçalho, dos modais e da paleta, e troca os véus por cor cheia. `data-zebra="nao"` apaga a listra
 mexendo no token `--veu-linha`, e não num seletor que desfaça o `background` da linha ímpar: um
 seletor com `:root[...]` na frente ganharia também das linhas de severidade e de atraso, que
-precisam continuar pintadas. Contraste e transparência entraram também no `theme-init.js` (no
+precisam continuar pintadas. Contraste e transparência entraram também no `temaInicial.js` (no
 `<head>`), pelo mesmo motivo do tema: redefinem cor, e cor aplicada tarde é o que se vê piscar.
 
 **Login.** Botão de mostrar a senha e aviso de Caps Lock. O aviso escuta `keyup` além de `keydown`
 porque o estado da tecla só muda depois de ela subir — sem isso o aviso ficaria um caractere
 atrasado, sumindo justamente quando a pessoa desliga a tecla para consertar.
 
-**Aviso de conexão perdida.** O `ApiClient` passou a distinguir "o servidor respondeu" (mesmo com
+**Aviso de conexão perdida.** O `ApiPainel` passou a distinguir "o servidor respondeu" (mesmo com
 4xx: quem está fora do ar não recusa nada, não responde) de "não deu para falar com ele" — status 0
 e timeout —, e dispara `conexao:mudou` no `document` **só na troca de estado**. `core/ConexaoBanner.js`
 escuta, põe uma faixa fixa no topo enquanto durar, tenta `/auth/status` a cada 5s e some quando o
 servidor volta, chamando `recarregarAba()` na saída. Quem apaga a faixa não é o `_tentar()`: é o
-próprio evento do `ApiClient`, para haver um caminho só para "voltou" — vale também quando quem
+próprio evento do `ApiPainel`, para haver um caminho só para "voltou" — vale também quando quem
 descobriu foi outra chamada qualquer feita no meio tempo. A faixa fica em `z-index: 1050`, abaixo
 dos modais (1100): uma confirmação aberta continua sendo a coisa mais urgente da tela. Enquanto ela
 existe, cabeçalho e barra lateral descem 44px (`body:has(.conexao-aviso)`), em vez de o conteúdo
@@ -892,7 +900,7 @@ fundo boa parte do dia; a faixa de lembretes só alcança quem está olhando a t
 
 **A faixa de conexão também escuta o `offline` do navegador**, que chega na hora em que o cabo sai,
 sem esperar requisição nenhuma falhar. O primeiro desenho disso tinha um bug que o teste pegou: a
-faixa se mostrava sozinha nesse evento, o `ApiClient` continuava se achando online, e por isso a
+faixa se mostrava sozinha nesse evento, o `ApiPainel` continuava se achando online, e por isso a
 primeira resposta boa depois da volta não era uma TROCA de estado — não disparava `conexao:mudou`, e
 a faixa ficava na tela para sempre sobre um app que já funcionava. O estado ficou com um dono só:
 quem descobre a queda chama `api.marcarOffline()`; quem apaga a faixa continua sendo a resposta do
@@ -904,7 +912,7 @@ desliga várias vezes ao dia; os outros dezesseis seguem só em Configurações.
 **Atalhos e avisos.** `Ctrl + B` alterna a barra lateral pelo mesmo `_definirSidebar` que o painel
 de Configurações usa (uma preferência, um caminho), e cada aba passou a mostrar seu `Alt+N` num
 `<kbd>` que ocupa o espaço o tempo todo e só muda de opacidade — aparecer do nada empurraria o
-rótulo e mudaria a largura da aba debaixo do cursor. No `Toast`, a duração original passou a ser
+rótulo e mudaria a largura da aba debaixo do cursor. No `AvisosRapidos`, a duração original passou a ser
 guardada na entrada ativa: `mouseleave` reagendava a saída com `DURACAO_MS`, encurtando a janela do
 toast de "Desfazer" (`DURACAO_ACAO_MS`) justamente para quem levou o mouse até ele; `focusin`/
 `focusout` entraram pelo mesmo motivo, já que o botão "Desfazer" é alcançável por Tab.
@@ -972,7 +980,7 @@ pós, já com o banco de volta ao ar).
 `BEXE.fdb` (transação única), marca `CONCLUIDO` e reporta à API. Os terminais leem o `BEXE.fdb` e
 se atualizam sozinhos. Só os `.exe` soltos na **raiz** do pacote entram nessa injeção — dependências
 em subpastas (ex.: `openssl.exe` usado internamente pelo ERP) ficam de fora, ver
-[3.8](#38-histórico-de-correções-críticas).
+[3.8](#39-histórico-de-correções-críticas).
 
 Qualquer exceção na Fase 3/4 dispara o `catch`: tenta restaurar o backup pré com
 `gbak -c -replace_database`, força o banco de volta ao ar, grava `ERRO` com a mensagem em
@@ -1008,7 +1016,7 @@ mantendo os últimos `BACKUPS_PARA_MANTER` ciclos (padrão 10).
 ### 3.4 Estado atual: pré-piloto
 
 > **Em produção, o Atualizador está DESATIVADO** desde 22/09/2026, 09:19 (horário de
-> Brasília), por Antonio Salomão (Administração → Atualizador; registro no
+> Brasília), por Antonio Salomão (Administração → Integrações; registro no
 > Histórico). Enquanto estiver assim:
 >
 > - toda a API dos agentes (`/api/update/*`) responde **403**: nenhum agente consulta,
@@ -1136,7 +1144,7 @@ GET {API_URL}/update/check/{cnpj}?versao={versaoAtual}
 
 `script_url` ainda existe no contrato por compatibilidade, mas **o agente não lê mais esse
 campo** — a Fase 3 aplica os `.sql` do próprio pacote via `ScriptRunnerService`, não um binário
-externo (ver [3.8](#38-histórico-de-correções-críticas)).
+externo (ver [3.8](#39-histórico-de-correções-críticas)).
 
 ```http
 POST {API_URL}/update/log
@@ -1182,7 +1190,7 @@ ponta a ponta. Detalhe completo, com trecho de código e cenário de falha de ca
 | 31/08 | Connection pooling do driver .NET quebrava depois de um `gfix -shut` (conexão em cache ficava inválida) | `Pooling=false` na connection string |
 | 01/09 | `SYS_ATUALIZACAO` **não existe** no `JUNIOR.fdb` real de produção (366 tabelas inspecionadas) — era só assumida pelo projeto | `GarantirTabelaSysAtualizacao` cria a tabela no primeiro ciclo se não existir (idempotente) |
 | 03/09 | `openssl.exe` (dependência interna do B_Vendas, numa subpasta do pacote) era injetado como se fosse um produto novo | Varredura da Fase 4 restrita a `.exe` soltos na **raiz** do pacote |
-| 03/09 | 4 dos 6 campos de `EXECUTAVEIS` gravados em formato errado (nome sem caminho completo, SHA-256 em vez de SHA-1, versão do pacote em vez do `FileVersion`, etc.) — achado comparando campo a campo contra um `BEXE.fdb` real e correto | `InjetarNovosBinarios` reescrito contra o formato confirmado (ver [3.8](#38-histórico-de-correções-críticas)) |
+| 03/09 | 4 dos 6 campos de `EXECUTAVEIS` gravados em formato errado (nome sem caminho completo, SHA-256 em vez de SHA-1, versão do pacote em vez do `FileVersion`, etc.) — achado comparando campo a campo contra um `BEXE.fdb` real e correto | `InjetarNovosBinarios` reescrito contra o formato confirmado (ver [3.8](#39-histórico-de-correções-críticas)) |
 | 03/09 | Configurar o serviço via variável de ambiente exigia elevar e editar o registro do Windows — inviável para instalar em campo | Configuração inteira migrada para `atualizador.ini` (ver [3.6](#36-configuração-atualizadorini)) |
 | 03/09 | Backups pré/pós eram apagados no mesmo ciclo em que nasciam (`Directory.Delete` da pasta de trabalho) | `Worker.ArquivarBackups` move os dois para `PASTA_BACKUPS`, fora da limpeza automática; poda mantém as últimas 10 gerações |
 
@@ -1193,12 +1201,13 @@ sem timeout deixaria o cliente inteiro parado até alguém perceber.
 
 ---
 
+<a id="decisoes-de-arquitetura"></a>
 ## 4. Decisões de arquitetura — ADRs do painel web
 
 > Esta seção reúne os Registros de Decisão de Arquitetura (ADR) que antes existiam como arquivos
 > separados em `web/docs/adr/`. Os primeiros foram incorporados em 22/09/2026;
 > os ADRs 0007–0009, em 28/09/2026 — ver
-> [seção 7](#7-histórico-deste-documento-o-que-foi-consolidado). O agente C# (`atualizador/`) tem
+> [seção 7](#historico-do-documento). O agente C# (`atualizador/`) tem
 > seus próprios ADRs, em `atualizador/docs/adr/` — não fazem parte deste documento.
 
 Um ADR é um documento curto que registra **uma** decisão de arquitetura: o que foi decidido, em
@@ -1221,6 +1230,7 @@ escolha deliberada — e reintroduz o problema que ela evitava.
 | [4.11](#adr-0010) | Somente HTTPS na rede, com Caddy na frente | Aceita |
 | [4.12](#adr-0011) | Proteção CSRF por token de sessão | Aceita |
 | [4.13](#adr-0012) | Testes de navegador pelo protocolo do Chrome | Aceita |
+| [4.14](#adr-0013) | Prazo depois da versão oficial; dependentes do B_Vendas | Aceita |
 
 **Como escrever um novo:** copie a estrutura de qualquer um — Contexto → Decisão → Consequências →
 Alternativas consideradas — como uma nova subseção `4.N` no fim desta lista. Um ADR não se edita
@@ -1246,7 +1256,7 @@ rodando.
 **Decisão.** O front-end é HTML, CSS e JavaScript puro, com módulos ES nativos do navegador. O que
 está em `client/` é exatamente o que o navegador executa. Sem bundler, sem transpilação, sem
 `node_modules` no front-end. Componentização é feita com classes de JavaScript manipulando o DOM
-diretamente (`components/`, `views/`), e `ApiClient.js` é o único ponto que fala HTTP.
+diretamente (`components/`, `views/`), e `ApiPainel.js` é o único ponto que fala HTTP.
 
 **Consequências.**
 
@@ -1281,7 +1291,7 @@ pequena: dezenas de milhares de linhas, poucos usuários simultâneos, escrita e
 requisito de alta concorrência de escrita nem de replicação.
 
 **Decisão.** Continuar com SQLite, acessado por `better-sqlite3` — um driver **síncrono**. O
-schema é criado e evoluído em código, por `src/database/Database.js`, na subida do servidor. Não
+schema é criado e evoluído em código, por `src/database/BancoDeDados.js`, na subida do servidor. Não
 há ferramenta de migração externa.
 
 **Consequências.**
@@ -1290,7 +1300,7 @@ há ferramenta de migração externa.
 distribui binário pré-compilado, então `npm install` no Windows não precisa de compilador C++ (ao
 contrário do driver `sqlite3`); sendo síncrono, o código de repositório é linear, sem `async`/
 `await` nem callback para ler uma linha — elimina uma classe inteira de bugs de ordem de execução,
-e é o que torna o `SqliteSessionStore` seguro (ver [ADR 4.3](#43-adr-0003--armazenamento-de-sessão-escrito-à-mão));
+e é o que torna o `ArmazemDeSessaoSqlite` seguro (ver [ADR 4.3](#43-adr-0003--armazenamento-de-sessão-escrito-à-mão));
 backup é copiar um arquivo — é literalmente o que `BackupService` faz.
 
 *Custos aceitos:* uma consulta lenta trava o event loop do Node inteiro (com este volume, cada
@@ -1315,7 +1325,7 @@ mundo é deslogado a cada reinício do servidor — inaceitável para um app que
 Windows e reinicia em toda atualização. A escolha natural seria `connect-sqlite3`, que faz
 exatamente isso.
 
-**Decisão.** Escrever `src/database/SqliteSessionStore.js`: uma classe que estende `session.Store`
+**Decisão.** Escrever `src/database/ArmazemDeSessaoSqlite.js`: uma classe que estende `session.Store`
 e implementa `get`, `set`, `destroy`, `touch` e `clearAll` sobre um `sessions.sqlite` próprio,
 usando o `better-sqlite3` que o app já usa.
 
@@ -1347,25 +1357,25 @@ restaurar um backup.
 
 **Contexto.** O servidor tem ~13 serviços e ~13 controllers, com dependências reais entre eles:
 quase todo serviço recebe o banco e o `HistoricoService`; o `AlertaAgenteService` recebe
-`VersaoService` e `NotificationService`; o `SaudeService` recebe banco, backups e versões. Esse é o
+`VersaoService` e `NotificacaoService`; o `SaudeService` recebe banco, backups e versões. Esse é o
 ponto em que projetos Node costumam adotar um container de DI (`awilix`, `tsyringe`,
 `InversifyJS`) ou partir para singletons importados diretamente.
 
 **Decisão.** A classe `Server` monta tudo à mão, em ordem explícita, em dois métodos:
-`_buildServices()` e `_buildControllers()`. Cada dependência é passada pelo construtor. Nenhum
+`_montarServicos()` e `_montarControladores()`. Cada dependência é passada pelo construtor. Nenhum
 serviço importa outro diretamente. Nenhum módulo exporta instância pronta — só classes.
 
 **Consequências.**
 
-*Ganhos:* existe um arquivo que mostra o sistema inteiro — ler `Server.js` de cima a baixo revela
+*Ganhos:* existe um arquivo que mostra o sistema inteiro — ler `Servidor.js` de cima a baixo revela
 todos os componentes e quem depende de quem, o que nenhum container oferece; testar é instanciar
 com o que se quiser no lugar (os testes sobem um `Server` completo com banco temporário justamente
 porque montar é barato); ciclo de dependência vira erro na hora de escrever, não em tempo de
 execução; zero mágica — nenhuma resolução por nome, nenhum decorator, nenhum `reflect-metadata`.
 
-*Custos aceitos:* acrescentar um serviço exige editar `Server.js` (é uma linha, e o incômodo é
+*Custos aceitos:* acrescentar um serviço exige editar `Servidor.js` (é uma linha, e o incômodo é
 proporcional ao custo real de acrescentar um serviço, o que é saudável); a ordem de construção
-dentro de `_buildServices()` importa (está explícito no código); uma instância de `BackupService`
+dentro de `_montarServicos()` importa (está explícito no código); uma instância de `BackupService`
 acaba criada duas vezes — inofensivo, mas é o tipo de duplicação que um container evitaria de graça.
 
 **Alternativas consideradas.** Container de DI (`awilix` etc.) — descartado: resolve acoplamento em
@@ -1397,7 +1407,7 @@ novo?" — a resposta era sempre "em `core/`", que é o mesmo que não ter respo
 | `views/` | uma tela | tudo |
 | `app/` | o esqueleto que segura o resto | tudo |
 
-`components/charts/` agrupa os três gráficos SVG, que são componentes de uma família só.
+`components/graficos/` agrupa os três gráficos SVG, que são componentes de uma família só.
 
 **Consequências.**
 
@@ -1417,8 +1427,8 @@ para arquivos antigos, em anotações fora do repositório, quebraram.
 **Efeito colateral valioso:** a migração revelou um bug real — um caminho de asset inexistente
 respondia 200 com o `index.html`, porque o fallback de SPA capturava qualquer caminho fora de
 `/api`; o navegador só reclamava depois, com uma mensagem de MIME type que manda procurar no lugar
-errado. Corrigido em `Server.js` e `middlewares/notFoundHandler.js`, com teste de regressão em
-`tests/routing.test.js`.
+errado. Corrigido em `Servidor.js` e `middlewares/rotaNaoEncontrada.js`, com teste de regressão em
+`tests/roteamento.test.js`.
 
 **Alternativas consideradas.** Manter `core/` e só criar subpastas dentro dela — descartado:
 manteria o nome que não significa nada, só empurrando o problema um nível abaixo. Organizar por
@@ -1426,6 +1436,20 @@ funcionalidade (`clientes/`, `atualizacoes/`, cada uma com sua view, seus compon
 helpers) — descartado: é a divisão certa quando os módulos são independentes, mas aqui quase todo
 componente é usado por quase toda tela; levaria a uma pasta `compartilhado/` que seria a `core/` de
 volta, com outro nome.
+
+**Revisão de 30/09/2026 (A16).** A tabela acima tinha ficado para trás, e o critério "não toca no DOM"
+não era cumprido. Duas correções:
+
+- Existe `templates/` (marcação montada com a tag `html`, sem DOM), entre `domain/` e `components/`; a
+  ordem das importações é `utils → domain → templates → components → views`, com `app/` por cima de
+  tudo.
+- `utils/`, `domain/` e `templates/` passaram a **não tocar no DOM de fato**. Cinco arquivos tocavam:
+  `utils/arquivo.js` (baixar e escolher arquivo), `utils/guard.js` (botão ocupado), `utils/html.js`
+  (`el()` e `copiarParaAreaDeTransferencia`), `utils/cor.js` (`tokenHex`) e `domain/agenteReport.js`
+  (`criarDetalhesRetorno`). Foram para `components/` (`arquivos`, `botaoOcupado`, `elemento`,
+  `areaDeTransferencia`, `detalhesRetorno`) e `app/tema.js`, sem mudar comportamento. O que garante
+  daqui em diante é o `npm run check` ([ADR-0006](#adr-0006)) e um teste textual em
+  `html-seguro.test.mjs`.
 
 <a id="adr-0006"></a>
 ### 4.6 ADR-0006 — Verificação de tipos sem etapa de build, escopada ao código puro
@@ -1448,13 +1472,20 @@ escopada ao código puro dos dois lados:
 
 | Config | Cobre | Critério |
 |---|---|---|
-| `client/tsconfig.json` | `js/domain/`, `js/utils/` | não tocam no DOM ([ADR 4.5](#45-adr-0005--clientjs-dividido-por-responsabilidade)) |
-| `server/tsconfig.json` | `src/shared/`, `services/normalizacao.js` | não falam com o Node nem com o banco |
+| `client/tsconfig.json` | `js/domain/`, `js/utils/`, `js/templates/` | não tocam no DOM ([ADR 4.5](#45-adr-0005--clientjs-dividido-por-responsabilidade)) |
+| `server/tsconfig.json` | `src/shared/`, `controllers/paginacao.js`, `database/ordenacao.js`, `services/validacao.js` | não falam com o Node nem com o banco |
 
-Nos dois casos a `lib` do TypeScript é só `es2022` — sem `dom`, sem `node`; é essa ausência que
-torna o critério automático: um arquivo novo que precise do `document` ou do `fs` está na pasta
+Nos dois casos a `lib` do TypeScript não tem `dom` nem `node`: no servidor é só `es2022`; no cliente,
+`es2022` mais `webworker` (timers, `URL`, `Blob`, `fetch`, sem a árvore de elementos). É essa ausência
+que torna o critério automático: um arquivo novo que precise do `document` ou do `fs` está na pasta
 errada, e o erro é o aviso. Execução por `npm run check`, também no CI. Modo estrito ligado, exceto
 `noImplicitAny`.
+
+*Revisão de 30/09/2026 (A16).* No cliente, a `lib` chegou a ter `dom`, e o portão só parecia existir:
+`utils/` abrigava quatro módulos que tocavam o documento (download de arquivo, botão ocupado, `el()` e
+cópia para a área de transferência, leitura de variável CSS) e `domain/` montava DOM num deles. Saíram de
+lá (ver a revisão no [ADR-0005](#adr-0005)), a `lib` perdeu o `dom` e o teste textual de
+`html-seguro.test.mjs` passou a cobrir `utils/` também.
 
 **Consequências.**
 
@@ -1472,8 +1503,8 @@ ferramenta para manter atualizada.
 lia uma propriedade que `VersaoService` nunca teve, e como `fs.existsSync(undefined)` devolve
 `false` em vez de lançar, o painel de Saúde reportava "0 pacotes, 0 bytes" para sempre, sem erro no
 log (o teste que existia não pegava, porque o dublê de `versoes` declarava a propriedade que o
-objeto real não implementava); quatro anotações JSDoc desatualizadas (`View.js`, `Toast.js`,
-`SortableTable.js`, `ConfiguracoesPanel.js`); uma subtração de datas que só funcionava por coerção
+objeto real não implementava); quatro anotações JSDoc desatualizadas (`View.js`, `AvisosRapidos.js`,
+`TabelaOrdenavel.js`, `ConfiguracoesPanel.js`); uma subtração de datas que só funcionava por coerção
 implícita, e duas comparações que dependiam do mesmo tipo de regra tácita.
 
 **Alternativas consideradas.** Migrar para TypeScript de verdade — descartado: reintroduz o passo
@@ -1518,8 +1549,8 @@ a revisão recebida.
 
 Três campos do banco guardavam listas ou vínculos como texto:
 
-- `atualizacoes.sistema` — a lista de sistemas de um atendimento, separada por
-  vírgula (`"B_Vendas, B_NFe"`). Em produção, 866 dos 945 atendimentos tinham
+- `atualizacoes.sistema` — a lista de sistemas de uma atualização, separada por
+  vírgula (`"B_Vendas, B_NFe"`). Em produção, 866 dos 945 atualizações tinham
   mais de um sistema.
 - `clientes.sistemas` — a mesma coisa para os sistemas de cada cliente.
 - `atualizacoes.cliente` e `agendamentos.cliente` — o **nome** do cliente,
@@ -1532,7 +1563,7 @@ O custo aparecia de três formas:
 
 1. **Toda leitura reinterpretava texto.** Quebrar a lista por vírgula e
    comparar nomes "sem caixa, acento nem prefixo `B_`" estava espalhado em seis
-   arquivos (`splitSystems`, `sameSystem`, `versaoDoRegistro`, `splitSistemas`,
+   arquivos (`separarSistemas`, `sameSystem`, `versaoDoRegistro`, `splitSistemas`,
    `versaoRegistrada`…). Cada tela nova precisava lembrar de todas as regras.
 2. **O catálogo não garantia nada.** `B_NFCe` (100 usos), `B_Sped` (53), `CTe`,
    `B_Rat` e outros apareciam no histórico sem existir na tabela `sistemas`, e
@@ -1540,7 +1571,7 @@ O custo aparecia de três formas:
    A comparação aproximada escondia isso na maior parte das telas, mas não em
    todas: a situação do cliente listava `NFCe` e `B_NFCe` como dois sistemas.
 3. **O vínculo com o cliente era frágil.** Renomear um cliente exigia reescrever
-   o nome em duas outras tabelas, e 57 atendimentos já não batiam com cliente
+   o nome em duas outras tabelas, e 57 atualizações já não batiam com cliente
    nenhum.
 
 E o jeito de mudar o esquema — `ALTER TABLE ADD COLUMN` em try/catch, repetido a
@@ -1554,7 +1585,7 @@ aplicada fica em `PRAGMA user_version`. Cada migração roda uma vez, em ordem,
 numa transação. Antes de aplicar qualquer migração pendente, o servidor copia o
 banco para `backups/` e confere a cópia com `integrity_check`; se a cópia falhar,
 a subida é interrompida. O bloco antigo de `ALTER TABLE` virou
-`Database._esquemaLegado` e só roda em banco ainda na versão 0.
+`BancoDeDados._esquemaLegado` e só roda em banco ainda na versão 0.
 
 **Migração 1:**
 
@@ -1570,14 +1601,14 @@ a subida é interrompida. O bloco antigo de `ALTER TABLE` virou
   mesmo nome reativa a mesma linha, com o histórico junto. As grafias de um
   mesmo sistema viram uma linha só, com o nome mais usado.
 - **O nome do cliente continua em `atualizacoes.cliente`**, como cópia: é o que
-  se mostra quando o cliente é excluído ou quando o atendimento foi lançado para
+  se mostra quando o cliente é excluído ou quando a atualização foi lançada para
   um nome sem cadastro. Enquanto existe vínculo, a cópia acompanha o rename.
-  Cadastrar um cliente com o nome de atendimentos sem vínculo passa a ligá-los
+  Cadastrar um cliente com o nome de atualizações sem vínculo passa a ligá-los
   a ele.
-- **`versoes_por_sistema`** distingue o atendimento cuja versão foi capturada
+- **`versoes_por_sistema`** distingue a atualização cuja versão foi capturada
   sistema a sistema do registro legado, em que a verdade é o texto livre de
   `versao`. No legado, a versão só vira a versão de um sistema quando o
-  atendimento tinha um sistema só; com vários, fica nula, porque é ambígua.
+  atualização tinha um sistema só; com vários, fica nula, porque é ambígua.
 - **Visões `atualizacoes_v` e `clientes_v`** montam de volta as listas em texto,
   no formato que a API sempre entregou. Por isso o front-end não mudou: `sistema`
   continua `"B_Vendas, B_NFe"` e `versoes_sistemas` continua um JSON (nulo para
@@ -1586,11 +1617,11 @@ a subida é interrompida. O bloco antigo de `ALTER TABLE` virou
 #### Consequências
 
 - Relatórios por sistema, o Resumo e a situação do cliente viraram consultas
-  SQL por id, com `ROW_NUMBER()` para "o último atendimento". O ensaio numa cópia
+  SQL por id, com `ROW_NUMBER()` para "a última atualização". O ensaio numa cópia
   do banco de produção comparou o código antigo com o novo: relatório por
   sistema (com e sem data de corte), Resumo e última versão por sistema saíram
   idênticos. As únicas diferenças foram as grafias corrigidas e o desempate de
-  dois atendimentos no mesmo dia, que agora é sempre pelo último registrado.
+  duas atualizações no mesmo dia, que agora é sempre pelo último registrado.
 - A regra "qual sistema um nome quer dizer" existe num lugar só:
   `SistemaRepository.resolver`/`resolverOuCriar`. Ela roda na gravação; a
   leitura só compara ids.
@@ -1613,7 +1644,7 @@ a subida é interrompida. O bloco antigo de `ALTER TABLE` virou
 
 Três telas respondiam a mesma pergunta de três jeitos:
 
-- **Resumo:** "em dia" era quem teve **qualquer** atendimento nos últimos 60
+- **Resumo:** "em dia" era quem teve **qualquer** atualização nos últimos 60
   dias; o resto era "desatualizado". Não olhava versão nenhuma. Cliente
   atendido ontem com a NFe velha aparecia em dia; cliente sem visita há três
   meses, mas sem nenhuma versão nova para receber, aparecia desatualizado.
@@ -1625,7 +1656,7 @@ Três telas respondiam a mesma pergunta de três jeitos:
 
 Medido numa cópia do banco de produção (24/09/2026), com a regra estrita
 ("sem versão registrada = não dá para saber"): de 369 clientes, 21
-desatualizados, **348 pendentes** e 0 em dia. Os atendimentos de antes da
+desatualizados, **348 pendentes** e 0 em dia. As atualizações de antes da
 versão oficial existir não gravaram versão (1.275 sistemas nessa condição), e
 o indicador novo não serviria para nada.
 
@@ -1638,19 +1669,19 @@ Resumo, pela aba Sistemas e pela situação do cliente.
 
 | Caso | Situação |
 |---|---|
-| Nenhum atendimento naquele sistema | Nunca atualizado |
+| Nenhum atualização naquele sistema | Nunca atualizado |
 | Sistema sem versão oficial cadastrada | Sem referência |
 | Versão recebida (data) **anterior** à oficial | Desatualizado |
 | Versão recebida igual ou **posterior** à oficial | Em dia |
-| Sem versão (ou versão que não é data) → data do atendimento anterior à oficial | Desatualizado, **pela data** |
-| Sem versão → atendimento na data da oficial ou depois | Em dia, **pela data** |
-| Sem versão e data do atendimento inválida | Sem informação |
+| Sem versão (ou versão que não é data) → data da atualização anterior à oficial | Desatualizado, **pela data** |
+| Sem versão → atualização na data da oficial ou depois | Em dia, **pela data** |
+| Sem versão e data da atualização inválida | Sem informação |
 
 - **Compara datas, não texto.**
-- **A fonte é o atendimento.** O que o agente reporta não entra na conta.
+- **A fonte é a atualização.** O que o agente reporta não entra na conta.
 - **"Pela data" é marcado**, e as telas escrevem "Em dia (pela data)". A versão
   recebida continua "Não informada": nada é gravado retroativamente, e editar
-  o atendimento não muda isso.
+  a atualização não muda isso.
 
 **Por cliente** (grupos que não se sobrepõem, para os totais somarem):
 
@@ -1681,40 +1712,40 @@ atualização há mais de N dias"), e não altera a situação de versão.
   inteiras na resposta do `/resumo`, e o clique abre exatamente os clientes
   contados.
 - A regra "pela data" é uma **dedução**, aceita pela equipe para o indicador
-  ser útil já. Com o tempo, atendimentos novos gravam a versão oficial e a
+  ser útil já. Com o tempo, atualizações novas gravam a versão oficial e a
   dedução deixa de ser usada naturalmente. Se ela passar a atrapalhar, basta
   remover o ramo "pela data" de `situacaoDoSistema`: o resto não muda.
 - Datas continuam `dd/mm/aaaa`. Uma versão que não é data não é comparável e
-  cai na regra da data do atendimento.
+  cai na regra da data da atualização.
 - A chave da regra da equipe continua `desatualizado_dias` (já gravada nas
   instalações); só o texto na Administração mudou para "Sem atualização".
 - O que ficou para depois: tela para marcar ou desmarcar sistema fixo e
   bloqueio na API de oficial para sistema fixo (resto do I04).
 
-#### Revisão de 29/09/2026: só a data do atendimento
+#### Revisão de 29/09/2026: só a data da atualização
 
 A equipe decidiu que a situação **não usa mais a versão recebida**: vale só
-a data do último atendimento contra a data da versão oficial (ou da
+a data da última atualização contra a data da versão oficial (ou da
 versão-alvo, em Campanhas). A tabela "Por sistema" acima fica assim:
 
 | Caso | Situação |
 |---|---|
-| Nenhum atendimento naquele sistema | Nunca atualizado |
+| Nenhum atualização naquele sistema | Nunca atualizado |
 | Sistema sem versão oficial cadastrada | Sem referência |
-| Atendimento **anterior** à data da oficial | Desatualizado |
-| Atendimento na data da oficial ou depois | Em dia |
-| Data do atendimento inválida | Sem informação |
+| Atualização **anterior** à data da oficial | Desatualizado |
+| Atualização na data da oficial ou depois | Em dia |
+| Data da atualização inválida | Sem informação |
 
 - **Por quê:** a versão recebida vinha preenchida de forma irregular, e
   duas regras na mesma tela (versão numa linha, "pela data" na outra)
   confundiam mais do que ajudavam.
 - **O que muda na prática:** quem foi atendido depois da oficial conta como
-  em dia mesmo que o atendimento tenha gravado uma versão anterior; e uma
-  versão recebida mais nova não tira do atraso um atendimento anterior à
+  em dia mesmo que a atualização tenha gravado uma versão anterior; e uma
+  versão recebida mais nova não tira do atraso uma atualização anterior à
   oficial.
 - A marca "(pela data)" saiu das telas, porque agora tudo é pela data. A
   coluna "Versão recebida" saiu da aba Sistemas.
-- A versão recebida **continua gravada** no atendimento e aparece na ficha do
+- A versão recebida **continua gravada** na atualização e aparece na ficha do
   cliente, no relatório copiado e na exportação de pendentes da campanha.
   Para voltar a usá-la, basta restaurar o ramo da versão em
   `situacaoDoSistema` (`git log -- server/src/services/situacaoVersao.js`).
@@ -1752,7 +1783,7 @@ mais é gravado por campanha:
 - **Quem entra:** os clientes que têm o sistema no cadastro
   (`cliente_sistemas`), lidos ao vivo. Cliente cadastrado depois da criação
   entra; cliente que perdeu o sistema sai.
-- **Quem está atualizado:** o último atendimento do cliente no sistema passa
+- **Quem está atualizado:** a última atualização do cliente no sistema passa
   por `situacaoDoSistema` (a mesma função da ADR-0008) contra a
   **versão-alvo**: atendido na data da versão-alvo ou depois conta (desde
   29/09/2026 a versão recebida não decide; ver a revisão da ADR-0008). **Não existe
@@ -1808,7 +1839,7 @@ Código: `server/src/services/CampanhaService.js`,
 #### Contexto
 
 O painel ia sair do PC de quem o usa para a rede (P01 do
-[plano de melhorias](MELHORIAS.md#plano-vigente)). Até aqui, a equipe acessava
+plano de melhorias de 28/09/2026 (hoje só no histórico do git)). Até aqui, a equipe acessava
 `http://IP:3000`: senha e cookie de sessão atravessavam a rede em texto puro.
 HTTPS era opcional (`SESSION_SECURE`), e as combinações erradas falhavam em
 silêncio — "ninguém consegue entrar" sem erro nenhum. Os scripts do serviço
@@ -1868,7 +1899,7 @@ jeito de implantar.
 
 Com o painel na rede (ADR-0010), qualquer página aberta no navegador de quem
 está logado podia tentar mandar o painel alterar dados (P02 do
-[plano de melhorias](MELHORIAS.md#plano-vigente)). A defesa era o cookie
+plano de melhorias de 28/09/2026 (hoje só no histórico do git)). A defesa era o cookie
 `SameSite=Lax` mais o fato de a API só entender JSON. Isso barrava o caso
 comum, mas deixava passar o que um `<form>` de outra página consegue mandar
 sem preflight: multipart (importação de planilha, envio de pacote) e POST
@@ -1889,7 +1920,7 @@ considera "o mesmo site" outros serviços do mesmo domínio.
 - **Fora da regra:** pedido sem usuário na sessão (continua recebendo o 401
   que leva ao login; cobre os agentes C#, que não usam cookie), login e
   configuração inicial.
-- **O `ApiClient` guarda o último token visto e o manda nas escritas**,
+- **O `ApiPainel` guarda o último token visto e o manda nas escritas**,
   inclusive no upload por XHR. Numa recusa com `codigo: "csrf"` (token de
   uma sessão anterior: a pessoa saiu e entrou de novo em outra aba), busca
   o atual em `/auth/status` e repete o pedido uma vez.
@@ -1919,12 +1950,16 @@ considera "o mesmo site" outros serviços do mesmo domínio.
 <a id="adr-0012"></a>
 ### 4.13 ADR-0012 — Testes de navegador pelo protocolo do Chrome, sem Playwright
 
-**Situação:** Aceita (29/09/2026)
+**Situação:** Aceita em 29/09/2026 e **revogada no mesmo dia**: a equipe retirou a pasta `navegador/` do
+repositório (commit `2935b5e`, que descreve a mudança como enxugar a suíte e eliminar redundância). Não há
+mais testes de navegador no repositório nem no CI. O registro fica pelo que a suíte mostrou enquanto existiu
+(o que um Chrome sem janela acha e o `npm test` não acha) e como referência, caso a equipe queira retomar:
+`git show 2935b5e^:navegador`.
 
 #### Contexto
 
 `npm test` cobre regras e módulos, mas não roda os fluxos completos no
-navegador (P04 do [plano de melhorias](MELHORIAS.md#plano-vigente)): foco,
+navegador (P04 do plano de melhorias de 28/09/2026 (hoje só no histórico do git)): foco,
 teclado, o que fica por cima do quê, o que acontece quando a API falha no
 meio de um envio. A ferramenta óbvia seria o Playwright, mas o repositório
 não tem dependência de front-end nem etapa de build
@@ -1978,6 +2013,150 @@ navegadores a cada instalação.
 
 ---
 
+<a id="adr-0013"></a>
+### 4.14 ADR-0013 — Prazo depois da versão oficial antes de "desatualizado"
+
+**Situação:** Aceita (30/09/2026). Complementa o [ADR-0008](#adr-0008), que
+continua valendo: quem decide é a data da última atualização contra a da
+versão oficial.
+
+#### Contexto
+
+Pelo ADR-0008, última atualização anterior à versão oficial = desatualizado.
+Na prática, isso deixava todos os clientes vermelhos no dia seguinte à
+publicação de uma versão, antes de a equipe ter tido tempo de visitar
+alguém. O card "Atualização dos Clientes" passava a medir a data da
+publicação, e não o atraso da equipe.
+
+#### Decisão
+
+- **Prazo configurável, padrão 60 dias** (`prazoVersaoDias` em
+  `server/src/config/regrasEquipe.js`, editável em Administração ›
+  Operação da equipe). É uma regra nova, e não `desatualizadoDias`: aquela
+  mede tempo sem nenhuma atualização, outra pergunta.
+- **Três situações por sistema** (`services/situacaoVersao.js`):
+  - *Em dia*: última atualização na data da oficial ou depois.
+  - *Aguardando atualização*: última atualização anterior à oficial, e a
+    oficial saiu há menos de N dias.
+  - *Desatualizado*: última atualização anterior à oficial, e a oficial
+    saiu há N dias ou mais.
+- **Os N dias contam da data da versão oficial** (o dd/mm/aaaa que as telas
+  mostram), e não do dia em que alguém a cadastrou no painel: é a data que
+  existe em todos os sistemas e que a equipe vê.
+- **No cliente**, "aguardando" é um grupo próprio, de cor neutra, entre em
+  dia e desatualizado. Um atraso vencido ganha dele; informação faltando
+  também (falta de dado não se esconde atrás do prazo). Quem tem B_Vendas
+  continua julgado só por ele.
+- **A mesma regra no Resumo, em Sistemas e na ficha.** A ficha, que sem
+  agente comparava a versão digitada com a publicada pelo Atualizador,
+  passou a mostrar a situação do servidor.
+- **Campanhas ficam de fora**: lá a pergunta é "já chegou na meta?", e o
+  prazo só adiaria a resposta.
+
+#### Consequências
+
+- Uma versão recém-publicada não pinta ninguém de vermelho antes do prazo;
+  mudar o prazo muda as contagens na hora.
+- Prazo 0 reproduz a regra estrita anterior.
+- O resultado depende do dia de hoje: os testes passam `hoje` explícito.
+
+#### Alternativas consideradas
+
+- **Contar do cadastro da oficial no painel:** a data de cadastro não é
+  mostrada em tela nenhuma e só existe para as oficiais cadastradas depois
+  da migração 3. A troca, se um dia a equipe preferir, é num ponto só
+  (`situacaoDoSistema`).
+- **Reaproveitar `desatualizadoDias`:** tem o mesmo número (60), mas mede
+  outra coisa; juntar as duas faria mudar uma mexer na outra sem aviso.
+
+#### Revisão depois da publicação (30/09/2026)
+
+Com a regra acima no ar, o Resumo de produção mostrou **nenhum** cliente
+desatualizado: a oficial do B_Vendas era de 09/09, então até quem estava
+parado havia quase um ano ficava "aguardando" até 08/11. E 99 clientes
+apareciam em "Verificação pendente", todos por nunca terem sido
+atualizados. A equipe decidiu:
+
+- **Desatualizado também quando a última atualização é N dias ou mais
+  anterior à oficial** — o cliente já estava longe da versão quando ela
+  saiu. "Aguardando" fica só para quem foi atualizado menos de N dias antes
+  da oficial, e só enquanto a oficial tem menos de N dias.
+- **Nunca atualizado é desatualizado.** O grupo "Verificação pendente" saiu
+  do card, do Resumo e dos filtros. Uma data ilegível conta igual. Um
+  sistema sem versão oficial ("Sem referência") sai da conta do cliente.
+- **Continua valendo que, com B_Vendas, o card julga o cliente pelo
+  B_Vendas**; a regra do prazo vale para cada sistema, na aba Sistemas, na
+  ficha e em "Onde estão os atrasos".
+
+Na cópia de produção do mesmo dia: 75 em dia, 123 aguardando, 170
+desatualizados (antes: 75, 194, 0 e 99 pendentes).
+
+#### Complemento: sistemas que atualizam junto com o B_Vendas (A13, 30/09/2026)
+
+**Contexto.** NFCe e Consignado M2 são dependências do B_Vendas: vão para o
+cliente junto com ele, e a equipe não lança uma atualização para cada
+dependente. Julgados pela própria data, apareciam atrasados na aba Sistemas,
+na ficha e em "Onde estão os atrasos" num cliente com o B_Vendas em dia.
+
+**Decisão.**
+
+- **Marcação por sistema, não lista fixa:** coluna
+  `sistemas.atualiza_com_principal` (migração 6), editável em Administração
+  › Operação da equipe, ao lado da classificação. A migração marca
+  `B_NFCe` e `Consignado M2`, os nomes gravados em produção (conferidos numa
+  cópia do banco de 29/09/2026), pela mesma resolução de nomes do catálogo
+  (que também acha o "NFCe" do catálogo inicial).
+- **Num cliente que tem B_Vendas** (no cadastro ou no histórico), o
+  dependente usa a data da última atualização do B_Vendas, comparada com a
+  versão oficial **do próprio dependente** e com o prazo acima. Sem B_Vendas
+  no cliente, volta a usar a própria data.
+- **A versão instalada continua sendo a do próprio sistema**; só a data que
+  decide a situação vem do B_Vendas. Sistemas e ficha mostram "pela data do
+  B_Vendas".
+- Na situação **do cliente** quase nada muda (quem tem B_Vendas já é julgado
+  só por ele); a mudança aparece na visão por sistema.
+- **Campanhas não usam a marcação:** a meta é por sistema, e a campanha
+  pergunta pelo sistema da meta.
+
+**Alternativa descartada.** Valer a data mais recente entre a do B_Vendas e
+a própria. A decisão da equipe foi usar a do B_Vendas; a troca, se mudar, é
+em `registroQueDecide` (`services/situacaoVersao.js`).
+
+---
+
+<a id="adr-0014"></a>
+### 4.15 ADR-0014 — "Atualização" como termo único
+
+**Situação:** Aceita (30/09/2026)
+
+#### Contexto
+
+O mesmo registro tinha dois nomes. A equipe dizia "atualização" — o que foi feito num cliente, e a
+"última atualização" como a data que importa —, mas o código, as telas, os comentários e a documentação
+carregavam outro termo, herdado da primeira versão. O descompasso chegava à tela (o contador do Resumo e o
+rótulo dele, o parâmetro de data da aba Sistemas) e obrigava quem lia o código a traduzir de cabeça. Uma busca
+por um dos dois termos nunca achava tudo.
+
+#### Decisão
+
+- O registro é uma **atualização**, e a data que importa é a **última atualização**. Vale para telas,
+  mensagens de erro, relatórios, nomes internos (o contador do Resumo é `semAtualizacao`, o parâmetro da
+  aba Sistemas é `atualizacaoAntesDe`), comentários, documentação e mensagens de commit.
+- **O termo antigo não aparece em lugar nenhum** de `client/`, `server/` e `docs/`, nem nos arquivos da
+  raiz. `client/tests/vocabulario.test.mjs` falha se ele voltar, e de propósito **sem lista de exceções**:
+  um arquivo que "precisa" do termo é um arquivo a reescrever. O teste monta o termo em partes para não se
+  reprovar.
+
+#### Consequências
+
+- Uma busca acha tudo de uma vez, e a tela, o código e a conversa da equipe dizem a mesma coisa.
+- O filtro de data da aba Sistemas que já estava salvo no navegador com a chave antiga continua valendo: o
+  código lê a chave antiga (também montada em partes, pela mesma razão do teste) quando não acha a nova.
+- As entradas antigas do CHANGELOG e as seções antigas desta documentação foram reescritas com o termo
+  novo; o histórico do git guarda o texto original.
+
+---
+
 ## 5. Como verificar
 
 **Painel web:**
@@ -1994,7 +2173,7 @@ O console mostra a migração na primeira vez.
 | Paleta | `Ctrl+K`, digitar o nome de um cliente, `Enter` → abre a ficha |
 | Tema | Botão no cabeçalho cicla sistema → escuro → claro; recarregar mantém |
 | Cache | Ir e voltar entre abas → aparece na hora, com a barra fina revalidando |
-| Resumo | Clicar em "Parados há mais de 60 dias" → rola até a lista |
+| Resumo | Clicar em "Sem Atualização Há Mais de 60 Dias" → abre a gaveta com a lista |
 | Distribuição | Escolher sistema → aviso diz qual versão sai do ar |
 | Substituição | Publicar → toast diz qual saiu; a antiga vira "Substituída" |
 | Trava de exclusão | Tentar excluir a versão "No ar" → recusa explicada |
@@ -2013,7 +2192,7 @@ tipos batiam):
 cd web
 npm install       # uma vez; traz só o verificador de tipos
 npm run check     # tipos, sem etapa de build (decisão ADR-0006 na seção 4)
-npm test          # 458 testes: 359 no servidor, 99 no front-end
+npm test          # servidor e front-end
 ```
 
 Entre os testes do front-end há um que **linka o grafo de módulos inteiro** a partir do
@@ -2037,6 +2216,7 @@ teste, ver o passo a passo em `atualizador/README.md` (Fase 2 precisa ser simula
 
 ---
 
+<a id="auditoria-ago-set-2026"></a>
 ## 6. Auditoria de agosto/set 2026 — o que mudou desde então
 
 Em 27/08/2026, uma auditoria técnica comparou três documentos de arquitetura anteriores —
@@ -2083,6 +2263,7 @@ listados como pendências ativas na [seção 3.4](#34-estado-atual-pré-piloto).
 
 ---
 
+<a id="historico-do-documento"></a>
 ## 7. Histórico deste documento — o que foi consolidado
 
 Este documento substitui os seguintes arquivos, que existiam separadamente em `web/docs/` e foram
@@ -2092,14 +2273,14 @@ continua disponível no `git log`, se for preciso consultar o texto original):
 | Arquivo removido | Natureza | Para onde foi |
 |---|---|---|
 | `ARCHITECTURE.md` | Arquitetura do código do painel web | [Seção 2.2](#22-arquitetura-do-código) |
-| `RELATORIO_IMPLEMENTACAO.md` | Relatório de implementação do agente C#, 26–27/08 | Superado pelo estado real de 03/09 — [seção 3](#3-atualizador-inteligente-de-erp--agente-local-c) e [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
+| `RELATORIO_IMPLEMENTACAO.md` | Relatório de implementação do agente C#, 26–27/08 | Superado pelo estado real de 03/09 — [seção 3](#3-atualizador-inteligente-de-erp--agente-local-c) e [seção 6](#auditoria-ago-set-2026) |
 | `REVISAO_INTERFACE.md` | Revisão de interface/distribuição do painel, set/2026 | [Seção 2.3](#23-revisão-de-interface-e-distribuição--set2026) |
-| `Planejamento_Tecnico_Atualizador_ERP_v4.pdf` | Especificação técnica original (MD5, sem estado `PROCESSANDO`) | Contexto histórico na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
-| `Projeto_Arquitetura_Atualizador_ERP.pdf` | Apresentação executiva da mesma arquitetura | Contexto histórico na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
+| `Planejamento_Tecnico_Atualizador_ERP_v4.pdf` | Especificação técnica original (MD5, sem estado `PROCESSANDO`) | Contexto histórico na [seção 6](#auditoria-ago-set-2026) |
+| `Projeto_Arquitetura_Atualizador_ERP.pdf` | Apresentação executiva da mesma arquitetura | Contexto histórico na [seção 6](#auditoria-ago-set-2026) |
 | `Documento_Tecnico_Atualizador_ERP.html`/`.pdf` | Documento técnico v1.0 (26/08) | Substituído pela [seção 3](#3-atualizador-inteligente-de-erp--agente-local-c), que reflete o estado atual |
-| `documento-oficial-atualizador-erp.pdf`/`.docx` | Auditoria técnica completa (27/08) | Resumida na [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então); achados individuais na [tabela da seção 3.9](#39-histórico-de-correções-críticas) |
+| `documento-oficial-atualizador-erp.pdf`/`.docx` | Auditoria técnica completa (27/08) | Resumida na [seção 6](#auditoria-ago-set-2026); achados individuais na [tabela da seção 3.9](#39-histórico-de-correções-críticas) |
 | `auditoria_atualizador_erp.html` | Mesma auditoria, versão HTML estilizada | Idem acima |
-| `relatorio-atualizador-erp.docx` | Revisão técnica complementar (27/08), comparando contra um desenho anterior descartado | Resumida no último parágrafo da [seção 6](#6-auditoria-de-agostoset2026-o-que-mudou-desde-então) |
+| `relatorio-atualizador-erp.docx` | Revisão técnica complementar (27/08), comparando contra um desenho anterior descartado | Resumida no último parágrafo da [seção 6](#auditoria-ago-set-2026) |
 | `apresentacao-atualizador-erp.docx` | Proposta de projeto em linguagem executiva | Conteúdo condensado na [seção 1](#1-visão-geral-do-projeto) |
 | `Apresentacao_Atualizador_Inteligente_ERP.pptx` | Slides gerados a partir do documento técnico e das capturas de tela | Conteúdo coberto pelas seções 1–3; os slides em si não têm informação que não esteja aqui |
 | `tela-distribuicao.png`, `tela-resumo.png` | Capturas de tela usadas nos slides acima | Removidas junto com a apresentação — ilustravam a mesma interface descrita na seção 2 |
@@ -2124,7 +2305,7 @@ movidos para dentro da pasta junto com o resto. A pasta foi reorganizada em dois
 
 **Passo 1 (mais cedo, mesmo dia).** `ANALISE_MELHORIAS_WEB.md` (auditoria técnica, 18/09) e
 `PLANEJAMENTO_MELHORIAS_UX_UI.md` (planejamento de UX/UI, também 18/09) foram fundidos em
-[`MELHORIAS.md`](MELHORIAS.md). Achado na reconciliação: quase todo o roadmap do segundo já tinha
+`MELHORIAS.md` (removido em 30/09/2026, ver 7.3). Achado na reconciliação: quase todo o roadmap do segundo já tinha
 sido entregue — confirmado no código e na entrada "Roadmap UX/UI entregue em quatro frentes" do
 [`CHANGELOG.md`](../CHANGELOG.md) — mas o documento continuava descrevendo esses itens como proposta
 futura. `MELHORIAS.md` ficou com o que sobrou de genuinamente pendente.
@@ -2142,20 +2323,30 @@ incluindo um índice próprio. A organização atual está descrita abaixo.
 
 ### 7.2 Consolidação dos planos e decisões — 28/09/2026
 
-O plano técnico vigente foi incorporado em [`MELHORIAS.md`](MELHORIAS.md#plano-vigente),
+O plano técnico vigente foi incorporado em `MELHORIAS.md`,
 antes do backlog histórico. O planejamento de revisão concluído foi preservado
 integralmente na [seção 8](#plano-revisao-concluido). Os ADRs 0007–0009 foram
 incorporados integralmente à seção 4. Os caminhos antigos passaram a apontar
 para essas seções. Na pasta `docs/` ficam apenas este arquivo,
-[`MELHORIAS.md`](MELHORIAS.md) e [`OPERACAO.md`](OPERACAO.md); o índice está no
+`MELHORIAS.md` e [`OPERACAO.md`](OPERACAO.md); o índice está no
 [`README.md`](../README.md) da raiz. Os arquivos especiais da raiz permanecem.
+
+### 7.3 O fim do `MELHORIAS.md` — 30/09/2026
+
+`docs/MELHORIAS.md` foi removido (commit `6d27219`): repetia o que já está no
+[`CHANGELOG.md`](../CHANGELOG.md) (o que mudou, e por quê) e nesta documentação (as decisões, na
+[seção 4](#decisoes-de-arquitetura)). Os itens do plano que ele carregava (P01 a P05) estão
+registrados nos ADRs 0010 a 0012 e no CHANGELOG. O que ainda falta fazer deixou de ter um arquivo
+próprio no repositório. Na auditoria de 30/09/2026 (A17), os links para ele saíram de todos os
+documentos e dos comentários do código; as menções das seções 7.1 e 7.2, que contam o que houve
+naquelas datas, ficam como registro.
 
 ---
 
 <a id="plano-revisao-concluido"></a>
 ## 8. Plano de revisão concluído — 24 a 28/09/2026
 
-Esta seção preserva as decisões, o checklist e os critérios da revisão concluída. Não é o backlog vigente; para melhorias novas, consulte [MELHORIAS.md](MELHORIAS.md).
+Esta seção preserva as decisões, o checklist e os critérios da revisão concluída. Não é um backlog; o que mudou e por quê está no [CHANGELOG](../CHANGELOG.md).
 
 Data: 24/09/2026 (finalizado em 28/09/2026)
 Situação: **FINALIZADO.** Todas as etapas (E0–E11), todos os itens das seções 3 a 12 e as evoluções 13.1 (Campanhas) e 13.4 (preferências e notificações) foram entregues e verificados. Este documento não recebe mais itens: 13.2 e 13.3 ficam registradas como sugestões para um planejamento futuro, sem compromisso de execução.
@@ -2163,7 +2354,7 @@ Escopo: identidade, indicadores, tabelas, relatórios, agendamentos, clientes, s
 
 ### 1. Objetivo e limites da análise
 
-Tornar o painel mais coerente com a operação: saber quem precisa de atualização, organizar atendimentos e produzir relatórios úteis, com menos controles disputando atenção.
+Tornar o painel mais coerente com a operação: saber quem precisa de atualização, organizar atualizações e produzir relatórios úteis, com menos controles disputando atenção.
 
 A análise foi feita sobre o código atual das telas, componentes, serviços e repositórios. As observações visuais do usuário são requisitos deste plano. O desalinhamento dos meses, o número 121 e a aparência do ícone precisam ser reproduzidos no navegador durante a execução: nesta etapa não houve nova inspeção visual de todas as telas nem consulta ao banco de produção para confirmar esse valor.
 
@@ -2173,9 +2364,9 @@ Somente este documento é criado nesta etapa. Interface, regras, dados e configu
 
 #### Regras já acordadas que precisam permanecer
 
-- Uma nova atualização guarda as versões oficiais dos sistemas informados naquele atendimento.
+- Uma nova atualização guarda as versões oficiais dos sistemas informados naquela atualização.
 - Alterar a oficial não muda a versão recebida anteriormente por um cliente.
-- Editar observações não deve reaplicar versões atuais ao atendimento antigo.
+- Editar observações não deve reaplicar versões atuais à atualização antiga.
 - Histórico sem versão comprovada não recebe a referência de hoje retroativamente.
 - B_Atualizador e Suporte Bredas são sistemas fixos, conforme definição do usuário, sem controle de defasagem de versões.
 - O relatório do chamado segue o formato aprovado, sem ID, código, cidade ou motivo.
@@ -2215,11 +2406,11 @@ P0: corrigir significado ou função importante. P1: revisão principal. P2: mel
 
 | Conceito | Pergunta respondida | Fonte |
 |---|---|---|
-| Versão recebida | Qual versão foi aplicada ao sistema do cliente? | Cópia registrada no atendimento |
-| Versão oficial | Qual versão deve ser aplicada em um atendimento novo? | Catálogo de versões oficiais |
-| Tempo sem atendimento | Há quanto tempo não há atendimento registrado? | Data do último atendimento válido |
+| Versão recebida | Qual versão foi aplicada ao sistema do cliente? | Cópia registrada na atualização |
+| Versão oficial | Qual versão deve ser aplicada em uma atualização nova? | Catálogo de versões oficiais |
+| Tempo sem atualização | Há quanto tempo não há atualização registrada? | Data da última atualização válida |
 
-Exemplo: cliente atendido ontem com NFe 22/09 fica desatualizado quando a oficial passa para 24/09, mas não está há 60 dias sem atendimento. Cliente sem atendimento recente pode continuar em dia se nenhuma versão dos seus sistemas mudou.
+Exemplo: cliente atendido ontem com NFe 22/09 fica desatualizado quando a oficial passa para 24/09, mas não está há 60 dias sem atualização. Cliente sem atualização recente pode continuar em dia se nenhuma versão dos seus sistemas mudou.
 
 #### 3.2 Sistemas fixos — I04
 
@@ -2233,41 +2424,41 @@ Recomendação: atributo persistido no catálogo, por exemplo `controla_versao`,
 - [x] Excluir de listas e contagens de clientes desatualizados por versão.
 - [x] Excluir da seleção da aba Sistemas e da lista de referências oficiais (`/sistemas/versoes`).
 - [x] Na ficha, apresentar em Serviços/componentes fixos, sem estado de atraso; a revisão geral da matriz continua em E7.
-- [x] Não apagar atendimentos, anotações ou referências antigas já registradas.
+- [x] Não apagar atualizações, anotações ou referências antigas já registradas.
 - [x] Impedir na API que sistema fixo receba nova referência oficial por engano.
 - [x] Desconsiderar referência antiga eventualmente cadastrada nesses sistemas; ao reclassificar como atualizável, a referência preservada volta a aparecer.
 - [x] Não gerar lote de agendamentos de atualização por atraso desses sistemas; tarefa manual de instalação/acesso continua possível.
 - [x] Reservar alteração da classificação de sistema à administração (aba Classificação, rota com papel `admin`).
 
-Para volume de trabalho: um atendimento misto continua contando uma vez. Registro exclusivamente de instalação/acesso a componente fixo pode continuar no histórico de atendimentos, mas não deve inflar uma série chamada Atualizações de sistemas. Explicitar essa distinção no indicador.
+Para volume de trabalho: uma atualização mista continua contando uma vez. Registro exclusivamente de instalação/acesso a componente fixo pode continuar no histórico de atualizações, mas não deve inflar uma série chamada Atualizações de sistemas. Explicitar essa distinção no indicador.
 
-**Feito em E2 (25/09/2026):** os totais e a tendência atuais do Resumo foram rotulados como **Atendimentos**, pois contam cada registro uma vez, inclusive os exclusivamente de componentes fixos. O gráfico **Atualizações Por Sistema Este Mês** lista somente sistemas atualizáveis. A definição e o tratamento dos meses vazios da tendência permanecem em E4 (5.3).
+**Feito em E2 (25/09/2026):** os totais e a tendência atuais do Resumo foram rotulados como **Atualizações**, pois contam cada registro uma vez, inclusive os exclusivamente de componentes fixos. O gráfico **Atualizações Por Sistema Este Mês** lista somente sistemas atualizáveis. A definição e o tratamento dos meses vazios da tendência permanecem em E4 (5.3).
 
 #### 3.3 Situação consolidada do cliente
 
 Grupos mutuamente exclusivos (decididos). **Cliente com B_Vendas é julgado só pelo B_Vendas** (decidido em 24/09/2026, depois de ver o card com dados reais: com todos os sistemas eram 21 em dia, 245 desatualizados e 103 pendentes, de 369). Sem B_Vendas, valem as regras abaixo sobre todos os sistemas:
 
 1. **Desatualizado:** existe sistema atualizável com versão recebida **anterior** à oficial (ou, sem versão registrada, atendido antes da data da oficial).
-2. **Verificação pendente:** não há atraso confirmado, mas algum sistema atualizável nunca teve atendimento, não tem oficial cadastrada ou tem data de atendimento inválida.
-3. **Em dia:** possui ao menos um sistema atualizável e todos têm versão recebida **igual ou posterior** à oficial (ou, sem versão registrada, atendimento na data da oficial ou depois).
+2. **Verificação pendente:** não há atraso confirmado, mas algum sistema atualizável nunca teve atualização, não tem oficial cadastrada ou tem data de atualização inválida.
+3. **Em dia:** possui ao menos um sistema atualizável e todos têm versão recebida **igual ou posterior** à oficial (ou, sem versão registrada, atualização na data da oficial ou depois).
 4. **Sem sistemas atualizáveis:** possui apenas fixos ou nenhum sistema; fica fora do denominador de cobertura.
 
 Comparação por data, não por igualdade de texto. Hoje `matrizVersoes.js` usa `instalada === versaoAtiva`, o que marca como atrasado um cliente à frente da oficial (versão de teste, oficial rebaixada). Recebida posterior à oficial conta como Em dia. Versão em formato que não se converte em data é tratada como versão ausente (regra "pela data" abaixo).
 
-**Fonte da versão recebida (decidido):** somente a versão registrada em atendimento. O que o agente reporta não entra na classificação; aparece separado, com origem identificada (ver 9.3). Hoje a ficha deixa o agente sobrepor o atendimento (`matrizVersoes.js`, `agente?.ultimaVersao || versaoRegistrada(...)`) e casa agente com cliente por CNPJ/nome; isso deixa de afetar a situação.
+**Fonte da versão recebida (decidido):** somente a versão registrada em atualização. O que o agente reporta não entra na classificação; aparece separado, com origem identificada (ver 9.3). Hoje a ficha deixa o agente sobrepor a atualização (`matrizVersoes.js`, `agente?.ultimaVersao || versaoRegistrada(...)`) e casa agente com cliente por CNPJ/nome; isso deixa de afetar a situação.
 
 Nunca atualizado continua como detalhe por sistema. No consolidado, falta de evidência entra em Verificação pendente. Cliente com atraso confirmado e outro sistema sem informação conta uma vez em Desatualizado; a falta de informação aparece como detalhe secundário.
 
-**Medido em 24/09/2026 (E0), numa cópia do banco de produção:** com a regra estrita, 21 desatualizados, 348 pendentes e 0 em dia, de 369 clientes. Havia 1.275 sistemas com atendimento sem versão, registrados antes de existir a versão oficial. **Decidido: atendimento sem versão é julgado pela data** do atendimento contra a data da oficial, marcado "(pela data)" na tela. A versão recebida continua "Não informada": nada é gravado retroativamente. A ação "confirmar versão atual" deixou de ser pré-requisito. Detalhes na [decisão ADR-0008](#adr-0008).
+**Medido em 24/09/2026 (E0), numa cópia do banco de produção:** com a regra estrita, 21 desatualizados, 348 pendentes e 0 em dia, de 369 clientes. Havia 1.275 sistemas com atualização sem versão, registrados antes de existir a versão oficial. **Decidido: atualização sem versão é julgado pela data** da atualização contra a data da oficial, marcado "(pela data)" na tela. A versão recebida continua "Não informada": nada é gravado retroativamente. A ação "confirmar versão atual" deixou de ser pré-requisito. Detalhes na [decisão ADR-0008](#adr-0008).
 
 - [x] Compartilhar regra no servidor entre Resumo, Sistemas, situação do cliente e relatório do cliente (`services/situacaoVersao.js`).
-- [x] Matriz da ficha revisada em E7: telemetria de agentes em bloco próprio sem sobrepor atendimento, e classificação de sistemas atualizáveis obtida da regra oficial do servidor/ADR-0008 (25/09/2026).
+- [x] Matriz da ficha revisada em E7: telemetria de agentes em bloco próprio sem sobrepor atualização, e classificação de sistemas atualizáveis obtida da regra oficial do servidor/ADR-0008 (25/09/2026).
 - [x] Retornar totais de clientes, elegíveis e fora da avaliação.
 - [x] Garantir soma correta, sem duplicar cliente com vários sistemas.
 - [x] Usar IDs e relacionamentos normalizados atuais, sem novas junções por nome livre.
 - [x] Aproveitar cópias de versões já existentes, sem mecanismo concorrente.
 - [x] Comparar versões como datas; recebida posterior à oficial conta Em dia.
-- [x] Classificar só pela versão do atendimento; agente fica fora da regra.
+- [x] Classificar só pela versão da atualização; agente fica fora da regra.
 - [x] Testar oficial alterada, recebida à frente, formato não comparável, versões ausentes, vários sistemas, fixos e legados (`server/tests/situacaoVersao.test.js`).
 
 ### 4. Identidade visual e nome principal — I01
@@ -2291,11 +2482,11 @@ O cabeçalho anterior misturava ATUALIZADOR e Gestor de clientes, deixando incer
 
 | Onde | Como |
 |---|---|
-| Símbolo | `simboloMarca()` em `client/js/utils/icons.js`: SVG 32×32, traço 2.6, `currentColor`. Mesmo traçado em `assets/favicon.svg`; ao mudar um, mude o outro. |
+| Símbolo | `simboloMarca()` em `client/js/utils/icones.js`: SVG 32×32, traço 2.6, `currentColor`. Mesmo traçado em `assets/favicon.svg`; ao mudar um, mude o outro. |
 | Quadrado do símbolo | Fundo `--cor-accent` e desenho `--cor-sobre-accent`, no CSS. Nunca fundo embutido no desenho. |
 | Barra lateral aberta | Símbolo 34 px (desenho 24 px) + "Gestor de / Atualizações" em duas linhas, Sora extra 16 px. Sem descritor. |
 | Barra recolhida | Só o símbolo. |
-| Login (tela larga) | Símbolo 48 px, nome numa linha em `--txt-xl`, e a linha "Bredas Sistemas · Atualizações e atendimento dos clientes, num só lugar." |
+| Login (tela larga) | Símbolo 48 px, nome numa linha em `--txt-xl`, e a linha "Bredas Sistemas · Atualizações e atualização dos clientes, num só lugar." |
 | Login (celular) | Símbolo 44 px no cartão; subtítulo "Gestor de Atualizações". |
 | Aba do navegador | "‹Tela› · Gestor de Atualizações"; `favicon.svg`, com `favicon.png` (64 px) como reserva e para as notificações. |
 | O que não usar | "ATUALIZADOR" como nome do painel: é o nome do agente. |
@@ -2316,15 +2507,15 @@ Substituir a rosca genérica por um card **Atualização dos clientes**, com bar
 - [x] Mostrar até três sistemas com mais clientes desatualizados e Ver todos.
 - [x] Estado vazio orienta cadastro quando não há clientes e vínculo/classificação quando só há clientes fora da avaliação; todos pendentes recebem orientação própria.
 - [x] Não mostrar 100% em dia quando não houver clientes elegíveis.
-- [x] Não misturar falha/offline de agente com versão registrada em atendimento.
+- [x] Não misturar falha/offline de agente com versão registrada em atualização.
 - [x] Conferir que a população aberta pelo clique corresponde à contagem (verificado no navegador com dados sintéticos).
 
-#### 5.2 Sem atendimento há mais de 60 dias
+#### 5.2 Sem atualização há mais de 60 dias
 
-- [x] Renomear indicador para **Sem atualização há mais de 60 dias** (a equipe preferiu "atualização" a "atendimento"), usando o prazo configurado, e o texto da regra na Administração.
-- [x] Separar Nunca atendidos de clientes com atendimento antigo (vêm primeiro na lista, com "Nunca").
+- [x] Renomear indicador para **Sem atualização há mais de 60 dias** (a equipe preferiu "atualização" a "atualização"), usando o prazo configurado, e o texto da regra na Administração.
+- [x] Separar Nunca atendidos de clientes com atualização antiga (vêm primeiro na lista, com "Nunca").
 - [x] Corrigir destino do clique: hoje abre Sistemas sem reproduzir o conjunto contado.
-- [x] Abrir lista com cliente, último atendimento e dias; responsável somente se houver fonte definida.
+- [x] Abrir lista com cliente, última atualização e dias; responsável somente se houver fonte definida.
 - [x] Remover fundo escuro arredondado do ícone de alerta.
 - [x] Usar ícone simples e cor discreta, coerente com os demais indicadores.
 - [x] Não tratar acompanhamento preventivo como falha crítica do sistema. Verificado: nenhuma palavra "falha"/"crítico" ligada ao indicador; o sino de notificações (`domain/notificacoes.js`) nem inclui "sem atualização" entre os avisos, só agendamentos atrasados e agentes.
@@ -2353,7 +2544,7 @@ Aceite: 0, 1, 2, 6 e 12 meses; série zerada; máximo 121; máximo no primeiro/�
 
 Validação E4: testes de banco cobrem virada de ano, meses sem registro, data futura e comparação de mês de 31 dias com anterior de 30. No navegador, cenários de 0/1/2/6/12 pontos, série zerada, máximo 121 nas pontas, zero alternado com picos, foco e setas do teclado, larguras 390/768/1280/1440 px e sidebar aberta/recolhida.
 
-**Ajuste após E4 (25/09/2026):** por decisão do usuário, a seção expansível “Ver valores dos 12 meses” foi removida; o gráfico ocupa a altura disponível no card, mantendo tooltip por mouse, toque e teclado. Os textos visíveis do painel, relatórios e exportação passaram a usar “atualização” em vez de “atendimento”. Os nomes internos e registros históricos permanecem intactos.
+**Ajuste após E4 (25/09/2026):** por decisão do usuário, a seção expansível “Ver valores dos 12 meses” foi removida; o gráfico ocupa a altura disponível no card, mantendo tooltip por mouse, toque e teclado. Os textos visíveis do painel, relatórios e exportação passaram a usar “atualização” em vez de “atualização”. Os nomes internos e registros históricos permanecem intactos.
 
 Na consulta por sistema, a coluna “Oficial” foi retirada da tabela porque a versão oficial do sistema selecionado já aparece acima dela. A coluna da data passou a se chamar “Última atualização”.
 
@@ -2413,9 +2604,9 @@ A prévia da importação pode ser entrega posterior: reposicionar botões não 
 
 Relatório por período, cópia, impressão/PDF e Excel formatado já existem. Melhorar acesso e apresentação, sem reconstruir recursos equivalentes.
 
-- [x] Trocar select por abas curtas: Atendimento e Cliente (25/09/2026).
+- [x] Trocar select por abas curtas: Atualização e Cliente (25/09/2026).
 - [x] Período permanece entrada própria, utilizável sem selecionar um cliente (25/09/2026).
-- [x] Não oferecer Atendimento sem registro selecionado (25/09/2026).
+- [x] Não oferecer Atualização sem registro selecionado (25/09/2026).
 - [x] Cabeçalho informa contexto e oferece fechar de forma discreta (25/09/2026).
 - [x] Prévia rolável com rodapé estável: Copiar e Imprimir/Salvar PDF (25/09/2026).
 - [x] Filtro de histórico somente na aba Cliente, recolhido inicialmente (25/09/2026).
@@ -2513,12 +2704,12 @@ Cadastro, Sistemas e Acessos já existem como subabas. O foco deve ser hierarqui
 - [x] Cabeçalho com nome, código e cidade; grupo apenas quando preenchido (25/09/2026).
 - [x] Remover CNPJ do subtítulo e dos campos da ficha (25/09/2026).
 - [x] Não remover identificação por CNPJ dos agentes em Distribuição: é outro uso (25/09/2026).
-- [x] Resumo compacto: último atendimento, sistemas desatualizados e informação pendente (25/09/2026).
+- [x] Resumo compacto: última atualização, sistemas desatualizados e informação pendente (25/09/2026).
 - [x] Compartilhar comparação de versões com Sistemas e relatório do cliente (25/09/2026).
 - [x] Separar componentes fixos dos sistemas atualizáveis (25/09/2026).
 - [x] Não confundir versão publicada do agente com oficial do histórico operacional (25/09/2026).
-- [x] Quando houver dados do agente, mostrar em bloco próprio (versão reportada, último contato, falha), sem alterar a situação do sistema, que vem só do atendimento (25/09/2026).
-- [x] Histórico cronológico com observações expansíveis e relatório do atendimento (25/09/2026).
+- [x] Quando houver dados do agente, mostrar em bloco próprio (versão reportada, último contato, falha), sem alterar a situação do sistema, que vem só da atualização (25/09/2026).
+- [x] Histórico cronológico com observações expansíveis e relatório da atualização (25/09/2026).
 - [x] Acrescentar próximos agendamentos se puder reutilizar consulta existente; caso contrário, entregar depois (25/09/2026).
 - [x] Acessos por máquina em lista compacta com cópia individual (25/09/2026).
 - [x] Estados vazios curtos, sem vários campos preenchidos com travessões (25/09/2026).
@@ -2526,7 +2717,7 @@ Cadastro, Sistemas e Acessos já existem como subabas. O foco deve ser hierarqui
 
 Aceite: nome longo, sem grupo, sem sistemas, apenas fixos, sem histórico, vários acessos e histórico extenso.
 
-**Revisto em 28/09/2026 (decisão do usuário):** o resumo compacto ficou só com **Última atualização** (o rótulo dizia "Último atendimento"); o cartão Situação dos sistemas saiu, porque repetia a Matriz de Versões.
+**Revisto em 28/09/2026 (decisão do usuário):** o resumo compacto ficou só com **Última atualização** (o rótulo dizia "Última atualização"); o cartão Situação dos sistemas saiu, porque repetia a Matriz de Versões.
 
 ### 10. Sistemas e versões oficiais — I16
 
@@ -2540,10 +2731,10 @@ Abaixo, referência de leitura: `Versão oficial de B_NFe: 22/09/2026`. Edição
 
 - [x] Situação: Todos, Em dia, Desatualizados, Sem informação.
 - [x] Busca por cliente/cidade sem alterar versão.
-- [x] Oferecer Último atendimento antes de em Filtros, com data opcional. Sem atendimento fica fora desse recorte de data; aparece em Sem informação quando não há data aplicada.
-- [x] A data filtra o atendimento; não substitui a oficial usada na classificação de versão.
+- [x] Oferecer Última atualização antes de em Filtros, com data opcional. Sem atualização fica fora desse recorte de data; aparece em Sem informação quando não há data aplicada.
+- [x] A data filtra a atualização; não substitui a oficial usada na classificação de versão.
 - [x] Retirar ambiguidade atual: a consulta não tem ação de salvar referência.
-- [x] Colunas: Cliente, Último atendimento, Versão recebida, Oficial e Situação; cidade secundária.
+- [x] Colunas: Cliente, Última atualização, Versão recebida, Oficial e Situação; cidade secundária.
 - [x] Abrir ficha na linha para investigar pendência.
 - [x] Excluir fixos da seleção principal de controle.
 - [x] Preservar filtros ao voltar, buscando a referência oficial atual a cada entrada.
@@ -2553,16 +2744,16 @@ Abaixo, referência de leitura: `Versão oficial de B_NFe: 22/09/2026`. Edição
 - [x] Uma linha por sistema atualizável, com versão salva.
 - [x] Mostrar autor/data da alteração quando disponíveis; a migração versionada 3 acrescenta as duas colunas também aos bancos existentes. Referências antigas mostram autor/data não registrados.
 - [x] Edição explícita por linha com Salvar/Cancelar e validação de data.
-- [x] Explicar: novos atendimentos usam a oficial; os existentes preservam versões recebidas.
+- [x] Explicar: novos atualizações usam a oficial; os existentes preservam versões recebidas.
 - [x] Referência ausente não implica Em dia (`Sem referência` no servidor).
 - [x] Preservar papéis atuais de gravação; consulta apenas visualiza.
 - [x] Invalidar os dados locais de Resumo, Sistemas, Consulta e relatórios após mudança.
 - [x] Detectar edição concorrente antes de sobrescrever uma oficial alterada por outra pessoa (comparação atômica com a referência anterior; HTTP 409).
 - [x] Fechar painel ou trocar seleção não grava alterações.
 
-Aceite: filtro nunca grava; salvar não reescreve atendimento; sistemas aceitam oficiais diferentes; limpar oficial não torna todos os clientes atualizados.
+Aceite: filtro nunca grava; salvar não reescreve atualização; sistemas aceitam oficiais diferentes; limpar oficial não torna todos os clientes atualizados.
 
-**Validado em E3 (25/09/2026):** testes de API cobrem autoria, referência anterior obrigatória e conflito HTTP 409; os testes de serviço cobrem filtro de atendimento sem substituir a oficial e preservação da versão recebida. No navegador, em 1280 e 390 px, o filtro não enviou PUT, a edição atualizou a referência mostrada, não houve erro de JavaScript nem rolagem horizontal.
+**Validado em E3 (25/09/2026):** testes de API cobrem autoria, referência anterior obrigatória e conflito HTTP 409; os testes de serviço cobrem filtro de atualização sem substituir a oficial e preservação da versão recebida. No navegador, em 1280 e 390 px, o filtro não enviou PUT, a edição atualizou a referência mostrada, não houve erro de JavaScript nem rolagem horizontal.
 
 ### 11. Usuários e Administração — I17, I18
 
@@ -2637,7 +2828,7 @@ Substitui a proposta anterior da Central de pendências. Permite criar metas tem
 
 - [x] Nova aba no menu lateral: **Campanhas** (ícone de bandeira), no grupo Distribuição, depois de Sistemas, para não mudar o Alt+N das abas existentes. A partir da 10ª aba não há atalho numérico, e a aba deixou de anunciar um "Alt+10" que não existia.
 - [x] Criação de campanha: sistema, versão-alvo (dd/mm/aaaa), prazo limite opcional e título/descrição. A versão-alvo vem sugerida com a oficial atual do sistema. Sistemas fixos e fora do catálogo são recusados.
-- [x] Reconhecimento automático via atendimentos: o último atendimento do cliente no sistema passa por `situacaoDoSistema` contra a versão-alvo (ADR-0008, inclusive "pela data" quando o atendimento não tem versão). Não existe baixa manual.
+- [x] Reconhecimento automático via atualizações: a última atualização do cliente no sistema passa por `situacaoDoSistema` contra a versão-alvo (ADR-0008, inclusive "pela data" quando a atualização não tem versão). Não existe baixa manual.
 - [x] Imutabilidade da meta: a versão-alvo é copiada na criação; editar a campanha muda só título, descrição e prazo, e uma oficial nova em Sistemas não altera a meta.
 - [x] Painel visual executivo: barra de progresso com atendidos, já agendados e pendentes (mesmas cores do card de situação do Resumo), contagens e percentual. Sem clientes, mostra "—" em vez de 0% ou 100%.
 - [x] Tabela de clientes com filtros rápidos (Pendentes, Já agendados, Concluídos, Todos), cada um com a contagem, e busca por nome, código ou cidade.
@@ -2656,7 +2847,7 @@ Uma aba dedicada pode reunir período, cliente, sistema e responsável, com filt
 
 #### 13.3 Qualidade dos cadastros
 
-Recomendação: seção em Dados, não nova aba principal. Listar clientes sem sistemas, atendimentos sem versão, sistemas sem oficial e possíveis duplicidades. Correção deve mostrar os registros envolvidos; não consolidar ou excluir automaticamente por semelhança de nomes.
+Recomendação: seção em Dados, não nova aba principal. Listar clientes sem sistemas, atualizações sem versão, sistemas sem oficial e possíveis duplicidades. Correção deve mostrar os registros envolvidos; não consolidar ou excluir automaticamente por semelhança de nomes.
 
 #### 13.4 Preferências e notificações — adiadas da seção 12
 
@@ -2665,7 +2856,7 @@ Recomendação: seção em Dados, não nova aba principal. Listar clientes sem s
 - [x] Tipos de evento, minhas tarefas/equipe, som opcional. O sino tem um interruptor por tipo (agendamentos atrasados, de hoje, situação dos agentes) e o escopo "Da equipe / Só as minhas"; o que fica desligado some do sino **e** do contador no título da aba, que somam a mesma lista (`montarNotificacoes` com filtro). "Minha" tarefa é decidida por `ehResponsavel` (domain/pessoa.js): sem caixa nem acento, e o primeiro nome da tarefa casa com o nome completo da conta ("Antonio" × "Antonio Salomão"), mas "Ana" não casa com "Anabela". Som opcional (desligado por padrão): toque curto gerado no navegador, sem arquivo, quando o número de pendências não vistas **cresce** ou chega falha de agente — não a cada ciclo.
 - [x] Horário silencioso. Intervalo de meia em meia hora que pode virar a noite (19:00–07:00); início igual ao fim não silencia nada; o fim é exclusivo. Fuso: o relógio deste computador, mostrado na tela ("America/Sao_Paulo"), sem conversão. Evento crítico: falha de agente, que por padrão aparece mesmo no silêncio (sem som); desligando isso, as falhas do período viram **um** aviso-resumo quando o silêncio acaba (mensagens acumuladas). O sino continua contando no silêncio.
 - [x] Estado real da permissão de notificação: linha própria em Notificações do sistema, relida do navegador (e do evento de mudança, quando o navegador oferece), com os quatro casos — permitidas, bloqueadas (com o caminho para liberar pelo cadeado), ainda não pedidas e indisponível (HTTP sem HTTPS).
-- [x] Preferências de relatório: aba com que o relatório abre (Atualização ou Cliente, quando a tela oferece as duas) e "Fechar o relatório depois de copiar". Nenhuma mexe no conteúdo: o formato do chamado (7.3) não virou editor. A aba "Atendimento" do relatório passou a se chamar "Atualização".
+- [x] Preferências de relatório: aba com que o relatório abre (Atualização ou Cliente, quando a tela oferece as duas) e "Fechar o relatório depois de copiar". Nenhuma mexe no conteúdo: o formato do chamado (7.3) não virou editor. A aba "Atualização" do relatório passou a se chamar "Atualização".
 - [x] Persistência por usuário no servidor, validação de chaves e migração das preferências locais. Persistência e migração já existiam. Nova: o servidor recusa nome de chave fora do formato (inclusive `__proto__`) e confere o valor das chaves que mudam comportamento (horários na grade de meia hora, listas fechadas, sim/não). O cliente deixa de enviar chave antiga fora do formato, para uma chave estranha não travar a sincronização das outras.
 - [x] Não acrescentar idioma/fuso decorativos: nenhum seletor de idioma ou fuso foi criado; o horário silencioso usa o relógio local e só informa qual é.
 
@@ -2690,15 +2881,15 @@ Numeração única: as etapas abaixo são a ordem de execução e cada uma é um
 | E10 | ✅ Validação visual completa, README/ajuda, CHANGELOG (25/09/2026) | — | Todas | Pequeno |
 | E11 | ✅ Campanhas de atualização (aba no menu lateral, metas de versão e progresso) e fechamento das pendências das seções 6 e 7.2 (28/09/2026) | I20, I06, I08 | E2, E4, E6 | Médio |
 
-E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída decidida foi julgar pela data o atendimento sem versão (3.3), e não criar a ação de confirmar versão.
+E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída decidida foi julgar pela data a atualização sem versão (3.3), e não criar a ação de confirmar versão.
 
 #### Checklist mestre
 
 - [x] E0 — contagem por grupo com dados reais (24/09/2026).
 - [x] E1 — alerta sem fundo escuro, borda em Excluir, remover Converter, recuperar Arquivar, Último acesso capitalizado.
-- [x] E2 — `controla_versao`, exclusões dos fixos, classificação só por admin, comparação por data, fonte só atendimento e regra única no servidor; ADR-0008. Validados API, histórico e gráfico mensal.
+- [x] E2 — `controla_versao`, exclusões dos fixos, classificação só por admin, comparação por data, fonte só atualização e regra única no servidor; ADR-0008. Validados API, histórico e gráfico mensal.
 - [x] E3 — consulta com filtros próprios e gerenciador de oficiais separado, com autoria e proteção contra edição concorrente.
-- [x] E4 — Resumo com card de situação, Sem atendimento e tendência de 12 meses, unidade explícita e comparação parcial justa.
+- [x] E4 — Resumo com card de situação, Sem atualização e tendência de 12 meses, unidade explícita e comparação parcial justa.
 - [x] E5 — variantes de botão, toolbars, filtros de data recolhíveis, exportar/importar reposicionados (25/09/2026).
 - [x] E6 — Agendamentos junto à grade; acessos na linha; Grupo/Rede compacto (25/09/2026).
 - [x] E7 — ficha sem CNPJ, agente em bloco próprio; relatórios em abas com o texto aprovado (25/09/2026).
@@ -2714,16 +2905,16 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 #### Regras e dados
 
 - [x] NFe recebido em 22/09 fica atrasado após oficial 24/09 sem reescrever histórico.
-- [x] Novo atendimento recebe a oficial; editar observação preserva a recebida.
+- [x] Nova atualização recebe a oficial; editar observação preserva a recebida.
 - [x] Cliente somente com fixos não entra na fila nem no denominador de versões.
 - [x] Cliente com vários sistemas conta uma vez na situação consolidada.
 - [x] Informação ausente não produz Em dia.
 - [x] Recebida posterior à oficial conta Em dia; formato não comparável vai para Verificação pendente.
 - [x] Versão reportada pelo agente não altera a situação do cliente.
-- [x] Tempo sem atendimento não altera situação de versão.
+- [x] Tempo sem atualização não altera situação de versão.
 - [x] Meses vazios aparecem; clique e indicador têm a mesma população.
 - [x] Exportação e relatório incluem todas as páginas do recorte.
-- [x] Alteração no catálogo invalida telas afetadas, preservando atendimentos.
+- [x] Alteração no catálogo invalida telas afetadas, preservando atualizações.
 - [x] Migrações preservam vínculos, são idempotentes e têm recuperação documentada.
 
 #### Interação
@@ -2767,18 +2958,18 @@ E0 mostrou que Verificação pendente concentraria 348 de 369 clientes. A saída
 | Área | Pontos de entrada |
 |---|---|
 | Marca | `client/js/app/App.js`, `client/index.html`, `client/assets/`, `client/css/theme.css` |
-| Padrões | `client/css/components.css`, `SortableTable.js`, `Drawer.js`, `Modal.js` |
-| Resumo/gráficos | `ResumoView.js`, `components/charts/LineChart.js`, `BarChart.js`, `PieChart.js`, `domain/resumo.js` |
+| Padrões | `client/css/components.css`, `TabelaOrdenavel.js`, `Gaveta.js`, `Modal.js` |
+| Resumo/gráficos | `ResumoView.js`, `components/graficos/GraficoDeLinhas.js`, `GraficoDeBarras.js`, `domain/resumo.js` |
 | Indicadores | `server/src/services/AtualizacaoService.js`, `server/src/database/AtualizacaoRepository.js` |
 | Sistemas | `SistemasView.js`, `SistemaRepository.js`, `ClienteService.js`, `SistemasController.js` |
-| Relatórios | `AtualizacoesView.js`, `components/RelatorioModal.js`, `domain/relatorio.js` |
+| Relatórios | `AtualizacoesView.js`, `components/relatorioModal.js`, `domain/relatorio.js` |
 | Agendamentos | `AgendamentosView.js`, `templates/agendamentos.js`, `AgendamentoService.js`, `AgendamentoRepository.js` |
 | Clientes/Consulta | `ClientesView.js`, `ConsultaView.js`, `AcessosModal.js`, `domain/matrizVersoes.js` |
 | Administração | `AdministracaoView.js`, `views/administracao/`, `templates/administracao.js` |
-| Configurações | `ConfiguracoesView.js`, `views/configuracoes/ajustes.js`, `ContaConfig.js`, `app/appearance.js` |
-| Regras/banco | `server/src/config/regrasEquipe.js`, `ConfiguracaoSistemaService.js`, `Database.js`, migrações atuais |
+| Configurações | `ConfiguracoesView.js`, `views/configuracoes/ajustes.js`, `ContaConfig.js`, `app/aparencia.js` |
+| Regras/banco | `server/src/config/regrasEquipe.js`, `ConfiguracaoSistemaService.js`, `BancoDeDados.js`, migrações atuais |
 | Campanhas | `CampanhasView.js`, `templates/campanhas.js`, `domain/campanhas.js`, `CampanhaService.js`, `CampanhaRepository.js`, migração 4 |
-| Importação | `components/ImportacaoModal.js`, `templates/importacao.js`, `AtualizacaoService.previaImportacao/importXlsx` |
+| Importação | `components/ImportacaoModal.js`, `templates/importacao.js`, `AtualizacaoService.previaImportacao/importarXlsx` |
 | Testes | `client/tests/`, `server/tests/` e navegador com dados descartáveis |
 
 Colunas e contratos devem seguir a normalização atual. Este mapa aponta investigação; não autoriza substituir mudanças recentes por arquivos de versões anteriores.
@@ -2790,7 +2981,7 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 | Decisão | Resultado |
 |---|---|
 | Recebida mais nova que a oficial | Em dia; desatualizado só quando anterior à oficial |
-| Fonte da versão para a situação | Só o atendimento; agente aparece separado |
+| Fonte da versão para a situação | Só a atualização; agente aparece separado |
 | Escopo de Configurações/Administração | Só reorganizar na seção 12; as novidades vieram depois, na 13.4 |
 | Central de pendências | Substituída por Campanhas de Atualização (E11, aba no menu lateral) |
 | Situação no Resumo | Barra e totais clicáveis, substituindo a rosca (E4) |
@@ -2800,9 +2991,9 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 | Duplicidade na importação | Avisada na prévia e pulada por padrão; importar mesmo assim é escolha explícita (28/09/2026) |
 | Campanha: quem entra e quem está atendido | Clientes ao vivo do cadastro; atendido pela regra da ADR-0008 contra a versão-alvo; sem baixa manual (ADR-0009) |
 | Nome/símbolo | Gestor de Atualizações, assinatura Bredas Sistemas; símbolo vetorial (seção 4) |
-| Atendimento sem versão registrada | Julgado pela data do atendimento contra a da oficial (ADR-0008) — desde 29/09/2026, todo atendimento é julgado assim |
+| Atualização sem versão registrada | Julgado pela data da atualização contra a da oficial (ADR-0008) — desde 29/09/2026, toda atualização é julgada assim |
 | Quem decide a situação do cliente | O B_Vendas, quando o cliente tem (fixo no código); sem ele, todos os sistemas |
-| Nome do indicador de tempo | "Sem atualização há mais de N dias" (não "atendimento") |
+| Nome do indicador de tempo | "Sem atualização há mais de N dias" (não "atualização") |
 | Sistemas fixos agora | Classificação, exclusões, tela administrativa e API concluídas em E2 |
 
 #### Em aberto

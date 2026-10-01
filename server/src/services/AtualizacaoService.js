@@ -1,12 +1,11 @@
 const ExcelJS = require("exceljs");
-const { splitSystems } = require("../database/AtualizacaoRepository");
 
-const { COLUMNS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constants");
+const { COLUNAS_ATUALIZACOES, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constantes");
 const { REGRAS } = require("../config/regrasEquipe");
-const { dataValida, parseData } = require("../shared/validation");
-const { normalizarSistemas, normalizarResponsavel } = require("../shared/normalizacao");
-const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
-const { situacaoDoSistema, situacaoDoCliente, contaParaVersao } = require("./situacaoVersao");
+const { dataValida, lerData } = require("./validacao");
+const { normalizarSistemas, normalizarResponsavel, separarSistemas } = require("../shared/normalizacao");
+const { ErroDeValidacao, ErroNaoEncontrado, ErroDeConflito } = require("../shared/erros");
+const { situacaoDoSistema, situacaoDoCliente, sistemasQueExplicam, contaComoAtraso, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL } = require("./situacaoVersao");
 const { acharSistema } = require("../database/SistemaRepository");
 const { LIMITE_LINHAS_IMPORTACAO, LIMITE_LINHAS_EXPORTACAO } = require("../config/limitesPlanilha");
 const { contarLinhasXlsx } = require("./contarLinhasXlsx");
@@ -19,14 +18,13 @@ const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
 /**
  * Regras de negocio da aba Atualizacoes: CRUD, importacao/exportacao de
- * planilha, e os calculos usados na aba Resumo (que no app original ficavam
- * dentro de gestor/views/resumo.py, misturados com o desenho da tela).
+ * planilha, e os calculos usados na aba Resumo.
  */
 class AtualizacaoService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
-   * @param {import('./NotificationService').NotificationService} [notifications]
+   * @param {import('./NotificacaoService').NotificacaoService} [notifications]
    */
   /**
    * @param {{valor(nome: string): any}} [regras] ConfiguracaoSistemaService. Opcional
@@ -44,20 +42,20 @@ class AtualizacaoService {
     return this.db.atualizacoes.list(search, responsavel, paginacao);
   }
 
-  distinctResponsaveis() {
-    return this.db.atualizacoes.distinctResponsaveis();
+  responsaveisDistintos() {
+    return this.db.atualizacoes.responsaveisDistintos();
   }
 
   create(input, usuario) {
-    const data = this._validate(input);
-    const sistemas = this._versoesNovas(data, input);
-    this.db.atualizacoes.insert(this._paraTabela(data), sistemas);
-    this.historico.registrar(usuario, "criar", "atualizacao", `Atualização de "${data.cliente}" (${data.sistema || "sem sistema"})`);
-    this._marcarSuporteBredasSeNecessario(data, usuario);
+    const dados = this._validar(input);
+    const sistemas = this._versoesNovas(dados, input);
+    this.db.atualizacoes.insert(this._paraTabela(dados), sistemas);
+    this.historico.registrar(usuario, "criar", "atualizacao", `Atualização de "${dados.cliente}" (${dados.sistema || "sem sistema"})`);
+    this._marcarSuporteBredasSeNecessario(dados, usuario);
     // Sem "await" de proposito: uma notificacao (ou uma falha nela) nao
     // pode atrasar nem derrubar a resposta HTTP deste cadastro.
-    this.notifications?.notifyAtualizacao(data);
-    return data;
+    this.notifications?.avisarAtualizacao(dados);
+    return dados;
   }
 
   // Um UPDATE/DELETE que nao encontra o id nao e' erro do SQLite -- ele
@@ -67,30 +65,30 @@ class AtualizacaoService {
   // usando o app, isso e' rotina: alguem exclui o registro enquanto outra
   // pessoa esta com ele aberto. Mesma regra que ClienteService ja seguia.
   update(id, input, usuario) {
-    const data = this._validate(input);
+    const dados = this._validar(input);
     const antes = this.db.atualizacoes.find(id);
-    const lista = this._resolverSistemas(data);
+    const lista = this._resolverSistemas(dados);
     let sistemas;
     if (antes?.versoes_por_sistema) {
       // Editar observações ou datas não reaplica versões oficiais novas: cada
-      // sistema que continua no atendimento guarda a versão que já tinha, e
-      // um sistema acrescentado na edição fica sem versão -- só um novo
-      // atendimento registra de fato uma atualização.
+      // sistema que continua na atualização guarda a versão que já tinha, e
+      // um sistema acrescentado na edição fica sem versão -- só uma
+      // atualização nova grava de fato a versão do dia.
       const anteriores = new Map(this.db.atualizacoes.sistemasDe(id).map((s) => [s.id, s.versao]));
       sistemas = lista.map((s) => ({ ...s, versao: anteriores.get(s.id) ?? null }));
-      this._resumirVersoes(data, sistemas);
+      this._resumirVersoes(dados, sistemas);
     } else {
-      sistemas = this._versoesLegadas(data, lista);
+      sistemas = this._versoesLegadas(dados, lista);
     }
     const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
-    if (this.db.atualizacoes.update(id, this._paraTabela(data), sistemas, revisaoEsperada, usuario?.nome || "") === 0) {
+    if (this.db.atualizacoes.update(id, this._paraTabela(dados), sistemas, revisaoEsperada, usuario?.nome || "") === 0) {
       const agora = this.db.atualizacoes.find(id);
-      if (agora && revisaoEsperada != null) throw new ConflictError(`Esta atualização foi alterada por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, agora);
-      throw new NotFoundError("Esta atualização não existe mais. Ela pode ter sido excluída por outra pessoa.");
+      if (agora && revisaoEsperada != null) throw new ErroDeConflito(`Esta atualização foi alterada por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, agora);
+      throw new ErroNaoEncontrado("Esta atualização não existe mais. Ela pode ter sido excluída por outra pessoa.");
     }
-    this.historico.registrar(usuario, "atualizar", "atualizacao", `Atualização #${id} de "${data.cliente}"`, { antes, depois: data });
-    this._marcarSuporteBredasSeNecessario(data, usuario);
-    return data;
+    this.historico.registrar(usuario, "atualizar", "atualizacao", `Atualização #${id} de "${dados.cliente}"`, { antes, depois: dados });
+    this._marcarSuporteBredasSeNecessario(dados, usuario);
+    return dados;
   }
 
   /**
@@ -103,16 +101,16 @@ class AtualizacaoService {
    * @param {{cliente: string, obs?: string}} data
    * @param {{id:number, nome:string}|null} usuario
    */
-  _marcarSuporteBredasSeNecessario(data, usuario) {
-    if (!(data.obs || "").toLowerCase().includes(OBS_SUPORTE_BREDAS)) return;
+  _marcarSuporteBredasSeNecessario(dados, usuario) {
+    if (!(dados.obs || "").toLowerCase().includes(OBS_SUPORTE_BREDAS)) return;
     const [suporte] = this.db.sistemas.resolverOuCriar([SISTEMA_SUPORTE_BREDAS]);
-    const marcado = this.db.clientes.adicionarSistema(data.cliente, suporte.id);
+    const marcado = this.db.clientes.adicionarSistema(dados.cliente, suporte.id);
     if (marcado) {
       this.historico.registrar(
         usuario,
         "atualizar",
         "cliente",
-        `Cliente "${data.cliente}" marcado com "${SISTEMA_SUPORTE_BREDAS}" (detectado na obs de uma atualização)`
+        `Cliente "${dados.cliente}" marcado com "${SISTEMA_SUPORTE_BREDAS}" (detectado na obs de uma atualização)`
       );
     }
   }
@@ -120,7 +118,7 @@ class AtualizacaoService {
   delete(id, usuario) {
     const existente = this.db.atualizacoes.find(id);
     if (this.db.atualizacoes.delete(id) === 0) {
-      throw new NotFoundError("Esta atualização não existe mais.");
+      throw new ErroNaoEncontrado("Esta atualização não existe mais.");
     }
     this.historico.registrar(usuario, "excluir", "atualizacao", `Atualização #${id}`, { antes: existente, depois: null });
   }
@@ -129,7 +127,7 @@ class AtualizacaoService {
    * Exclui varios registros de uma vez (selecao multipla na aba Atualizacoes).
    *
    * Devolve os registros que sairam, porque a tela oferece "Desfazer" e
-   * precisa saber o que recriar -- ver `findByIds`. A leitura acontece ANTES
+   * precisa saber o que recriar -- ver `buscarPorIds`. A leitura acontece ANTES
    * da exclusao, pelo motivo obvio, e o historico ganha UMA linha para a
    * operacao inteira: trinta linhas dizendo "excluiu #12", "excluiu #13"
    * afogariam o historico e esconderiam justamente o que aconteceu (uma
@@ -138,13 +136,13 @@ class AtualizacaoService {
    * @param {number[]} ids
    * @returns {{excluidos: number, registros: object[]}}
    */
-  deleteMany(ids, usuario) {
-    const registros = this.db.atualizacoes.findByIds(ids);
+  excluirVarios(ids, usuario) {
+    const registros = this.db.atualizacoes.buscarPorIds(ids);
     if (registros.length === 0) {
-      throw new NotFoundError("Nenhum dos registros selecionados existe mais. A lista pode estar desatualizada.");
+      throw new ErroNaoEncontrado("Nenhum dos registros selecionados existe mais. A lista pode estar desatualizada.");
     }
 
-    const excluidos = this.db.atualizacoes.deleteMany(registros.map((r) => r.id));
+    const excluidos = this.db.atualizacoes.excluirVarios(registros.map((r) => r.id));
 
     const clientes = [...new Set(registros.map((r) => r.cliente).filter(Boolean))];
     const resumoClientes = clientes.slice(0, 3).join(", ") + (clientes.length > 3 ? ` e mais ${clientes.length - 3}` : "");
@@ -158,11 +156,6 @@ class AtualizacaoService {
     return { excluidos, registros };
   }
 
-  /** Registro mais recente de um cliente especifico (aba Consultar Cliente). */
-  lastUpdateForClient(nome) {
-    return this.db.atualizacoes.lastUpdateForClient(nome);
-  }
-
   /**
    * As últimas N atualizações de um cliente específico (aba Consultar Cliente,
    * "Histórico recente").
@@ -173,109 +166,107 @@ class AtualizacaoService {
    * como o SQLite escreve "sem limite" num LIMIT. O teto de 50 continua
    * valendo para qualquer número, que é o caso do "Histórico recente".
    */
-  recentUpdatesForClient(nome, limit = 5) {
+  atualizacoesRecentesDoCliente(nome, limit = 5) {
     const efetivo = String(limit) === "todas" ? -1 : Math.min(Math.max(Number(limit) || 5, 1), 50);
-    return this.db.atualizacoes.recentUpdatesForClient(nome, efetivo);
-  }
-
-  /** Última versão registrada para cada sistema do histórico operacional. */
-  latestVersionBySystem() {
-    return this.db.atualizacoes.latestVersionBySystem();
+    return this.db.atualizacoes.atualizacoesRecentesDoCliente(nome, efetivo);
   }
 
   /**
    * Clientes que usam um sistema especifico, com a data da ultima
    * atualizacao NAQUELE sistema e uma situacao calculada a partir de uma
-   * Data opcional filtra a última data de atendimento. A classificação de
+   * Data opcional filtra a última data de atualização. A classificação de
    * versão continua usando exclusivamente a referência oficial cadastrada.
    * @param {string} sistema
-   * @param {string} [atendimentoAntesDe] dd/mm/aaaa
+   * @param {string} [atualizacaoAntesDe] dd/mm/aaaa
+   * @param {Date} [hoje]
    */
-  relatorioPorSistema(sistema, atendimentoAntesDe) {
+  relatorioPorSistema(sistema, atualizacaoAntesDe, hoje = new Date()) {
     const sistemaLimpo = (sistema || "").trim();
-    if (!sistemaLimpo) throw new ValidationError("Informe o sistema.");
+    if (!sistemaLimpo) throw new ErroDeValidacao("Informe o sistema.");
     const alvo = this.db.sistemas.resolver(sistemaLimpo);
     if (alvo && (!alvo.ativo || !contaParaVersao(alvo))) return [];
     const oficial = alvo?.ultima_versao || "";
-    if (atendimentoAntesDe && !dataValida(atendimentoAntesDe)) {
-      throw new ValidationError("Campo 'Última atualização antes de' precisa estar no formato dd/mm/aaaa.");
+    if (atualizacaoAntesDe && !dataValida(atualizacaoAntesDe)) {
+      throw new ErroDeValidacao("Campo 'Última atualização antes de' precisa estar no formato dd/mm/aaaa.");
     }
-    const limiteAtendimento = atendimentoAntesDe ? parseData(atendimentoAntesDe) : null;
+    const limiteAtualizacao = atualizacaoAntesDe ? lerData(atualizacaoAntesDe) : null;
     if (!alvo) return [];
 
     const ultimas = new Map(this.db.atualizacoes.ultimaPorClienteNoSistema(alvo.id).map((r) => [r.cliente_id, r]));
+    const principal = this._principalPorCliente(alvo);
     const resultado = [];
+    const prazo = this._prazoVersao(hoje);
     for (const { id, nome, cidade } of this.db.clientes.clientesDoSistema(alvo.id)) {
-      const registro = ultimas.get(id);
-      if (limiteAtendimento && (!registro?.data || !parseData(registro.data) || parseData(registro.data) >= limiteAtendimento)) continue;
-      const { situacao } = situacaoDoSistema(registro, oficial);
-      resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", oficial: oficial || "Não informada", situacao });
+      const { registro, pelaDataDe } = registroQueDecide(alvo, ultimas.get(id), principal(id));
+      if (limiteAtualizacao && (!registro?.data || !lerData(registro.data) || lerData(registro.data) >= limiteAtualizacao)) continue;
+      const { situacao } = situacaoDoSistema(registro, oficial, prazo);
+      resultado.push({ cliente: nome, cidade: cidade || "—", ultima: registro?.data || "Nunca", oficial: oficial || "Não informada", situacao, pelaDataDe });
     }
     resultado.sort((a, b) => a.cliente.localeCompare(b.cliente, "pt-BR"));
     return resultado;
   }
 
-  /** Os sistemas do atendimento, resolvidos no catálogo (ver SistemaRepository.resolverOuCriar). */
+  /** Os sistemas da atualização, resolvidos no catálogo (ver SistemaRepository.resolverOuCriar). */
   /** @param {Array<any>} [catalogo] ver SistemaRepository.resolverOuCriar */
-  _resolverSistemas(data, catalogo) {
-    const lista = this.db.sistemas.resolverOuCriar(splitSystems(data.sistema), catalogo);
+  _resolverSistemas(dados, catalogo) {
+    const lista = this.db.sistemas.resolverOuCriar(separarSistemas(dados.sistema), catalogo);
     // O nome que fica é o do catálogo: "Vendas" digitado vira "B_Vendas".
-    data.sistema = lista.map((s) => s.nome).join(", ");
+    dados.sistema = lista.map((s) => s.nome).join(", ");
     return lista;
   }
 
   /**
-   * Versão de cada sistema de um atendimento NOVO: a oficial cadastrada em
-   * Sistemas, desde que já existisse na data do atendimento. Grava o
-   * atendimento como "versões por sistema" (ver migracoes.js).
+   * Versão de cada sistema de uma atualização NOVA: a oficial cadastrada em
+   * Sistemas, desde que já existisse na dados da atualização. Grava a
+   * atualização como "versões por sistema" (ver migracoes.js).
    */
-  _versoesNovas(data, input) {
-    const lista = this._resolverSistemas(data);
+  _versoesNovas(dados, input) {
+    const lista = this._resolverSistemas(dados);
     // Desfazer uma exclusão devolve exatamente o que saiu, inclusive um
     // registro legado (sem versões por sistema).
     if (input.restaurarVersoes === true) {
-      if (input.versoes_sistemas == null) return this._versoesLegadas(data, lista);
+      if (input.versoes_sistemas == null) return this._versoesLegadas(dados, lista);
       let mapa;
-      try { mapa = JSON.parse(input.versoes_sistemas); } catch { throw new ValidationError("Versões inválidas."); }
-      if (!mapa || Array.isArray(mapa) || typeof mapa !== "object") throw new ValidationError("Versões inválidas.");
+      try { mapa = JSON.parse(input.versoes_sistemas); } catch { throw new ErroDeValidacao("Versões inválidas."); }
+      if (!mapa || Array.isArray(mapa) || typeof mapa !== "object") throw new ErroDeValidacao("Versões inválidas.");
       const sistemas = lista.map((s) => {
         const chave = Object.keys(mapa).find((nome) => nome === s.nome) ?? Object.keys(mapa).find((nome) => this.db.sistemas.resolver(nome)?.id === s.id);
         const valor = chave == null ? null : mapa[chave] ?? null;
-        if (valor !== null && (typeof valor !== "string" || valor.length > 100)) throw new ValidationError("Versões inválidas.");
+        if (valor !== null && (typeof valor !== "string" || valor.length > 100)) throw new ErroDeValidacao("Versões inválidas.");
         return { ...s, versao: valor };
       });
-      this._resumirVersoes(data, sistemas);
+      this._resumirVersoes(dados, sistemas);
       return sistemas;
     }
     const oficiais = new Map(this.db.sistemas.todos().map((s) => [s.id, contaParaVersao(s) ? s.ultima_versao : ""]));
-    const atendimento = parseData(data.data);
+    const dataAtualizacao = lerData(dados.data);
     const sistemas = lista.map((s) => {
       const oficial = oficiais.get(s.id);
-      // Não atribuir uma versão publicada depois da data do atendimento.
-      const disponivel = oficial && atendimento && parseData(oficial) <= atendimento;
-      return { ...s, versao: disponivel ? oficial : !oficial && lista.length === 1 ? data.versao || null : null };
+      // Não atribuir uma versão publicada depois da dados da atualização.
+      const disponivel = oficial && dataAtualizacao && lerData(oficial) <= dataAtualizacao;
+      return { ...s, versao: disponivel ? oficial : !oficial && lista.length === 1 ? dados.versao || null : null };
     });
-    this._resumirVersoes(data, sistemas);
+    this._resumirVersoes(dados, sistemas);
     return sistemas;
   }
 
   /**
    * Registro legado (importado de planilha, ou de antes da versão oficial):
    * o texto de "versao" é a verdade, e só vale por sistema quando o
-   * atendimento tem um sistema só.
+   * atualização tem um sistema só.
    */
-  _versoesLegadas(data, lista) {
-    data.versoes_sistemas = null;
-    data.versoesPorSistema = false;
-    return lista.map((s) => ({ ...s, versao: lista.length === 1 ? data.versao || null : null }));
+  _versoesLegadas(dados, lista) {
+    dados.versoes_sistemas = null;
+    dados.versoesPorSistema = false;
+    return lista.map((s) => ({ ...s, versao: lista.length === 1 ? dados.versao || null : null }));
   }
 
   /** Monta o texto de "versao" e o `versoes_sistemas` que a API entrega. */
-  _resumirVersoes(data, sistemas) {
-    data.versoesPorSistema = true;
-    data.versoes_sistemas = JSON.stringify(Object.fromEntries(sistemas.map((s) => [s.nome, s.versao])));
+  _resumirVersoes(dados, sistemas) {
+    dados.versoesPorSistema = true;
+    dados.versoes_sistemas = JSON.stringify(Object.fromEntries(sistemas.map((s) => [s.nome, s.versao])));
     const valores = [...new Set(sistemas.map((s) => s.versao))];
-    data.versao = valores.length === 1 ? valores[0] || "" : sistemas.map((s) => `${s.nome}: ${s.versao || "Não informada"}`).join("; ");
+    dados.versao = valores.length === 1 ? valores[0] || "" : sistemas.map((s) => `${s.nome}: ${s.versao || "Não informada"}`).join("; ");
   }
 
   /**
@@ -283,29 +274,29 @@ class AtualizacaoService {
    * quando o nome digitado tem cadastro -- e aí o nome gravado é o do
    * cadastro, com a grafia dele.
    */
-  _paraTabela(data) {
-    const cliente = this.db.clientes.resolverNome(data.cliente);
-    if (cliente) data.cliente = cliente.nome;
-    const versoesPorSistema = data.versoesPorSistema;
+  _paraTabela(dados) {
+    const cliente = this.db.clientes.resolverNome(dados.cliente);
+    if (cliente) dados.cliente = cliente.nome;
+    const versoesPorSistema = dados.versoesPorSistema;
     // Marcação interna de _resumirVersoes/_versoesLegadas: não faz parte do
     // registro que volta para a tela nem do que vai para o histórico.
-    delete data.versoesPorSistema;
+    delete dados.versoesPorSistema;
     return {
-      cliente: data.cliente,
+      cliente: dados.cliente,
       cliente_id: cliente?.id ?? null,
-      versao: data.versao,
-      responsavel: data.responsavel,
-      data: data.data,
-      motivo: data.motivo,
-      maquinas: data.maquinas,
-      obs: data.obs,
+      versao: dados.versao,
+      responsavel: dados.responsavel,
+      data: dados.data,
+      motivo: dados.motivo,
+      maquinas: dados.maquinas,
+      obs: dados.obs,
       versoes_por_sistema: versoesPorSistema ? 1 : 0,
     };
   }
 
   relatorioPeriodo(search = "", responsavel = "Todos", periodo = {}) {
     validarPeriodo(periodo);
-    return this._resumoPeriodo(this.db.atualizacoes.exportAll(search, responsavel, periodo), { search, responsavel, periodo });
+    return this._resumoPeriodo(this.db.atualizacoes.exportarTudo(search, responsavel, periodo), { search, responsavel, periodo });
   }
 
   /**
@@ -327,40 +318,46 @@ class AtualizacaoService {
     };
     return { filtros: { search, responsavel, ...periodo }, total: registros.length,
       clientes: new Set(registros.map((r) => r.cliente.trim().toLowerCase())).size,
-      porSistema: contar((r) => splitSystems(r.sistema).length ? splitSystems(r.sistema) : ["Não informado"]),
+      porSistema: contar((r) => separarSistemas(r.sistema).length ? separarSistemas(r.sistema) : ["Não informado"]),
       porResponsavel: contar((r) => [r.responsavel || "Não informado"]), registros };
   }
 
-  situacaoCliente(nome) {
-    const cliente = this.db.clientes.getByNome(nome);
+  situacaoCliente(nome, hoje = new Date()) {
+    const prazo = this._prazoVersao(hoje);
+    const cliente = this.db.clientes.obterPorNome(nome);
     const ultimas = new Map(this.db.atualizacoes.ultimaPorSistemaDoCliente(nome).map((u) => [u.sistema_id, u]));
     const catalogo = new Map(this.db.sistemas.todos().map((s) => [s.id, s]));
     const ids = new Set([...(cliente ? this.db.clientes.sistemasDoCliente(cliente.id) : []), ...ultimas.keys()]);
+    const idPrincipal = this.db.sistemas.resolver(SISTEMA_PRINCIPAL)?.id;
+    const principal = { tem: ids.has(idPrincipal), registro: ultimas.get(idPrincipal) };
     return [...ids]
       .map((id) => {
         const sistema = catalogo.get(id);
+        const { registro: quemDecide, pelaDataDe } = registroQueDecide(sistema, ultimas.get(id), principal);
+        // A versão instalada é sempre a do PRÓPRIO sistema; só a data que
+        // decide a situação pode vir do B_Vendas.
         const registro = ultimas.get(id);
         const instalada = registro?.versao || "";
         const contaNaSituacao = contaParaVersao(sistema);
         const oficial = contaNaSituacao ? sistema.ultima_versao || "" : "";
         const { situacao } = contaNaSituacao
-          ? situacaoDoSistema(registro, oficial)
+          ? situacaoDoSistema(quemDecide, oficial, prazo)
           : { situacao: sistema.controla_versao ? "Sistema inativo" : "Componente fixo" };
         // `contaNaSituacao` falso = sistema fixo (B_Atualizador, Suporte
         // Bredas) ou fora do catálogo: a ficha mostra, mas ele não entra na
         // situação consolidada do cliente (a do Resumo).
-        return { sistema: sistema.nome, instalada, oficial, situacao, contaNaSituacao, fixo: !sistema.controla_versao, data: registro?.data || "" };
+        return { sistema: sistema.nome, instalada, oficial, situacao, contaNaSituacao, fixo: !sistema.controla_versao, data: registro?.data || "", pelaDataDe: contaNaSituacao ? pelaDataDe : null };
       })
       .sort((a, b) => (a.sistema < b.sistema ? -1 : a.sistema > b.sistema ? 1 : 0));
   }
 
-  _validate(input) {
+  _validar(input) {
     const cliente = (input.cliente || "").trim();
-    if (!cliente) throw new ValidationError("Campo 'Cliente' é obrigatório.");
+    if (!cliente) throw new ErroDeValidacao("Campo 'Cliente' é obrigatório.");
     const data = (input.data || "").trim();
-    if (!dataValida(data)) throw new ValidationError("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
+    if (!dataValida(data)) throw new ErroDeValidacao("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
     const registro = { cliente, data };
-    for (const { key } of COLUMNS) {
+    for (const { key } of COLUNAS_ATUALIZACOES) {
       if (key !== "cliente" && key !== "data") registro[key] = (input[key] || "").trim();
     }
     return this._normalizar(registro, this._contextoNormalizacao());
@@ -377,7 +374,7 @@ class AtualizacaoService {
       // Todos, inclusive os inativos: um nome antigo do histórico precisa
       // cair no sistema que ele sempre foi, não virar uma grafia nova.
       catalogo: this.db.sistemas.todos().map((s) => s.nome),
-      conhecidos: this.db.atualizacoes.distinctResponsaveis(),
+      conhecidos: this.db.atualizacoes.responsaveisDistintos(),
     };
   }
 
@@ -417,14 +414,15 @@ class AtualizacaoService {
 
     const totalClientes = this.db.clientes.count();
     const totalAtualizacoes = this.db.atualizacoes.count();
-    const mesCount = this.db.atualizacoes.countForMonth(mesStr, hojeStr);
-    const mesAtualComparavel = this.db.atualizacoes.countForMonth(mesStr, ateAtualComparavel);
-    const mesAnteriorComparavel = this.db.atualizacoes.countForMonth(mesAnteriorStr, ateAnterior);
+    const mesCount = this.db.atualizacoes.contarDoMes(mesStr, hojeStr);
+    const mesAtualComparavel = this.db.atualizacoes.contarDoMes(mesStr, ateAtualComparavel);
+    const mesAnteriorComparavel = this.db.atualizacoes.contarDoMes(mesAnteriorStr, ateAnterior);
     const desatualizadoDias = this.regras.valor("desatualizadoDias");
-    const semAtendimento = this._clientesSemAtendimento(hoje, desatualizadoDias);
-    const situacaoClientes = this._situacaoDosClientes();
-    const porResponsavel = this.db.atualizacoes.countsByResponsavel();
-    const atualizadosMesPorSistema = this._atualizadosMesPorSistema(mesStr);
+    const semAtualizacao = this._clientesSemAtualizacao(hoje, desatualizadoDias);
+    const situacaoClientes = this._situacaoDosClientes(hoje);
+    const prazoVersaoDias = this.regras.valor("prazoVersaoDias");
+    const porResponsavel = this.db.atualizacoes.contagemPorResponsavel();
+    const atualizadosMesPorSistema = this._atualizadosMesPorSistema(mesStr, mesAnteriorStr, diaComparavel);
     // Tendencia mensal (grafico do Resumo) e tempo medio de resolucao das
     // tarefas de Agendamentos vivem em tabelas diferentes desta classe,
     // mas moram aqui porque o Resumo ja busca tudo numa chamada so -- mesmo
@@ -438,16 +436,19 @@ class AtualizacaoService {
       mesCount,
       mesAtualComparavel,
       mesAnteriorComparavel,
-      // Tempo sem atendimento e situação de versão são perguntas DIFERENTES,
+      // Tempo sem atualização e situação de versão são perguntas DIFERENTES,
       // e por isso duas chaves. Antes o Resumo chamava de "em dia" o
       // complemento da lista abaixo: cliente atendido ontem com a NFe velha
       // aparecia em dia, e cliente sem visita há 3 meses mas sem nenhuma
       // versão nova para receber aparecia desatualizado.
-      semAtendimento,
-      // A tela escreve "Sem atendimento há mais de N dias" com este N, e não
+      semAtualizacao,
+      // A tela escreve "Sem atualização há mais de N dias" com este N, e não
       // com um número próprio: é regra da equipe, editável, e o rótulo tem
       // que contar a mesma regra que a lista acima usou.
       desatualizadoDias,
+      // O card diz o prazo que usou ("desatualizado depois de N dias da
+      // oficial"), pelo mesmo motivo do desatualizadoDias acima.
+      prazoVersaoDias,
       situacaoClientes,
       porResponsavel,
       atualizadosMesPorSistema,
@@ -465,7 +466,8 @@ class AtualizacaoService {
    * Os sistemas de um cliente são os do cadastro MAIS os que aparecem no
    * histórico dele (mesmo conjunto da ficha), tirando fixos e inativos.
    */
-  _situacaoDosClientes() {
+  _situacaoDosClientes(hoje = new Date()) {
+    const prazo = this._prazoVersao(hoje);
     const catalogo = new Map(this.db.sistemas.todos().map((s) => [s.id, s]));
     /** @type {Map<number, Map<number, {data: string, versao: string|null}>>} */
     const ultimas = new Map();
@@ -480,26 +482,29 @@ class AtualizacaoService {
       cadastro.get(c).add(s);
     }
 
-    const grupos = { desatualizado: [], pendente: [], em_dia: [], sem_atualizaveis: [] };
+    const idPrincipal = this.db.sistemas.resolver(SISTEMA_PRINCIPAL)?.id;
+    const grupos = { desatualizado: [], aguardando: [], em_dia: [], sem_atualizaveis: [] };
     /** Quantos clientes estão atrasados em cada sistema -- os "mais atrasados" do card. */
     const atrasosPorSistema = new Map();
     /** Quantos clientes avaliados usam cada sistema -- o "de quantos" do card. */
     const clientesPorSistema = new Map();
-    for (const { id, nome, cidade } of this.db.clientes.allBasic()) {
+    for (const { id, nome, cidade } of this.db.clientes.todasBasicas()) {
       const doCliente = ultimas.get(id) || new Map();
       const ids = new Set([...(cadastro.get(id) || []), ...doCliente.keys()]);
+      const principal = { tem: ids.has(idPrincipal), registro: doCliente.get(idPrincipal) };
       const sistemas = [];
       for (const sistemaId of ids) {
         const sistema = catalogo.get(sistemaId);
         if (!contaParaVersao(sistema)) continue;
-        const { situacao } = situacaoDoSistema(doCliente.get(sistemaId), sistema.ultima_versao);
+        const { registro } = registroQueDecide(sistema, doCliente.get(sistemaId), principal);
+        const { situacao } = situacaoDoSistema(registro, sistema.ultima_versao, prazo);
         sistemas.push({ sistema: sistema.nome, situacao });
         clientesPorSistema.set(sistema.nome, (clientesPorSistema.get(sistema.nome) || 0) + 1);
-        if (situacao === "Desatualizado") atrasosPorSistema.set(sistema.nome, (atrasosPorSistema.get(sistema.nome) || 0) + 1);
+        if (contaComoAtraso(situacao)) atrasosPorSistema.set(sistema.nome, (atrasosPorSistema.get(sistema.nome) || 0) + 1);
       }
       sistemas.sort((a, b) => a.sistema.localeCompare(b.sistema, "pt-BR"));
       const { grupo, decididoPor } = situacaoDoCliente(sistemas);
-      grupos[grupo].push({ nome, cidade: cidade || "—", sistemas, decididoPor });
+      grupos[grupo].push({ nome, cidade: cidade || "—", sistemas, decididoPor, explicam: sistemasQueExplicam(grupo, sistemas, decididoPor) });
     }
     for (const lista of Object.values(grupos)) lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
@@ -514,31 +519,65 @@ class AtualizacaoService {
   }
 
   /**
+   * Para a aba Sistemas: `(clienteId) => {tem, registro}` do B_Vendas de cada
+   * cliente, lido de uma vez só -- e só quando o sistema pedido depende dele.
+   * "Tem" é o mesmo critério da ficha e do Resumo: no cadastro ou no histórico.
+   */
+  _principalPorCliente(alvo) {
+    const nenhum = () => ({ tem: false, registro: null });
+    if (!alvo.atualiza_com_principal) return nenhum;
+    const principal = this.db.sistemas.resolver(SISTEMA_PRINCIPAL);
+    if (!principal) return nenhum;
+    const ultimas = new Map(this.db.atualizacoes.ultimaPorClienteNoSistema(principal.id).map((r) => [r.cliente_id, r]));
+    const cadastrados = new Set(this.db.clientes.clientesDoSistema(principal.id).map((c) => c.id));
+    return (clienteId) => ({ tem: cadastrados.has(clienteId) || ultimas.has(clienteId), registro: ultimas.get(clienteId) });
+  }
+
+  /** O prazo depois da versão oficial (ver situacaoVersao.js, decisão 4), lido na hora. */
+  _prazoVersao(hoje) {
+    return { prazoDias: this.regras.valor("prazoVersaoDias"), hoje };
+  }
+
+  /**
    * Quantos clientes (de cada sistema conhecido) foram atualizados NAQUELE
    * sistema este mês -- diferente de contar linhas cru pelo texto de
    * "sistema" (que na prática guarda a lista inteira separada por vírgula,
    * então contar por string dava uma "sopa" de combinações em vez de um
    * total por sistema de verdade). Cruza os sistemas que cada cliente tem
-   * cadastrado (clientes.sistemas) com a última atualização daquele
-   * cliente NAQUELE sistema (mesma lógica de relatorioPorSistema).
+   * cadastrado com as atualizações do mês naquele sistema.
+   *
+   * Cada sistema vem com o `anterior` (o mesmo número no mês anterior, até
+   * o mesmo dia -- o recorte do indicador "este mês") para o gráfico mostrar
+   * ▲/▼. Contra o mês anterior inteiro, todo sistema apareceria em queda nos
+   * primeiros dias do mês. Sistemas zerados nos dois meses
+   * ficam de fora: o gráfico listava o catálogo inteiro, a maioria em zero,
+   * e o que importava se perdia entre eles.
    * @param {string} mesStr formato "mm/aaaa"
+   * @param {string} mesAnteriorStr formato "mm/aaaa"
+   * @param {number} diaComparavel
+   * @returns {Array<{label: string, total: number, anterior: number}>}
    */
-  _atualizadosMesPorSistema(mesStr) {
-    return this.db.atualizacoes.atualizadosNoMesPorSistema(mesStr);
+  _atualizadosMesPorSistema(mesStr, mesAnteriorStr, diaComparavel) {
+    const anterior = new Map(this.db.atualizacoes.atualizadosNoMesPorSistema(mesAnteriorStr, diaComparavel).map((r) => [r.label, r.total]));
+    return this.db.atualizacoes
+      .atualizadosNoMesPorSistema(mesStr)
+      .map((r) => ({ label: r.label, total: r.total, anterior: anterior.get(r.label) || 0 }))
+      .filter((r) => r.total > 0 || r.anterior > 0)
+      .sort((a, b) => b.total - a.total || b.anterior - a.anterior || a.label.localeCompare(b.label, "pt-BR"));
   }
 
   /**
-   * Clientes cujo último atendimento passou de `limiteDias` (ou nunca
+   * Clientes cuja última atualização passou de `limiteDias` (ou nunca
    * aconteceu). Não diz nada sobre versão -- ver _situacaoDosClientes.
    */
-  _clientesSemAtendimento(hoje, limiteDias) {
+  _clientesSemAtualizacao(hoje, limiteDias) {
     const ultimas = this.db.atualizacoes.ultimaDataPorCliente();
     const resultado = [];
-    for (const { id, nome, cidade } of this.db.clientes.allBasic()) {
+    for (const { id, nome, cidade } of this.db.clientes.todasBasicas()) {
       const dataStr = ultimas.get(id);
       let dias = NUNCA;
       if (dataStr) {
-        const d = parseData(dataStr);
+        const d = lerData(dataStr);
         // Formato invalido (erro de digitacao antigo) tratado como "nunca".
         dias = d ? Math.floor((hoje - d) / MS_POR_DIA) : NUNCA;
       }
@@ -580,19 +619,19 @@ class AtualizacaoService {
    *  - tudo numa transação só: ou o lote inteiro entra, ou nada entra.
    *
    * Continua valendo: planilha é histórico, grava como registro legado, sem
-   * atribuir a versão oficial de hoje a um atendimento de meses atrás
+   * atribuir a versão oficial de hoje a uma atualização de meses atrás
    * (`_versoesLegadas`).
    * @param {Buffer} buffer conteudo do arquivo enviado
    * @param {{id:number, nome:string}|null} usuario
    * @param {{pularDuplicadas?: boolean}} [opcoes]
    */
-  async importXlsx(buffer, usuario, { pularDuplicadas = false } = {}) {
+  async importarXlsx(buffer, usuario, { pularDuplicadas = false } = {}) {
     const leitura = await this._lerPlanilha(buffer);
     const aplicar = leitura.linhas.filter((l) => !l.erro && !(pularDuplicadas && l.duplicada));
     const naoCadastrados = new Set();
     // Lido uma vez para o lote todo, e não uma por linha (medido: P05).
     const catalogo = this.db.sistemas.todos();
-    this.db.conn.transaction(() => {
+    this.db.transacao(() => {
       for (const { registro } of aplicar) {
         const sistemas = this._versoesLegadas(registro, this._resolverSistemas(registro, catalogo));
         const linha = this._paraTabela(registro);
@@ -600,7 +639,7 @@ class AtualizacaoService {
         this.db.atualizacoes.insert(linha, sistemas);
         this._marcarSuporteBredasSeNecessario(registro, usuario);
       }
-    })();
+    });
     const resumo = this._resumoLeitura(leitura);
     const inserted = aplicar.length;
     const ignoradas = leitura.linhas.length - inserted;
@@ -620,33 +659,33 @@ class AtualizacaoService {
 
   /**
    * Lê e classifica cada linha, sem gravar. Erro de ARQUIVO (não abre, sem
-   * linhas, sem a coluna Cliente) é ValidationError: não há o que prever.
+   * linhas, sem a coluna Cliente) é ErroDeValidacao: não há o que prever.
    * Erro de LINHA (cliente em branco, data) e aviso (cliente sem cadastro,
    * sistema fora do catálogo, duplicidade) ficam em cada linha.
    * @param {Buffer} buffer
    */
   async _lerPlanilha(buffer) {
     const brutas = await lerLinhasDaPlanilha(buffer, LIMITE_LINHAS_IMPORTACAO);
-    if (brutas.length === 0) throw new ValidationError("A planilha está vazia: a primeira aba precisa ter ao menos uma linha.");
+    if (brutas.length === 0) throw new ErroDeValidacao("A planilha está vazia: a primeira aba precisa ter ao menos uma linha.");
 
-    const expected = COLUMNS.map((c) => c.key);
+    const expected = COLUNAS_ATUALIZACOES.map((c) => c.key);
     const cabecalho = (brutas[0].numero === 1 ? brutas[0].valores : []).map((h) => h.trim());
     const colMap = {};
     const colunasIgnoradas = [];
     cabecalho.forEach((h, idx) => {
-      const match = COLUMNS.find((c) => h.toLowerCase() === c.key || h.toLowerCase() === c.label.toLowerCase());
+      const match = COLUNAS_ATUALIZACOES.find((c) => h.toLowerCase() === c.key || h.toLowerCase() === c.label.toLowerCase());
       if (match) colMap[match.key] = idx;
       else if (h) colunasIgnoradas.push(h);
     });
     // Menos de duas colunas reconhecidas: a planilha não tem o nosso
-    // cabeçalho, e vale a ordem fixa de COLUMNS (como sempre foi).
+    // cabeçalho, e vale a ordem fixa de COLUNAS_ATUALIZACOES (como sempre foi).
     const semCabecalho = Object.keys(colMap).length < 2;
     if (!semCabecalho && colMap.cliente == null) {
-      throw new ValidationError('A coluna "Cliente" não foi encontrada no cabeçalho. Ela é obrigatória.');
+      throw new ErroDeValidacao('A coluna "Cliente" não foi encontrada no cabeçalho. Ela é obrigatória.');
     }
     // Sem cabeçalho, a linha 1 já é DADO: começa nela, e o que havia nela não
     // é "coluna ignorada". (Começar sempre na 2 descartava o primeiro
-    // atendimento em silêncio -- e uma planilha de uma linha só dava "vazia".)
+    // atualização em silêncio -- e uma planilha de uma linha só dava "vazia".)
     const primeira = semCabecalho ? 1 : 2;
     if (semCabecalho) colunasIgnoradas.length = 0;
 
@@ -684,7 +723,7 @@ class AtualizacaoService {
       if (!this.db.clientes.resolverNome(registro.cliente)) {
         linha.avisos.push({ tipo: "cliente", mensagem: "Cliente sem cadastro: entra no histórico, mas só aparece no Resumo e na ficha quando houver cliente com o mesmo nome." });
       }
-      const foraDoCatalogo = splitSystems(registro.sistema).filter((nome) => !acharSistema(catalogo, nome));
+      const foraDoCatalogo = separarSistemas(registro.sistema).filter((nome) => !acharSistema(catalogo, nome));
       if (foraDoCatalogo.length) {
         linha.avisos.push({ tipo: "sistema", mensagem: `Sistema fora do catálogo (${foraDoCatalogo.join(", ")}): entra como inativo.` });
       }
@@ -695,7 +734,7 @@ class AtualizacaoService {
       }
       vistas.add(chave);
     }
-    if (linhas.length === 0) throw new ValidationError(semCabecalho ? "A planilha está vazia." : "A planilha não tem nenhuma linha preenchida abaixo do cabeçalho.");
+    if (linhas.length === 0) throw new ErroDeValidacao(semCabecalho ? "A planilha está vazia." : "A planilha não tem nenhuma linha preenchida abaixo do cabeçalho.");
     return { linhas, colunasIgnoradas, semCabecalho };
   }
 
@@ -725,26 +764,26 @@ class AtualizacaoService {
    * Aceita os mesmos filtros da listagem: exportar precisa devolver o que a
    * pessoa esta vendo na tela, nao o historico inteiro.
    */
-  async exportXlsxBuffer(search = "", responsavel = "Todos", periodo = {}) {
+  async exportarXlsxEmMemoria(search = "", responsavel = "Todos", periodo = {}) {
     const workbook = new ExcelJS.Workbook();
     const ws = workbook.addWorksheet("Atualizações");
-    ws.addRow(COLUMNS.map((c) => c.label));
+    ws.addRow(COLUNAS_ATUALIZACOES.map((c) => c.label));
     validarPeriodo(periodo);
     // Conta ANTES de ler: acima do limite, recusa sem montar nada na memória
     // (ver config/limitesPlanilha.js).
     const total = this.db.atualizacoes.contarFiltrados(search, responsavel, periodo);
     if (total > LIMITE_LINHAS_EXPORTACAO) {
-      throw new ValidationError(
+      throw new ErroDeValidacao(
         `A exportação teria ${total.toLocaleString("pt-BR")} linhas; o limite é ${LIMITE_LINHAS_EXPORTACAO.toLocaleString("pt-BR")}. ` +
           "Filtre por período (botão Filtros) e exporte em partes."
       );
     }
-    const registros = this.db.atualizacoes.exportAll(search, responsavel, periodo);
+    const registros = this.db.atualizacoes.exportarTudo(search, responsavel, periodo);
     for (const row of registros) {
-      ws.addRow(COLUMNS.map((c) => row[c.key]));
+      ws.addRow(COLUNAS_ATUALIZACOES.map((c) => row[c.key]));
     }
     ws.views = [{ state: "frozen", ySplit: 1 }];
-    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: ws.rowCount, column: COLUMNS.length } };
+    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: ws.rowCount, column: COLUNAS_ATUALIZACOES.length } };
     ws.columns.forEach((col, i) => { col.width = [32, 30, 40, 24, 16, 30, 14, 60][i] || 24; });
     ws.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
     ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF24476B" } };
@@ -761,9 +800,9 @@ class AtualizacaoService {
 /** Período do relatório e da exportação: datas válidas, e a inicial antes da final. */
 function validarPeriodo(periodo) {
   for (const data of [periodo.desde, periodo.ate]) {
-    if (data && !dataValida(data)) throw new ValidationError("Período inválido.");
+    if (data && !dataValida(data)) throw new ErroDeValidacao("Período inválido.");
   }
-  if (periodo.desde && periodo.ate && parseData(periodo.desde) > parseData(periodo.ate)) throw new ValidationError("A data inicial deve ser anterior à final.");
+  if (periodo.desde && periodo.ate && lerData(periodo.desde) > lerData(periodo.ate)) throw new ErroDeValidacao("A data inicial deve ser anterior à final.");
 }
 
 /**
@@ -780,7 +819,7 @@ function validarPeriodo(periodo) {
  * @param {Array<{nome: string}>} catalogo `sistemas.todos()`
  */
 function chaveDuplicidade(cliente, data, sistema, catalogo) {
-  const sistemas = splitSystems(sistema)
+  const sistemas = separarSistemas(sistema)
     .map((nome) => (acharSistema(catalogo, nome)?.nome || nome).toLowerCase())
     .sort()
     .join(",");
@@ -808,7 +847,7 @@ function chaveDuplicidade(cliente, data, sistema, catalogo) {
  */
 async function lerLinhasDaPlanilha(buffer, limite) {
   const grande = () =>
-    new ValidationError(
+    new ErroDeValidacao(
       `A planilha tem mais de ${limite.toLocaleString("pt-BR")} linhas, o limite por importação. ` +
         "Divida o arquivo em partes menores e importe uma de cada vez. Nada foi gravado."
     );
@@ -819,7 +858,7 @@ async function lerLinhasDaPlanilha(buffer, limite) {
   try {
     await workbook.xlsx.load(buffer);
   } catch {
-    throw new ValidationError("Não foi possível abrir o arquivo. Envie uma planilha Excel (.xlsx) sem senha.");
+    throw new ErroDeValidacao("Não foi possível abrir o arquivo. Envie uma planilha Excel (.xlsx) sem senha.");
   }
   const ws = workbook.worksheets[0];
   if (!ws) return [];
@@ -828,7 +867,7 @@ async function lerLinhasDaPlanilha(buffer, limite) {
     const row = ws.getRow(r);
     const valores = [];
     // row.values[0] não existe (o ExcelJS começa em 1).
-    for (let i = 1; i <= row.cellCount; i++) valores[i - 1] = cellToString(row.getCell(i).value);
+    for (let i = 1; i <= row.cellCount; i++) valores[i - 1] = celulaParaTexto(row.getCell(i).value);
     if (valores.every((v) => v === "")) continue;
     linhas.push({ numero: r, valores });
     // +1: o cabeçalho, quando houver, também é uma linha lida aqui.
@@ -837,21 +876,21 @@ async function lerLinhasDaPlanilha(buffer, limite) {
   return linhas;
 }
 
-function cellToString(value) {
+function celulaParaTexto(value) {
   if (value === null || value === undefined || value === "") return "";
-  if (value instanceof Date) return formatDate(value);
+  if (value instanceof Date) return formatarData(value);
   if (typeof value === "object") {
     // Texto com formatação (parte em negrito, cor): antes virava
     // "[object Object]" -- e era gravado assim, em silêncio.
     if (Array.isArray(value.richText)) return value.richText.map((t) => t.text ?? "").join("");
     if (value.text != null) return String(value.text); // hiperlink
     // Fórmula: vale o resultado calculado que o Excel guardou no arquivo.
-    if ("result" in value) return cellToString(value.result);
+    if ("result" in value) return celulaParaTexto(value.result);
   }
   return String(value);
 }
 
-function formatDate(date) {
+function formatarData(date) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 }

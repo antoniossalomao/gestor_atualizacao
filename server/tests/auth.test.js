@@ -1,7 +1,7 @@
 /*
  * Testes do fluxo de autenticacao: primeiro acesso, login e troca de senha.
  *
- * `security.test.js` cobre este servico pelo angulo das PERMISSOES (quem pode
+ * `seguranca.test.js` cobre este servico pelo angulo das PERMISSOES (quem pode
  * criar conta, quem pode rebaixar quem). Aqui o foco e' o outro lado: a porta
  * de entrada em si.
  *
@@ -23,7 +23,7 @@ const path = require("node:path");
 const os = require("node:os");
 const bcrypt = require("bcryptjs");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AuthService } = require("../src/services/AuthService");
 
@@ -31,7 +31,7 @@ const SENHA = "senha-de-teste-123";
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-auth-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const auth = new AuthService(db, new HistoricoService(db));
   const cleanup = () => {
     try {
@@ -48,34 +48,34 @@ test("AuthService - primeiro acesso", async (t) => {
   const env = ambiente();
   try {
     await t.test("banco vazio pede configuração inicial", () => {
-      assert.equal(env.auth.needsSetup(), true);
+      assert.equal(env.auth.precisaConfigurar(), true);
     });
 
     await t.test("o primeiro usuário nasce administrador", () => {
       // Sem isso, o banco ficaria sem nenhum admin e a tela de Usuários seria
       // inalcançável -- a única saída seria mexer no banco à mão.
-      const admin = env.auth.setupAdmin({ nome: "Admin", usuario: "admin", senha: SENHA });
+      const admin = env.auth.configurarAdmin({ nome: "Admin", usuario: "admin", senha: SENHA });
       assert.equal(admin.role, "admin");
-      assert.equal(env.auth.needsSetup(), false);
+      assert.equal(env.auth.precisaConfigurar(), false);
     });
 
     await t.test("o setup já registra o primeiro acesso", () => {
-      // `setupAdmin` cria a sessão direto, sem passar por `login()` -- que é
+      // `configurarAdmin` cria a sessão direto, sem passar por `login()` -- que é
       // onde `ultimo_login` normalmente é gravado. Sem isto, a tela de
       // Usuários mostraria "Nunca acessou" para quem está olhando a tela
       // naquele exato momento.
-      assert.ok(env.db.usuarios.findByUsuario("admin").ultimo_login);
+      assert.ok(env.db.usuarios.buscarPorUsuario("admin").ultimo_login);
     });
 
     await t.test("rodar o setup de novo é recusado", () => {
       assert.throws(
-        () => env.auth.setupAdmin({ nome: "Outro", usuario: "outro", senha: SENHA }),
+        () => env.auth.configurarAdmin({ nome: "Outro", usuario: "outro", senha: SENHA }),
         /use a tela de login/
       );
     });
 
     await t.test("a senha nunca é guardada em texto", () => {
-      const linha = env.db.usuarios.findByUsuario("admin");
+      const linha = env.db.usuarios.buscarPorUsuario("admin");
       assert.equal(linha.senha, undefined, "não existe coluna de senha em claro");
       assert.notEqual(linha.senha_hash, SENHA);
       assert.match(linha.senha_hash, /^\$2[aby]\$/, "é bcrypt");
@@ -88,7 +88,7 @@ test("AuthService - primeiro acesso", async (t) => {
 test("AuthService - login", async (t) => {
   const env = ambiente();
   try {
-    env.auth.setupAdmin({ nome: "Admin", usuario: "admin", senha: SENHA });
+    env.auth.configurarAdmin({ nome: "Admin", usuario: "admin", senha: SENHA });
 
     await t.test("credenciais corretas devolvem a conta, sem o hash", () => {
       const u = env.auth.login("admin", SENHA);
@@ -143,9 +143,9 @@ test("AuthService - login", async (t) => {
     });
 
     await t.test("o login registra quando aconteceu", () => {
-      const antes = env.db.usuarios.findByUsuario("admin").ultimo_login;
+      const antes = env.db.usuarios.buscarPorUsuario("admin").ultimo_login;
       env.auth.login("admin", SENHA);
-      const depois = env.db.usuarios.findByUsuario("admin").ultimo_login;
+      const depois = env.db.usuarios.buscarPorUsuario("admin").ultimo_login;
       assert.ok(depois >= antes);
     });
 
@@ -153,9 +153,9 @@ test("AuthService - login", async (t) => {
       // Senão a tela de Usuários mostraria "acessou agora há pouco" para uma
       // conta que ninguém conseguiu abrir -- exatamente ao contrário do que
       // interessa a quem está investigando.
-      const antes = env.db.usuarios.findByUsuario("admin").ultimo_login;
+      const antes = env.db.usuarios.buscarPorUsuario("admin").ultimo_login;
       assert.throws(() => env.auth.login("admin", "errada"));
-      assert.equal(env.db.usuarios.findByUsuario("admin").ultimo_login, antes);
+      assert.equal(env.db.usuarios.buscarPorUsuario("admin").ultimo_login, antes);
     });
   } finally {
     env.cleanup();
@@ -165,32 +165,32 @@ test("AuthService - login", async (t) => {
 test("AuthService - troca de senha", async (t) => {
   const env = ambiente();
   try {
-    const admin = env.auth.setupAdmin({ nome: "Admin", usuario: "admin", senha: SENHA });
+    const admin = env.auth.configurarAdmin({ nome: "Admin", usuario: "admin", senha: SENHA });
     const logado = { ...admin, usuario: "admin" };
 
     await t.test("exige a senha ATUAL, não basta estar logado", () => {
       // A sessão pode ter ficado aberta num computador que não é o da pessoa.
-      assert.throws(() => env.auth.changePassword(logado, "errada", "nova-senha-123"), /Senha atual incorreta/);
-      assert.throws(() => env.auth.changePassword(logado, "", "nova-senha-123"), /Senha atual incorreta/);
-      assert.throws(() => env.auth.changePassword(logado, null, "nova-senha-123"), /Senha atual incorreta/);
+      assert.throws(() => env.auth.trocarSenha(logado, "errada", "nova-senha-123"), /Senha atual incorreta/);
+      assert.throws(() => env.auth.trocarSenha(logado, "", "nova-senha-123"), /Senha atual incorreta/);
+      assert.throws(() => env.auth.trocarSenha(logado, null, "nova-senha-123"), /Senha atual incorreta/);
     });
 
     await t.test("a nova senha tem tamanho mínimo", () => {
       for (const curta of ["", "abc", "12345", null, undefined]) {
-        assert.throws(() => env.auth.changePassword(logado, SENHA, curta), /pelo menos/, JSON.stringify(curta));
+        assert.throws(() => env.auth.trocarSenha(logado, SENHA, curta), /pelo menos/, JSON.stringify(curta));
       }
     });
 
     await t.test("troca funcionando: a nova entra, a antiga sai", () => {
       const NOVA = "uma-senha-nova-123";
-      env.auth.changePassword(logado, SENHA, NOVA);
+      env.auth.trocarSenha(logado, SENHA, NOVA);
 
       assert.doesNotThrow(() => env.auth.login("admin", NOVA), "a nova senha entra");
       assert.throws(() => env.auth.login("admin", SENHA), /inválidos/, "a antiga não entra mais");
     });
 
     await t.test("a nova senha também é guardada como hash", () => {
-      const linha = env.db.usuarios.findByUsuario("admin");
+      const linha = env.db.usuarios.buscarPorUsuario("admin");
       assert.notEqual(linha.senha_hash, "uma-senha-nova-123");
       assert.ok(bcrypt.compareSync("uma-senha-nova-123", linha.senha_hash));
     });
@@ -207,7 +207,7 @@ test("AuthService - troca de senha", async (t) => {
       // pedido chegar. Sem a checagem, o bcrypt receberia null e o erro seria
       // um 500 sem explicação.
       assert.throws(
-        () => env.auth.changePassword({ id: 999, usuario: "fantasma" }, SENHA, "outra-senha-123"),
+        () => env.auth.trocarSenha({ id: 999, usuario: "fantasma" }, SENHA, "outra-senha-123"),
         /Faça login novamente/
       );
     });
@@ -218,7 +218,7 @@ test("AuthService - troca de senha", async (t) => {
 
 /*
  * O papel que as rotas conferem é o COPIADO para a sessão no login (ver
- * requireRole), não o do banco. Então rebaixar ou excluir uma conta só tem
+ * exigirPapel), não o do banco. Então rebaixar ou excluir uma conta só tem
  * efeito real se as sessões abertas dela caírem junto -- senão a pessoa segue
  * com o papel antigo até o cookie expirar (7 dias). Nada na tela denuncia o
  * problema: a lista de usuários mostra o papel novo, corretamente.
@@ -228,9 +228,9 @@ test("AuthService - troca de senha", async (t) => {
  */
 test("AuthService - sessões caem quando o papel muda ou a conta some", async (t) => {
   const env = ambiente();
-  const { SqliteSessionStore } = require("../src/database/SqliteSessionStore");
-  const store = new SqliteSessionStore({ filePath: path.join(path.dirname(env.db.path), "sessions.sqlite") });
-  env.auth.setSessionStore(store);
+  const { ArmazemDeSessaoSqlite } = require("../src/database/ArmazemDeSessaoSqlite");
+  const store = new ArmazemDeSessaoSqlite({ filePath: path.join(path.dirname(env.db.path), "sessions.sqlite") });
+  env.auth.definirArmazemDeSessao(store);
 
   const abrirSessao = (sid, user) =>
     store.set(sid, { cookie: { maxAge: 60_000 }, user: { id: user.id, nome: user.nome, usuario: user.usuario, role: user.role } });
@@ -238,50 +238,50 @@ test("AuthService - sessões caem quando o papel muda ou a conta some", async (t
     new Promise((resolve, reject) => store.get(sid, (err, dados) => (err ? reject(err) : resolve(dados != null))));
 
   try {
-    const admin = env.auth.setupAdmin({ nome: "Admin", usuario: "admin", senha: SENHA });
-    const outroAdmin = env.auth.createUser({ nome: "Bia", usuario: "bia", senha: SENHA, role: "admin" }, admin);
-    const operador = env.auth.createUser({ nome: "Caio", usuario: "caio", senha: SENHA, role: "operador" }, admin);
+    const admin = env.auth.configurarAdmin({ nome: "Admin", usuario: "admin", senha: SENHA });
+    const outroAdmin = env.auth.criarUsuario({ nome: "Bia", usuario: "bia", senha: SENHA, role: "admin" }, admin);
+    const operador = env.auth.criarUsuario({ nome: "Caio", usuario: "caio", senha: SENHA, role: "operador" }, admin);
 
     await t.test("rebaixar derruba todas as sessões da conta", async () => {
       abrirSessao("bia-pc", outroAdmin);
       abrirSessao("bia-celular", outroAdmin);
-      env.auth.updateUser(outroAdmin.id, { role: "consulta" }, admin);
+      env.auth.alterarUsuario(outroAdmin.id, { role: "consulta" }, admin);
       assert.equal(await sessaoExiste("bia-pc"), false);
       assert.equal(await sessaoExiste("bia-celular"), false);
     });
 
     await t.test("promover também derruba (a sessão guardava o papel menor)", async () => {
       abrirSessao("caio-pc", operador);
-      env.auth.updateUser(operador.id, { role: "admin" }, admin);
+      env.auth.alterarUsuario(operador.id, { role: "admin" }, admin);
       assert.equal(await sessaoExiste("caio-pc"), false);
     });
 
     await t.test("só as sessões DAQUELA conta caem", async () => {
       abrirSessao("admin-pc", admin);
       abrirSessao("caio-pc", { ...operador, role: "admin" });
-      env.auth.updateUser(operador.id, { role: "operador" }, admin);
+      env.auth.alterarUsuario(operador.id, { role: "operador" }, admin);
       assert.equal(await sessaoExiste("admin-pc"), true, "quem fez a alteração continua logado");
       assert.equal(await sessaoExiste("caio-pc"), false);
     });
 
     await t.test("trocar só o nome NÃO desloga ninguém", async () => {
       abrirSessao("caio-pc", operador);
-      env.auth.updateUser(operador.id, { nome: "Caio Souza" }, admin);
+      env.auth.alterarUsuario(operador.id, { nome: "Caio Souza" }, admin);
       assert.equal(await sessaoExiste("caio-pc"), true);
     });
 
     await t.test("excluir a conta derruba as sessões dela", async () => {
       abrirSessao("caio-pc", operador);
-      env.auth.deleteUser(operador.id, admin);
+      env.auth.excluirUsuario(operador.id, admin);
       assert.equal(await sessaoExiste("caio-pc"), false);
       assert.equal(await sessaoExiste("admin-pc"), true);
     });
 
     await t.test("alteração recusada não derruba nada", async () => {
       // Rebaixar o único admin restante é recusado -- a sessão dele fica.
-      env.auth.updateUser(outroAdmin.id, { role: "consulta" }, admin);
+      env.auth.alterarUsuario(outroAdmin.id, { role: "consulta" }, admin);
       abrirSessao("admin-pc", admin);
-      assert.throws(() => env.auth.updateUser(admin.id, { role: "consulta" }, { ...admin, role: "admin" }), /único administrador/);
+      assert.throws(() => env.auth.alterarUsuario(admin.id, { role: "consulta" }, { ...admin, role: "admin" }), /único administrador/);
       assert.equal(await sessaoExiste("admin-pc"), true);
     });
   } finally {

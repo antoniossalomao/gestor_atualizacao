@@ -1,16 +1,15 @@
-const { STATUS_OPTIONS, PRIORIDADE_OPTIONS } = require("../config/constants");
+const { OPCOES_STATUS, OPCOES_PRIORIDADE } = require("../config/constantes");
 const { REGRAS } = require("../config/regrasEquipe");
-const { dataValida, horaValida } = require("../shared/validation");
+const { dataValida, horaValida } = require("./validacao");
 const { normalizarResponsavel } = require("../shared/normalizacao");
-const { ValidationError, NotFoundError, ConflictError } = require("../shared/errors");
-const { contaParaVersao } = require("./situacaoVersao");
+const { ErroDeValidacao, ErroNaoEncontrado, ErroDeConflito } = require("../shared/erros");
 
 /**
  * Regras de negocio da aba Agendamentos, em cima do AgendamentoRepository.
  */
 class AgendamentoService {
   /**
-   * @param {import('../database/Database').Database} db
+   * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
    */
   /**
@@ -52,19 +51,19 @@ class AgendamentoService {
   arquivarAntigas() {
     return this.db.agendamentos.arquivarConcluidasAntigas(
       this.regras.valor("agendamentoArquivarDias"),
-      STATUS_OPTIONS[STATUS_OPTIONS.length - 1]
+      OPCOES_STATUS[OPCOES_STATUS.length - 1]
     );
   }
 
   /** Traz uma tarefa arquivada de volta para a lista, reaberta. */
   reabrir(id, usuario) {
     const tarefa = this.db.agendamentos.find(id);
-    if (!tarefa) throw new NotFoundError("Esta tarefa não existe mais.");
-    if (this.db.agendamentos.reabrir(id, STATUS_OPTIONS[0]) === 0) {
-      throw new NotFoundError("Esta tarefa não está arquivada.");
+    if (!tarefa) throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
+    if (this.db.agendamentos.reabrir(id, OPCOES_STATUS[0]) === 0) {
+      throw new ErroNaoEncontrado("Esta tarefa não está arquivada.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${tarefa.tarefa}" desarquivada e reaberta`);
-    return { ...tarefa, status: STATUS_OPTIONS[0], concluidoEm: null };
+    return { ...tarefa, status: OPCOES_STATUS[0], concluidoEm: null };
   }
 
   /**
@@ -76,144 +75,85 @@ class AgendamentoService {
    */
   arquivar(id, usuario) {
     const tarefa = this.db.agendamentos.find(id);
-    if (!tarefa) throw new NotFoundError("Esta tarefa não existe mais.");
-    const statusConcluido = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+    if (!tarefa) throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
+    const statusConcluido = OPCOES_STATUS[OPCOES_STATUS.length - 1];
     if (tarefa.status !== statusConcluido) {
-      throw new ValidationError(`Só é possível arquivar tarefas "${statusConcluido}".`);
+      throw new ErroDeValidacao(`Só é possível arquivar tarefas "${statusConcluido}".`);
     }
     if (this.db.agendamentos.arquivar(id) === 0) {
-      throw new NotFoundError("Esta tarefa já está arquivada.");
+      throw new ErroNaoEncontrado("Esta tarefa já está arquivada.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${tarefa.tarefa}" arquivada`);
   }
 
   /** Tarefas pendentes vencidas/vencendo hoje, para o banner de lembrete. */
   lembretes() {
-    return this.db.agendamentos.dueSoon();
+    return this.db.agendamentos.venceEmBreve();
   }
 
   create(input, usuario) {
-    const data = this._validate(input);
-    this.db.agendamentos.insert(data);
-    this.historico.registrar(usuario, "criar", "agendamento", `Tarefa "${data.tarefa}"`);
-    return data;
-  }
-
-  gerarLote(input, usuario) {
-    const clientes = [...new Set((input.clientes || []).map((nome) => String(nome || "").trim()).filter(Boolean))];
-    const sistema = String(input.sistema || "").trim();
-    if (!sistema) throw new ValidationError("Informe o sistema do lote.");
-    const catalogado = this.db.sistemas.resolver(sistema);
-    if (catalogado && !contaParaVersao(catalogado)) {
-      throw new ValidationError(`"${catalogado.nome}" não controla versão e não gera agendamentos por atraso.`);
-    }
-    if (clientes.length === 0) throw new ValidationError("Nenhum cliente foi selecionado para o lote.");
-    if (clientes.length > 500) throw new ValidationError("O lote pode conter no máximo 500 clientes.");
-    const hoje = new Date();
-    const data = `${String(hoje.getDate()).padStart(2, "0")}/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
-    const itens = clientes.map((cliente) => this._validate({
-      tarefa: `Atualizar ${sistema}${input.dataCorte ? ` — defasado antes de ${input.dataCorte}` : ""}`,
-      cliente,
-      // O lote é sempre de UM sistema, e a tarefa agora tem campo próprio
-      // para ele (aparece no cartão do quadro).
-      sistema,
-      responsavel: input.responsavel || usuario?.nome || "",
-      data,
-      horario: "",
-      status: STATUS_OPTIONS[0],
-    }));
-    const criados = this.db.agendamentos.insertMany(itens);
-    this.historico.registrar(usuario, "criar", "agendamento", `${criados} tarefas geradas em lote para ${sistema}`);
-    return { criados };
+    const dados = this._validar(input);
+    this.db.agendamentos.insert(dados);
+    this.historico.registrar(usuario, "criar", "agendamento", `Tarefa "${dados.tarefa}"`);
+    return dados;
   }
 
   // Ver o comentario equivalente em AtualizacaoService: "zero linhas
   // afetadas" precisa virar 404, senao a tela confirma uma alteracao que
   // nao aconteceu numa tarefa que outra pessoa ja excluiu.
   update(id, input, usuario) {
-    const data = this._validate(input);
+    const dados = this._validar(input);
     // concluido_em so existe enquanto a tarefa ESTA "Concluído" agora:
     // acabou de virar -> grava a hora; deixou de ser (reaberta) -> limpa;
     // continua concluída de uma edição pra outra -> preserva a data
     // original (senão editar o responsável de uma tarefa já fechada
     // "resetaria" o tempo de resolução dela).
-    const statusConcluido = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+    const statusConcluido = OPCOES_STATUS[OPCOES_STATUS.length - 1];
     const atual = this.db.agendamentos.find(id);
     let concluidoEm = null;
-    if (data.status === statusConcluido) {
+    if (dados.status === statusConcluido) {
       concluidoEm = atual && atual.status === statusConcluido ? atual.concluidoEm : new Date().toISOString();
     }
     const revisaoEsperada = Number.isInteger(Number(input.revisao)) ? Number(input.revisao) : null;
-    if (this.db.agendamentos.update(id, { ...data, concluidoEm }, revisaoEsperada, usuario?.nome || "") === 0) {
+    if (this.db.agendamentos.update(id, { ...dados, concluidoEm }, revisaoEsperada, usuario?.nome || "") === 0) {
       const agora = this.db.agendamentos.find(id);
-      if (agora && revisaoEsperada != null) throw new ConflictError(`Este agendamento foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, agora);
-      throw new NotFoundError("Esta tarefa não existe mais. Ela pode ter sido excluída por outra pessoa.");
+      if (agora && revisaoEsperada != null) throw new ErroDeConflito(`Este agendamento foi atualizado por ${agora.atualizadoPor || "outra pessoa"}. Confira os dados antes de sobrescrever.`, agora);
+      throw new ErroNaoEncontrado("Esta tarefa não existe mais. Ela pode ter sido excluída por outra pessoa.");
     }
-    this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${data.tarefa}"`, { antes: atual, depois: data });
-    return data;
+    this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${dados.tarefa}"`, { antes: atual, depois: dados });
+    // Devolve a linha RELIDA, com a `revisao` nova. Devolver só `dados` (sem
+    // revisão) fazia o quadro guardar a revisão antiga depois de arrastar um
+    // cartão: a mudança seguinte no mesmo cartão -- voltar de "Em Andamento"
+    // para "A Fazer", por exemplo -- batia em 409 contra a própria pessoa, e
+    // o quadro só voltava a aceitar mudanças depois de um F5.
+    return this.db.agendamentos.find(id);
   }
 
   delete(id, usuario) {
     const atual = this.db.agendamentos.find(id);
     if (this.db.agendamentos.delete(id) === 0) {
-      throw new NotFoundError("Esta tarefa não existe mais.");
+      throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
     }
     this.historico.registrar(usuario, "excluir", "agendamento", `Tarefa #${id}`, { antes: atual, depois: null });
   }
 
   /** Atalho: marca a tarefa com o ultimo status da lista ("Concluído"). */
-  markDone(id, usuario) {
-    if (this.db.agendamentos.markDone(id, STATUS_OPTIONS[STATUS_OPTIONS.length - 1]) === 0) {
-      throw new NotFoundError("Esta tarefa não existe mais.");
+  marcarConcluida(id, usuario) {
+    if (this.db.agendamentos.marcarConcluida(id, OPCOES_STATUS[OPCOES_STATUS.length - 1]) === 0) {
+      throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
     }
     this.historico.registrar(usuario, "marcar_concluida", "agendamento", `Tarefa #${id} concluída`);
   }
 
-  /**
-   * Exclui várias tarefas de uma vez. Devolve `{ excluidos, registros }` --
-   * `registros` são os dados ANTES de sumirem, com que a tela recria tudo se
-   * a pessoa apertar "Desfazer" (mesmo padrão de AtualizacaoService.deleteMany).
-   */
-  deleteMany(ids, usuario) {
-    const registros = this.db.agendamentos.findByIds(ids);
-    if (registros.length === 0) {
-      throw new NotFoundError("Nenhuma das tarefas selecionadas existe mais. A lista pode estar desatualizada.");
-    }
-    const excluidos = this.db.agendamentos.deleteMany(registros.map((r) => r.id));
-    this.historico.registrar(usuario, "excluir", "agendamento", `${excluidos} tarefas excluídas de uma vez`);
-    return { excluidos, registros };
-  }
-
-  /**
-   * Marca várias tarefas como concluídas de uma vez. Só toca as que AINDA
-   * não estavam concluídas (idempotente, e evita sujar o histórico com
-   * tarefas que já estavam assim) -- `registros` devolve o estado ANTERIOR
-   * só dessas, para o "Desfazer" da tela restaurar o status/data de
-   * conclusão exatos que cada uma tinha, não um "A Fazer" genérico.
-   */
-  markDoneMany(ids, usuario) {
-    const doneLabel = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
-    const registros = this.db.agendamentos.findByIds(ids);
-    if (registros.length === 0) {
-      throw new NotFoundError("Nenhuma das tarefas selecionadas existe mais. A lista pode estar desatualizada.");
-    }
-    const pendentes = registros.filter((r) => r.status !== doneLabel);
-    const concluidos = pendentes.length > 0 ? this.db.agendamentos.markDoneMany(pendentes.map((r) => r.id), doneLabel) : 0;
-    if (concluidos > 0) {
-      this.historico.registrar(usuario, "marcar_concluida", "agendamento", `${concluidos} tarefas concluídas de uma vez`);
-    }
-    return { concluidos, registros: pendentes };
-  }
-
-  _validate(input) {
+  _validar(input) {
     const tarefa = (input.tarefa || "").trim();
-    if (!tarefa) throw new ValidationError("Campo 'Tarefa' é obrigatório.");
+    if (!tarefa) throw new ErroDeValidacao("Campo 'Tarefa' é obrigatório.");
     const data = (input.data || "").trim();
-    if (!dataValida(data)) throw new ValidationError("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
+    if (!dataValida(data)) throw new ErroDeValidacao("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
     const horario = (input.horario || "").trim();
-    if (!horaValida(horario)) throw new ValidationError("Campo 'Horário' precisa estar no formato hh:mm.");
-    const status = STATUS_OPTIONS.includes(input.status) ? input.status : STATUS_OPTIONS[0];
-    const prioridade = PRIORIDADE_OPTIONS.includes(input.prioridade) ? input.prioridade : "Normal";
+    if (!horaValida(horario)) throw new ErroDeValidacao("Campo 'Horário' precisa estar no formato hh:mm.");
+    const status = OPCOES_STATUS.includes(input.status) ? input.status : OPCOES_STATUS[0];
+    const prioridade = OPCOES_PRIORIDADE.includes(input.prioridade) ? input.prioridade : "Normal";
     return {
       tarefa,
       cliente: (input.cliente || "").trim(),
@@ -222,7 +162,7 @@ class AgendamentoService {
       // a mesma equipe, e é lá que está o volume que define qual grafia vale
       // ("Camila", não "CAMILA"). Sem isto, o campo Responsável de uma aba
       // divergia do da outra -- foi assim que "Marcos/lennon" nasceu aqui.
-      responsavel: normalizarResponsavel(input.responsavel, this.db.atualizacoes.distinctResponsaveis()),
+      responsavel: normalizarResponsavel(input.responsavel, this.db.atualizacoes.responsaveisDistintos()),
       prioridade,
       data,
       horario,

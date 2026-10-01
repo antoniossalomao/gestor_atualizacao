@@ -1,9 +1,9 @@
-import { ApiError } from "../../api/ApiClient.js";
+import { ErroApi } from "../../api/ApiPainel.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/Toast.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
-import { marcarOcupado } from "../../utils/guard.js";
+import { iconeHtml } from "../../utils/icones.js";
+import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { cartaoPerfil, listaSessoes } from "../../templates/configuracoes.js";
 
@@ -23,7 +23,7 @@ const SENHA_MINIMA = 8;
 export class ContaConfig {
   /**
    * @param {HTMLElement} container
-   * @param {import('../../api/ApiClient').ApiClient} api
+   * @param {import('../../api/ApiPainel').ApiPainel} api
    * @param {{
    *   usuario: {id: number, nome: string, usuario: string, role?: string},
    *   navigate: (aba: string, params?: object) => void,
@@ -103,8 +103,8 @@ export class ContaConfig {
                 <span class="cfg-group__help">Um arquivo com todas as suas escolhas, para aplicar em outra conta ou guardar.</span>
               </div>
               <div class="cfg-botoes">
-                <button type="button" class="btn btn--small" data-action="exportar">${iconHtml("download")} Exportar</button>
-                <button type="button" class="btn btn--small" data-action="importar">${iconHtml("upload")} Importar</button>
+                <button type="button" class="btn btn--small" data-action="exportar">${iconeHtml("download")} Exportar</button>
+                <button type="button" class="btn btn--small" data-action="importar">${iconeHtml("upload")} Importar</button>
               </div>
             </div>
             <div class="cfg-group cfg-linha" data-ajuste="restaurar">
@@ -113,7 +113,7 @@ export class ContaConfig {
                 <span class="cfg-group__help" data-role="resumo"></span>
               </div>
               <button type="button" class="btn btn--small btn--danger" data-action="restaurar-tudo">
-                ${iconHtml("restaurar")} Restaurar tudo</button>
+                ${iconeHtml("restaurar")} Restaurar tudo</button>
             </div>
           </div>
         </section>
@@ -121,12 +121,12 @@ export class ContaConfig {
         ${
           ehAdmin &&
           html`<button type="button" class="card cfg-link cfg-link--cartao" data-action="administracao">
-            <span class="cfg-link__icon">${iconHtml("escudo")}</span>
+            <span class="cfg-link__icon">${iconeHtml("escudo")}</span>
             <span class="cfg-link__labels">
               <strong>Administração da equipe</strong>
               <span>Usuários e papéis, histórico de alterações, regras da equipe, backups e saúde do servidor.</span>
             </span>
-            <span class="cfg-link__seta">${iconHtml("seta")}</span>
+            <span class="cfg-link__seta">${iconeHtml("seta")}</span>
           </button>`
         }
       </div>`.toString();
@@ -176,10 +176,6 @@ export class ContaConfig {
     /** @type {HTMLElement|null} */ (alvo.querySelector("input, button:not([disabled])"))?.focus({ preventScroll: true });
   }
 
-  // ==========================================================================
-  // PERFIL
-  // ==========================================================================
-
   _pintarPerfil() {
     const alvo = /** @type {HTMLElement} */ (this.container.querySelector('[data-role="perfil"]'));
     alvo.innerHTML = cartaoPerfil(this.perfil).toString();
@@ -197,7 +193,7 @@ export class ContaConfig {
         this.perfil = await this.api.put("/usuarios/me", { nome: campo.value });
         this._pintarPerfil();
         this.opcoes.aoMudarNome(this.perfil.nome);
-        toast.success("Nome atualizado.");
+        avisoRapido.sucesso("Nome atualizado.");
       } catch (err) {
         liberar();
         Modal.alert("Não foi possível trocar o nome", mensagem(err), "warning");
@@ -211,10 +207,6 @@ export class ContaConfig {
     const nome = campo.value.trim().replace(/\s+/g, " ");
     return nome.length > 0 && nome !== this.perfil.nome;
   }
-
-  // ==========================================================================
-  // SENHA
-  // ==========================================================================
 
   _ligarSenha() {
     const form = /** @type {HTMLFormElement} */ (this.container.querySelector('[data-role="form-senha"]'));
@@ -248,7 +240,7 @@ export class ContaConfig {
         await this.api.put("/usuarios/me/senha", { senhaAtual: valor("senhaAtual"), senhaNova: valor("senhaNova") });
         form.reset();
         estado.textContent = "";
-        toast.success("Senha trocada. A sua conta foi desconectada nos outros aparelhos.");
+        avisoRapido.sucesso("Senha trocada. A sua conta foi desconectada nos outros aparelhos.");
         this._pintarSessoes(await this.api.get("/usuarios/me/sessoes").catch(() => null));
       } catch (err) {
         estado.textContent = mensagem(err);
@@ -261,10 +253,6 @@ export class ContaConfig {
     });
   }
 
-  // ==========================================================================
-  // SESSÕES
-  // ==========================================================================
-
   _ligarSessoes() {
     const cartao = /** @type {HTMLElement} */ (this.container.querySelector('[data-ajuste="sessoes"]'));
     cartao.addEventListener("click", async (e) => {
@@ -274,10 +262,10 @@ export class ContaConfig {
         const liberar = marcarOcupado(encerrar);
         try {
           await this.api.delete(`/usuarios/me/sessoes/${encodeURIComponent(encerrar.dataset.id || "")}`);
-          toast.success("Sessão encerrada. Aquele aparelho vai pedir login de novo.");
+          avisoRapido.sucesso("Sessão encerrada. Aquele aparelho vai pedir login de novo.");
         } catch (err) {
           liberar();
-          toast.error(mensagem(err));
+          avisoRapido.erro(mensagem(err));
         }
         this._pintarSessoes(await this.api.get("/usuarios/me/sessoes").catch(() => null));
         return;
@@ -296,9 +284,9 @@ export class ContaConfig {
     if (!ok) return;
     try {
       const { encerradas } = await this.api.delete("/usuarios/me/sessoes");
-      toast.success(encerradas === 1 ? "1 sessão encerrada." : `${encerradas} sessões encerradas.`);
+      avisoRapido.sucesso(encerradas === 1 ? "1 sessão encerrada." : `${encerradas} sessões encerradas.`);
     } catch (err) {
-      toast.error(mensagem(err));
+      avisoRapido.erro(mensagem(err));
     }
     this._pintarSessoes(await this.api.get("/usuarios/me/sessoes").catch(() => null));
   }
@@ -319,5 +307,5 @@ export class ContaConfig {
 }
 
 function mensagem(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

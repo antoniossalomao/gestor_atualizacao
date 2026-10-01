@@ -30,14 +30,12 @@ const TETO = {
   "views/HistoricoView.js": 2,
   "views/AgenteDetalheModal.js": 2,
   "views/SistemasView.js": 1,
-  "main.js": 1,
-  "components/charts/BarChart.js": 1,
-  "components/Pagination.js": 1,
+  "components/Paginacao.js": 1,
   "components/Modal.js": 1,
   "components/MenuConta.js": 1,
-  "components/Drawer.js": 1,
+  "components/Gaveta.js": 1,
   "components/ConexaoBanner.js": 1,
-  "app/Shortcuts.js": 1,
+  "app/atalhos.js": 1,
 };
 
 function listar(dir) {
@@ -72,16 +70,17 @@ test("todo arquivo da lista de tetos ainda existe", () => {
   }
 });
 
-test("templates/ e domain/ não tocam no DOM", async (t) => {
+test("utils/, domain/ e templates/ não tocam no DOM", async (t) => {
   // É o que os deixa rodar no Node (e ser testados). O tsc tem "dom" nas
   // libs e não pegaria um `document` aqui -- por isso a checagem é textual.
-  // Exceção herdada, anterior a esta trava: criarDetalhesRetorno monta DOM
-  // dentro de domain/. O lugar certo dele é components/ -- quando mudar, tire daqui.
-  const EXCECOES = new Set(["domain/agenteReport.js"]);
-  for (const { rel, fonte } of arquivos.filter((a) => /^(templates|domain)\//.test(a.rel) && !EXCECOES.has(a.rel))) {
+  // `utils/` só entrou nesta lista no A16 (30/09/2026): até então abrigava o
+  // download de arquivo, o botão ocupado, o `el()` e a leitura de variável CSS,
+  // que foram para components/ e app/. E `criarDetalhesRetorno`, a exceção que
+  // esta lista carregava em domain/, foi para components/detalhesRetorno.js.
+  for (const { rel, fonte } of arquivos.filter((a) => /^(utils|templates|domain)\//.test(a.rel))) {
     await t.test(rel, () => {
       const semComentario = fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-      assert.doesNotMatch(semComentario, /\b(document|window|localStorage|navigator)\b/);
+      assert.doesNotMatch(semComentario, /\b(document|window|localStorage|sessionStorage|navigator|getComputedStyle|HTMLElement)\b/);
     });
   }
 });

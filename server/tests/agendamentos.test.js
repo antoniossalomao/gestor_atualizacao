@@ -18,18 +18,18 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AgendamentoService } = require("../src/services/AgendamentoService");
-const { STATUS_OPTIONS } = require("../src/config/constants");
+const { OPCOES_STATUS } = require("../src/config/constantes");
 
-const A_FAZER = STATUS_OPTIONS[0];
-const CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+const A_FAZER = OPCOES_STATUS[0];
+const CONCLUIDO = OPCOES_STATUS[OPCOES_STATUS.length - 1];
 const USUARIO = { id: 1, nome: "Teste" };
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-agenda-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const service = new AgendamentoService(db, new HistoricoService(db));
   const cleanup = () => {
     try {
@@ -131,13 +131,20 @@ test("AgendamentoService - concorrência otimista e geração em lote", () => {
       (erro) => erro.statusCode === 409 && /Camila/.test(erro.message)
     );
 
-    const lote = env.service.gerarLote({ clientes: ["Loja 1", "Loja 2", "Loja 1"], sistema: "B_Vendas", responsavel: "Teste" }, USUARIO);
-    assert.equal(lote.criados, 2, "remove clientes duplicados antes da transação");
-    assert.equal(env.db.agendamentos.list("Atualizar B_Vendas").total, 2);
-    assert.throws(
-      () => env.service.gerarLote({ clientes: ["Loja 1"], sistema: "B_Atualizador", responsavel: "Teste" }, USUARIO),
-      (erro) => erro.statusCode === 400 && /não controla versão/.test(erro.message)
-    );
+    // A01: o quadro guarda o que o PUT devolve e manda essa revisão na próxima
+    // mudança. Antes a resposta vinha sem `revisao`, e a segunda mudança do
+    // mesmo cartão (sair de "Em Andamento", por exemplo) era um 409 contra a
+    // própria pessoa. Ida e volta entre "Em Andamento" e cada outro status.
+    let linha = criar(env.service, env.db, { tarefa: "Vai e volta" });
+    for (const outro of OPCOES_STATUS.filter((s) => s !== "Em Andamento")) {
+      for (const status of ["Em Andamento", outro]) {
+        const resposta = env.service.update(linha.id, { ...linha, status }, USUARIO);
+        assert.equal(resposta.status, status);
+        assert.equal(resposta.revisao, linha.revisao + 1, `revisão nova na resposta ao ir para ${status}`);
+        linha = { ...linha, ...resposta };
+      }
+    }
+    assert.equal(env.db.agendamentos.find(linha.id).status, CONCLUIDO);
   } finally { env.cleanup(); }
 });
 
@@ -155,7 +162,7 @@ test("AgendamentoService - concluido_em", async (t) => {
       assert.equal(depois.status, CONCLUIDO);
       assert.ok(depois.concluidoEm, "deveria ter gravado a hora da conclusão");
       assert.equal(env.db.conn.prepare("SELECT COUNT(*) AS total FROM atualizacoes").get().total, atualizacoesAntes,
-        "concluir tarefa não cria um atendimento nem aplica versões ao cliente");
+        "concluir tarefa não cria uma atualização nem aplica versões ao cliente");
     });
 
     await t.test("editar tarefa JÁ concluída preserva a data original", () => {
@@ -242,50 +249,6 @@ test("AgendamentoService - arquivar e reabrir", async (t) => {
       const lista = env.service.list("", "Todos", { page: 1, pageSize: 100 });
       assert.equal(typeof lista.arquivarDias, "number");
       assert.ok(lista.arquivarDias > 0);
-    });
-  } finally {
-    env.cleanup();
-  }
-});
-
-test("AgendamentoService - operações em lote", async (t) => {
-  const env = ambiente();
-  try {
-    await t.test("markDoneMany só toca as que ainda não estavam concluídas", () => {
-      const a = criar(env.service, env.db, { tarefa: "Lote A" });
-      const b = criar(env.service, env.db, { tarefa: "Lote B" });
-      env.service.update(b.id, { tarefa: "Lote B", status: CONCLUIDO }, USUARIO);
-
-      const r = env.service.markDoneMany([a.id, b.id], USUARIO);
-      assert.equal(r.concluidos, 1, "só a que estava pendente conta");
-      assert.equal(r.registros.length, 1, "e só ela entra no 'Desfazer'");
-      assert.equal(r.registros[0].id, a.id);
-    });
-
-    await t.test("markDoneMany com tudo já concluído não suja o histórico", () => {
-      const c = criar(env.service, env.db, { tarefa: "Lote C" });
-      env.service.update(c.id, { tarefa: "Lote C", status: CONCLUIDO }, USUARIO);
-      const antes = env.db.historico.list({ page: 1, pageSize: 200 }).total;
-
-      const r = env.service.markDoneMany([c.id], USUARIO);
-      assert.equal(r.concluidos, 0);
-      assert.equal(env.db.historico.list({ page: 1, pageSize: 200 }).total, antes, "nada novo no histórico");
-    });
-
-    await t.test("deleteMany devolve os registros para o 'Desfazer'", () => {
-      const d = criar(env.service, env.db, { tarefa: "Some D" });
-      const e = criar(env.service, env.db, { tarefa: "Some E" });
-
-      const r = env.service.deleteMany([d.id, e.id], USUARIO);
-      assert.equal(r.excluidos, 2);
-      assert.equal(r.registros.length, 2, "os dados de antes de sumirem");
-      assert.ok(r.registros.every((x) => x.tarefa));
-      assert.equal(env.db.agendamentos.find(d.id), undefined);
-    });
-
-    await t.test("lote com ids que não existem mais dá 404 explicativo", () => {
-      assert.throws(() => env.service.deleteMany([999998, 999999], USUARIO), /lista pode estar desatualizada/);
-      assert.throws(() => env.service.markDoneMany([999998], USUARIO), /lista pode estar desatualizada/);
     });
   } finally {
     env.cleanup();

@@ -1,5 +1,5 @@
 import { html, plural } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
+import { iconeHtml } from "../utils/icones.js";
 
 /**
  * Um indicador do topo do Resumo. O `data-stat` é como a view o encontra
@@ -12,22 +12,22 @@ import { iconHtml } from "../utils/icons.js";
  * tela, que é o que uma `<div onclick>` não daria.
  *
  * @param {string} chave
- * @param {Parameters<typeof iconHtml>[0]} nomeIcone
+ * @param {Parameters<typeof iconeHtml>[0]} nomeIcone
  * @param {string} rotulo
  * @param {string} destino
  */
-export function statTile(chave, nomeIcone, rotulo, destino) {
+export function blocoDeNumero(chave, nomeIcone, rotulo, destino) {
   return html`
     <button type="button" class="card stat-tile" data-stat="${chave}" data-destino="${destino}">
       <div class="stat-tile__label">
-        <span class="stat-tile__icon">${iconHtml(nomeIcone)}</span>
+        <span class="stat-tile__icon">${iconeHtml(nomeIcone)}</span>
         <span data-role="rotulo">${rotulo}</span>
       </div>
       <div class="stat-tile__value-row">
         <div class="stat-tile__value">—</div>
         <span class="stat-tile__delta" data-role="delta" hidden></span>
       </div>
-      <span class="stat-tile__go">${destino} ${iconHtml("seta")}</span>
+      <span class="stat-tile__go">${destino} ${iconeHtml("seta")}</span>
     </button>`;
 }
 
@@ -38,7 +38,7 @@ export function statTile(chave, nomeIcone, rotulo, destino) {
  */
 export function deltaTendencia(tendencia) {
   const pct = `${Math.abs(tendencia.pct)}%`;
-  return tendencia.tendencia === "neutra" ? html`${pct}` : html`${iconHtml("seta")}${pct}`;
+  return tendencia.tendencia === "neutra" ? html`${pct}` : html`${iconeHtml("seta")}${pct}`;
 }
 
 /**
@@ -47,14 +47,15 @@ export function deltaTendencia(tendencia) {
  * (cada sistema com a proporção dos seus clientes que está atrasada).
  *
  * Substituiu uma rosca de duas fatias ("Em dia" x "Desatualizados") em que
- * "em dia" era só quem teve algum atendimento nos últimos 60 dias -- não
+ * "em dia" era só quem teve alguma atualização nos últimos 60 dias -- não
  * dizia nada sobre versão. A barra é auxiliar: os números e os botões
  * funcionam sem ela, e ela some quando não há ninguém para dividir.
  *
  * @param {ReturnType<typeof import("../domain/situacao.js").totaisSituacao>} totais
  * @param {Array<{sistema: string, total: number, clientes?: number}>} maisAtrasados clientes = quantos avaliados usam o sistema
+ * @param {number|null} [prazoDias] prazo da equipe depois da versão oficial (A07)
  */
-export function corpoSituacao(totais, maisAtrasados) {
+export function corpoSituacao(totais, maisAtrasados, prazoDias = null) {
   if (totais.avaliados === 0) {
     // Nunca "100% em dia" de um conjunto vazio; o próximo passo depende
     // de já haver clientes cadastrados ou não.
@@ -73,7 +74,7 @@ export function corpoSituacao(totais, maisAtrasados) {
       <strong class="situacao__hero">${emDia?.pct ?? 0}%</strong>
       <span class="situacao__hero-texto">
         <span>dos clientes em dia</span>
-        <small>${emDia?.total ?? 0} de ${plural(totais.avaliados, "cliente")} com sistema que controla versão</small>
+        <small>${emDia?.total ?? 0} de ${plural(totais.avaliados, "cliente")}${prazoDias != null ? ` · desatualizado ${prazoDias === 0 ? "logo depois da" : `${plural(prazoDias, "dia")} depois da`} versão oficial` : ""}</small>
       </span>
     </div>
     <div class="situacao__barra" role="img" aria-label="${descricaoBarra}">
@@ -91,10 +92,7 @@ export function corpoSituacao(totais, maisAtrasados) {
       )}
     </div>
     ${totais.foraDaAvaliacao
-      ? html`<p class="situacao__nota">${plural(totais.foraDaAvaliacao, "cliente")} fora da conta (só sistemas fixos ou nenhum).</p>`
-      : ""}
-    ${totais.grupos.find((g) => g.chave === "pendente")?.total === totais.avaliados
-      ? html`<p class="situacao__nota">Todos aguardam verificação. Abra a lista acima para ver o que falta; as referências oficiais ficam em Versões oficiais na aba Sistemas.</p>`
+      ? html`<p class="situacao__nota">${plural(totais.foraDaAvaliacao, "cliente")} fora da conta (sem sistema que controle versão).</p>`
       : ""}
     ${top.length
       ? html`

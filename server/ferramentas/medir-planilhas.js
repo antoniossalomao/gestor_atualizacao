@@ -1,6 +1,6 @@
 /**
- * Mede tempo e memória da importação e da exportação de planilhas (P05 de
- * docs/MELHORIAS.md). Os números que ele imprime são os que justificam os
+ * Mede tempo e memória da importação e da exportação de planilhas (ver
+ * "Lentidão" em docs/OPERACAO.md). Os números que ele imprime são os que justificam os
  * limites de config/limitesPlanilha.js -- rode de novo antes de mexer neles.
  *
  *   node server/ferramentas/medir-planilhas.js
@@ -19,7 +19,7 @@ const path = require("node:path");
 const { performance } = require("node:perf_hooks");
 
 const ExcelJS = require("exceljs");
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AtualizacaoService } = require("../src/services/AtualizacaoService");
 
@@ -44,8 +44,8 @@ async function planilha(n, arquivo) {
 }
 
 function abrir(dir) {
-  const db = new Database(path.join(dir, "gestao.db"));
-  const servico = new AtualizacaoService(db, new HistoricoService(db), { notifyAtualizacao: async () => {} });
+  const db = new BancoDeDados(path.join(dir, "gestao.db"));
+  const servico = new AtualizacaoService(db, new HistoricoService(db), { avisarAtualizacao: async () => {} });
   return { db, servico };
 }
 
@@ -65,7 +65,7 @@ async function medir(fn) {
 async function cenario([tipo, nStr, dir]) {
   const n = Number(nStr);
   if (tipo === "preparar") {
-    // Cadastra os clientes e deixa o banco com `n` atendimentos (para a exportação).
+    // Cadastra os clientes e deixa o banco com `n` atualizações (para a exportação).
     const { db, servico } = abrir(dir);
     const vendas = db.sistemas.resolver("B_Vendas").id;
     db.conn.transaction(() => {
@@ -99,13 +99,13 @@ async function cenario([tipo, nStr, dir]) {
     const buffer = fs.readFileSync(path.join(dir, `import-${n}.xlsx`));
     // Acima do limite, o que se mede é o custo da RECUSA.
     const m = await medir(() =>
-      (tipo === "previa" ? servico.previaImportacao(buffer) : servico.importXlsx(buffer, USUARIO)).catch((e) => ({ recusada: e.message }))
+      (tipo === "previa" ? servico.previaImportacao(buffer) : servico.importarXlsx(buffer, USUARIO)).catch((e) => ({ recusada: e.message }))
     );
     db.conn.close();
     return { ms: m.ms, picoMb: m.picoMb, recusada: Boolean(m.resultado.recusada) };
   }
   if (tipo === "exportar") {
-    const m = await medir(() => servico.exportXlsxBuffer().catch((e) => ({ recusada: e.message })));
+    const m = await medir(() => servico.exportarXlsxEmMemoria().catch((e) => ({ recusada: e.message })));
     db.conn.close();
     return { ms: m.ms, picoMb: m.picoMb, kb: m.resultado.recusada ? "recusada" : Math.round(m.resultado.byteLength / 1024) };
   }

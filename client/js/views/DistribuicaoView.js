@@ -1,17 +1,18 @@
 import { View } from "../app/View.js";
-import { icon } from "../utils/icons.js";
-import { toast } from "../components/Toast.js";
+import { iconeSvg } from "../utils/icones.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
 import { Modal } from "../components/Modal.js";
-import { emptyState } from "../components/EmptyState.js";
-import { copyToClipboard, escapeAttr, escapeHtml, plural } from "../utils/html.js";
-import { formatarDataHora, tempoRelativo } from "../utils/date.js";
-import { notificacoes } from "../app/notify.js";
-import { aparencia } from "../app/appearance.js";
-import { faseLabel } from "../domain/agenteLabels.js";
+import { estadoVazio } from "../components/estadoVazio.js";
+import { escaparAtributo, escaparHtml, plural } from "../utils/html.js";
+import { copiarParaAreaDeTransferencia } from "../components/areaDeTransferencia.js";
+import { formatarDataHora, tempoRelativo } from "../utils/data.js";
+import { notificacoes } from "../app/notificacoesDoSistema.js";
+import { aparencia } from "../app/aparencia.js";
+import { rotuloDaFase } from "../domain/agenteLabels.js";
 import { relatorioRetornosTexto } from "../domain/agenteReport.js";
 import { classificarRetorno, agruparRetornos } from "../domain/agenteStatus.js";
 import { AgenteDetalheModal } from "./AgenteDetalheModal.js";
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 
 const RESULTADOS = {
   sucesso: "badge--success", erro: "badge--danger", pendencias: "badge--warning",
@@ -44,17 +45,17 @@ export class DistribuicaoView extends View {
     this.filtroSistemaRetorno = "";
     this.buscaRetorno = "";
     this._timer = null;
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.classList.add("distribution-dashboard");
     this.container.innerHTML = `
       <div class="distribution-topbar">
         <p>Visão geral dos agentes</p>
         <div class="distribution-topbar__actions">
           <button type="button" class="btn btn--small btn--ghost distribution-refresh-button" data-action="refresh"
-                  aria-label="Atualizar dados" title="Atualizar dados">${icon("atualizar")}</button>
+                  aria-label="Atualizar dados" title="Atualizar dados">${iconeSvg("atualizar")}</button>
         </div>
       </div>
 
@@ -65,7 +66,7 @@ export class DistribuicaoView extends View {
           <div><h2 class="card__title">Retornos recentes</h2><p class="distribution-section__description">Um resumo por agente. Erros e mensagens ficam nos detalhes.</p></div>
           <div class="distribution-section__actions">
             <span class="result-count" data-role="logs-count" aria-live="polite"></span>
-            <button type="button" class="btn btn--small btn--ghost" data-action="copy-report">${icon("copiar")} Copiar relatório</button>
+            <button type="button" class="btn btn--small btn--ghost" data-action="copy-report">${iconeSvg("copiar")} Copiar relatório</button>
           </div>
         </div>
         <div class="toolbar distribution-report-filters">
@@ -147,38 +148,38 @@ export class DistribuicaoView extends View {
       button.disabled = true;
       this.cache?.invalidar("distribuicao:");
       try { await this.refresh(true); }
-      catch { toast.error("Não foi possível atualizar o painel. Tente novamente."); }
+      catch { avisoRapido.erro("Não foi possível atualizar o painel. Tente novamente."); }
       finally { button.disabled = false; }
     });
-    this.container.querySelector('[data-action="copy-report"]').addEventListener("click", () => this._copyReport());
+    this.container.querySelector('[data-action="copy-report"]').addEventListener("click", () => this._copiarRelatorio());
     this.searchInput.addEventListener("input", () => {
       this.buscaAgente = this.searchInput.value.trim().toLowerCase();
-      this._renderAgents();
+      this._desenharAgentes();
     });
     this.situationFilter.addEventListener("change", () => {
       this.filtroSituacao = this.situationFilter.value;
-      this._renderAgents();
+      this._desenharAgentes();
     });
     this.systemFilter.addEventListener("change", () => {
       this.filtroSistema = this.systemFilter.value;
-      this._renderAgents();
+      this._desenharAgentes();
     });
     this.logSearch.addEventListener("input", () => {
       this.buscaRetorno = this.logSearch.value.trim().toLowerCase();
-      this._renderLogs();
+      this._desenharRegistros();
     });
     this.logStatus.addEventListener("change", () => {
       this.filtroRetorno = this.logStatus.value;
-      this._renderLogs();
+      this._desenharRegistros();
     });
     this.logSystem.addEventListener("change", () => {
       this.filtroSistemaRetorno = this.logSystem.value;
-      this._renderLogs();
+      this._desenharRegistros();
     });
 
     this.on(document, "visibilitychange", () => {
-      if (document.visibilityState === "visible" && this.visivel) this._startPolling();
-      else this._stopPolling();
+      if (document.visibilityState === "visible" && this.visivel) this._iniciarVerificacao();
+      else this._pararVerificacao();
     });
   }
 
@@ -197,14 +198,14 @@ export class DistribuicaoView extends View {
       if (this.searchInput) this.searchInput.value = params.busca;
     }
     if (this.painel) {
-      this._renderAgents();
+      this._desenharAgentes();
     }
   }
 
   async refresh(manual = false) {
     const systems = await this.swr("sistemas", () => this.api.get("/sistemas", null, { key: "dist:sistemas" }), (list) => {
       this.systems = list || [];
-      this._fillSystems();
+      this._preencherSistemasDoFormulario();
     });
     this.systems = systems || [];
 
@@ -214,8 +215,8 @@ export class DistribuicaoView extends View {
       (data, { doCache }) => {
         if (!doCache && this.painel) this._avisarRecuperados(this.painel.agentes || [], data.agentes || []);
         this.painel = data;
-        this._renderIndicators();
-        this._renderAgents();
+        this._desenharIndicadores();
+        this._desenharAgentes();
       }
     );
 
@@ -224,24 +225,24 @@ export class DistribuicaoView extends View {
       () => this.api.get("/versoes/logs", { limit: 300 }, { key: "dist:logs" }),
       (logs) => {
         this.logs = logs || [];
-        this._renderLogs();
+        this._desenharRegistros();
         notificacoes.sincronizar(this.logs);
       }
     );
 
-    this._startPolling();
-    if (manual) toast.info("Painel atualizado.");
+    this._iniciarVerificacao();
+    if (manual) avisoRapido.informar("Painel atualizado.");
   }
 
-  _fillSystems() {
+  _preencherSistemasDoFormulario() {
     for (const select of [this.systemFilter, this.logSystem]) {
       const current = select.value;
-      select.innerHTML = `<option value="">Todos</option>` + this.systems.map((s) => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join("");
+      select.innerHTML = `<option value="">Todos</option>` + this.systems.map((s) => `<option value="${escaparAtributo(s)}">${escaparHtml(s)}</option>`).join("");
       select.value = this.systems.includes(current) ? current : "";
     }
   }
 
-  _renderIndicators() {
+  _desenharIndicadores() {
     const agents = this.painel?.agentes || [];
     const attention = agents.filter((agent) => ["erro", "pendencias", "desatualizado", "aguardando_autorizacao", "aguardando_autorizacao_demorada"].includes(agent.situacao)).length;
     const aligned = agents.filter((agent) => agent.versaoAlvo && agent.ultimaVersao === agent.versaoAlvo).length;
@@ -254,12 +255,12 @@ export class DistribuicaoView extends View {
     ];
     this.container.querySelector('[data-role="indicators"]').innerHTML = `
       ${metrics.map((metric) => `<div class="card distribution-metric distribution-metric--${metric.tone}">
-        <div class="distribution-metric__head"><span>${metric.label}</span>${icon(metric.icon)}</div>
+        <div class="distribution-metric__head"><span>${metric.label}</span>${iconeSvg(metric.icon)}</div>
         <strong>${metric.value}</strong><small>${metric.hint}</small>
       </div>`).join("")}`;
   }
 
-  _filteredLogGroups() {
+  _gruposDeRegistroFiltrados() {
     const logs = this.filtroSistemaRetorno ? this.logs.filter((log) => log.sistema === this.filtroSistemaRetorno) : this.logs;
     return agruparRetornos(logs).filter((group) => {
       if (this.filtroRetorno !== "todos" && group.resultado.tipo !== this.filtroRetorno) return false;
@@ -269,9 +270,9 @@ export class DistribuicaoView extends View {
     });
   }
 
-  _renderLogs() {
+  _desenharRegistros() {
     const list = this.container.querySelector('[data-role="logs"]');
-    const groups = this._filteredLogGroups();
+    const groups = this._gruposDeRegistroFiltrados();
     list.replaceChildren();
     this.container.querySelector('[data-role="logs-count"]').textContent =
       plural(groups.length, "agente");
@@ -281,7 +282,7 @@ export class DistribuicaoView extends View {
 
     if (!groups.length) {
       list.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: this.logs.length ? "Nenhum retorno com esse filtro" : "Nenhum retorno ainda",
           descricao: this.logs.length ? "Tente mudar a busca ou o último resultado." : "As mensagens aparecerão quando um agente se comunicar.",
           icone: this.logs.length ? "busca" : "historico",
@@ -306,21 +307,21 @@ export class DistribuicaoView extends View {
         : result.tipo === "sucesso" ? "Última atualização concluída sem pendências informadas."
         : result.tipo === "aguardando" ? "A atualização aguarda autorização para continuar."
         : result.tipo === "desconhecido" ? "O agente enviou um retorno sem resultado reconhecido."
-        : `Atualização em andamento${log.fase ? ` · ${faseLabel(log.fase)}` : ""}.`;
+        : `Atualização em andamento${log.fase ? ` · ${rotuloDaFase(log.fase)}` : ""}.`;
       item.innerHTML = `
-        <div class="distribution-return__icon">${icon(result.tipo === "sucesso" ? "check" : ["erro", "pendencias"].includes(result.tipo) ? "alerta" : "relogio")}</div>
+        <div class="distribution-return__icon">${iconeSvg(result.tipo === "sucesso" ? "check" : ["erro", "pendencias"].includes(result.tipo) ? "alerta" : "relogio")}</div>
         <div class="distribution-return__body">
           <div class="distribution-return__heading">
-            <h3>${escapeHtml(log.empresa || log.cnpj)}</h3>
-            <span class="badge ${RESULTADOS[result.tipo] || "badge--muted"}">${escapeHtml(result.label)}</span>
+            <h3>${escaparHtml(log.empresa || log.cnpj)}</h3>
+            <span class="badge ${RESULTADOS[result.tipo] || "badge--muted"}">${escaparHtml(result.label)}</span>
           </div>
-          <p class="distribution-return__context">Último retorno${context ? ` · ${escapeHtml(context)}` : ""}</p>
-          <p class="distribution-return__summary">${escapeHtml(summary)}</p>
+          <p class="distribution-return__context">Último retorno${context ? ` · ${escaparHtml(context)}` : ""}</p>
+          <p class="distribution-return__summary">${escaparHtml(summary)}</p>
           <p class="distribution-return__history">${plural(group.logs.length, "mensagem", "mensagens")}${group.erros.length ? ` · ${plural(group.erros.length, "registro")} de erro no histórico recente` : ""}${group.sistemas.length > 1 ? ` · ${plural(group.sistemas.length, "sistema")}` : ""}</p>
         </div>
         <div class="distribution-return__actions">
           <time data-role="when"></time>
-          <button type="button" class="btn btn--small" data-action="details">Detalhes ${icon("seta")}</button>
+          <button type="button" class="btn btn--small" data-action="details">Detalhes ${iconeSvg("seta")}</button>
         </div>
       `;
       const when = item.querySelector('[data-role="when"]');
@@ -333,18 +334,18 @@ export class DistribuicaoView extends View {
     }
   }
 
-  async _copyReport() {
-    const logs = this._filteredLogGroups().flatMap((group) => group.logs);
+  async _copiarRelatorio() {
+    const logs = this._gruposDeRegistroFiltrados().flatMap((group) => group.logs);
     if (!logs.length) {
-      toast.info("Não há retornos nesse filtro para copiar.");
+      avisoRapido.informar("Não há retornos nesse filtro para copiar.");
       return;
     }
     const classificados = logs.map((log) => ({ ...log, status: classificarRetorno(log).label }));
-    if (await copyToClipboard(relatorioRetornosTexto(classificados))) toast.success("Relatório copiado.");
-    else toast.error("Não foi possível copiar o relatório.");
+    if (await copiarParaAreaDeTransferencia(relatorioRetornosTexto(classificados))) avisoRapido.sucesso("Relatório copiado.");
+    else avisoRapido.erro("Não foi possível copiar o relatório.");
   }
 
-  _renderAgents() {
+  _desenharAgentes() {
     const body = this.container.querySelector('[data-role="agents"]');
     const all = this.painel?.agentes || [];
     const filtered = all.filter((agent) => {
@@ -391,7 +392,7 @@ export class DistribuicaoView extends View {
       cell.colSpan = 7;
       cell.className = "table-empty";
       cell.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: all.length ? "Nenhum agente com esse filtro" : "Nenhum agente comunicou ainda",
           descricao: all.length ? "Tente mudar a busca ou os filtros." : "Assim que o Atualizador rodar num cliente, ele aparecerá aqui.",
           icone: all.length ? "busca" : "distribuicao",
@@ -409,17 +410,17 @@ export class DistribuicaoView extends View {
       const isAlerta = agent.situacao === "offline" || agent.situacao === "pendencias";
       row.className = `is-readonly ${isErro ? "row--incident-erro" : isAlerta ? "row--incident-alerta" : ""}`;
       row.innerHTML = `
-        <td data-label="Empresa"><div class="distribution-agent-identity"><strong>${escapeHtml(agent.empresa)}</strong><small class="table-subtext">${escapeHtml(agent.cnpj)}${agent.maquina ? ` · ${escapeHtml(agent.maquina)}` : ""}</small></div></td>
+        <td data-label="Empresa"><div class="distribution-agent-identity"><strong>${escaparHtml(agent.empresa)}</strong><small class="table-subtext">${escaparHtml(agent.cnpj)}${agent.maquina ? ` · ${escaparHtml(agent.maquina)}` : ""}</small></div></td>
         <td data-label="Situação"><span class="badge ${situation.badge}">${situation.label}</span></td>
-        <td data-label="Sistema">${escapeHtml(agent.ultimoSistema || "—")}</td>
-        <td data-label="Versão informada">${agent.ultimaVersao ? `<span class="version-chip">${escapeHtml(agent.ultimaVersao)}</span>` : "—"}</td>
-        <td data-label="Publicada">${escapeHtml(agent.versaoAlvo || "—")}</td>
+        <td data-label="Sistema">${escaparHtml(agent.ultimoSistema || "—")}</td>
+        <td data-label="Versão informada">${agent.ultimaVersao ? `<span class="version-chip">${escaparHtml(agent.ultimaVersao)}</span>` : "—"}</td>
+        <td data-label="Publicada">${escaparHtml(agent.versaoAlvo || "—")}</td>
         <td data-label="Último contato" data-role="contact"></td>
         <td data-label="Ações"><div class="distribution-row-actions" data-role="actions"></div></td>
       `;
       const contact = row.querySelector('[data-role="contact"]');
       contact.textContent = tempoRelativo(agent.ultimaComunicacao);
-      const phase = faseLabel(agent.ultimaFase);
+      const phase = rotuloDaFase(agent.ultimaFase);
       contact.title = `${formatarDataHora(agent.ultimaComunicacao)}${phase ? `\nFase: ${phase}` : ""}`;
 
       const details = document.createElement("button");
@@ -449,10 +450,10 @@ export class DistribuicaoView extends View {
           .filter(Boolean)
           .join("\n");
 
-        if (await copyToClipboard(textoDiag)) {
-          toast.success(`Diagnóstico de ${agent.empresa} copiado.`);
+        if (await copiarParaAreaDeTransferencia(textoDiag)) {
+          avisoRapido.sucesso(`Diagnóstico de ${agent.empresa} copiado.`);
         } else {
-          toast.error("Não foi possível copiar o diagnóstico.");
+          avisoRapido.erro("Não foi possível copiar o diagnóstico.");
         }
       });
       actions.appendChild(diagBtn);
@@ -462,7 +463,7 @@ export class DistribuicaoView extends View {
       pause.className = "btn btn--small btn--ghost";
       pause.textContent = agent.pausado ? "Retomar" : "Pausar";
       pause.setAttribute("aria-label", `${agent.pausado ? "Retomar" : "Pausar"} agente ${agent.empresa}`);
-      pause.addEventListener("click", () => this._toggleAgentPause(agent, pause));
+      pause.addEventListener("click", () => this._alternarPausaDoAgente(agent, pause));
       actions.appendChild(pause);
 
       const remove = document.createElement("button");
@@ -470,13 +471,13 @@ export class DistribuicaoView extends View {
       remove.className = "btn btn--small btn--danger";
       remove.textContent = "Excluir";
       remove.setAttribute("aria-label", `Excluir agente ${agent.empresa}`);
-      remove.addEventListener("click", () => this._removeAgent(agent, remove));
+      remove.addEventListener("click", () => this._removerAgente(agent, remove));
       actions.appendChild(remove);
       body.appendChild(row);
     }
   }
 
-  async _removeAgent(agent, button) {
+  async _removerAgente(agent, button) {
     const confirmed = await Modal.confirm(
       "Excluir agente",
       `Excluir o agente ${agent.empresa}?\n\nTodo o histórico de retornos desse CNPJ será apagado. Se o agente voltar a se comunicar, ele aparecerá novamente no painel.`,
@@ -487,19 +488,19 @@ export class DistribuicaoView extends View {
     button.disabled = true;
     try {
       const identificador = encodeURIComponent(String(agent.cnpj || "").trim());
-      const result = await this.api.delete(`/versoes/agentes/${identificador}`);
-      const total = Number(result?.retornosExcluidos) || 0;
-      if (total === 0) throw new ApiError("O servidor não removeu nenhum retorno. Reinicie o serviço web e tente novamente.", 409);
-      toast.success(`Agente excluído (${plural(total, "retorno")} removido${total === 1 ? "" : "s"}).`);
+      const resposta = await this.api.delete(`/versoes/agentes/${identificador}`);
+      const total = Number(resposta?.retornosExcluidos) || 0;
+      if (total === 0) throw new ErroApi("O servidor não removeu nenhum retorno. Reinicie o serviço web e tente novamente.", 409);
+      avisoRapido.sucesso(`Agente excluído (${plural(total, "retorno")} removido${total === 1 ? "" : "s"}).`);
       this.cache?.invalidar("distribuicao:");
       await this.refresh();
     } catch (error) {
-      await Modal.alert("Não foi possível excluir", error instanceof ApiError ? error.message : "Erro inesperado.", "error");
+      await Modal.alert("Não foi possível excluir", error instanceof ErroApi ? error.message : "Erro inesperado.", "error");
       button.disabled = false;
     }
   }
 
-  async _toggleAgentPause(agent, button) {
+  async _alternarPausaDoAgente(agent, button) {
     const pausar = !agent.pausado;
     const confirmed = await Modal.confirm(
       pausar ? "Pausar agente" : "Retomar agente",
@@ -514,21 +515,21 @@ export class DistribuicaoView extends View {
     try {
       const identificador = encodeURIComponent(String(agent.cnpj || "").trim());
       await this.api.patch(`/versoes/agentes/${identificador}/${pausar ? "pausar" : "retomar"}`);
-      toast.success(pausar ? "Agente pausado." : "Agente retomado.");
+      avisoRapido.sucesso(pausar ? "Agente pausado." : "Agente retomado.");
       this.cache?.invalidar("distribuicao:");
       await this.refresh();
     } catch (error) {
       await Modal.alert(
         pausar ? "Não foi possível pausar" : "Não foi possível retomar",
-        error instanceof ApiError ? error.message : "Erro inesperado.",
+        error instanceof ErroApi ? error.message : "Erro inesperado.",
         "error"
       );
       button.disabled = false;
     }
   }
 
-  _startPolling() {
-    this._stopPolling();
+  _iniciarVerificacao() {
+    this._pararVerificacao();
     const interval = aparencia.ritmoPainel();
     if (!interval) return;
     this._timer = setInterval(() => {
@@ -539,7 +540,7 @@ export class DistribuicaoView extends View {
     }, interval);
   }
 
-  _stopPolling() {
+  _pararVerificacao() {
     if (this._timer) clearInterval(this._timer);
     this._timer = null;
   }
@@ -547,12 +548,12 @@ export class DistribuicaoView extends View {
   _avisarRecuperados(antes, depois) {
     const falhas = new Map(antes.filter((a) => ["erro", "offline", "pendencias"].includes(a.situacao)).map((a) => [a.cnpj, a]));
     for (const agente of depois) {
-      if (agente.situacao === "ok" && falhas.has(agente.cnpj)) toast.success(`${agente.empresa || agente.cnpj} voltou a ficar em dia.`);
+      if (agente.situacao === "ok" && falhas.has(agente.cnpj)) avisoRapido.sucesso(`${agente.empresa || agente.cnpj} voltou a ficar em dia.`);
     }
   }
 
   destroy() {
-    this._stopPolling();
+    this._pararVerificacao();
     super.destroy();
   }
 }

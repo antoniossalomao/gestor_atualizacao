@@ -1,9 +1,10 @@
 const { BaseRepository } = require("./BaseRepository");
-const { DATE_SORT_EXPR, titleCase } = require("./AtualizacaoRepository");
-const { buildOrderBy } = require("../shared/sortHelper");
-const { FILTRO_ARQUIVADAS, STATUS_OPTIONS } = require("../config/constants");
+const { DATE_SORT_EXPR } = require("./AtualizacaoRepository");
+const { primeiraMaiuscula } = require("../shared/normalizacao");
+const { montarOrdenacao } = require("./ordenacao");
+const { FILTRO_ARQUIVADAS, OPCOES_STATUS } = require("../config/constantes");
 
-const STATUS_CONCLUIDO = STATUS_OPTIONS[STATUS_OPTIONS.length - 1];
+const STATUS_CONCLUIDO = OPCOES_STATUS[OPCOES_STATUS.length - 1];
 
 /**
  * Hoje no relógio LOCAL, na forma aaaammdd de DATE_SORT_EXPR. Local, e não
@@ -14,7 +15,7 @@ function hojeOrdenavel(agora = new Date()) {
   return `${agora.getFullYear()}${String(agora.getMonth() + 1).padStart(2, "0")}${String(agora.getDate()).padStart(2, "0")}`;
 }
 
-const COLUMNS = ["tarefa", "cliente", "sistema", "responsavel", "prioridade", "data", "horario", "status", "obs"];
+const COLUNAS_ATUALIZACOES = ["tarefa", "cliente", "sistema", "responsavel", "prioridade", "data", "horario", "status", "obs"];
 
 // A tarefa guarda o nome do cliente como foi digitado e, se ele tiver
 // cadastro, o id -- mesma regra de vínculo de ClienteRepository.resolverNome
@@ -53,7 +54,6 @@ const SORT_MAP = {
 
 /**
  * Agenda de tarefas internas (aba Agendamentos).
- * Equivalente de "AgendamentoRepository" em gestor/database.py.
  */
 class AgendamentoRepository extends BaseRepository {
   get table() {
@@ -110,14 +110,14 @@ class AgendamentoRepository extends BaseRepository {
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table} ${where}`).get(params).total;
 
     const offset = Math.max(0, (page - 1) * pageSize);
-    const orderBy = buildOrderBy(
+    const orderBy = montarOrdenacao(
       SORT_MAP,
       sortBy,
       sortDir,
       `${STATUS_ORDER_EXPR}, ${PRIORIDADE_ORDER_EXPR}, ${DATE_SORT_EXPR} ASC, ${HORARIO_SORT_EXPR}, id DESC`
     );
     const sql = `
-      SELECT id, ${COLUMNS.join(", ")}, arquivado_em AS arquivadoEm, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table}
+      SELECT id, ${COLUNAS_ATUALIZACOES.join(", ")}, arquivado_em AS arquivadoEm, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table}
       ${where}
       ORDER BY ${orderBy}
       LIMIT @limit OFFSET @offset
@@ -129,26 +129,14 @@ class AgendamentoRepository extends BaseRepository {
   /** Uma tarefa por id, incluindo criado_em/concluido_em (que list() nao devolve). */
   find(id) {
     return this.conn
-      .prepare(`SELECT id, ${COLUMNS.join(", ")}, criado_em AS criadoEm, concluido_em AS concluidoEm, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table} WHERE id = ?`)
+      .prepare(`SELECT id, ${COLUNAS_ATUALIZACOES.join(", ")}, criado_em AS criadoEm, concluido_em AS concluidoEm, revisao, atualizado_em AS atualizadoEm, atualizado_por AS atualizadoPor FROM ${this.table} WHERE id = ?`)
       .get(id);
   }
 
   insert(data) {
-    const columns = [...COLUMNS, "criado_em", "cliente_id"].join(", ");
-    const placeholders = [...COLUMNS.map((c) => `@${c}`), "@criadoEm", CLIENTE_ID_EXPR].join(", ");
+    const columns = [...COLUNAS_ATUALIZACOES, "criado_em", "cliente_id"].join(", ");
+    const placeholders = [...COLUNAS_ATUALIZACOES.map((c) => `@${c}`), "@criadoEm", CLIENTE_ID_EXPR].join(", ");
     this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`).run({ ...data, criadoEm: new Date().toISOString() });
-  }
-
-  insertMany(lista) {
-    const columns = [...COLUMNS, "criado_em", "cliente_id"].join(", ");
-    const placeholders = [...COLUMNS.map((c) => `@${c}`), "@criadoEm", CLIENTE_ID_EXPR].join(", ");
-    const stmt = this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`);
-    const agora = new Date().toISOString();
-    return this.conn.transaction((itens) => {
-      let criados = 0;
-      for (const item of itens) criados += stmt.run({ ...item, criadoEm: agora }).changes;
-      return criados;
-    })(lista);
   }
 
   /**
@@ -159,40 +147,17 @@ class AgendamentoRepository extends BaseRepository {
    * concluida ou nunca esteve.
    */
   update(id, data, revisaoEsperada = null, usuarioNome = "") {
-    const assignments = [...COLUMNS.map((c) => `${c} = @${c}`), `cliente_id = ${CLIENTE_ID_EXPR}`, "concluido_em = @concluidoEm", "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
+    const assignments = [...COLUNAS_ATUALIZACOES.map((c) => `${c} = @${c}`), `cliente_id = ${CLIENTE_ID_EXPR}`, "concluido_em = @concluidoEm", "revisao = revisao + 1", "atualizado_em = @atualizadoEm", "atualizado_por = @atualizadoPor"].join(", ");
     return this.conn
       .prepare(`UPDATE ${this.table} SET ${assignments} WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)`)
       .run({ ...data, id, concluidoEm: data.concluidoEm ?? null, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome }).changes;
   }
 
   /** Atalho para marcar rapidamente uma tarefa como concluida agora. */
-  markDone(id, doneLabel) {
+  marcarConcluida(id, doneLabel) {
     return this.conn
       .prepare(`UPDATE ${this.table} SET status = @status, concluido_em = @concluidoEm WHERE id = @id`)
       .run({ id, status: doneLabel, concluidoEm: new Date().toISOString() }).changes;
-  }
-
-  /**
-   * Os registros completos (mesmas colunas de list(), sem criado_em/
-   * concluido_em) de uma lista de ids -- usado pelo "Desfazer" das ações em
-   * lote (exclusão e conclusão), que precisam do estado ANTES da ação para
-   * poder recriar/restaurar exatamente o que havia.
-   */
-  findByIds(ids) {
-    const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
-    if (limpos.length === 0) return [];
-    const marcadores = limpos.map(() => "?").join(", ");
-    return this.conn.prepare(`SELECT id, ${COLUMNS.join(", ")} FROM ${this.table} WHERE id IN (${marcadores})`).all(...limpos);
-  }
-
-  /** Variante em lote de markDone -- só toca as tarefas informadas, todas com o mesmo instante de conclusão. */
-  markDoneMany(ids, doneLabel) {
-    const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
-    if (limpos.length === 0) return 0;
-    const marcadores = limpos.map(() => "?").join(", ");
-    const stmt = this.conn.prepare(`UPDATE ${this.table} SET status = ?, concluido_em = ? WHERE id IN (${marcadores})`);
-    const concluidoEm = new Date().toISOString();
-    return this.conn.transaction(() => stmt.run(doneLabel, concluidoEm, ...limpos).changes)();
   }
 
   /**
@@ -200,7 +165,7 @@ class AgendamentoRepository extends BaseRepository {
    * responsavel -- so entra no calculo quem tem as duas datas (tarefas
    * criadas antes desta coluna existir ficam de fora, em vez de contar com
    * uma data inventada). Agrupa ignorando maiusculas/espacos, mesma regra
-   * de AtualizacaoRepository.countsByResponsavel, e combina a media das
+   * de AtualizacaoRepository.contagemPorResponsavel, e combina a media das
    * variações de nome ponderada pela quantidade de cada uma.
    */
   tempoMedioResolucaoPorResponsavel() {
@@ -218,7 +183,7 @@ class AgendamentoRepository extends BaseRepository {
     for (const { responsavel, dias, total } of raw) {
       const key = responsavel.trim().toLowerCase();
       const atual = merged.get(key);
-      const label = atual ? atual.label : titleCase(responsavel.trim());
+      const label = atual ? atual.label : primeiraMaiuscula(responsavel.trim());
       const totalNovo = (atual ? atual.total : 0) + total;
       const diasNovo = ((atual ? atual.dias * atual.total : 0) + dias * total) / totalNovo;
       merged.set(key, { label, total: totalNovo, dias: diasNovo });
@@ -290,7 +255,7 @@ class AgendamentoRepository extends BaseRepository {
    * das Campanhas. Em aberto = não arquivada e fora dos status encerrados
    * que quem chama informa ("Concluído" e "Sem resposta": uma tarefa em que
    * não se conseguiu falar com o cliente não o encaminha, e ele precisa
-   * continuar na lista de pendentes -- a mesma leitura de `dueSoon`).
+   * continuar na lista de pendentes -- a mesma leitura de `venceEmBreve`).
    * O sistema vem como texto (o campo da tarefa é livre); quem chama resolve
    * no catálogo.
    * @param {string[]} statusEncerrados
@@ -311,10 +276,10 @@ class AgendamentoRepository extends BaseRepository {
    * Tarefas pendentes (nem "Concluído" nem "Sem resposta") com data de hoje
    * ou anterior -- usadas pelo banner de lembrete que aparece ao abrir o app.
    */
-  dueSoon() {
+  venceEmBreve() {
     const cutoff = hojeOrdenavel();
     const sql = `
-      SELECT id, ${COLUMNS.join(", ")} FROM ${this.table}
+      SELECT id, ${COLUNAS_ATUALIZACOES.join(", ")} FROM ${this.table}
       WHERE status NOT IN ('Concluído', 'Sem resposta') AND data != '' AND ${DATE_SORT_EXPR} <= @cutoff
       ORDER BY ${DATE_SORT_EXPR} ASC, ${HORARIO_SORT_EXPR}
     `;

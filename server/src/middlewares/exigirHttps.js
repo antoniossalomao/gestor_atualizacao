@@ -1,7 +1,7 @@
 /**
  * Com SESSION_SECURE=true, recusa qualquer pedido que não tenha chegado por
- * HTTPS -- o "caminho alternativo" do critério de aceite do P01
- * (docs/MELHORIAS.md). Sem isto, quem digitasse http://IP:3000 direto na
+ * HTTPS -- o "caminho alternativo" do critério de aceite do
+ * ADR-0010. Sem isto, quem digitasse http://IP:3000 direto na
  * porta do Node continuaria mandando a senha em texto puro: o cookie
  * "Secure" protege a sessão, mas não o POST do login, que sai antes dele.
  *
@@ -32,7 +32,7 @@ function exigirHttps(req, res, next) {
   if (req.secure || LIBERADOS_EM_HTTP.has(`${req.method} ${req.path}`)) return next();
   // 403 e não 426 (Upgrade Required): o 426 pede o cabeçalho Upgrade, que é
   // de troca de protocolo na mesma conexão (TLS em HTTP/1.1, RFC 2817) e que
-  // nenhum navegador implementa. O formato segue o notFoundHandler.
+  // nenhum navegador implementa. O formato segue o rotaNaoEncontrada.
   if (req.path.startsWith("/api")) return res.status(403).json({ error: MENSAGEM });
   res.status(403).type("txt").send(MENSAGEM);
 }

@@ -1,43 +1,43 @@
-import { COLUMNS } from "../config.js";
-import { ApiError } from "../api/ApiClient.js";
+import { COLUNAS_ATUALIZACOES } from "../config.js";
+import { ErroApi } from "../api/ApiPainel.js";
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
-import { Pagination } from "../components/Pagination.js";
-import { Autocomplete } from "../components/Autocomplete.js";
+import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
+import { Paginacao } from "../components/Paginacao.js";
+import { CampoComSugestoes } from "../components/CampoComSugestoes.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { debounce } from "../utils/debounce.js";
-import { todayBR, isValidDateBR, mascaraDataBR } from "../utils/date.js";
-import { icon, iconHtml } from "../utils/icons.js";
-import { html, plural, copyToClipboard } from "../utils/html.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { hojeBR, dataBRValida, mascaraDataBR } from "../utils/data.js";
+import { iconeSvg, iconeHtml } from "../utils/icones.js";
+import { html, plural } from "../utils/html.js";
 import { ImportacaoModal } from "../components/ImportacaoModal.js";
-import { abrirRelatorio } from "../components/RelatorioModal.js";
+import { abrirRelatorio } from "../components/relatorioModal.js";
 import { relatorioDeAtualizacao, relatorioDoCliente, relatorioSituacao, relatorioDoPeriodo, versaoRegistrada } from "../domain/relatorio.js";
 import { splitSistemas } from "../domain/matrizVersoes.js";
-import { emptyState } from "../components/EmptyState.js";
-import { withBusyButton, marcarOcupado } from "../utils/guard.js";
-import { baixarBlob } from "../utils/arquivo.js";
-import { prefs } from "../app/prefs.js";
-import { aparencia } from "../app/appearance.js";
-import { Drawer } from "../components/Drawer.js";
-import { montarPresets, intervaloPreset } from "../components/DatePresets.js";
-import { chipsFiltroAtualizacoes, htmlChips } from "../templates/filtros.js";
+import { estadoVazio } from "../components/estadoVazio.js";
+import { comBotaoOcupado, marcarOcupado } from "../components/botaoOcupado.js";
+import { baixarBlob } from "../components/arquivos.js";
+import { prefs } from "../app/preferencias.js";
+import { aparencia } from "../app/aparencia.js";
+import { Gaveta } from "../components/Gaveta.js";
+import { montarPresets, intervaloPreset } from "../components/presetsDeData.js";
+import { chipsFiltroAtualizacoes, chipsHtml } from "../templates/filtros.js";
 
 /**
  * Aba Atualizações: histórico de atualizações de sistemas por cliente.
  * Cadastro, edição, busca, importação/exportação de planilha (.xlsx).
- * Equivalente de gestor/views/atualizacoes.py.
  *
- * O que mudou nesta revisão:
- *  - virou um `<form>` de verdade (submit nativo, validação do navegador);
- *  - `Escape` não destrói mais o que foi digitado sem volta: limpa e oferece
+ * Decisões de comportamento:
+ *  - o formulário é um `<form>` de verdade (submit nativo, validação do
+ *    navegador);
+ *  - `Escape` não destrói o que foi digitado sem volta: limpa e oferece
  *    "Desfazer" por alguns segundos;
  *  - excluir não pede confirmação modal -- exclui e oferece "Desfazer", que é
  *    a proteção que de fato protege (confirmação a gente clica no automático);
  *  - busca e filtro sobrevivem à troca de aba;
  *  - exportar respeita os filtros da tela;
  *  - o listener global de `Delete` é registrado por `this.on(...)` e some no
- *    `destroy()` -- antes vazava e podia excluir por uma tela fantasma.
+ *    `destroy()`; sem isso vazaria e poderia excluir por uma tela fantasma.
  */
 export class AtualizacoesView extends View {
   constructor(container, api, ctx) {
@@ -58,18 +58,22 @@ export class AtualizacoesView extends View {
     this.responsavel = salvo.responsavel || "Todos";
     this.desde = salvo.desde || periodoInicial?.desde || "";
     this.ate = salvo.ate || periodoInicial?.ate || "";
+    // Só chega pelo gráfico "por sistema" do Resumo (A08) e não é salvo: sem
+    // um campo na tela para escolhê-lo, um filtro lembrado de outra visita
+    // esconderia registros sem motivo aparente (o chip seria a única pista).
+    this.sistema = "";
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "desc";
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       <form class="card" data-role="form" novalidate>
         <div class="form-grid form-grid--2" data-role="fields"></div>
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconeHtml("alerta")} Excluir</button>
             <span class="form-actions__hint text-muted" data-role="modo"></span>
           </div>
           <div class="form-actions__right">
@@ -96,30 +100,30 @@ export class AtualizacoesView extends View {
           </div>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
-          <!-- Botão que abre/fecha o painel de filtros de data (I07) -->
+          <!-- Botão que abre/fecha o painel de filtros de data -->
           <button type="button" class="btn btn--ghost btn--small" data-action="toggle-filtros" aria-expanded="false" aria-controls="atu-filtros-painel">Filtros</button>
           <!-- Dropdown de relatórios -->
           <div class="menu-acoes" data-role="menu-relatorios">
             <button type="button" class="btn btn--ghost btn--small" data-action="toggle-relatorios" aria-haspopup="menu" aria-expanded="false">Relatórios ▾</button>
             <div class="menu-acoes__lista" role="menu" hidden>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio-periodo">${iconHtml("copiar")} Relatório do período</button>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio" disabled>${iconHtml("copiar")} Relatório do cliente</button>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio-periodo">${iconeHtml("copiar")} Relatório do período</button>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio" disabled>${iconeHtml("copiar")} Relatório do cliente</button>
             </div>
           </div>
-          <!-- Mais ações: exportar e importar (I08) -->
+          <!-- Mais ações: exportar e importar -->
           <div class="menu-acoes" data-role="menu-acoes">
             <button type="button" class="btn btn--ghost btn--small" data-action="toggle-mais-acoes" aria-haspopup="menu" aria-expanded="false">Mais ações ▾</button>
             <div class="menu-acoes__lista" role="menu" hidden>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="export">${iconHtml("download")} Exportar resultado (.xlsx)</button>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="import">${iconHtml("upload")} Importar planilha…</button>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="export">${iconeHtml("download")} Exportar resultado (.xlsx)</button>
+              <button type="button" class="menu-acoes__item" role="menuitem" data-action="import">${iconeHtml("upload")} Importar planilha…</button>
             </div>
           </div>
           <!-- Excluir: aparece só quando há seleção; lote oculta este -->
-          <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
+          <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconeHtml("alerta")} Excluir</button>
           <button type="button" class="btn btn--accent btn--small" data-action="nova-atualizacao">+ Nova Atualização</button>
         </div>
 
-        <!-- Painel de filtros de data (recolhível — I07) -->
+        <!-- Painel de filtros de data (recolhível) -->
         <div class="filtros-painel" id="atu-filtros-painel" hidden>
           <div class="field field--periodo">
             <label class="field__label" for="atu-desde">De</label>
@@ -139,7 +143,7 @@ export class AtualizacoesView extends View {
           Sem coluna de caixinhas, o Shift+clique não tem NENHUM indício visual
           na tabela -- é um gesto que ninguém adivinha sozinho. Esta linha é a
           única pista de que ele existe (a lista de atalhos, aberta com "?",
-          também o documenta -- ver Shortcuts.js). Fica sempre visível, mas
+          também o documenta -- ver atalhos.js). Fica sempre visível, mas
           discreta: uma frase, não um card chamando atenção.
         -->
         <p class="text-muted bulk-hint">
@@ -155,7 +159,7 @@ export class AtualizacoesView extends View {
           <button type="button" class="btn btn--small btn--ghost" data-action="bulk-limpar">Desmarcar</button>
           <div class="toolbar-spacer"></div>
           <button type="button" class="btn btn--small btn--danger" data-action="bulk-excluir">
-            ${iconHtml("alerta")} Excluir selecionados
+            ${iconeHtml("alerta")} Excluir selecionados
           </button>
         </div>
 
@@ -164,7 +168,7 @@ export class AtualizacoesView extends View {
       </div>
     `;
 
-    this._buildFields();
+    this._montarCampos();
 
     // Larguras ajustadas para caber sem rolamento horizontal (ver
     // CHANGELOG): "máquinas" e "ações" estavam estreitas demais para o
@@ -188,10 +192,11 @@ export class AtualizacoesView extends View {
       acoes: "104px",
     };
 
-    this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
+    this.table = new TabelaOrdenavel(this.container.querySelector('[data-role="table"]'), {
+      ocuparAltura: true,
       columns: [
         { key: "id", label: "ID", type: "numeric", largura: LARGURAS_ATUALIZACAO.id },
-        ...COLUMNS.map((c) => ({
+        ...COLUNAS_ATUALIZACOES.map((c) => ({
           key: c.key,
           label: c.label,
           type: c.key === "data" ? "date" : "text",
@@ -199,14 +204,14 @@ export class AtualizacoesView extends View {
           // A célula é estreita demais para o resumo de vários sistemas
           // ("B_Vendas: 09/09/2026; B_NFe: 02/09/2026"), que cortava no meio.
           // Mostra só a versão do primeiro sistema listado -- geralmente uma
-          // data só, do mesmo jeito que um atendimento de um sistema só
+          // data só, do mesmo jeito que uma atualização de um sistema só
           // sempre apareceu aqui. O resumo inteiro continua no title (hover)
           // e no relatório/edição, que têm espaço para ele.
           ...(c.key === "versao" ? { render: (row) => versaoResumida(row) } : {}),
         })),
         { key: "acoes", label: "Ações", largura: LARGURAS_ATUALIZACAO.acoes, render: (row) => acoesAtualizacao(row, this.user?.role) },
       ],
-      onSelect: (row) => this._loadIntoForm(row),
+      onSelect: (row) => this._carregarNoFormulario(row),
       // Seleção múltipla: esta é a tabela onde faz sentido: importar uma
       // planilha errada e precisar remover as sessenta linhas que entraram
       // significava sessenta ciclos de "clicar na linha, clicar em Excluir".
@@ -215,13 +220,13 @@ export class AtualizacoesView extends View {
       caption: "Atualizações registradas",
       emptyNode: () =>
         this._temFiltro()
-          ? emptyState({
+          ? estadoVazio({
               titulo: "Nenhum registro com esse filtro",
               descricao: "Tente outro termo, ou limpe os filtros para ver tudo.",
               icone: "busca",
               acao: { label: "Limpar filtros", onClick: () => this._limparFiltros() },
             })
-          : emptyState({
+          : estadoVazio({
               titulo: "Nenhuma atualização registrada",
               descricao: "Preencha o formulário acima para registrar a primeira, ou importe uma planilha.",
               icone: "atualizacoes",
@@ -232,21 +237,21 @@ export class AtualizacoesView extends View {
         this.sortDir = dir;
         this.page = 1;
         this._salvarFiltros();
-        this._reloadList();
+        this._recarregarLista();
       },
     });
-    this.pagination = new Pagination(this.container.querySelector('[data-role="pagination"]'), (page) => {
+    this.pagination = new Paginacao(this.container.querySelector('[data-role="pagination"]'), (page) => {
       this.page = page;
-      this._reloadList();
+      this._recarregarLista();
     });
 
     this.form = this.container.querySelector('[data-role="form"]');
-    this.drawer = new Drawer(this.form, {
+    this.drawer = new Gaveta(this.form, {
       titulo: "Atualização",
       descricao: "Registre uma atualização sem perder a lista de vista.",
     });
     this.container.querySelector('[data-action="nova-atualizacao"]').addEventListener("click", () => {
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.abrir({ foco: this.fields.cliente });
     });
     this.searchInput = this.container.querySelector('[data-role="search"]');
@@ -254,10 +259,10 @@ export class AtualizacoesView extends View {
     this.botaoLimparFiltros = this.container.querySelector('[data-action="limpar-filtros"]');
     this.searchInput.value = this.busca;
 
-    const reload = debounce(() => {
+    const reload = aguardarPausa(() => {
       this.page = 1;
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     }, 200);
     this.searchInput.addEventListener("input", () => {
       this.busca = this.searchInput.value.trim();
@@ -269,11 +274,11 @@ export class AtualizacoesView extends View {
       this.page = 1;
       this._trocouDeFiltro();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
-    // -- painel de filtros recolhível (I07) --
+    // -- painel de filtros recolhível --
     this.painelFiltros = this.container.querySelector("#atu-filtros-painel");
     this.btnFiltros = this.container.querySelector('[data-action="toggle-filtros"]');
     this.btnFiltros.addEventListener("click", () => this._togglePainelFiltros());
@@ -287,19 +292,19 @@ export class AtualizacoesView extends View {
     // Uma data pela metade ("15/01/") não é filtro nenhum: enquanto não estiver
     // completa, o campo é simplesmente ignorado, em vez de a lista esvaziar e
     // reaparecer a cada tecla digitada.
-    const aplicarPeriodo = debounce(() => {
-      this.desde = isValidDateBR(this.desdeInput.value) ? this.desdeInput.value.trim() : "";
-      this.ate = isValidDateBR(this.ateInput.value) ? this.ateInput.value.trim() : "";
+    const aplicarPeriodo = aguardarPausa(() => {
+      this.desde = dataBRValida(this.desdeInput.value) ? this.desdeInput.value.trim() : "";
+      this.ate = dataBRValida(this.ateInput.value) ? this.ateInput.value.trim() : "";
       this.page = 1;
       this._trocouDeFiltro();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     }, 300);
     for (const campo of [this.desdeInput, this.ateInput]) {
       campo.addEventListener("input", () => {
         campo.value = mascaraDataBR(campo.value);
         const vazio = !campo.value.trim();
-        const invalido = !vazio && !isValidDateBR(campo.value);
+        const invalido = !vazio && !dataBRValida(campo.value);
         campo.setAttribute("aria-invalid", String(invalido));
         aplicarPeriodo();
       });
@@ -326,7 +331,7 @@ export class AtualizacoesView extends View {
       if (!botao) return;
       const row = this.table.rows.find((item) => String(item.id) === botao.dataset.id);
       if (!row) return;
-      this._loadIntoForm(row);
+      this._carregarNoFormulario(row);
       if (botao.dataset.rowAction === "editar") this.drawer.abrir({ foco: this.fields.cliente });
       if (botao.dataset.rowAction === "relatorio") this.abrirRelatorio();
       if (botao.dataset.rowAction === "cliente") this.navigate("consulta", { cliente: row.cliente });
@@ -349,7 +354,7 @@ export class AtualizacoesView extends View {
       this.modalDeleteBtn.addEventListener("click", async () => {
         this.drawer.marcarLimpa();
         await this.drawer.fechar({ forcar: true });
-        this.deleteRecord();
+        this.excluirAtualizacao();
       });
     }
 
@@ -357,12 +362,12 @@ export class AtualizacoesView extends View {
     // campo -- antes era preciso amarrar o Enter campo por campo, na mão.
     this.form.addEventListener("submit", (e) => {
       e.preventDefault();
-      this._submit();
+      this._enviar();
     });
-    this.updateBtn?.addEventListener("click", () => this.updateRecord());
-    this.deleteBtn?.addEventListener("click", () => this.deleteRecord());
+    this.updateBtn?.addEventListener("click", () => this.alterarAtualizacao());
+    this.deleteBtn?.addEventListener("click", () => this.excluirAtualizacao());
 
-    // -- menus dropdown (I08) --
+    // -- menus dropdown --
     this._configurarMenuDropdown(
       this.container.querySelector('[data-role="menu-relatorios"]'),
       (acao, fechar) => {
@@ -373,11 +378,11 @@ export class AtualizacoesView extends View {
     const menuAcoes = this.container.querySelector('[data-role="menu-acoes"]');
     const exportBtn = menuAcoes.querySelector('[data-action="export"]');
     this._configurarMenuDropdown(menuAcoes, (acao, fechar) => {
-      if (acao === "export") { fechar(); withBusyButton(exportBtn, () => this.exportXlsx())(); }
+      if (acao === "export") { fechar(); comBotaoOcupado(exportBtn, () => this.exportarXlsx())(); }
       if (acao === "import") { fechar(); this.abrirImportacao(); }
     });
 
-    this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
+    this.on(document, "keydown", (e) => this._aoTeclarGlobal(e));
 
     if (this.user?.role === "consulta") {
       this.form.hidden = true;
@@ -392,7 +397,7 @@ export class AtualizacoesView extends View {
     }
 
     this._pintarLimparFiltros();
-    this.clearForm();
+    this.limparFormulario();
   }
 
   /**
@@ -468,10 +473,10 @@ export class AtualizacoesView extends View {
   }
 
 
-  _buildFields() {
+  _montarCampos() {
     const wrap = this.container.querySelector('[data-role="fields"]');
     this.fields = {};
-    for (const col of COLUMNS) {
+    for (const col of COLUNAS_ATUALIZACOES) {
       const id = `atu-${col.key}`;
       const field = document.createElement("div");
       field.className = "field";
@@ -492,24 +497,24 @@ export class AtualizacoesView extends View {
       wrap.appendChild(field);
 
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") this.clearForm({ comDesfazer: true });
+        if (e.key === "Escape") this.limparFormulario({ comDesfazer: true });
       });
       if (col.key === "data") {
         input.setAttribute("aria-describedby", hint.id);
         input.addEventListener("input", () => {
           input.value = mascaraDataBR(input.value);
-          const invalida = Boolean(input.value) && !isValidDateBR(input.value);
+          const invalida = Boolean(input.value) && !dataBRValida(input.value);
           hint.textContent = invalida ? "Formato esperado: dd/mm/aaaa" : "";
           input.setAttribute("aria-invalid", String(invalida));
         });
       }
       this.fields[col.key] = input;
     }
-    this.clienteAutocomplete = new Autocomplete(this.fields.cliente, { values: [] });
+    this.clienteAutocomplete = new CampoComSugestoes(this.fields.cliente, { values: [] });
     // Sugere nomes já usados no campo Responsável -- diferente de Cliente,
     // continua sendo texto livre (a mesma pessoa pode digitar um nome novo),
     // só ajuda a não escrever "Camila" de um jeito diferente cada vez.
-    this.responsavelAutocomplete = new Autocomplete(this.fields.responsavel, { values: [] });
+    this.responsavelAutocomplete = new CampoComSugestoes(this.fields.responsavel, { values: [] });
   }
 
   async refresh() {
@@ -523,23 +528,23 @@ export class AtualizacoesView extends View {
         return { nomes, responsaveis };
       },
       ({ nomes, responsaveis }) => {
-        this.clienteAutocomplete.setValues(nomes);
-        this.responsavelAutocomplete.setValues(responsaveis);
+        this.clienteAutocomplete.definirValores(nomes);
+        this.responsavelAutocomplete.definirValores(responsaveis);
         const opcoes = ["Todos", ...responsaveis];
         this.responsavelFilter.innerHTML = html`${opcoes.map((r) => html`<option>${r}</option>`)}`;
         this.responsavelFilter.value = opcoes.includes(this.responsavel) ? this.responsavel : "Todos";
         this.responsavel = this.responsavelFilter.value;
       }
     );
-    await this._reloadList();
+    await this._recarregarLista();
   }
 
   _chaveLista() {
-    return `atualizacoes:lista:${this.busca}|${this.responsavel}|${this.desde}|${this.ate}|${this.page}|${this.sortBy}|${this.sortDir}`;
+    return `atualizacoes:lista:${this.busca}|${this.responsavel}|${this.sistema}|${this.desde}|${this.ate}|${this.page}|${this.sortBy}|${this.sortDir}`;
   }
 
-  async _reloadList() {
-    this.table.setRefreshing(true);
+  async _recarregarLista() {
+    this.table.definirRecarregando(true);
     try {
       const resposta = await this.swr(
         this._chaveLista(),
@@ -549,6 +554,7 @@ export class AtualizacoesView extends View {
             {
               search: this.busca,
               responsavel: this.responsavel,
+              sistema: this.sistema,
               desde: this.desde,
               ate: this.ate,
               page: this.page,
@@ -571,15 +577,15 @@ export class AtualizacoesView extends View {
       // uma página sozinho, em vez de mostrar "nenhum registro" enganosamente.
       if (resposta && resposta.rows.length === 0 && this.page > 1 && resposta.total > 0) {
         this.page -= 1;
-        return this._reloadList();
+        return this._recarregarLista();
       }
     } finally {
-      this.table.setRefreshing(false);
+      this.table.definirRecarregando(false);
     }
   }
 
   _pintarLista(resposta) {
-    this.table.setRows(resposta.rows);
+    this.table.definirLinhas(resposta.rows);
     this.pagination.update(resposta);
     this.container.querySelector('[data-role="count"]').textContent = plural(resposta.total, "registro");
   }
@@ -597,7 +603,7 @@ export class AtualizacoesView extends View {
     this.page = 1;
     this._trocouDeFiltro();
     this._salvarFiltros();
-    this._reloadList();
+    this._recarregarLista();
     // Atualiza contagem no botão Filtros após mudar o período
     this._atualizarBotaoFiltros?.();
   }
@@ -618,7 +624,7 @@ export class AtualizacoesView extends View {
   }
 
   _temFiltro() {
-    return Boolean(this.busca) || this.responsavel !== "Todos" || Boolean(this.desde) || Boolean(this.ate);
+    return Boolean(this.busca) || this.responsavel !== "Todos" || Boolean(this.sistema) || Boolean(this.desde) || Boolean(this.ate);
   }
 
   _pintarLimparFiltros() {
@@ -644,7 +650,7 @@ export class AtualizacoesView extends View {
         this._trocouDeFiltro();
         this._salvarFiltros();
         this.page = 1;
-        this._reloadList();
+        this._recarregarLista();
       },
       responsavel: () => {
         this.responsavel = "Todos";
@@ -652,13 +658,19 @@ export class AtualizacoesView extends View {
         this._trocouDeFiltro();
         this._salvarFiltros();
         this.page = 1;
-        this._reloadList();
+        this._recarregarLista();
+      },
+      sistema: () => {
+        this.sistema = "";
+        this._trocouDeFiltro();
+        this.page = 1;
+        this._recarregarLista();
       },
       periodo: () => this._aplicarPeriodo("", ""),
     };
 
     chipsEl.hidden = false;
-    chipsEl.innerHTML = htmlChips(chips);
+    chipsEl.innerHTML = chipsHtml(chips);
     chipsEl.querySelectorAll(".filter-chip__remove").forEach((btn) => {
       btn.addEventListener("click", () => limpar[btn.dataset.chip]?.());
     });
@@ -667,6 +679,7 @@ export class AtualizacoesView extends View {
   _limparFiltros() {
     this.busca = "";
     this.responsavel = "Todos";
+    this.sistema = "";
     this.searchInput.value = "";
     this.responsavelFilter.value = "Todos";
     this._aplicarPeriodo("", "");
@@ -683,7 +696,7 @@ export class AtualizacoesView extends View {
     });
   }
 
-  _loadIntoForm(row) {
+  _carregarNoFormulario(row) {
     this.selectedId = row.id;
     // Guardado inteiro (e não só o id) porque o relatório sai DO REGISTRO
     // SALVO, não do que está digitado no formulário: quem abriu a linha,
@@ -691,20 +704,24 @@ export class AtualizacoesView extends View {
     // fato está gravado, que é o que ele vai colar no chamado.
     this.selectedRow = row;
     this.selectedRevision = row.revisao;
-    for (const col of COLUMNS) this.fields[col.key].value = row[col.key] ?? "";
+    for (const col of COLUNAS_ATUALIZACOES) this.fields[col.key].value = row[col.key] ?? "";
     this._pintarModo();
   }
 
-  /** Aplica o período vindo do Resumo ou abre um novo atendimento. */
-  aplicarParams({ desde, ate, novo } = {}) {
+  /** Aplica o período vindo do Resumo ou abre uma nova atualização. */
+  aplicarParams({ desde, ate, novo, sistema } = {}) {
     // Vindo de um indicador do Resumo: não é para preencher formulário
     // nenhum, é para FILTRAR a lista pelo período que aquele número contava.
+    // O sistema vem junto só do gráfico por sistema; os outros indicadores
+    // não o mandam, e aí ele sai -- senão o total da lista não bateria com
+    // o número clicado.
     if (desde || ate) {
+      this.sistema = sistema || "";
       this._aplicarPeriodo(desde, ate);
       return;
     }
     if (novo) {
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.abrir({ foco: this.fields.cliente });
       return;
     }
@@ -737,67 +754,65 @@ export class AtualizacoesView extends View {
     }
   }
 
-  _readForm() {
-    const data = {};
-    for (const col of COLUMNS) data[col.key] = this.fields[col.key].value.trim();
-    if (!data.cliente) {
-      Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning");
-      this.fields.cliente.focus();
+  _lerFormulario() {
+    const dados = {};
+    for (const col of COLUNAS_ATUALIZACOES) dados[col.key] = this.fields[col.key].value.trim();
+    if (!dados.cliente) {
+      Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning").then(() => this.fields.cliente.focus());
       return null;
     }
-    if (!isValidDateBR(data.data)) {
-      Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning");
-      this.fields.data.focus();
+    if (!dataBRValida(dados.data)) {
+      Modal.alert("Validação", "Campo 'Data' precisa estar no formato dd/mm/aaaa.", "warning").then(() => this.fields.data.focus());
       return null;
     }
-    return data;
+    return dados;
   }
 
-  _submit() {
-    if (this.selectedId == null) this.addRecord();
-    else this.updateRecord();
+  _enviar() {
+    if (this.selectedId == null) this.adicionarAtualizacao();
+    else this.alterarAtualizacao();
   }
 
-  async addRecord() {
-    const data = this._readForm();
-    if (!data) return;
+  async adicionarAtualizacao() {
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
-      await this.api.post("/atualizacoes", data);
-      this.clearForm();
+      await this.api.post("/atualizacoes", dados);
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       // Volta pra 1ª página: com a ordenação padrão (mais recente primeiro),
       // é onde o registro recém-criado aparece.
       this.page = 1;
       this._invalidar();
-      await this._reloadList();
-      toast.success("Registro adicionado.");
+      await this._recarregarLista();
+      avisoRapido.sucesso("Registro adicionado.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
   }
 
-  async updateRecord() {
+  async alterarAtualizacao() {
     if (this.selectedId == null) {
       Modal.alert("Seleção", "Selecione um registro na tabela primeiro.", "warning");
       return;
     }
-    const data = this._readForm();
-    if (!data) return;
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
-      await this.api.put(`/atualizacoes/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
-      this.clearForm();
+      await this.api.put(`/atualizacoes/${this.selectedId}`, { ...dados, revisao: this.selectedRevision });
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
-      toast.success("Registro atualizado.");
+      await this._recarregarLista();
+      avisoRapido.sucesso("Registro atualizado.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -812,7 +827,7 @@ export class AtualizacoesView extends View {
    * nenhuma. Desfazer custa zero quando você quis mesmo excluir, e resolve o
    * problema de verdade quando não quis.
    */
-  async deleteRecord() {
+  async excluirAtualizacao() {
     if (this.selectedId == null) {
       Modal.alert("Seleção", "Selecione um registro na tabela primeiro.", "warning");
       return;
@@ -823,21 +838,21 @@ export class AtualizacoesView extends View {
     const liberar = marcarOcupado(this.deleteBtn);
     try {
       await this.api.delete(`/atualizacoes/${id}`);
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
-      toast.undo(`Registro de ${dadosAntes.cliente || "cliente"} excluído.`, async () => {
+      await this._recarregarLista();
+      avisoRapido.desfazer(`Registro de ${dadosAntes.cliente || "cliente"} excluído.`, async () => {
         try {
           await this.api.post("/atualizacoes", dadosAntes);
           this._invalidar();
-          await this._reloadList();
-          toast.success("Exclusão desfeita.");
+          await this._recarregarLista();
+          avisoRapido.sucesso("Exclusão desfeita.");
         } catch {
-          toast.error("Não foi possível desfazer a exclusão.");
+          avisoRapido.erro("Não foi possível desfazer a exclusão.");
         }
       });
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -860,7 +875,7 @@ export class AtualizacoesView extends View {
    * Exclui todos os marcados de uma vez.
    *
    * Aqui a confirmação VOLTA, ao contrário da exclusão de um registro só (ver
-   * o comentário em `deleteRecord` sobre por que "Desfazer" protege melhor que
+   * o comentário em `excluirAtualizacao` sobre por que "Desfazer" protege melhor que
    * "Confirmar"). O argumento se inverte quando o número cresce: um clique
    * errado em "Excluir selecionados" com quarenta linhas marcadas não é o
    * mesmo engano que apagar uma linha, e a confirmação aqui é rara o bastante
@@ -887,11 +902,11 @@ export class AtualizacoesView extends View {
       // necessariamente os dados completos de cada uma.
       const { excluidos, registros } = await this.api.post("/atualizacoes/excluir-lote", { ids });
       this.table.limparMarcadas();
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
+      await this._recarregarLista();
 
-      toast.undo(`${plural(excluidos, "registro")} ${excluidos === 1 ? "excluído" : "excluídos"}.`, async () => {
+      avisoRapido.desfazer(`${plural(excluidos, "registro")} ${excluidos === 1 ? "excluído" : "excluídos"}.`, async () => {
         try {
           // Um a um: não existe rota de criação em lote, e recriar é uma
           // operação rara o bastante para não valer uma. `id` sai fora --
@@ -901,16 +916,16 @@ export class AtualizacoesView extends View {
             await this.api.post("/atualizacoes", { ...dados, restaurarVersoes: true });
           }
           this._invalidar();
-          await this._reloadList();
-          toast.success("Exclusão desfeita.");
+          await this._recarregarLista();
+          avisoRapido.sucesso("Exclusão desfeita.");
         } catch {
-          toast.error("Não foi possível desfazer tudo. Confira a lista.");
+          avisoRapido.erro("Não foi possível desfazer tudo. Confira a lista.");
           this._invalidar();
-          this._reloadList();
+          this._recarregarLista();
         }
       });
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -920,11 +935,11 @@ export class AtualizacoesView extends View {
    * @param {{comDesfazer?: boolean}} [opts] quando `true`, oferece restaurar
    *   o que estava digitado. `Escape` limpava oito campos sem volta.
    */
-  clearForm({ comDesfazer = false } = {}) {
+  limparFormulario({ comDesfazer = false } = {}) {
     const antes = {};
     let tinhaConteudo = false;
     if (this.fields) {
-      for (const col of COLUMNS) {
+      for (const col of COLUNAS_ATUALIZACOES) {
         antes[col.key] = this.fields[col.key].value;
         if (col.key !== "data" && col.key !== "responsavel" && antes[col.key].trim()) tinhaConteudo = true;
       }
@@ -933,19 +948,18 @@ export class AtualizacoesView extends View {
     this.selectedId = null;
     this.selectedRow = null;
     this.selectedRevision = null;
-    this.table?.clearSelection();
-    for (const col of COLUMNS) this.fields[col.key].value = "";
-    this.fields.data.value = todayBR();
-    // Melhoria em relação ao app original: já vem preenchido com quem está
-    // logado (continua editável, caso outra pessoa tenha feito a atualização
-    // em nome dela).
+    this.table?.limparSelecao();
+    for (const col of COLUNAS_ATUALIZACOES) this.fields[col.key].value = "";
+    this.fields.data.value = hojeBR();
+    // Já vem preenchido com quem está logado (continua editável, caso outra
+    // pessoa tenha feito a atualização em nome dela).
     if (this.user) this.fields.responsavel.value = this.user.nome;
     for (const hint of this.form.querySelectorAll(".field__hint")) hint.textContent = "";
     this._pintarModo();
 
     if (comDesfazer && tinhaConteudo) {
-      toast.undo("Formulário limpo.", () => {
-        for (const col of COLUMNS) this.fields[col.key].value = antes[col.key];
+      avisoRapido.desfazer("Formulário limpo.", () => {
+        for (const col of COLUNAS_ATUALIZACOES) this.fields[col.key].value = antes[col.key];
         this.fields.cliente.focus();
       }, "Restaurar");
     }
@@ -962,7 +976,7 @@ export class AtualizacoesView extends View {
         this.page = 1;
         this._invalidar();
         this.cache?.invalidar("campanhas:");
-        await this._reloadList();
+        await this._recarregarLista();
       },
     }).open();
   }
@@ -972,12 +986,13 @@ export class AtualizacoesView extends View {
    * inteira: filtrar 12 registros na tela e receber um arquivo com 4.000 é
    * exatamente o oposto do que a pessoa pediu ao filtrar.
    */
-  async exportXlsx() {
+  async exportarXlsx() {
     let blob;
     try {
       blob = await this.api.getFile("/atualizacoes/export", {
         search: this.busca,
         responsavel: this.responsavel,
+        sistema: this.sistema,
         desde: this.desde,
         ate: this.ate,
       });
@@ -985,8 +1000,8 @@ export class AtualizacoesView extends View {
       // Antes não havia catch: uma exportação recusada (acima do limite de
       // linhas, período inválido) ou falha de rede não mostrava NADA -- o
       // botão voltava ao normal e o arquivo simplesmente não vinha (P05).
-      if (err?.status === 401) return; // já tratado pelo ApiClient (login)
-      Modal.alert("Não foi possível exportar", errorMessage(err), "warning");
+      if (err?.status === 401) return; // já tratado pelo ApiPainel (login)
+      Modal.alert("Não foi possível exportar", mensagemDeErro(err), "warning");
       return;
     }
     // Nome identifica o recorte: com período fica "atualizacoes_01-09-2026_25-09-2026.xlsx"
@@ -994,7 +1009,7 @@ export class AtualizacoesView extends View {
       ? `_${(this.desde || "inicio").replace(/\//g, "-")}_${(this.ate || "fim").replace(/\//g, "-")}`
       : this._temFiltro() ? "_filtrado" : "";
     baixarBlob(blob, `atualizacoes${sufixo}.xlsx`);
-    toast.info(this._temFiltro() ? "Exportação concluída (com os filtros atuais)." : "Exportação concluída.");
+    avisoRapido.informar(this._temFiltro() ? "Exportação concluída (com os filtros atuais)." : "Exportação concluída.");
   }
 
   /**
@@ -1032,7 +1047,7 @@ export class AtualizacoesView extends View {
       this._modalRelatorio(registro, cliente, historico, situacao);
     } catch (err) {
       if (err?.cancelled) return;
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -1040,9 +1055,9 @@ export class AtualizacoesView extends View {
 
   async abrirRelatorioPeriodo() {
     try {
-      const resumo = await this.api.get("/atualizacoes/relatorio", { search: this.busca, responsavel: this.responsavel, desde: this.desde, ate: this.ate });
+      const resumo = await this.api.get("/atualizacoes/relatorio", { search: this.busca, responsavel: this.responsavel, sistema: this.sistema, desde: this.desde, ate: this.ate });
       abrirRelatorio({ tipos: [{ valor: "periodo", nome: "Resumo do período filtrado" }], gerar: () => relatorioDoPeriodo(resumo) });
-    } catch (err) { Modal.alert("Erro", errorMessage(err), "error"); }
+    } catch (err) { Modal.alert("Erro", mensagemDeErro(err), "error"); }
   }
 
   _modalRelatorio(registro, cliente, historico, situacao) {
@@ -1079,10 +1094,10 @@ export class AtualizacoesView extends View {
     this.cache?.invalidar("versoes:");
   }
 
-  _onGlobalKeydown(e) {
+  _aoTeclarGlobal(e) {
     if (!this.visivel) return;
-    if (isTypingTarget(e.target)) return;
-    if (e.key === "Delete" && this.selectedId != null) this.deleteRecord();
+    if (ehCampoDeTexto(e.target)) return;
+    if (e.key === "Delete" && this.selectedId != null) this.excluirAtualizacao();
     else if (e.key.toLowerCase() === "n") this.container.querySelector('[data-action="nova-atualizacao"]')?.click();
     else if (e.key === "/") { e.preventDefault(); this.searchInput.focus(); }
     else if (e.key.toLowerCase() === "j") this.table.moverCursor(1);
@@ -1134,16 +1149,16 @@ function acoesAtualizacao(row, role) {
     botao.dataset.id = row.id;
     botao.title = titulo;
     botao.setAttribute("aria-label", titulo);
-    botao.innerHTML = icon(nomeIcone);
+    botao.innerHTML = iconeSvg(nomeIcone);
     wrap.appendChild(botao);
   }
   return wrap;
 }
 
-function isTypingTarget(el) {
+function ehCampoDeTexto(el) {
   return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 }
 
-function errorMessage(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+function mensagemDeErro(err) {
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

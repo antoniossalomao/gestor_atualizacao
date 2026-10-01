@@ -18,6 +18,8 @@ const {
   normalizarSistemas,
   normalizarResponsavel,
   canonizarResponsaveis,
+  separarSistemas,
+  primeiraMaiuscula,
 } = require("../src/shared/normalizacao");
 
 /** O catálogo oficial, como viria da tabela `sistemas`. */
@@ -96,7 +98,7 @@ test("normalizacao - normalizarSistemas()", async (t) => {
 
   await t.test("texto que não é sistema nenhum vira B_Vendas", () => {
     // Decisão consciente: chutar o sistema que quase todo cliente tem, em vez
-    // de esvaziar o campo e perder o registro do atendimento.
+    // de esvaziar o campo e perder o registro da atualização.
     assert.equal(norm("ATUALIZADO"), "B_Vendas");
     assert.equal(norm("feito acesso regina"), "B_Vendas");
     assert.equal(norm("apenas verificar as versões"), "B_Vendas");
@@ -121,6 +123,17 @@ test("normalizacao - normalizarSistemas()", async (t) => {
     assert.equal(norm("   "), "");
     assert.equal(norm(null), "");
     assert.equal(norm(undefined), "");
+  });
+
+  await t.test("separador com espaços sobrando e texto longo de espaços", () => {
+    // A regex antiga tinha \s* e \s+ disputando a mesma fileira de espaços:
+    // correta, mas quadrática. A nova não tem quantificador e depende do trim
+    // de cada pedaço -- se ele sumir, "B_Vendas  " deixa de casar.
+    assert.equal(norm("B_Vendas   e   B_NFe"), "B_Vendas, B_NFe");
+    assert.equal(norm("B_Vendas  -  B_NFe ,  B_Sped"), "B_Vendas, B_NFe, B_Sped");
+    const inicio = Date.now();
+    norm(`B_Vendas${" ".repeat(50_000)}x`);
+    assert.ok(Date.now() - inicio < 500, "50 mil espaços não podem travar o servidor");
   });
 
   await t.test("sem catálogo, os apelidos ainda funcionam", () => {
@@ -193,5 +206,23 @@ test("normalizacao - canonizarResponsaveis()", async (t) => {
 
   await t.test("lista vazia devolve mapa vazio", () => {
     assert.equal(canonizarResponsaveis([]).size, 0);
+  });
+});
+
+test("separarSistemas e primeiraMaiuscula - o texto simples das duas camadas", async (t) => {
+  // Moraram em AtualizacaoRepository até o A16 (30/09/2026), de onde serviços e
+  // outro repositório os importavam; o lugar de texto puro usado por duas
+  // camadas é este arquivo.
+  await t.test("separarSistemas separa por vírgula, apara e descarta vazios", () => {
+    assert.deepEqual(separarSistemas("B_Vendas, B_NFe ,  ,B_Estoque"), ["B_Vendas", "B_NFe", "B_Estoque"]);
+    assert.deepEqual(separarSistemas(""), []);
+    assert.deepEqual(separarSistemas(null), []);
+    assert.deepEqual(separarSistemas(undefined), []);
+  });
+
+  await t.test("primeiraMaiuscula põe cada palavra em maiúscula inicial e o resto em minúscula", () => {
+    assert.equal(primeiraMaiuscula("camila silva"), "Camila Silva");
+    assert.equal(primeiraMaiuscula("CAMILA SILVA"), "Camila Silva");
+    assert.equal(primeiraMaiuscula("maria"), "Maria");
   });
 });

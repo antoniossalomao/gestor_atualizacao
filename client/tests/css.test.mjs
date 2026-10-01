@@ -109,3 +109,27 @@ test("CSS - integridade das folhas de estilo", async (t) => {
     });
   }
 });
+
+/*
+ * A02: a ordem das camadas mora em `--camada-*` (theme.css). Com números
+ * soltos, o modal chegou a ficar em 1100, abaixo da gaveta (1200), e a
+ * confirmação abria escondida atrás do formulário -- o tipo de erro que
+ * não aparece em teste nenhum sem navegador, só na mão de quem usa.
+ */
+test("CSS - camadas da tela saem da escala --camada-*", async (t) => {
+  await t.test("nenhum z-index de camada global como número solto", () => {
+    for (const arquivo of ARQUIVOS) {
+      const texto = semComentarios(fs.readFileSync(path.join(CSS_DIR, arquivo), "utf8"));
+      const soltos = [...texto.matchAll(/z-index:\s*(\d+)/g)].map((m) => Number(m[1])).filter((n) => n >= 50);
+      assert.deepEqual(soltos, [], `${arquivo}: use var(--camada-...) em vez de ${soltos.join(", ")}`);
+    }
+  });
+
+  await t.test("modal acima da gaveta e da faixa; notificação acima do modal", () => {
+    const tema = fs.readFileSync(path.join(CSS_DIR, "theme.css"), "utf8");
+    const camada = (nome) => Number(new RegExp(`--camada-${nome}:\\s*(\\d+)`).exec(tema)?.[1]);
+    assert.ok(camada("faixa") < camada("modal"), "a faixa de conexão fica abaixo do modal");
+    assert.ok(camada("gaveta") < camada("modal"), "o modal nasce da gaveta e tem que ficar por cima dela");
+    assert.ok(camada("modal") < camada("notificacao"), "o toast fica visível com um modal aberto");
+  });
+});

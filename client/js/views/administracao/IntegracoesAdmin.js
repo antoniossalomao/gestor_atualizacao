@@ -1,7 +1,7 @@
-import { toast } from "../../components/Toast.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
-import { marcarOcupado } from "../../utils/guard.js";
+import { iconeHtml } from "../../utils/icones.js";
+import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { linhaRegraNumero, rodapeFormulario } from "../../templates/administracao.js";
 import { descreverChaveAgentes } from "../../domain/administracao.js";
@@ -39,7 +39,7 @@ export class IntegracoesAdmin extends FormularioRegras {
           <div class="admin-campo-acao">
             <input type="url" class="input" id="regra-webhook" data-regra="discordWebhookUrl"
                    placeholder="https://discord.com/api/webhooks/…" autocomplete="off" spellcheck="false" />
-            <button type="button" class="btn" data-action="testar-discord">${iconHtml("sino")} Enviar teste</button>
+            <button type="button" class="btn" data-action="testar-discord">${iconeHtml("sino")} Enviar teste</button>
           </div>
         </div>
 
@@ -112,10 +112,10 @@ export class IntegracoesAdmin extends FormularioRegras {
     const liberar = marcarOcupado(botao);
     try {
       const r = await this.api.post("/configuracao-sistema/testar-discord", url ? { url } : {});
-      if (r.ok) toast.success(r.detalhe);
-      else toast.error(r.detalhe);
+      if (r.ok) avisoRapido.sucesso(r.detalhe);
+      else avisoRapido.erro(r.detalhe);
     } catch (err) {
-      toast.error(mensagem(err));
+      avisoRapido.erro(mensagem(err));
     } finally {
       liberar();
     }

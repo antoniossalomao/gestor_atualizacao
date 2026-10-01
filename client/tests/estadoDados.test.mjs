@@ -1,6 +1,6 @@
 /*
- * Testes do aviso de dados desatualizados (P03, docs/MELHORIAS.md;
- * utils/estadoDados.js, usado pela View.swr).
+ * Testes do aviso de dados desatualizados (CHANGELOG de 29/09/2026;
+ * utils/EstadoDados.js, usado pela View.swr).
  *
  * O que erra em silêncio se quebrar:
  *  - a falha não avisar → a tela mostra dado velho como se fosse atual, que
@@ -13,9 +13,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { EstadoDados, descreverFalha, formatarMomento, grupoDaChave } from "../js/utils/estadoDados.js";
+import { EstadoDados, descreverFalha, formatarMomento, grupoDaChave } from "../js/utils/EstadoDados.js";
 
-const cancelado = { cancelled: true, name: "RequestCancelled" };
+const cancelado = { cancelled: true, name: "RequisicaoCancelada" };
 const erro = (status, message = "") => ({ status, message });
 
 test("descreverFalha - separa rede, demora, servidor e recusa", async (t) => {

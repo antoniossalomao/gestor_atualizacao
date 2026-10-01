@@ -15,7 +15,7 @@
  * A quarta protege contra INCONSISTENCIA: uma sessao criada depois do backup
  * aponta para um usuario que pode nao existir no banco restaurado.
  *
- * `security.test.js` ja cobre parte disso pelo angulo de permissao; aqui o
+ * `seguranca.test.js` ja cobre parte disso pelo angulo de permissao; aqui o
  * foco e' o efeito no disco e a ordem em que as travas sao aplicadas.
  */
 const test = require("node:test");
@@ -24,7 +24,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { Database } = require("../src/database/Database");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AuthService } = require("../src/services/AuthService");
 const { BackupService } = require("../src/services/BackupService");
@@ -33,10 +33,10 @@ const SENHA = "senha-de-teste-123";
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-bkp-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
   const historico = new HistoricoService(db);
   const auth = new AuthService(db, historico);
-  const admin = { ...auth.setupAdmin({ nome: "Admin", usuario: "admin", senha: SENHA }), usuario: "admin" };
+  const admin = { ...auth.configurarAdmin({ nome: "Admin", usuario: "admin", senha: SENHA }), usuario: "admin" };
 
   const sessoesLimpas = { vezes: 0 };
   const sessionStore = { clearAll: () => void (sessoesLimpas.vezes += 1) };
@@ -82,7 +82,7 @@ test("BackupService - listar e localizar", async (t) => {
     await t.test("duas cópias no mesmo segundo não viram uma só", () => {
       // Regressão: o carimbo do nome tem resolução de segundos, e
       // `copyFileSync` sobrescreve sem avisar. O caminho perigoso é o
-      // `restoreFrom`, que faz uma cópia de segurança logo antes de restaurar
+      // `restaurarDe`, que faz uma cópia de segurança logo antes de restaurar
       // -- ela podia apagar, em silêncio, um backup do mesmo segundo.
       const antes = env.service.list().length;
       env.db._backup();
@@ -100,20 +100,20 @@ test("BackupService - listar e localizar", async (t) => {
       // O nome vem da URL. Sem a checagem contra a lista, seria um jeito de
       // pedir qualquer arquivo do servidor pelo nome.
       for (const ruim of ["nao-existe.db", "../gestao.db", "../../.env", ""]) {
-        assert.throws(() => env.service.getBackupPath(ruim), /não encontrado/i, ruim);
+        assert.throws(() => env.service.caminhoDoBackup(ruim), /não encontrado/i, ruim);
       }
     });
 
     await t.test("baixar um backup que existe devolve o caminho", () => {
       const arquivo = criarBackup(env);
-      const caminho = env.service.getBackupPath(arquivo);
+      const caminho = env.service.caminhoDoBackup(arquivo);
       assert.ok(fs.existsSync(caminho));
       assert.equal(path.basename(caminho), arquivo);
     });
 
     await t.test("o banco atual também pode ser baixado", () => {
       // É o "baixe antes de mexer" que o runbook manda fazer.
-      assert.ok(fs.existsSync(env.service.getCurrentDbPath()));
+      assert.ok(fs.existsSync(env.service.caminhoDoBancoAtual()));
     });
   } finally {
     env.cleanup();
@@ -164,7 +164,7 @@ test("BackupService - as quatro travas da restauração", async (t) => {
     await t.test("a senha é conferida contra o HASH, não contra o texto", () => {
       // Sanidade: se a comparação fosse de texto puro, a senha estaria
       // gravada em claro no banco -- e este teste passaria por acidente.
-      const linha = env.db.usuarios.findByUsuario("admin");
+      const linha = env.db.usuarios.buscarPorUsuario("admin");
       assert.notEqual(linha.senha_hash, SENHA);
       assert.match(linha.senha_hash, /^\$2[aby]\$/, "é um hash bcrypt");
     });
@@ -199,12 +199,12 @@ test("BackupService - efeito da restauração", async (t) => {
       const arquivo = criarBackup(env);
 
       env.db.clientes.insert("C002", "Depois do backup", "", [], "");
-      assert.ok(env.db.clientes.getByNome("Depois do backup"), "existe antes de restaurar");
+      assert.ok(env.db.clientes.obterPorNome("Depois do backup"), "existe antes de restaurar");
 
       env.service.restore(arquivo, env.admin, { senha: SENHA, confirmacao: "RESTAURAR" });
 
-      assert.ok(env.db.clientes.getByNome("Antes do backup"), "o que estava no backup continua");
-      assert.equal(env.db.clientes.getByNome("Depois do backup"), null, "o que veio depois foi descartado");
+      assert.ok(env.db.clientes.obterPorNome("Antes do backup"), "o que estava no backup continua");
+      assert.equal(env.db.clientes.obterPorNome("Depois do backup"), null, "o que veio depois foi descartado");
     });
 
     await t.test("uma cópia de segurança do estado ANTERIOR é guardada", () => {
@@ -229,7 +229,7 @@ test("BackupService - efeito da restauração", async (t) => {
       // A conexão é fechada e reaberta no meio do processo. Se a reabertura
       // falhasse, o servidor ficaria de pé respondendo erro em tudo.
       assert.doesNotThrow(() => env.db.clientes.insert("C003", "Depois de restaurar", "", [], ""));
-      assert.ok(env.db.clientes.getByNome("Depois de restaurar"));
+      assert.ok(env.db.clientes.obterPorNome("Depois de restaurar"));
     });
   } finally {
     env.cleanup();
@@ -238,7 +238,7 @@ test("BackupService - efeito da restauração", async (t) => {
 
 test("BackupService - sem session store configurado", async (t) => {
   await t.test("restaurar não quebra se o store não tiver sido ligado", () => {
-    // O store é injetado depois da construção (setSessionStore, chamado pelo
+    // O store é injetado depois da construção (definirArmazemDeSessao, chamado pelo
     // Server). Um caminho que construa o serviço sem ele -- um script, um
     // teste -- não pode explodir na hora de restaurar.
     const env = ambiente();

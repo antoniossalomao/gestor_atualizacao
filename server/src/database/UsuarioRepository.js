@@ -1,9 +1,7 @@
 const { BaseRepository } = require("./BaseRepository");
 
 /**
- * Contas de login (tabela nova, nao existia no app Python original --
- * la o uso era individual, sem usuarios). Guarda so o hash da senha,
- * NUNCA a senha em texto puro (o hash e calculado em AuthService, com
+ * Contas de login. Guarda so o hash da senha, NUNCA a senha em texto puro (o hash e calculado em AuthService, com
  * bcryptjs, antes de chegar aqui).
  */
 class UsuarioRepository extends BaseRepository {
@@ -11,11 +9,11 @@ class UsuarioRepository extends BaseRepository {
     return "usuarios";
   }
 
-  findByUsuario(usuario) {
+  buscarPorUsuario(usuario) {
     return this.conn.prepare("SELECT * FROM usuarios WHERE usuario = ?").get(usuario) || null;
   }
 
-  findById(id) {
+  buscarPorId(id) {
     return (
       this.conn.prepare("SELECT id, nome, usuario, role, criado_em, ultimo_login FROM usuarios WHERE id = ?").get(id) || null
     );
@@ -31,17 +29,11 @@ class UsuarioRepository extends BaseRepository {
     const info = this.conn
       .prepare("INSERT INTO usuarios (nome, usuario, senha_hash, role, criado_em) VALUES (?, ?, ?, ?, ?)")
       .run(nome, usuario, senhaHash, role, criadoEm);
-    return this.findById(info.lastInsertRowid);
-  }
-
-  /** Atualiza o papel do usuário (admin, operador ou consulta). */
-  updateRole(id, role) {
-    this.conn.prepare("UPDATE usuarios SET role = ? WHERE id = ?").run(role, id);
-    return this.findById(id);
+    return this.buscarPorId(info.lastInsertRowid);
   }
 
   /** Atualiza nome e papel de um usuário existente. */
-  updateUser(id, { nome, role }) {
+  alterarUsuario(id, { nome, role }) {
     if (nome && role) {
       this.conn.prepare("UPDATE usuarios SET nome = ?, role = ? WHERE id = ?").run(nome, role, id);
     } else if (nome) {
@@ -49,15 +41,15 @@ class UsuarioRepository extends BaseRepository {
     } else if (role) {
       this.conn.prepare("UPDATE usuarios SET role = ? WHERE id = ?").run(role, id);
     }
-    return this.findById(id);
+    return this.buscarPorId(id);
   }
 
   /** Troca só o hash da senha -- usado tanto pela troca de senha própria quanto por um reset futuro. */
-  updateSenhaHash(id, senhaHash) {
+  alterarHashDaSenha(id, senhaHash) {
     this.conn.prepare("UPDATE usuarios SET senha_hash = ? WHERE id = ?").run(senhaHash, id);
   }
 
-  /** Registra o instante do login bem-sucedido -- ver findById/list, que agora devolvem "ultimo_login". */
+  /** Registra o instante do login bem-sucedido -- ver buscarPorId/list, que agora devolvem "ultimo_login". */
   registrarLogin(id) {
     this.conn.prepare("UPDATE usuarios SET ultimo_login = ? WHERE id = ?").run(new Date().toISOString(), id);
   }

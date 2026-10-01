@@ -10,6 +10,7 @@
  * a rota.
  */
 const { garantirTokenCsrf, CABECALHO_CSRF } = require("../middlewares/protecaoCsrf");
+const { VERSAO_PAINEL } = require("../config/constantes");
 
 class AuthController {
   /**
@@ -28,19 +29,22 @@ class AuthController {
   status = (req, res) => {
     const logado = Boolean(req.session.user);
     res.json({
-      needsSetup: this.authService.needsSetup(),
+      precisaConfigurar: this.authService.precisaConfigurar(),
       user: req.session.user || null,
       atualizadorHabilitado: this.configuracaoSistemaService.atualizadorHabilitado(),
       // As regras públicas da equipe (ver config/regrasEquipe.js) vão junto
       // pelo mesmo motivo -- mas só com sessão: esta rota é aberta, e quem
       // não entrou não tem por que saber as regras internas da equipe.
       regras: logado ? this.configuracaoSistemaService.ler() : null,
+      // Para a aba Sobre e ajuda. Não é segredo, mas também só com sessão:
+      // quem não entrou não precisa saber que versão está rodando aqui.
+      versao: logado ? VERSAO_PAINEL : null,
     });
   };
 
-  setupAdmin = (req, res, next) => {
+  configurarAdmin = (req, res, next) => {
     try {
-      const user = this.authService.setupAdmin(req.body || {});
+      const user = this.authService.configurarAdmin(req.body || {});
       this._iniciarSessao(req, res, user, next, () => res.status(201).json({ user }));
     } catch (err) {
       next(err);

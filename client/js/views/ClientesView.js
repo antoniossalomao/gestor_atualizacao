@@ -1,25 +1,26 @@
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
-import { Pagination } from "../components/Pagination.js";
+import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
+import { Paginacao } from "../components/Paginacao.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { debounce } from "../utils/debounce.js";
-import { icon, iconHtml } from "../utils/icons.js";
-import { emptyState } from "../components/EmptyState.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { iconeSvg, iconeHtml } from "../utils/icones.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { html, plural } from "../utils/html.js";
-import { marcarOcupado } from "../utils/guard.js";
-import { prefs } from "../app/prefs.js";
-import { aparencia } from "../app/appearance.js";
-import { Autocomplete } from "../components/Autocomplete.js";
+import { marcarOcupado } from "../components/botaoOcupado.js";
+import { prefs } from "../app/preferencias.js";
+import { aparencia } from "../app/aparencia.js";
+import { CampoComSugestoes } from "../components/CampoComSugestoes.js";
 import { AcessosModal } from "./AcessosModal.js";
-import { Drawer } from "../components/Drawer.js";
+import { Gaveta } from "../components/Gaveta.js";
 
 /**
  * Aba Clientes: cadastro, edição e listagem dos clientes e seus sistemas.
- * O formulário fica escondido por padrão (botão "+ Novo Cliente") -- mesma
- * ideia de gestor/views/clientes.py.
+ * O formulário fica escondido por padrão (botão "+ Novo Cliente").
  */
+const ORDEM_INICIAL = { sortBy: "id", sortDir: "asc" };
+
 export class ClientesView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
@@ -29,18 +30,31 @@ export class ClientesView extends View {
     const salvo = prefs.get("clientes:filtros", {});
     this.page = 1;
     this.busca = salvo.busca || "";
-    this.sortBy = salvo.sortBy;
-    this.sortDir = salvo.sortDir || "asc";
-    this._buildDom();
+    this.sortBy = ORDEM_INICIAL.sortBy;
+    this.sortDir = ORDEM_INICIAL.sortDir;
+    this._montarDom();
+  }
+
+  /**
+   * A equipe pediu (A04) que Clientes abra SEMPRE por ID crescente: o ID é
+   * a ordem de cadastro, e é por ele que se confere "o último que entrou". A
+   * ordenação escolhida na tela vale enquanto se está nela e não é mais
+   * lembrada; a busca continua sendo.
+   */
+  aoEntrar() {
+    this.sortBy = ORDEM_INICIAL.sortBy;
+    this.sortDir = ORDEM_INICIAL.sortDir;
+    this.page = 1;
+    this.table?.definirOrdem(this.sortBy, this.sortDir === "desc");
   }
 
   aplicarParams({ novo } = {}) {
     if (!novo || this.user?.role === "consulta") return;
-    this.clearForm();
+    this.limparFormulario();
     this.drawer?.abrir({ foco: this.fields.nome });
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       <form class="card" id="clientes-form" data-role="form-card" hidden novalidate>
         <div class="form-grid form-grid--3">
@@ -56,7 +70,7 @@ export class ClientesView extends View {
 
         <div class="clientes-sistemas-head" style="margin-top: var(--sp-4);">
           <span class="field__label">Sistemas Contratados</span>
-          <button type="button" class="btn btn--small" data-action="toggle-novo-sistema">${iconHtml("plus")} Novo Sistema</button>
+          <button type="button" class="btn btn--small" data-action="toggle-novo-sistema">${iconeHtml("plus")} Novo Sistema</button>
         </div>
         <div class="toolbar" data-role="novo-sistema-row" hidden>
           <input type="text" class="input" data-role="novo-sistema-input" style="max-width:240px" placeholder="Nome do sistema" />
@@ -66,7 +80,7 @@ export class ClientesView extends View {
 
         <div class="form-actions form-actions--modal">
           <div class="form-actions__left">
-            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconHtml("alerta")} Excluir</button>
+            <button type="button" class="btn btn--danger" data-action="modal-delete" hidden>${iconeHtml("alerta")} Excluir</button>
           </div>
           <div class="form-actions__right">
             <button type="button" class="btn btn--ghost" data-action="cancel">Cancelar</button>
@@ -87,7 +101,7 @@ export class ClientesView extends View {
           </div>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
-          <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconHtml("alerta")} Excluir</button>
+          <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconeHtml("alerta")} Excluir</button>
           <button type="button" class="btn btn--accent btn--small" data-action="toggle-form">+ Novo Cliente</button>
         </div>
         <p class="text-muted bulk-hint">
@@ -100,7 +114,7 @@ export class ClientesView extends View {
           <select class="input" data-role="bulk-sistema-select" style="max-width:200px"></select>
           <button type="button" class="btn btn--small" data-action="bulk-add-sistema">Adicionar sistema</button>
           <button type="button" class="btn btn--small btn--danger" data-action="bulk-excluir">
-            ${iconHtml("alerta")} Excluir selecionados
+            ${iconeHtml("alerta")} Excluir selecionados
           </button>
         </div>
         <div data-role="table"></div>
@@ -109,7 +123,7 @@ export class ClientesView extends View {
     `;
 
     this.formCard = this.container.querySelector('[data-role="form-card"]');
-    this.drawer = new Drawer(this.formCard, {
+    this.drawer = new Gaveta(this.formCard, {
       titulo: "Novo Cliente",
       descricao: "Cadastre um novo cliente e selecione seus sistemas.",
     });
@@ -123,10 +137,10 @@ export class ClientesView extends View {
     };
     for (const input of Object.values(this.fields)) {
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") this.clearForm({ comDesfazer: true });
+        if (e.key === "Escape") this.limparFormulario({ comDesfazer: true });
       });
     }
-    this.grupoAutocomplete = new Autocomplete(this.fields.grupo, { values: [] });
+    this.grupoAutocomplete = new CampoComSugestoes(this.fields.grupo, { values: [] });
 
     this.sistemasGrid = this.formCard.querySelector('[data-role="sistemas-grid"]');
     this.novoSistemaRow = this.formCard.querySelector('[data-role="novo-sistema-row"]');
@@ -140,7 +154,8 @@ export class ClientesView extends View {
       }
     });
 
-    this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
+    this.table = new TabelaOrdenavel(this.container.querySelector('[data-role="table"]'), {
+      ocuparAltura: true,
       columns: [
         { key: "id", label: "ID", type: "numeric", largura: "56px" },
         { key: "codigo", label: "Código", largura: "80px" },
@@ -162,7 +177,7 @@ export class ClientesView extends View {
         { key: "maquinas", label: "Máquinas", type: "numeric", largura: "92px" },
         { key: "acoes", label: "Ações", largura: "140px", render: (row) => acoesCliente(row, this.user?.role) },
       ],
-      onSelect: (row) => this._loadIntoForm(row),
+      onSelect: (row) => this._carregarNoFormulario(row),
       // Seleção múltipla: marcar um sistema em vários clientes de uma vez
       // (ex.: "esses 8 agora têm NFCe") ou excluir vários era um ciclo de
       // "abrir, editar, salvar" por cliente -- mesma ideia já usada em
@@ -172,17 +187,17 @@ export class ClientesView extends View {
       caption: "Clientes cadastrados",
       emptyNode: () =>
         this.busca
-          ? emptyState({
+          ? estadoVazio({
               titulo: "Nenhum cliente encontrado",
               descricao: `Nada casa com "${this.busca}". Tente outro termo.`,
               icone: "busca",
               acao: { label: "Limpar busca", onClick: () => this._limparFiltros() },
             })
-          : emptyState({
+          : estadoVazio({
               titulo: "Nenhum cliente cadastrado",
               descricao: "Cadastre o primeiro cliente para começar a registrar atualizações.",
               icone: "clientes",
-              acao: { label: "Novo cliente", onClick: () => { this.clearForm(); this.drawer.abrir({ foco: this.fields.nome }); } },
+              acao: { label: "Novo cliente", onClick: () => { this.limparFormulario(); this.drawer.abrir({ foco: this.fields.nome }); } },
             }),
       serverSort: true,
       onSortChange: (key, dir) => {
@@ -190,22 +205,22 @@ export class ClientesView extends View {
         this.sortDir = dir;
         this.page = 1;
         this._salvarFiltros();
-        this._reloadList();
+        this._recarregarLista();
       },
     });
-    this.pagination = new Pagination(this.container.querySelector('[data-role="pagination"]'), (page) => {
+    this.pagination = new Paginacao(this.container.querySelector('[data-role="pagination"]'), (page) => {
       this.page = page;
-      this._reloadList();
+      this._recarregarLista();
     });
     this.table.container.addEventListener("click", (e) => this._acaoRapida(e));
 
     this.searchInput = this.container.querySelector('[data-role="search"]');
     this.botaoLimparFiltros = this.container.querySelector('[data-action="limpar-filtros"]');
     this.searchInput.value = this.busca;
-    const reload = debounce(() => {
+    const reload = aguardarPausa(() => {
       this.page = 1;
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     }, 200);
     this.searchInput.addEventListener("input", () => {
       this.busca = this.searchInput.value.trim();
@@ -215,10 +230,10 @@ export class ClientesView extends View {
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
     this.toggleFormBtn.addEventListener("click", () => {
-      this.clearForm();
+      this.limparFormulario();
       this.drawer.abrir({ foco: this.fields.nome });
     });
-    this.formCard.querySelector('[data-action="toggle-novo-sistema"]').addEventListener("click", () => this._toggleNovoSistema());
+    this.formCard.querySelector('[data-action="toggle-novo-sistema"]').addEventListener("click", () => this._alternarNovoSistema());
     this.formCard.querySelector('[data-action="add-sistema"]').addEventListener("click", () => this.addSistema());
 
     this.addBtn = this.formCard.querySelector('[data-action="add"]');
@@ -228,7 +243,7 @@ export class ClientesView extends View {
       this.modalDeleteBtn.addEventListener("click", async () => {
         this.drawer.marcarLimpa();
         await this.drawer.fechar({ forcar: true });
-        this.deleteClient();
+        this.excluirCliente();
       });
     }
     this.deleteBtn = this.container.querySelector('[data-action="delete"]');
@@ -245,12 +260,12 @@ export class ClientesView extends View {
 
     this.formCard.addEventListener("submit", (e) => {
       e.preventDefault();
-      this._submit();
+      this._enviar();
     });
-    this.updateBtn?.addEventListener("click", () => this.updateClient());
-    this.deleteBtn?.addEventListener("click", () => this.deleteClient());
+    this.updateBtn?.addEventListener("click", () => this.alterarCliente());
+    this.deleteBtn?.addEventListener("click", () => this.excluirCliente());
 
-    this.on(document, "keydown", (e) => this._onGlobalKeydown(e));
+    this.on(document, "keydown", (e) => this._aoTeclarGlobal(e));
 
     if (this.user?.role === "consulta") {
       this.toggleFormBtn.hidden = true;
@@ -262,11 +277,11 @@ export class ClientesView extends View {
     }
 
     this.botaoLimparFiltros.hidden = !this.busca;
-    this.clearForm();
+    this.limparFormulario();
   }
 
   /** @param {boolean} [forcarAberto] */
-  toggleForm(forcarAberto) {
+  alternarFormulario(forcarAberto) {
     if (forcarAberto === true) {
       this.drawer.abrir({ foco: this.fields.nome });
     } else if (forcarAberto === false) {
@@ -285,8 +300,8 @@ export class ClientesView extends View {
     const row = this.table.rows.find((item) => String(item.id) === botao.dataset.id);
     if (!row) return;
     if (botao.dataset.rowAction === "editar") {
-      this._loadIntoForm(row);
-      this.toggleForm(true);
+      this._carregarNoFormulario(row);
+      this.alternarFormulario(true);
     }
     if (botao.dataset.rowAction === "ficha") this.navigate("consulta", { cliente: row.nome });
     if (botao.dataset.rowAction === "gerenciar-acesso") {
@@ -294,7 +309,7 @@ export class ClientesView extends View {
     }
   }
 
-  _toggleNovoSistema() {
+  _alternarNovoSistema() {
     const visible = !this.novoSistemaRow.hidden;
     this.novoSistemaRow.hidden = visible;
     if (!visible) {
@@ -314,10 +329,10 @@ export class ClientesView extends View {
       await this._reloadSistemas();
       const cb = [...this.sistemasGrid.querySelectorAll("input[type=checkbox]")].find((el) => el.value === nome);
       if (cb) cb.checked = true;
-      this._toggleNovoSistema();
-      toast.success(`Sistema "${nome}" adicionado.`);
+      this._alternarNovoSistema();
+      avisoRapido.sucesso(`Sistema "${nome}" adicionado.`);
     } catch (err) {
-      Modal.alert("Validação", errorMessage(err), "warning");
+      Modal.alert("Validação", mensagemDeErro(err), "warning");
     }
   }
 
@@ -399,29 +414,29 @@ export class ClientesView extends View {
       this.cache?.invalidar("sistemas");
       this.cache?.invalidar("clientes:");
       await this._reloadSistemas();
-      await this._reloadList();
-      toast.success(
+      await this._recarregarLista();
+      avisoRapido.sucesso(
         resultado.clientesAfetados > 0
           ? `Sistema "${sistema}" excluído (desmarcado de ${plural(resultado.clientesAfetados, "cliente")}).`
           : `Sistema "${sistema}" excluído.`
       );
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     }
   }
 
   async refresh() {
     await this._reloadSistemas();
-    await this._reloadList();
+    await this._recarregarLista();
     await this.swr(
       "clientes:grupos",
       () => this.api.get("/clientes/grupos", null, { key: "clientes:grupos" }),
-      (grupos) => this.grupoAutocomplete.setValues(grupos)
+      (grupos) => this.grupoAutocomplete.definirValores(grupos)
     );
   }
 
-  async _reloadList() {
-    this.table.setRefreshing(true);
+  async _recarregarLista() {
+    this.table.definirRecarregando(true);
     try {
       const resposta = await this.swr(
         `clientes:lista:${this.busca}|${this.page}|${this.sortBy}|${this.sortDir}`,
@@ -432,7 +447,7 @@ export class ClientesView extends View {
             { key: "clientes:lista" }
           ),
         (resposta) => {
-          this.table.setRows(resposta.rows.map((r) => ({ ...r, sistemasTexto: r.sistemas.join(", ") })));
+          this.table.definirLinhas(resposta.rows.map((r) => ({ ...r, sistemasTexto: r.sistemas.join(", ") })));
           this.pagination.update(resposta);
           this.container.querySelector('[data-role="count"]').textContent = plural(resposta.total, "cliente");
         }
@@ -440,10 +455,10 @@ export class ClientesView extends View {
 
       if (resposta && resposta.rows.length === 0 && this.page > 1 && resposta.total > 0) {
         this.page -= 1;
-        return this._reloadList();
+        return this._recarregarLista();
       }
     } finally {
-      this.table.setRefreshing(false);
+      this.table.definirRecarregando(false);
     }
   }
 
@@ -453,14 +468,14 @@ export class ClientesView extends View {
     this.botaoLimparFiltros.hidden = true;
     this.page = 1;
     this._salvarFiltros();
-    this._reloadList();
+    this._recarregarLista();
   }
 
   _salvarFiltros() {
-    prefs.set("clientes:filtros", { busca: this.busca, sortBy: this.sortBy, sortDir: this.sortDir });
+    prefs.set("clientes:filtros", { busca: this.busca });
   }
 
-  _loadIntoForm(row) {
+  _carregarNoFormulario(row) {
     this.selectedId = row.id;
     this.selectedRevision = row.revisao;
     this.fields.codigo.value = row.codigo || "";
@@ -502,11 +517,10 @@ export class ClientesView extends View {
     new AcessosModal(this.api, { id, nome }).open();
   }
 
-  _readForm() {
+  _lerFormulario() {
     const nome = this.fields.nome.value.trim();
     if (!nome) {
-      Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning");
-      this.fields.nome.focus();
+      Modal.alert("Validação", "Campo 'Cliente' é obrigatório.", "warning").then(() => this.fields.nome.focus());
       return null;
     }
     const sistemas = [...this.sistemasGrid.querySelectorAll("input:checked")].map((el) => el.value);
@@ -520,48 +534,48 @@ export class ClientesView extends View {
     };
   }
 
-  _submit() {
-    if (this.selectedId == null) this.addClient();
-    else this.updateClient();
+  _enviar() {
+    if (this.selectedId == null) this.adicionarCliente();
+    else this.alterarCliente();
   }
 
-  async addClient() {
-    const data = this._readForm();
-    if (!data) return;
+  async adicionarCliente() {
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.addBtn);
     try {
-      await this.api.post("/clientes", data);
-      this.clearForm();
+      await this.api.post("/clientes", dados);
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
-      toast.success("Cliente adicionado.");
+      await this._recarregarLista();
+      avisoRapido.sucesso("Cliente adicionado.");
     } catch (err) {
-      Modal.alert("Validação", errorMessage(err), "warning");
+      Modal.alert("Validação", mensagemDeErro(err), "warning");
     } finally {
       liberar();
     }
   }
 
-  async updateClient() {
+  async alterarCliente() {
     if (this.selectedId == null) {
       Modal.alert("Seleção", "Selecione um cliente na tabela primeiro.", "warning");
       return;
     }
-    const data = this._readForm();
-    if (!data) return;
+    const dados = this._lerFormulario();
+    if (!dados) return;
     const liberar = marcarOcupado(this.updateBtn);
     try {
-      await this.api.put(`/clientes/${this.selectedId}`, { ...data, revisao: this.selectedRevision });
-      this.clearForm();
+      await this.api.put(`/clientes/${this.selectedId}`, { ...dados, revisao: this.selectedRevision });
+      this.limparFormulario();
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
       this._invalidar();
-      await this._reloadList();
-      toast.success("Cliente atualizado.");
+      await this._recarregarLista();
+      avisoRapido.sucesso("Cliente atualizado.");
     } catch (err) {
-      Modal.alert("Validação", errorMessage(err), "warning");
+      Modal.alert("Validação", mensagemDeErro(err), "warning");
     } finally {
       liberar();
     }
@@ -574,7 +588,7 @@ export class ClientesView extends View {
    * afeta o Resumo e a Consulta inteiros. "Desfazer" recriaria o cadastro com
    * um id novo, o que não é o mesmo que nunca ter excluído.
    */
-  async deleteClient() {
+  async excluirCliente() {
     if (this.selectedId == null) {
       Modal.alert("Seleção", "Selecione um cliente na tabela primeiro.", "warning");
       return;
@@ -590,12 +604,12 @@ export class ClientesView extends View {
     const liberar = marcarOcupado(this.deleteBtn);
     try {
       await this.api.delete(`/clientes/${this.selectedId}`);
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
-      toast.success("Cliente excluído.");
+      await this._recarregarLista();
+      avisoRapido.sucesso("Cliente excluído.");
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -625,14 +639,14 @@ export class ClientesView extends View {
       const { afetados, total } = await this.api.post("/clientes/adicionar-sistema-lote", { ids, sistema });
       this.table.limparMarcadas();
       this._invalidar();
-      await this._reloadList();
-      toast.success(
+      await this._recarregarLista();
+      avisoRapido.sucesso(
         afetados === 0
           ? `Todos os ${plural(total, "cliente selecionado", "clientes selecionados")} já tinham "${sistema}".`
           : `"${sistema}" adicionado a ${plural(afetados, "cliente")}${afetados < total ? ` (${total - afetados} já tinha${total - afetados === 1 ? "" : "m"})` : ""}.`
       );
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
@@ -640,7 +654,7 @@ export class ClientesView extends View {
 
   /**
    * Exclui todos os clientes marcados de uma vez. Sem "Desfazer", diferente
-   * de Atualizações/Agendamentos -- ver o comentário em deleteClient() sobre
+   * de Atualizações/Agendamentos -- ver o comentário em excluirCliente() sobre
    * por que a exclusão de cliente já pedia confirmação: recriar perde o id
    * antigo e, agora, também os acessos remotos (AnyDesk/Suporte Bredas)
    * cadastrados, apagados junto por causa da chave estrangeira. Numa
@@ -662,18 +676,18 @@ export class ClientesView extends View {
     try {
       const { excluidos } = await this.api.post("/clientes/excluir-lote", { ids });
       this.table.limparMarcadas();
-      this.clearForm();
+      this.limparFormulario();
       this._invalidar();
-      await this._reloadList();
-      toast.success(`${plural(excluidos, "cliente")} ${excluidos === 1 ? "excluído" : "excluídos"}.`);
+      await this._recarregarLista();
+      avisoRapido.sucesso(`${plural(excluidos, "cliente")} ${excluidos === 1 ? "excluído" : "excluídos"}.`);
     } catch (err) {
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
     }
   }
 
-  clearForm({ comDesfazer = false } = {}) {
+  limparFormulario({ comDesfazer = false } = {}) {
     const antes = {
       codigo: this.fields?.codigo?.value || "",
       nome: this.fields?.nome?.value || "",
@@ -686,7 +700,7 @@ export class ClientesView extends View {
 
     this.selectedId = null;
     this.selectedRevision = null;
-    this.table?.clearSelection();
+    this.table?.limparSelecao();
     if (this.fields) {
       this.fields.codigo.value = "";
       this.fields.nome.value = "";
@@ -700,7 +714,7 @@ export class ClientesView extends View {
     this._pintarModo();
 
     if (comDesfazer && tinhaConteudo) {
-      toast.undo("Formulário limpo.", () => {
+      avisoRapido.desfazer("Formulário limpo.", () => {
         this.fields.codigo.value = antes.codigo;
         this.fields.nome.value = antes.nome;
         this.fields.cidade.value = antes.cidade;
@@ -728,11 +742,11 @@ export class ClientesView extends View {
     this.cache?.invalidar("consulta");
   }
 
-  _onGlobalKeydown(e) {
+  _aoTeclarGlobal(e) {
     if (!this.visivel) return;
-    if (isTypingTarget(e.target)) return;
-    if (e.key === "Delete" && this.selectedId != null) this.deleteClient();
-    else if (e.key.toLowerCase() === "n") { this.clearForm(); this.drawer.abrir({ foco: this.fields.nome }); }
+    if (ehCampoDeTexto(e.target)) return;
+    if (e.key === "Delete" && this.selectedId != null) this.excluirCliente();
+    else if (e.key.toLowerCase() === "n") { this.limparFormulario(); this.drawer.abrir({ foco: this.fields.nome }); }
     else if (e.key === "/") { e.preventDefault(); this.searchInput.focus(); }
     else if (e.key.toLowerCase() === "j") this.table.moverCursor(1);
     else if (e.key.toLowerCase() === "k") this.table.moverCursor(-1);
@@ -760,16 +774,16 @@ function acoesCliente(row, role) {
     botao.dataset.id = row.id;
     botao.title = titulo;
     botao.setAttribute("aria-label", titulo);
-    botao.innerHTML = icon(nomeIcone);
+    botao.innerHTML = iconeSvg(nomeIcone);
     wrap.appendChild(botao);
   }
   return wrap;
 }
 
-function isTypingTarget(el) {
+function ehCampoDeTexto(el) {
   return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
 }
 
-function errorMessage(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+function mensagemDeErro(err) {
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

@@ -1,14 +1,14 @@
 import { View } from "../app/View.js";
-import { SortableTable } from "../components/SortableTable.js";
-import { Pagination } from "../components/Pagination.js";
-import { debounce } from "../utils/debounce.js";
-import { emptyState } from "../components/EmptyState.js";
+import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
+import { Paginacao } from "../components/Paginacao.js";
+import { aguardarPausa } from "../utils/aguardarPausa.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 import { plural } from "../utils/html.js";
-import { tempoRelativo, formatarDataHora } from "../utils/date.js";
-import { prefs } from "../app/prefs.js";
-import { aparencia } from "../app/appearance.js";
+import { tempoRelativo, formatarDataHora } from "../utils/data.js";
+import { prefs } from "../app/preferencias.js";
+import { aparencia } from "../app/aparencia.js";
 import { Modal } from "../components/Modal.js";
-import { escapeHtml } from "../utils/html.js";
+import { escaparHtml } from "../utils/html.js";
 
 const ACAO_LABEL = {
   criar: "Criou",
@@ -36,9 +36,8 @@ const ENTIDADE_LABEL = {
 const ENTIDADES = Object.keys(ENTIDADE_LABEL);
 
 /**
- * Aba Histórico: quem criou/editou/excluiu o quê, e quando. Não existia no
- * app Python original (uso individual, sem contas) -- é a peça que dá
- * visibilidade sobre o uso do sistema por uma equipe com vários logins.
+ * Aba Histórico: quem criou/editou/excluiu o quê, e quando. Dá visibilidade
+ * sobre o uso do sistema por uma equipe com vários logins.
  */
 export class HistoricoView extends View {
   constructor(container, api, ctx) {
@@ -49,10 +48,10 @@ export class HistoricoView extends View {
     this.entidade = salvo.entidade || "Todos";
     this.sortBy = salvo.sortBy;
     this.sortDir = salvo.sortDir || "desc";
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = `
       <div class="card">
         <div class="toolbar">
@@ -78,7 +77,7 @@ export class HistoricoView extends View {
       </div>
     `;
 
-    this.table = new SortableTable(this.container.querySelector('[data-role="table"]'), {
+    this.table = new TabelaOrdenavel(this.container.querySelector('[data-role="table"]'), {
       columns: [
         { key: "quando", label: "Quando", type: "text", title: (row) => formatarDataHora(row.criado_em) },
         { key: "usuario_nome", label: "Quem" },
@@ -91,13 +90,13 @@ export class HistoricoView extends View {
       caption: "Ações registradas no sistema",
       emptyNode: () =>
         this._temFiltro()
-          ? emptyState({
+          ? estadoVazio({
               titulo: "Nenhuma ação com esse filtro",
               descricao: "Tente outro termo ou outro tipo.",
               icone: "busca",
               acao: { label: "Limpar filtros", onClick: () => this._limparFiltros() },
             })
-          : emptyState({
+          : estadoVazio({
               titulo: "Nenhuma ação registrada",
               descricao: "Tudo que a equipe fizer no sistema aparece aqui.",
               icone: "historico",
@@ -112,12 +111,12 @@ export class HistoricoView extends View {
         this.sortDir = dir;
         this.page = 1;
         this._salvarFiltros();
-        this._reloadList();
+        this._recarregarLista();
       },
     });
-    this.pagination = new Pagination(this.container.querySelector('[data-role="pagination"]'), (page) => {
+    this.pagination = new Paginacao(this.container.querySelector('[data-role="pagination"]'), (page) => {
       this.page = page;
-      this._reloadList();
+      this._recarregarLista();
     });
 
     this.searchInput = this.container.querySelector('[data-role="search"]');
@@ -126,10 +125,10 @@ export class HistoricoView extends View {
     this.searchInput.value = this.busca;
     this.entidadeFilter.value = this.entidade;
 
-    const reload = debounce(() => {
+    const reload = aguardarPausa(() => {
       this.page = 1;
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     }, 200);
     this.searchInput.addEventListener("input", () => {
       this.busca = this.searchInput.value.trim();
@@ -141,18 +140,18 @@ export class HistoricoView extends View {
       this.page = 1;
       this._pintarLimparFiltros();
       this._salvarFiltros();
-      this._reloadList();
+      this._recarregarLista();
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
     this._pintarLimparFiltros();
   }
 
   async refresh() {
-    await this._reloadList();
+    await this._recarregarLista();
   }
 
-  async _reloadList() {
-    this.table.setRefreshing(true);
+  async _recarregarLista() {
+    this.table.definirRecarregando(true);
     try {
       await this.swr(
         `historico:lista:${this.busca}|${this.entidade}|${this.page}|${this.sortBy}|${this.sortDir}`,
@@ -179,13 +178,13 @@ export class HistoricoView extends View {
             acaoLabel: ACAO_LABEL[r.acao] || r.acao,
             entidadeLabel: ENTIDADE_LABEL[r.entidade] || r.entidade,
           }));
-          this.table.setRows(linhas);
+          this.table.definirLinhas(linhas);
           this.pagination.update(resposta);
           this.container.querySelector('[data-role="count"]').textContent = plural(resposta.total, "registro");
         }
       );
     } finally {
-      this.table.setRefreshing(false);
+      this.table.definirRecarregando(false);
     }
   }
 
@@ -205,7 +204,7 @@ export class HistoricoView extends View {
     this.page = 1;
     this._pintarLimparFiltros();
     this._salvarFiltros();
-    this._reloadList();
+    this._recarregarLista();
   }
 
   _salvarFiltros() {
@@ -226,8 +225,8 @@ export class HistoricoView extends View {
     const chaves = [...new Set([...Object.keys(antes), ...Object.keys(depois)])].filter((chave) => !["id", "criadoEm", "atualizadoEm", "revisao"].includes(chave));
     const linhas = chaves.filter((chave) => JSON.stringify(antes[chave] ?? null) !== JSON.stringify(depois[chave] ?? null));
     const { box, close } = Modal.abrirCaixa({ largura: 680 });
-    box.innerHTML = `<h3 class="modal-box__title">Antes × Depois</h3><p class="modal-box__message">${escapeHtml(row.descricao)}</p>
-      <div class="audit-diff">${linhas.length ? linhas.map((chave) => `<div class="audit-diff__row"><strong>${escapeHtml(rotuloCampo(chave))}</strong><del>${escapeHtml(valorDiff(antes[chave]))}</del><span aria-hidden="true">→</span><ins>${escapeHtml(valorDiff(depois[chave]))}</ins></div>`).join("") : "<p>Nenhum campo comparável foi alterado.</p>"}</div>
+    box.innerHTML = `<h3 class="modal-box__title">Antes × Depois</h3><p class="modal-box__message">${escaparHtml(row.descricao)}</p>
+      <div class="audit-diff">${linhas.length ? linhas.map((chave) => `<div class="audit-diff__row"><strong>${escaparHtml(rotuloCampo(chave))}</strong><del>${escaparHtml(valorDiff(antes[chave]))}</del><span aria-hidden="true">→</span><ins>${escaparHtml(valorDiff(depois[chave]))}</ins></div>`).join("") : "<p>Nenhum campo comparável foi alterado.</p>"}</div>
       <div class="modal-box__actions"><button type="button" class="btn btn--accent" data-action="fechar">Fechar</button></div>`;
     box.querySelector('[data-action="fechar"]').addEventListener("click", close);
   }

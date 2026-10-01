@@ -1,8 +1,8 @@
-import { ApiError } from "../../api/ApiClient.js";
+import { ErroApi } from "../../api/ApiPainel.js";
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/Toast.js";
-import { marcarOcupado } from "../../utils/guard.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
+import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { alteracoesRegras } from "../../domain/administracao.js";
 
 /**
@@ -38,7 +38,7 @@ export class FormularioRegras extends View {
       this.completa = await this.api.get("/configuracao-sistema/completa");
     } catch (err) {
       if (err?.cancelled) return;
-      toast.error(mensagem(err));
+      avisoRapido.erro(mensagem(err));
       return;
     }
     this.desenhar(this.completa);
@@ -68,8 +68,6 @@ export class FormularioRegras extends View {
 
   /** Chamado depois de salvar -- o Atualizador usa para recarregar o app. */
   aposSalvar(mudou) {}
-
-  // ==========================================================================
 
   _ligarFormulario() {
     this.form = this.container.querySelector('[data-role="form"]');
@@ -121,7 +119,7 @@ export class FormularioRegras extends View {
     try {
       this.completa = await this.api.put("/configuracao-sistema", mudou);
       this._preencher(this.completa.valores);
-      toast.success("Salvo. Vale para a equipe inteira a partir de agora.");
+      avisoRapido.sucesso("Salvo. Vale para a equipe inteira a partir de agora.");
       this.aposSalvar(Object.keys(mudou));
     } catch (err) {
       Modal.alert("Não foi possível salvar", mensagem(err), "warning");
@@ -133,5 +131,5 @@ export class FormularioRegras extends View {
 }
 
 export function mensagem(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

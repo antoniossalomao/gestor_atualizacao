@@ -1,13 +1,13 @@
-import { ApiError } from "../../api/ApiClient.js";
+import { ErroApi } from "../../api/ApiPainel.js";
 import { View } from "../../app/View.js";
 import { Modal } from "../../components/Modal.js";
-import { toast } from "../../components/Toast.js";
-import { Drawer } from "../../components/Drawer.js";
+import { avisoRapido } from "../../components/AvisosRapidos.js";
+import { Gaveta } from "../../components/Gaveta.js";
 import { html } from "../../utils/html.js";
-import { iconHtml } from "../../utils/icons.js";
-import { marcarOcupado } from "../../utils/guard.js";
+import { iconeHtml } from "../../utils/icones.js";
+import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { rotuloPapel } from "../../domain/pessoa.js";
-import { cabecalhoSecao } from "../../templates/secao.js";
+import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { legendaPapeis, linhaUsuario } from "../../templates/administracao.js";
 
 /**
@@ -29,15 +29,15 @@ import { legendaPapeis, linhaUsuario } from "../../templates/administracao.js";
 export class UsuariosAdmin extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
-    this._buildDom();
+    this._montarDom();
   }
 
-  _buildDom() {
+  _montarDom() {
     this.container.innerHTML = html`
       ${cabecalhoSecao({
         titulo: "Pessoas e permissões",
         descricao: "Quem entra no sistema, papéis de acesso e ações de conta.",
-        acoes: html`<button type="button" class="btn btn--accent" data-action="nova">${iconHtml("plus")} Nova conta</button>`,
+        acoes: html`<button type="button" class="btn btn--accent" data-action="nova">${iconeHtml("plus")} Nova conta</button>`,
       })}
       <div class="admin-grade">
         <div class="card secao-card">
@@ -47,7 +47,7 @@ export class UsuariosAdmin extends View {
           </table>
         </div>
         <aside class="card secao-card secao-card--lateral">
-          <h3 class="card__title">O que cada papel pode</h3>
+          ${tituloCartao({ titulo: "O que cada papel pode" })}
           ${legendaPapeis()}
         </aside>
       </div>
@@ -73,7 +73,7 @@ export class UsuariosAdmin extends View {
 
     this.lista = this.container.querySelector('[data-role="lista"]');
     this.form = this.container.querySelector('[data-role="form-nova"]');
-    this.drawer = new Drawer(this.form, { titulo: "Nova conta", descricao: "A pessoa entra com o usuário e a senha definidos aqui." });
+    this.drawer = new Gaveta(this.form, { titulo: "Nova conta", descricao: "A pessoa entra com o usuário e a senha definidos aqui." });
 
     this.container.querySelector('[data-action="nova"]').addEventListener("click", () => {
       this.form.reset();
@@ -99,7 +99,7 @@ export class UsuariosAdmin extends View {
       this.usuarios = await this.api.get("/usuarios");
     } catch (err) {
       if (err?.cancelled) return;
-      toast.error(mensagem(err));
+      avisoRapido.erro(mensagem(err));
       return;
     }
     this._desenhar();
@@ -129,7 +129,7 @@ export class UsuariosAdmin extends View {
       await this.api.post("/usuarios", dados);
       this.drawer.marcarLimpa();
       await this.drawer.fechar({ forcar: true });
-      toast.success(`Conta de "${dados.nome}" criada como ${rotuloPapel(dados.role)}.`);
+      avisoRapido.sucesso(`Conta de "${dados.nome}" criada como ${rotuloPapel(dados.role)}.`);
       await this.refresh();
     } catch (err) {
       Modal.alert("Não foi possível criar a conta", mensagem(err), "warning");
@@ -157,7 +157,7 @@ export class UsuariosAdmin extends View {
     select.disabled = true;
     try {
       await this.api.put(`/usuarios/${u.id}`, { role: novo });
-      toast.success(`"${u.nome}" agora é ${rotuloPapel(novo)}. Ele precisa entrar de novo para valer.`);
+      avisoRapido.sucesso(`"${u.nome}" agora é ${rotuloPapel(novo)}. Ele precisa entrar de novo para valer.`);
       await this.refresh();
     } catch (err) {
       select.value = u.role;
@@ -178,7 +178,7 @@ export class UsuariosAdmin extends View {
     const liberar = marcarOcupado(botao);
     try {
       await this.api.delete(`/usuarios/${u.id}`);
-      toast.success(`Acesso de "${u.nome}" removido.`);
+      avisoRapido.sucesso(`Acesso de "${u.nome}" removido.`);
       await this.refresh();
     } catch (err) {
       liberar();
@@ -193,5 +193,5 @@ export class UsuariosAdmin extends View {
 }
 
 function mensagem(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

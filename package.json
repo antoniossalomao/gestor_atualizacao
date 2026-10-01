@@ -1,6 +1,6 @@
 {
   "name": "gestor-de-atualizacoes",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Gestor de Atualizacoes -- painel web (servidor Express + SQLite e cliente sem build)",
   "scripts": {
@@ -13,7 +13,6 @@
     "check:server": "tsc -p server --noEmit",
     "test:server": "npm test --prefix server",
     "test:client": "node --experimental-vm-modules --test client/tests/*.test.mjs",
-    "test:navegador": "node --test --test-concurrency=1 navegador/*.test.mjs",
     "resetar-senha": "npm run resetar-senha --prefix server"
   },
   "engines": {

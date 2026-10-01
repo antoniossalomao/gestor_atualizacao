@@ -1,5 +1,5 @@
 /*
- * P02 -- proteção CSRF (docs/MELHORIAS.md, middlewares/protecaoCsrf.js).
+ * Proteção CSRF (ADR-0011, middlewares/protecaoCsrf.js).
  *
  * O que erra em silêncio se quebrar, e por isso tem teste:
  * - uma escrita com cookie e sem token passar (a proteção não protege nada);
@@ -19,13 +19,13 @@ const path = require("node:path");
 const os = require("node:os");
 const ExcelJS = require("exceljs");
 
-const { Server } = require("../src/Server");
+const { Servidor } = require("../src/Servidor");
 
 const SENHA = "senha-de-teste-123";
 
 async function subirServidor() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-csrf-"));
-  const server = new Server({
+  const server = new Servidor({
     port: 0,
     host: "127.0.0.1",
     dbPath: path.join(tmpDir, "gestao.db"),
@@ -110,7 +110,7 @@ test("Proteção CSRF", async (t) => {
     const antes = clientes();
     const r = await pedir("/clientes", { metodo: "POST", cookie: admin.cookie, corpo: { nome: "Sem Token" } });
     assert.equal(r.status, 403);
-    assert.equal(r.corpo.codigo, "csrf", "o ApiClient distingue esta recusa de uma falta de permissão por aqui");
+    assert.equal(r.corpo.codigo, "csrf", "o ApiPainel distingue esta recusa de uma falta de permissão por aqui");
     assert.match(r.corpo.error, /Recarregue a página/);
     assert.equal(clientes(), antes);
   });
@@ -139,7 +139,7 @@ test("Proteção CSRF", async (t) => {
     assert.equal(del.status, 403);
     const patch = await pedir("/sistemas/1/classificacao", { metodo: "PATCH", cookie: admin.cookie, corpo: {} });
     assert.equal(patch.status, 403);
-    assert.equal(server.db.clientes.getById(idCliente)?.nome, "Mercado", "nada mudou");
+    assert.equal(server.db.clientes.obterPorId(idCliente)?.nome, "Mercado", "nada mudou");
   });
 
   await t.test("upload (multipart) sem token é recusado antes de ser lido; com token, importa", async () => {
@@ -178,7 +178,7 @@ test("Proteção CSRF", async (t) => {
     assert.equal(r.status, 200);
     assert.ok(r.token);
     assert.notEqual(r.token, admin.token, "sessão nova, token novo");
-    // O token velho não vale na sessão nova: é o caso que o ApiClient resolve
+    // O token velho não vale na sessão nova: é o caso que o ApiPainel resolve
     // buscando o atual e repetindo o pedido.
     const velho = await pedir("/clientes", { metodo: "POST", cookie: r.cookie, token: admin.token, corpo: { nome: "Token Velho" } });
     assert.equal(velho.status, 403);

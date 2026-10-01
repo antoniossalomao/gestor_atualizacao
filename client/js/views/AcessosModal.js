@@ -1,10 +1,11 @@
-import { ApiError } from "../api/ApiClient.js";
+import { ErroApi } from "../api/ApiPainel.js";
 import { Modal } from "../components/Modal.js";
-import { toast } from "../components/Toast.js";
-import { icon } from "../utils/icons.js";
-import { escapeHtml, copyToClipboard } from "../utils/html.js";
-import { marcarOcupado } from "../utils/guard.js";
-import { emptyState } from "../components/EmptyState.js";
+import { avisoRapido } from "../components/AvisosRapidos.js";
+import { iconeSvg } from "../utils/icones.js";
+import { escaparHtml } from "../utils/html.js";
+import { copiarParaAreaDeTransferencia } from "../components/areaDeTransferencia.js";
+import { marcarOcupado } from "../components/botaoOcupado.js";
+import { estadoVazio } from "../components/estadoVazio.js";
 
 /**
  * Janela flutuante com os acessos remotos (AnyDesk / Suporte Bredas) das
@@ -14,7 +15,7 @@ import { emptyState } from "../components/EmptyState.js";
  * cima da tela, não uma aba fixa.
  */
 export class AcessosModal {
-  /** @param {import('../api/ApiClient').ApiClient} api @param {{id:number, nome:string}} cliente */
+  /** @param {import('../api/ApiPainel').ApiPainel} api @param {{id:number, nome:string}} cliente */
   constructor(api, cliente) {
     this.api = api;
     this.cliente = cliente;
@@ -27,11 +28,11 @@ export class AcessosModal {
     this.close = close;
 
     box.innerHTML = `
-      <h3 class="modal-box__title" id="acessos-titulo">Acessos — ${escapeHtml(this.cliente.nome)}</h3>
+      <h3 class="modal-box__title" id="acessos-titulo">Acessos — ${escaparHtml(this.cliente.nome)}</h3>
       <p class="modal-box__message">AnyDesk e Suporte Bredas de cada máquina deste cliente.</p>
       <div class="users-list" data-role="list"></div>
       <button type="button" class="btn btn--small" data-action="toggle-form" aria-expanded="false" aria-controls="nova-maquina">
-        ${icon("plus")} Nova Máquina
+        ${iconeSvg("plus")} Nova Máquina
       </button>
       <form class="users-new" id="nova-maquina" data-role="form" hidden>
         <div class="form-grid form-grid--2">
@@ -67,26 +68,26 @@ export class AcessosModal {
 
     this.toggleBtn.addEventListener("click", () => {
       const visible = !this.form.hidden;
-      if (visible) this._resetForm();
-      else this._toggleForm(true);
+      if (visible) this._reiniciarFormulario();
+      else this._alternarFormulario(true);
     });
-    this.cancelarEdicaoBtn.addEventListener("click", () => this._resetForm());
+    this.cancelarEdicaoBtn.addEventListener("click", () => this._reiniciarFormulario());
     this.form.addEventListener("submit", (e) => {
       e.preventDefault();
-      this._submit();
+      this._enviar();
     });
 
-    await this._reload();
+    await this._recarregar();
   }
 
-  async _reload() {
+  async _recarregar() {
     const acessos = await this.api.get(`/clientes/${this.cliente.id}/acessos`);
     const list = this.box.querySelector('[data-role="list"]');
     list.replaceChildren();
 
     if (acessos.length === 0) {
       list.appendChild(
-        emptyState({
+        estadoVazio({
           titulo: "Nenhuma máquina cadastrada",
           descricao: "Use o formulário abaixo para adicionar a primeira.",
           icone: "acessos",
@@ -148,19 +149,19 @@ export class AcessosModal {
     const copiar = document.createElement("button");
     copiar.type = "button";
     copiar.className = "btn btn--small btn--ghost acesso-linha__copiar";
-    copiar.innerHTML = icon("copiar");
+    copiar.innerHTML = iconeSvg("copiar");
     copiar.setAttribute("aria-label", `Copiar ${rotulo}`);
     copiar.title = `Copiar ${rotulo}`;
     copiar.addEventListener("click", async () => {
-      const ok = await copyToClipboard(valor);
-      toast[ok ? "success" : "error"](ok ? `${rotulo} copiado.` : "Não foi possível copiar.");
+      const ok = await copiarParaAreaDeTransferencia(valor);
+      avisoRapido[ok ? "sucesso" : "erro"](ok ? `${rotulo} copiado.` : "Não foi possível copiar.");
     });
     linha.appendChild(copiar);
 
     return linha;
   }
 
-  _toggleForm(visivel) {
+  _alternarFormulario(visivel) {
     this.form.hidden = !visivel;
     this.toggleBtn.setAttribute("aria-expanded", String(visivel));
     if (visivel) this.fields.maquina.focus();
@@ -175,8 +176,8 @@ export class AcessosModal {
     this.salvarBtn.textContent = "Salvar Máquina";
     this.cancelarEdicaoBtn.hidden = false;
     this.toggleBtn.textContent = "";
-    this.toggleBtn.innerHTML = `${icon("minus")} Nova Máquina`;
-    this._toggleForm(true);
+    this.toggleBtn.innerHTML = `${iconeSvg("minus")} Nova Máquina`;
+    this._alternarFormulario(true);
     this._marcarEdicao();
   }
 
@@ -187,24 +188,23 @@ export class AcessosModal {
     }
   }
 
-  _resetForm() {
+  _reiniciarFormulario() {
     this.editingId = null;
     for (const input of Object.values(this.fields)) input.value = "";
     this.salvarBtn.textContent = "Adicionar Máquina";
     this.cancelarEdicaoBtn.hidden = true;
-    this.toggleBtn.innerHTML = `${icon("plus")} Nova Máquina`;
-    this._toggleForm(false);
+    this.toggleBtn.innerHTML = `${iconeSvg("plus")} Nova Máquina`;
+    this._alternarFormulario(false);
     this._marcarEdicao();
   }
 
-  async _submit() {
+  async _enviar() {
     const maquina = this.fields.maquina.value.trim();
     if (!maquina) {
-      Modal.alert("Validação", "Campo 'Máquina' é obrigatório.", "warning");
-      this.fields.maquina.focus();
+      Modal.alert("Validação", "Campo 'Máquina' é obrigatório.", "warning").then(() => this.fields.maquina.focus());
       return;
     }
-    const data = {
+    const dados = {
       maquina,
       anydesk: this.fields.anydesk.value.trim(),
       suporteBredas: this.fields.suporteBredas.value.trim(),
@@ -214,16 +214,16 @@ export class AcessosModal {
     const liberar = marcarOcupado(this.salvarBtn);
     try {
       if (this.editingId == null) {
-        await this.api.post(`/clientes/${this.cliente.id}/acessos`, data);
-        toast.success(`Máquina "${maquina}" adicionada.`);
+        await this.api.post(`/clientes/${this.cliente.id}/acessos`, dados);
+        avisoRapido.sucesso(`Máquina "${maquina}" adicionada.`);
       } else {
-        await this.api.put(`/clientes/acessos/${this.editingId}`, data);
-        toast.success(`Máquina "${maquina}" atualizada.`);
+        await this.api.put(`/clientes/acessos/${this.editingId}`, dados);
+        avisoRapido.sucesso(`Máquina "${maquina}" atualizada.`);
       }
-      this._resetForm();
-      await this._reload();
+      this._reiniciarFormulario();
+      await this._recarregar();
     } catch (err) {
-      Modal.alert("Validação", errorMessage(err), "warning");
+      Modal.alert("Validação", mensagemDeErro(err), "warning");
     } finally {
       liberar();
     }
@@ -240,15 +240,15 @@ export class AcessosModal {
     const liberar = marcarOcupado(botao);
     try {
       await this.api.delete(`/clientes/acessos/${acesso.id}`);
-      await this._reload();
-      toast.success(`Máquina "${acesso.maquina}" removida.`);
+      await this._recarregar();
+      avisoRapido.sucesso(`Máquina "${acesso.maquina}" removida.`);
     } catch (err) {
       liberar();
-      Modal.alert("Erro", errorMessage(err), "error");
+      Modal.alert("Erro", mensagemDeErro(err), "error");
     }
   }
 }
 
-function errorMessage(err) {
-  return err instanceof ApiError ? err.message : "Ocorreu um erro inesperado.";
+function mensagemDeErro(err) {
+  return err instanceof ErroApi ? err.message : "Ocorreu um erro inesperado.";
 }

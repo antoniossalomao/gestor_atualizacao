@@ -28,7 +28,7 @@ export function primeiroDiaDoMes(hoje = new Date()) {
 }
 
 /**
- * Compara atendimentos realizados até hoje com o mesmo período do mês
+ * Compara atualizações realizadas até hoje com o mesmo período do mês
  * anterior (o servidor já recorta os dois). Sem base anterior, não há %.
  *
  * @param {number} totalAtual
@@ -39,4 +39,34 @@ export function tendenciaMensal(totalAtual, totalAnteriorComparavel) {
   if (!Number.isFinite(totalAtual) || !Number.isFinite(totalAnteriorComparavel) || totalAnteriorComparavel <= 0) return null;
   const pct = Math.round(((totalAtual - totalAnteriorComparavel) / totalAnteriorComparavel) * 100);
   return { pct, tendencia: pct > 0 ? "alta" : pct < 0 ? "baixa" : "neutra" };
+}
+
+/**
+ * Barras do gráfico "Atualizações por sistema este mês" (A08): até `limite`
+ * sistemas pelo nome, na ordem que o servidor mandou (decrescente), e o resto
+ * somado numa barra "Outros" -- com a lista dos que ela junta, para o clique
+ * e a dica dizerem o que há dentro.
+ *
+ * @param {Array<{label: string, total: number, anterior?: number}>} lista
+ * @param {number} [limite]
+ * @returns {Array<{label: string, total: number, anterior: number, diferenca: number, sistemas: string[], outros: boolean}>}
+ */
+export function barrasPorSistema(lista, limite = 8) {
+  const barra = (label, total, anterior, sistemas, outros = false) => ({ label, total, anterior, diferenca: total - anterior, sistemas, outros });
+  const itens = (lista || []).map((i) => barra(i.label, i.total, i.anterior ?? 0, [i.label]));
+  if (itens.length <= limite) return itens;
+  const resto = itens.slice(limite);
+  const soma = (campo) => resto.reduce((acc, i) => acc + i[campo], 0);
+  return [...itens.slice(0, limite), barra("Outros", soma("total"), soma("anterior"), resto.map((i) => i.label), true)];
+}
+
+/**
+ * "▲ 3", "▼ 2" ou "=" contra o mesmo período do mês anterior.
+ * @param {number} diferenca
+ * @returns {{texto: string, tendencia: "alta"|"baixa"|"neutra"}}
+ */
+export function variacaoMesAnterior(diferenca) {
+  if (diferenca > 0) return { texto: `▲ ${diferenca}`, tendencia: "alta" };
+  if (diferenca < 0) return { texto: `▼ ${Math.abs(diferenca)}`, tendencia: "baixa" };
+  return { texto: "=", tendencia: "neutra" };
 }

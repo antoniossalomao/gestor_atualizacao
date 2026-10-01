@@ -1,12 +1,12 @@
 /*
- * Importação de planilha (AtualizacaoService.previaImportacao / importXlsx).
+ * Importação de planilha (AtualizacaoService.previaImportacao / importarXlsx).
  *
  * Erra em silêncio de várias formas, e cada teste abaixo é uma delas:
  *  - a prévia gravar alguma coisa (nem que seja um sistema novo no catálogo);
  *  - uma data fora do formato entrar e bagunçar ordenação e situação;
  *  - importar o mesmo arquivo duas vezes duplicar o histórico;
  *  - uma falha no meio deixar metade do lote dentro;
- *  - a planilha receber a versão oficial de HOJE num atendimento antigo.
+ *  - a planilha receber a versão oficial de HOJE numa atualização antiga.
  */
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -15,8 +15,8 @@ const path = require("node:path");
 const os = require("node:os");
 const ExcelJS = require("exceljs");
 
-const { Database } = require("../src/database/Database");
-const { Server } = require("../src/Server");
+const { BancoDeDados } = require("../src/database/BancoDeDados");
+const { Servidor } = require("../src/Servidor");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { AtualizacaoService } = require("../src/services/AtualizacaoService");
 
@@ -31,8 +31,8 @@ async function planilha(linhas) {
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-import-"));
-  const db = new Database(path.join(tmpDir, "gestao.db"));
-  const servico = new AtualizacaoService(db, new HistoricoService(db), { notifyAtualizacao: async () => {} });
+  const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));
+  const servico = new AtualizacaoService(db, new HistoricoService(db), { avisarAtualizacao: async () => {} });
   db.clientes.insert("", "Mercado Central", "Araxá", [db.sistemas.resolver("B_NFe").id], "");
   const cleanup = () => {
     try {
@@ -73,7 +73,7 @@ test("Importação - prévia e aplicação", async (t) => {
     });
 
     await t.test("aplicar importa só as válidas, pula a duplicada, e registra no Histórico", async () => {
-      const r = await env.servico.importXlsx(arquivo, USUARIO, { pularDuplicadas: true });
+      const r = await env.servico.importarXlsx(arquivo, USUARIO, { pularDuplicadas: true });
       assert.equal(r.inserted, 2);
       assert.equal(r.ignoradas, 3);
       assert.deepEqual(r.naoCadastrados, ["Cliente Novo"]);
@@ -85,13 +85,13 @@ test("Importação - prévia e aplicação", async (t) => {
     await t.test("reimportar o mesmo arquivo não duplica", async () => {
       const p = await env.servico.previaImportacao(arquivo);
       assert.equal(p.duplicadas, 3);
-      const r = await env.servico.importXlsx(arquivo, USUARIO, { pularDuplicadas: true });
+      const r = await env.servico.importarXlsx(arquivo, USUARIO, { pularDuplicadas: true });
       assert.equal(r.inserted, 0);
       assert.equal(env.db.atualizacoes.count(), 2);
     });
 
     await t.test("sem pular duplicadas, elas entram (escolha explícita)", async () => {
-      const r = await env.servico.importXlsx(arquivo, USUARIO, { pularDuplicadas: false });
+      const r = await env.servico.importarXlsx(arquivo, USUARIO, { pularDuplicadas: false });
       assert.equal(r.inserted, 3);
     });
   } finally {
@@ -99,11 +99,11 @@ test("Importação - prévia e aplicação", async (t) => {
   }
 });
 
-test("Importação - não aplica a versão oficial de hoje a atendimento antigo", async () => {
+test("Importação - não aplica a versão oficial de hoje a atualização antiga", async () => {
   const env = ambiente();
   try {
     env.db.sistemas.salvarVersao("B_NFe", "01/08/2026");
-    await env.servico.importXlsx(await planilha([CABECALHO, ["Mercado Central", "B_NFe", "", "Antonio", "10/08/2026", "", "", ""]]), USUARIO);
+    await env.servico.importarXlsx(await planilha([CABECALHO, ["Mercado Central", "B_NFe", "", "Antonio", "10/08/2026", "", "", ""]]), USUARIO);
     const id = env.db.conn.prepare("SELECT MAX(id) AS id FROM atualizacoes").get().id;
     assert.deepEqual(env.db.atualizacoes.sistemasDe(id).map((s) => s.versao ?? null), [null]);
     assert.equal(env.db.conn.prepare("SELECT versoes_por_sistema FROM atualizacoes WHERE id = ?").get(id).versoes_por_sistema, 0);
@@ -123,7 +123,7 @@ test("Importação - uma falha no meio não deixa metade do lote gravada", async
       if (chamadas === 3) throw new Error("disco cheio");
       return original(...args);
     };
-    await assert.rejects(env.servico.importXlsx(arquivo, USUARIO), /disco cheio/);
+    await assert.rejects(env.servico.importarXlsx(arquivo, USUARIO), /disco cheio/);
     assert.equal(env.db.atualizacoes.count(), 0);
   } finally {
     env.cleanup();
@@ -148,7 +148,7 @@ test("Importação - erros de arquivo e de coluna", async (t) => {
       assert.equal(p.validas, 1);
     });
     await t.test("sem cabeçalho, vale a ordem fixa -- e a PRIMEIRA linha já é dado", async () => {
-      // Antes a leitura começava sempre na linha 2: o primeiro atendimento de
+      // Antes a leitura começava sempre na linha 2: a primeira atualização de
       // uma planilha sem cabeçalho sumia, e os dados dele apareciam como
       // "colunas ignoradas".
       const p = await env.servico.previaImportacao(await planilha([
@@ -169,7 +169,7 @@ test("Importação - erros de arquivo e de coluna", async (t) => {
 
 test("Importação - permissões da prévia e da importação", async (t) => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-import-http-"));
-  const server = new Server({ port: 0, dbPath: path.join(tmpDir, "gestao.db"), sessionSecret: "x", sessionSecure: false, agentApiToken: "t" });
+  const server = new Servidor({ port: 0, dbPath: path.join(tmpDir, "gestao.db"), sessionSecret: "x", sessionSecure: false, agentApiToken: "t" });
   await server.start();
   const base = `http://127.0.0.1:${server.httpServer.address().port}/api`;
   t.after(async () => {
@@ -216,7 +216,7 @@ test("Importação - permissões da prévia e da importação", async (t) => {
 test("Importação - duplicidade reconhece o sistema pelo catálogo e ignora a ordem", async () => {
   const env = ambiente();
   try {
-    await env.servico.importXlsx(await planilha([CABECALHO, ["Mercado Central", "B_Vendas, B_NFe", "", "", "10/08/2026", "", "", ""]]), USUARIO);
+    await env.servico.importarXlsx(await planilha([CABECALHO, ["Mercado Central", "B_Vendas, B_NFe", "", "", "10/08/2026", "", "", ""]]), USUARIO);
     // "Vendas" é o B_Vendas do catálogo, e "NFe, Vendas" é o mesmo par em
     // outra ordem: as duas linhas repetem o que já foi gravado.
     const p = await env.servico.previaImportacao(await planilha([
@@ -235,7 +235,7 @@ test("Importação - nada importado não vira registro de criação na Auditoria
   const env = ambiente();
   try {
     const antes = env.db.historico.list({}).total;
-    const r = await env.servico.importXlsx(await planilha([CABECALHO, ["Loja", "B_NFe", "", "", "2026-08-10", "", "", ""]]), USUARIO);
+    const r = await env.servico.importarXlsx(await planilha([CABECALHO, ["Loja", "B_NFe", "", "", "2026-08-10", "", "", ""]]), USUARIO);
     assert.equal(r.inserted, 0);
     assert.equal(env.db.historico.list({}).total, antes);
   } finally {

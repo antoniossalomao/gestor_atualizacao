@@ -1,6 +1,6 @@
 import { html, confiavel } from "../utils/html.js";
-import { iconHtml } from "../utils/icons.js";
-import { formatarBytes, formatarDataHora, tempoRelativo } from "../utils/date.js";
+import { iconeHtml } from "../utils/icones.js";
+import { formatarBytes, formatarDataHora, tempoRelativo } from "../utils/data.js";
 import { rotuloPapel, descricaoPapel } from "../domain/pessoa.js";
 import { formatarTempoAtivo, papelNormalizado } from "../domain/administracao.js";
 
@@ -98,7 +98,7 @@ export function linhaBackup(b) {
     }</td>
     <td data-label="" class="admin-tabela__acoes">
       <a class="btn btn--small btn--ghost" href="/api/backups/${encodeURIComponent(b.arquivo)}/download" download="${b.arquivo}">
-        ${iconHtml("download")} Baixar
+        ${iconeHtml("download")} Baixar
       </a>
       <button type="button" class="btn btn--small btn--danger" data-action="restaurar" data-arquivo="${b.arquivo}"
               ${b.integro === false && confiavel('disabled title="Cópia corrompida não pode ser restaurada."')}>Restaurar</button>
@@ -170,13 +170,13 @@ function pacotes(p) {
 }
 
 /**
- * @param {{icone: Parameters<typeof iconHtml>[0], titulo: string, selo: [string, string], linhas: Array<[string, unknown]>}} b
+ * @param {{icone: Parameters<typeof iconeHtml>[0], titulo: string, selo: [string, string], linhas: Array<[string, unknown]>}} b
  */
 function blocoSaude({ icone, titulo, selo, linhas }) {
   return html`
     <section class="admin-saude__bloco">
       <header>
-        <span class="admin-saude__icone">${iconHtml(icone)}</span>
+        <span class="admin-saude__icone">${iconeHtml(icone)}</span>
         <h3>${titulo}</h3>
         <span class="badge badge--${selo[1]}">${selo[0]}</span>
       </header>
