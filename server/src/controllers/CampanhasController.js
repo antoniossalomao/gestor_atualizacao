@@ -63,17 +63,6 @@ class CampanhasController {
       res.status(204).end();
     } catch (err) { next(err); }
   };
-
-  exportarXlsx = async (req, res, next) => {
-    try {
-      const { buffer, campanha } = await this.campanhaService.exportarPendentesXlsx(req.params.id);
-      // Nome de arquivo identificável e só com caracteres seguros no cabeçalho.
-      const sufixo = `${campanha.sistema}-${campanha.versaoAlvo}`.replace(/[^a-zA-Z0-9_-]+/g, "-");
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", `attachment; filename="campanha-pendentes-${sufixo}.xlsx"`);
-      res.send(Buffer.from(buffer));
-    } catch (err) { next(err); }
-  };
 }
 
 module.exports = { CampanhasController };

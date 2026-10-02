@@ -1,5 +1,3 @@
-const ExcelJS = require("exceljs");
-
 const { OPCOES_STATUS } = require("../config/constantes");
 const { dataValida } = require("./validacao");
 const { ErroDeValidacao, ErroNaoEncontrado } = require("../shared/erros");
@@ -10,9 +8,6 @@ const { situacaoDoSistema, contaParaVersao } = require("./situacaoVersao");
 const STATUS_CONCLUIDO = OPCOES_STATUS[OPCOES_STATUS.length - 1];
 /** Status em que a tarefa não encaminha mais o cliente (ver abertasComCliente). */
 const STATUS_ENCERRADOS = [STATUS_CONCLUIDO, "Sem resposta"];
-
-/** Situação de um cliente DENTRO da campanha. Não se sobrepõem: somam o total. */
-const SITUACOES = { concluido: "Concluído", agendado: "Já agendado", pendente: "Pendente" };
 
 /**
  * Campanhas de atualização (E11): "todo cliente de B_NFe precisa estar na
@@ -183,39 +178,6 @@ class CampanhaService {
     this.historico.registrar(usuario, "excluir", "campanha", `Campanha "${campanha.titulo}"`);
   }
 
-  /** Planilha com quem ainda falta (pendentes e já agendados). */
-  async exportarPendentesXlsx(id) {
-    const campanha = this.detalhe(id);
-    const faltam = campanha.clientes.filter((c) => c.situacao !== "concluido");
-    const workbook = new ExcelJS.Workbook();
-    const ws = workbook.addWorksheet("Pendentes");
-    const colunas = ["Cliente", "Código", "Cidade", "Situação", "Última atualização", "Versão recebida", "Agendado para", "Responsável da tarefa"];
-    ws.addRow(colunas);
-    for (const c of faltam) {
-      ws.addRow([c.nome, c.codigo, c.cidade, SITUACOES[c.situacao], c.ultima || "Nunca", c.versaoRecebida || "Não informada", c.agendamento?.data || "", c.agendamento?.responsavel || ""]);
-    }
-    ws.views = [{ state: "frozen", ySplit: 1 }];
-    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(ws.rowCount, 1), column: colunas.length } };
-    ws.columns.forEach((col, i) => { col.width = [36, 12, 22, 16, 20, 18, 16, 24][i]; });
-    ws.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
-    ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF24476B" } };
-    const meta = workbook.addWorksheet("Campanha");
-    meta.addRows([
-      ["Campanha", campanha.titulo],
-      ["Sistema", campanha.sistema],
-      ["Versão-alvo", campanha.versaoAlvo],
-      ["Prazo", campanha.prazo || "Sem prazo"],
-      ["Público", descreverPublico(campanha)],
-      ["Clientes na campanha", campanha.totalClientes],
-      ["Atualizados", campanha.atendidos],
-      ["Já agendados", campanha.agendados],
-      ["Pendentes", campanha.pendentes],
-      ["Gerado em", new Date().toLocaleString("pt-BR")],
-    ]);
-    meta.columns = [{ width: 24 }, { width: 40 }];
-    return { buffer: await workbook.xlsx.writeBuffer(), campanha };
-  }
-
   _achar(id) {
     const campanha = this.db.campanhas.find(Number(id));
     if (!campanha) throw new ErroNaoEncontrado("Esta campanha não existe mais.");
@@ -353,15 +315,10 @@ class CampanhaService {
   }
 }
 
-/** "Clientes escolhidos", a cidade ou "Todas as cidades" -- o texto do público na planilha. */
-function descreverPublico(campanha) {
-  return campanha.publico === "escolhidos" ? "Clientes escolhidos" : campanha.cidade || "Todas as cidades";
-}
-
 function prazoPassou(prazo, hoje = new Date()) {
   const [d, m, a] = prazo.split("/").map(Number);
   const fimDoPrazo = new Date(a, m - 1, d, 23, 59, 59, 999);
   return hoje > fimDoPrazo;
 }
 
-module.exports = { CampanhaService, SITUACOES_CAMPANHA: SITUACOES };
+module.exports = { CampanhaService };

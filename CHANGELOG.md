@@ -15,6 +15,8 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Campanhas, saiu "Exportar pendentes" (02/10/2026):** o botão, a rota `GET /api/campanhas/:id/export` e a planilha (`.xlsx`) foram removidos, a pedido da equipe. Quem falta continua na tabela da campanha, com os filtros e a busca. A exportação de outras telas (Atualizações, Clientes etc.) não mudou.
+
 - **Campanhas, adicionar e retirar cliente no detalhe (02/10/2026):** numa campanha de clientes escolhidos, "Adicionar clientes" (mesma lista com busca e filtros, sem quem já está) e um "×" em cada linha ("Retirar da campanha") evitam abrir "Editar" e refazer a lista inteira.
   - Só em campanha de clientes escolhidos e aberta: a de "todos" não tem lista (edite o público) e a encerrada tem o placar congelado (reabra antes). A campanha não fica sem nenhum cliente. Retirar não mexe no cadastro nem nas atualizações do cliente.
   - Rotas `POST /api/campanhas/:id/clientes` e `DELETE /api/campanhas/:id/clientes/:clienteId`, só Operador e Admin; o servidor confere que o cliente usa o sistema.
@@ -23,7 +25,7 @@ Para o agente C#, o equivalente é
   - O "já cumpre" usa a mesma regra da campanha, contra a versão-alvo digitada no formulário; sem uma data completa e real o filtro fica desabilitado (o servidor devolve `atendido: null`, e não "pendente" para todos). Seletor com uma opção só não aparece.
 
 - **Campanha só para clientes escolhidos (02/10/2026):** o formulário de campanha ganhou "Quem entra na campanha": todos os clientes do sistema (como sempre, com a cidade opcional) ou só os clientes marcados numa lista com busca por nome, código ou cidade, "Marcar os visíveis" e "Limpar". Serve para um piloto ou para quem uma Nota Técnica atinge, sem criar uma campanha do sistema inteiro e ignorar a maioria.
-  - Continua valendo a baixa automática pela atualização, o "já agendado" por tarefa do mesmo sistema e o placar congelado no encerramento. A planilha de pendentes traz o público na aba "Campanha".
+  - Continua valendo a baixa automática pela atualização, o "já agendado" por tarefa do mesmo sistema e o placar congelado no encerramento.
   - Dá para trocar a lista depois de criada (a meta, sistema e versão-alvo, continua fixa). Escolher clientes substitui a cidade.
   - Cliente escolhido que perde o sistema no cadastro sai da lista; se todos saírem, a campanha fica vazia (0 de 0), e não vira "todos". Migração 7; decisão na [ADR-0009](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0009).
 

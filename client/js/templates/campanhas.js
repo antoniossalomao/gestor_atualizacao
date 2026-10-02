@@ -82,7 +82,6 @@ export function cabecalhoCampanha(c, usuario) {
         ${c.descricao ? html`<p class="campanha__descricao">${c.descricao}</p>` : ""}
       </div>
       <div class="campanha__acoes">
-        <button type="button" class="btn btn--small" data-action="exportar">${iconeHtml("download")} Exportar pendentes (.xlsx)</button>
         ${podeEditar && !encerrada && c.publico === "escolhidos" ? html`<button type="button" class="btn btn--small" data-action="adicionar">${iconeHtml("plus")} Adicionar clientes</button>` : ""}
         ${podeEditar && !encerrada ? html`<button type="button" class="btn btn--small" data-action="editar">${iconeHtml("editar")} Editar</button>` : ""}
         ${podeEditar ? html`<button type="button" class="btn btn--small" data-action="${encerrada ? "reabrir" : "encerrar"}">${encerrada ? "Reabrir" : "Encerrar"}</button>` : ""}

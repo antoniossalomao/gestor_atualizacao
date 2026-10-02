@@ -7,7 +7,6 @@ import { ErroApi } from "../api/ApiPainel.js";
 import { prefs } from "../app/preferencias.js";
 import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { dataBRValida, mascaraDataBR, hojeBR } from "../utils/data.js";
-import { baixarBlob } from "../components/arquivos.js";
 import { html } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
 import { comBotaoOcupado } from "../components/botaoOcupado.js";
@@ -87,7 +86,7 @@ export class CampanhasView extends View {
     this.table = new TabelaOrdenavel(this.tableEl, {
       // Ao lado da lista de campanhas não cabem sete colunas: código e
       // cidade vão embaixo do nome, a versão recebida embaixo da data (a
-      // busca e a planilha continuam com tudo). Só as colunas curtas têm
+      // busca continua com tudo). Só as colunas curtas têm
       // largura fixa; o nome fica com o resto.
       columns: [
         { key: "nome", label: "Cliente", title: (row) => row.nome, render: (row) => no(celulaClienteCampanha(row)) },
@@ -225,7 +224,6 @@ export class CampanhasView extends View {
     if (!botao || !this.detalhe) return;
     const c = this.detalhe;
     const acao = botao.dataset.action;
-    if (acao === "exportar") return comBotaoOcupado(botao, () => this._exportar())();
     if (acao === "editar") return this._abrirFormulario(c);
     if (acao === "adicionar") return this._abrirAdicionar(c);
     if (acao === "encerrar") {
@@ -249,16 +247,6 @@ export class CampanhasView extends View {
       Modal.alert("Não foi possível concluir", mensagem(err), "error");
       this.cache?.invalidar();
       await this.refresh();
-    }
-  }
-
-  async _exportar() {
-    const c = this.detalhe;
-    try {
-      const blob = await this.api.getFile(`/campanhas/${c.id}/export`);
-      baixarBlob(blob, `campanha-pendentes-${c.sistema}-${c.versaoAlvo.replaceAll("/", "-")}.xlsx`);
-    } catch (err) {
-      Modal.alert("Erro ao exportar", mensagem(err), "error");
     }
   }
 

@@ -45,7 +45,7 @@ function ambiente() {
   return { db, atualizacoes, agenda, campanhas, cliente, atender, situacao, cleanup };
 }
 
-test("Campanhas - cidade limita público, placar e exportação", async () => {
+test("Campanhas - cidade limita público e placar", async () => {
   const env = ambiente();
   try {
     env.cliente("Loja Marília", ["B_NFe"]);
@@ -54,11 +54,6 @@ test("Campanhas - cidade limita público, placar e exportação", async () => {
     assert.equal(campanha.cidade, "Marília");
     assert.deepEqual(campanha.clientes.map((c) => c.nome), ["Loja Marília"]);
     assert.equal(env.campanhas.list()[0].totalClientes, 1);
-    const exportado = await env.campanhas.exportarPendentesXlsx(campanha.id);
-    const ExcelJS = require("exceljs");
-    const planilha = new ExcelJS.Workbook();
-    await planilha.xlsx.load(exportado.buffer);
-    assert.equal(planilha.getWorksheet("Pendentes").rowCount, 2);
     const editada = env.campanhas.update(campanha.id, { titulo: "Local", cidade: "Bauru" }, USUARIO);
     assert.deepEqual(editada.clientes.map((c) => c.nome), ["Loja Bauru"]);
     assert.throws(() => env.campanhas.create({ titulo: "Inválida", sistema: "B_NFe", versaoAlvo: "25/09/2026", cidade: "Inexistente" }, USUARIO), /cidade cadastrada/);
@@ -147,16 +142,6 @@ test("Campanhas - só para clientes escolhidos", async (t) => {
       env.campanhas.remove(campanha.id, USUARIO);
       assert.equal(env.db.conn.prepare("SELECT COUNT(*) AS n FROM campanha_clientes WHERE campanha_id = ?").get(campanha.id).n, 0);
       assert.equal(env.db.conn.prepare("SELECT COUNT(*) AS n FROM clientes WHERE id = ?").get(a).n, 1);
-    });
-
-    await t.test("a planilha diz que o público é de clientes escolhidos", async () => {
-      const campanha = env.campanhas.create({ ...base, titulo: "Planilha", publico: "escolhidos", clientes: [a] }, USUARIO);
-      const { buffer } = await env.campanhas.exportarPendentesXlsx(campanha.id);
-      const ExcelJS = require("exceljs");
-      const planilha = new ExcelJS.Workbook();
-      await planilha.xlsx.load(buffer);
-      const linhas = planilha.getWorksheet("Campanha").getSheetValues().filter(Boolean);
-      assert.ok(linhas.some(([, rotulo, valor]) => rotulo === "Público" && valor === "Clientes escolhidos"));
     });
 
     await t.test("clientesDoSistema lista só quem tem o sistema, em ordem de nome", () => {
@@ -469,12 +454,6 @@ test("Campanhas - rotas e permissões", async (t) => {
     assert.equal((await pedir(`/campanhas/${id}/encerrar`, { metodo: "PATCH", cookie: operador })).status, 200);
     assert.equal((await pedir(`/campanhas/${id}/reabrir`, { metodo: "PATCH", cookie: operador })).status, 200);
     assert.equal((await pedir(`/campanhas/${id}`, { metodo: "DELETE", cookie: operador })).status, 403);
-  });
-  await t.test("exportação devolve planilha com nome identificável", async () => {
-    const r = await pedir(`/campanhas/${id}/export`, { cookie: consulta });
-    assert.equal(r.status, 200);
-    assert.match(r.tipo, /spreadsheetml/);
-    assert.match(r.disposicao, /campanha-pendentes-B_NFe-25-09-2026\.xlsx/);
   });
   await t.test("candidatos de uma campanha de escolhidos: rota própria, antes do :id", async () => {
     const lista = await pedir("/campanhas/clientes-do-sistema?sistema=B_NFe", { cookie: consulta });

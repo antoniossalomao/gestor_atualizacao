@@ -59,7 +59,7 @@ test("Agendar só para pendente, e nunca para Consulta ou campanha encerrada", (
 
 test("ações da campanha respeitam o papel", () => {
   assert.doesNotMatch(String(cabecalhoCampanha(CAMPANHA, { role: "consulta" })), /data-action="(editar|encerrar|excluir)"/);
-  assert.match(String(cabecalhoCampanha(CAMPANHA, { role: "consulta" })), /data-action="exportar"/);
+  assert.doesNotMatch(String(cabecalhoCampanha(CAMPANHA, { role: "admin" })), /exportar/i, "a exportação de pendentes foi retirada");
   assert.doesNotMatch(String(cabecalhoCampanha(CAMPANHA, { role: "operador" })), /data-action="excluir"/);
   assert.match(String(cabecalhoCampanha(CAMPANHA, { role: "admin" })), /data-action="excluir"/);
   const encerrada = String(cabecalhoCampanha({ ...CAMPANHA, encerradaEm: "2026-09-30T10:00:00Z" }, { role: "operador" }));

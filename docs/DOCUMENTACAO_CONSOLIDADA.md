@@ -1853,6 +1853,8 @@ ficam guardadas; atendido, agendado e pendente seguem calculados.
 - **Diferente da meta, a lista pode ser editada** (trocar quem entra, ou voltar
   para "todos"). Sistema e versão-alvo continuam imutáveis. Encerrar congela o
   placar como antes.
+- **Sem exportação de pendentes** (02/10/2026): a planilha `.xlsx` da campanha
+  saiu a pedido da equipe; a lista de quem falta fica na própria tela.
 - **Quem escolhe vê só candidatos do sistema:** `GET /api/campanhas/clientes-do-sistema`,
   e o servidor recusa id de cliente que não tenha o sistema.
 
@@ -2858,7 +2860,7 @@ Substitui a proposta anterior da Central de pendências. Permite criar metas tem
 - [x] Painel visual executivo: barra de progresso com atendidos, já agendados e pendentes (mesmas cores do card de situação do Resumo), contagens e percentual. Sem clientes, mostra "—" em vez de 0% ou 100%.
 - [x] Tabela de clientes com filtros rápidos (Pendentes, Já agendados, Concluídos, Todos), cada um com a contagem, e busca por nome, código ou cidade.
 - [x] Ações na linha: Agendar (cria a tarefa na hora, com o sistema da campanha, prioridade Alta se houver prazo e a origem no título), gerenciar acessos remotos e abrir a ficha. Agendar só aparece para pendente e para quem pode editar.
-- [x] Exportação em planilha (.xlsx) dos clientes que faltam (pendentes e já agendados), com código, cidade, última atualização, versão recebida e a tarefa; segunda aba com o resumo da campanha.
+- [x] ~~Exportação em planilha (.xlsx) dos clientes que faltam (pendentes e já agendados), com código, cidade, última atualização, versão recebida e a tarefa; segunda aba com o resumo da campanha. (removida em 02/10/2026, a pedido da equipe)~~
 - [x] Ciclo de vida: ativa → encerrada (placar congelado no encerramento) → reabrir, se preciso. Excluir é só do admin e não apaga atualizações nem tarefas. Tudo registrado no Histórico (tipo "Campanha").
 - [x] Estrutura leve no SQLite: migração 4 cria só `campanhas` (a meta). Os clientes saem ao vivo de `cliente_sistemas`; "já agendado" é uma tarefa em aberto do mesmo sistema. Nenhuma tabela de clientes duplicada.
 

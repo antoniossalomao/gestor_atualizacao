@@ -203,7 +203,6 @@ class ApiRouter {
     // Antes de "/campanhas/:id": senão "clientes-do-sistema" seria lido como id.
     api.get("/campanhas/clientes-do-sistema", campanhas.clientesDoSistema);
     api.get("/campanhas/:id", campanhas.get);
-    api.get("/campanhas/:id/export", campanhas.exportarXlsx);
     api.post("/campanhas", exigirPapel("operador", "admin"), campanhas.create);
     api.put("/campanhas/:id", exigirPapel("operador", "admin"), campanhas.update);
     api.post("/campanhas/:id/clientes", exigirPapel("operador", "admin"), campanhas.adicionarClientes);
