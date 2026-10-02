@@ -39,10 +39,12 @@ class CampanhaService {
   /**
    * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
+   * @param {import('./AgendamentoService').AgendamentoService} agendamentos
    */
-  constructor(db, historico) {
+  constructor(db, historico, agendamentos) {
     this.db = db;
     this.historico = historico;
+    this.agendamentos = agendamentos;
   }
 
   /** Campanhas com o placar de cada uma (sem a lista de clientes). */
@@ -152,6 +154,46 @@ class CampanhaService {
     const nome = this.db.clientes.obterPorId(cid)?.nome || `#${cid}`;
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${campanha.titulo}": cliente "${nome}" retirado`);
     return this.detalhe(campanha.id);
+  }
+
+  /**
+   * Cria a tarefa de atualização de quem está pendente: de todos, ou só dos
+   * `clientes` pedidos (o botão "Agendar" da linha). O texto da tarefa e a
+   * prioridade moram aqui, e não na tela, para a linha e o lote não divergirem.
+   *
+   * Só vira tarefa quem está "pendente" AGORA. Pedir um cliente que outra
+   * pessoa acabou de agendar (ou que acabou de ser atendido) não cria nada
+   * para ele, em vez de duplicar a tarefa -- e foi também o que impede um
+   * clique duplo no lote de agendar todo mundo duas vezes.
+   * @param {number|string} id
+   * @param {{clientes?: unknown, data?: string}} [pedido] sem `clientes`: todos os pendentes
+   * @returns {{criadas: number, clientes: string[]}}
+   */
+  agendar(id, pedido = {}, usuario) {
+    const campanha = this.detalhe(id);
+    if (campanha.encerradaEm) throw new ErroDeValidacao("Reabra a campanha para agendar atualizações.");
+    const data = String(pedido.data || "").trim() || hojeBR();
+    if (!dataValida(data)) throw new ErroDeValidacao("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
+    let alvos = campanha.clientes;
+    if (pedido.clientes !== undefined) {
+      if (!Array.isArray(pedido.clientes) || pedido.clientes.length === 0) throw new ErroDeValidacao("Escolha pelo menos um cliente para agendar.");
+      const pedidos = new Set(pedido.clientes.map(Number));
+      if ([...pedidos].some((cid) => !campanha.clientes.some((c) => c.id === cid))) throw new ErroDeValidacao("Há cliente que não está nesta campanha.");
+      alvos = campanha.clientes.filter((c) => pedidos.has(c.id));
+    }
+    const pendentes = alvos.filter((c) => c.situacao === "pendente");
+    const tarefas = pendentes.map((c) => ({
+      tarefa: tarefaDaCampanha(campanha),
+      cliente: c.nome,
+      sistema: campanha.sistema,
+      responsavel: usuario?.nome || "",
+      // Campanha com prazo é urgente de verdade; sem prazo, rotina.
+      prioridade: campanha.prazo ? "Alta" : "Normal",
+      data,
+      obs: campanha.prazo ? `Prazo da campanha: ${campanha.prazo}` : "",
+    }));
+    this.agendamentos.createMany(tarefas, usuario, `Campanha "${campanha.titulo}": ${tarefas.length} tarefa(s) de atualização agendada(s)`);
+    return { criadas: tarefas.length, clientes: pendentes.map((c) => c.nome) };
   }
 
   /** Encerra e congela o placar: a campanha encerrada mostra o resultado que teve. */
@@ -313,6 +355,17 @@ class CampanhaService {
       atrasada: !encerrada && Boolean(campanha.prazo) && prazoPassou(campanha.prazo) && conta("concluido") < clientes.length,
     };
   }
+}
+
+/** Texto da tarefa criada por "agendar": nomeia a campanha para quem abrir Agendamentos saber de onde veio. */
+function tarefaDaCampanha(campanha) {
+  return `Atualizar ${campanha.sistema} para ${campanha.versaoAlvo} — ${campanha.titulo}`;
+}
+
+/** Hoje, como dd/mm/aaaa (o formato das datas deste sistema). */
+function hojeBR(d = new Date()) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
 function prazoPassou(prazo, hoje = new Date()) {

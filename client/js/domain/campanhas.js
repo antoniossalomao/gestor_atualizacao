@@ -115,15 +115,6 @@ export function textoProgresso(c) {
 }
 
 /**
- * Texto da tarefa criada pelo botão "Agendar" da linha. Nomeia a campanha
- * para quem abrir Agendamentos saber de onde a tarefa veio.
- * @param {{sistema: string, versaoAlvo: string, titulo: string}} campanha
- */
-export function tarefaDaCampanha(campanha) {
-  return `Atualizar ${campanha.sistema} para ${campanha.versaoAlvo} — ${campanha.titulo}`;
-}
-
-/**
  * Situação do prazo, para o selo do cartão.
  * @param {{prazo: string, encerradaEm?: string|null, atrasada?: boolean}} c
  * @returns {{texto: string, tipo: "neutro"|"alerta"|"encerrada"}|null}

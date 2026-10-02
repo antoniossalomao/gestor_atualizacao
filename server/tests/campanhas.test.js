@@ -29,7 +29,7 @@ function ambiente() {
   const historico = new HistoricoService(db);
   const atualizacoes = new AtualizacaoService(db, historico, { avisarAtualizacao: async () => {} });
   const agenda = new AgendamentoService(db, historico);
-  const campanhas = new CampanhaService(db, historico);
+  const campanhas = new CampanhaService(db, historico, agenda);
   const id = (nome) => db.sistemas.resolver(nome).id;
   const cliente = (nome, sistemas) => db.clientes.insert("", nome, "Marília", sistemas.map(id), "");
   const atender = (nome, sistema, data) => atualizacoes.create({ cliente: nome, sistema, data }, USUARIO);
@@ -149,6 +149,75 @@ test("Campanhas - só para clientes escolhidos", async (t) => {
       assert.ok(!nomes.includes("Sem NFe"));
       assert.deepEqual(nomes, [...nomes].sort((x, y) => x.localeCompare(y, "pt-BR")));
       assert.throws(() => env.campanhas.clientesDoSistema("Inexistente"), /catálogo/);
+    });
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("Campanhas - agendar os pendentes", async (t) => {
+  const env = ambiente();
+  try {
+    env.db.sistemas.salvarVersao("B_NFe", "20/09/2026");
+    for (const nome of ["Loja A", "Loja B", "Loja C", "Loja D"]) env.cliente(nome, ["B_NFe"]);
+    env.atender("Loja A", "B_NFe", "26/09/2026"); // já cumpre
+    env.agenda.create({ tarefa: "Visita", cliente: "Loja B", sistema: "B_NFe", data: "29/09/2026" }, USUARIO); // já agendada
+    const campanha = env.campanhas.create({ titulo: "NT 2026.001", sistema: "B_NFe", versaoAlvo: "25/09/2026", prazo: "30/09/2026" }, USUARIO);
+    const tarefasDe = (nome) => env.db.conn.prepare("SELECT * FROM agendamentos WHERE cliente = ? ORDER BY id").all(nome);
+    const idDe = (nome) => env.db.clientes.resolverNome(nome).id;
+
+    await t.test("sem lista, agenda só quem está pendente: atendido e já agendado ficam de fora", () => {
+      const r = env.campanhas.agendar(campanha.id, { data: "01/10/2026" }, { id: 1, nome: "Camila" });
+      assert.equal(r.criadas, 2);
+      assert.deepEqual(r.clientes.sort(), ["Loja C", "Loja D"]);
+      assert.equal(tarefasDe("Loja A").length, 0, "atendido não ganha tarefa");
+      assert.equal(tarefasDe("Loja B").length, 1, "já agendado não ganha segunda");
+      const tarefa = tarefasDe("Loja C")[0];
+      assert.equal(tarefa.tarefa, "Atualizar B_NFe para 25/09/2026 — NT 2026.001");
+      assert.equal(tarefa.sistema, "B_NFe");
+      assert.equal(tarefa.responsavel, "Camila");
+      assert.equal(tarefa.prioridade, "Alta", "campanha com prazo é prioridade alta");
+      assert.equal(tarefa.data, "01/10/2026");
+      assert.match(tarefa.obs, /Prazo da campanha: 30\/09\/2026/);
+      assert.equal(tarefa.cliente_id, idDe("Loja C"), "a tarefa fica ligada ao cliente");
+    });
+
+    await t.test("depois do lote ninguém está pendente: repetir (clique duplo) não duplica", () => {
+      const d = env.campanhas.detalhe(campanha.id);
+      assert.deepEqual([d.agendados, d.pendentes], [3, 0]);
+      assert.equal(env.campanhas.agendar(campanha.id, {}, USUARIO).criadas, 0);
+      assert.equal(tarefasDe("Loja C").length, 1);
+    });
+
+    await t.test("um registro só no histórico, e não um por tarefa", () => {
+      const linhas = env.db.conn.prepare("SELECT descricao FROM historico WHERE descricao LIKE ?").all('%tarefa(s) de atualização agendada(s)%');
+      assert.equal(linhas.length, 1, "o segundo pedido não criou nada, então não registrou");
+      assert.match(linhas[0].descricao, /2 tarefa\(s\)/);
+    });
+
+    await t.test("com lista, agenda só os pedidos que ainda estão pendentes", () => {
+      const outra = env.campanhas.create({ titulo: "Outra", sistema: "B_NFe", versaoAlvo: "25/09/2026" }, USUARIO);
+      env.db.conn.prepare("DELETE FROM agendamentos WHERE cliente = 'Loja C'").run();
+      const r = env.campanhas.agendar(outra.id, { clientes: [idDe("Loja C"), idDe("Loja A")] }, USUARIO);
+      assert.deepEqual(r.clientes, ["Loja C"], "Loja A já cumpre a meta: ignorada");
+      assert.equal(tarefasDe("Loja C")[0].prioridade, "Normal", "sem prazo, prioridade normal");
+      assert.equal(tarefasDe("Loja C")[0].obs, "");
+      assert.equal(tarefasDe("Loja C")[0].data.length, 10, "sem data no pedido, vale hoje (dd/mm/aaaa)");
+    });
+
+    await t.test("recusa: cliente de fora da campanha, lista vazia, data ruim, campanha encerrada", () => {
+      const escolhida = env.campanhas.create({ titulo: "Só D", sistema: "B_NFe", versaoAlvo: "25/09/2026", publico: "escolhidos", clientes: [idDe("Loja D")] }, USUARIO);
+      assert.throws(() => env.campanhas.agendar(escolhida.id, { clientes: [idDe("Loja C")] }, USUARIO), /não está nesta campanha/);
+      assert.throws(() => env.campanhas.agendar(escolhida.id, { clientes: [] }, USUARIO), /pelo menos um cliente/);
+      assert.throws(() => env.campanhas.agendar(escolhida.id, { data: "31/02/2026" }, USUARIO), /Data/);
+      env.campanhas.encerrar(escolhida.id, USUARIO);
+      assert.throws(() => env.campanhas.agendar(escolhida.id, {}, USUARIO), /Reabra a campanha/);
+    });
+
+    await t.test("campanha de escolhidos agenda só os escolhidos pendentes", () => {
+      env.db.conn.prepare("DELETE FROM agendamentos WHERE cliente = 'Loja D'").run();
+      const escolhida = env.campanhas.create({ titulo: "Só D 2", sistema: "B_NFe", versaoAlvo: "25/09/2026", publico: "escolhidos", clientes: [idDe("Loja D")] }, USUARIO);
+      assert.deepEqual(env.campanhas.agendar(escolhida.id, {}, USUARIO).clientes, ["Loja D"]);
     });
   } finally {
     env.cleanup();
@@ -467,6 +536,10 @@ test("Campanhas - rotas e permissões", async (t) => {
     assert.equal((await pedir(`/campanhas/${id}/clientes`, { metodo: "POST", cookie: consulta, corpo: { clientes: [] } })).status, 403);
     assert.equal((await pedir(`/campanhas/${id}/clientes/1`, { metodo: "DELETE", cookie: consulta })).status, 403);
     assert.equal((await pedir(`/campanhas/${id}/clientes`, { metodo: "POST", cookie: operador, corpo: { clientes: lista.map((x) => x.id) } })).status, 400, "a campanha do teste vale para todos: não tem lista");
+  });
+  await t.test("agendar pendentes: Consulta não pode", async () => {
+    assert.equal((await pedir(`/campanhas/${id}/agendar`, { metodo: "POST", cookie: consulta, corpo: {} })).status, 403);
+    assert.equal((await pedir(`/campanhas/${id}/agendar`, { metodo: "POST", cookie: operador, corpo: {} })).status, 200);
   });
   await t.test("admin exclui; depois disso é 404", async () => {
     assert.equal((await pedir(`/campanhas/${id}`, { metodo: "DELETE", cookie: admin })).status, 204);

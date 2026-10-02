@@ -82,6 +82,7 @@ export function cabecalhoCampanha(c, usuario) {
         ${c.descricao ? html`<p class="campanha__descricao">${c.descricao}</p>` : ""}
       </div>
       <div class="campanha__acoes">
+        ${podeEditar && !encerrada && c.pendentes > 0 ? html`<button type="button" class="btn btn--small" data-action="agendar-pendentes">${iconeHtml("calendario")} Agendar pendentes (${c.pendentes})</button>` : ""}
         ${podeEditar && !encerrada && c.publico === "escolhidos" ? html`<button type="button" class="btn btn--small" data-action="adicionar">${iconeHtml("plus")} Adicionar clientes</button>` : ""}
         ${podeEditar && !encerrada ? html`<button type="button" class="btn btn--small" data-action="editar">${iconeHtml("editar")} Editar</button>` : ""}
         ${podeEditar ? html`<button type="button" class="btn btn--small" data-action="${encerrada ? "reabrir" : "encerrar"}">${encerrada ? "Reabrir" : "Encerrar"}</button>` : ""}
@@ -218,6 +219,31 @@ export function blocoEscolhaClientes({ oculto = false } = {}) {
       <div class="campanha-escolha__lista" data-role="lista-escolha" role="group" aria-label="Clientes da campanha"></div>
       <div class="field__help" data-role="contagem-escolha" aria-live="polite"></div>
     </div>`;
+}
+
+/**
+ * Janela "Agendar pendentes": cria uma tarefa de atualização para cada
+ * cliente pendente. A data é a única escolha; o resto (texto, prioridade,
+ * responsável) o servidor decide.
+ * @param {{titulo: string, prazo?: string, pendentes: number}} campanha
+ * @param {string} hoje dd/mm/aaaa, a data sugerida
+ */
+export function formularioAgendarPendentes(campanha, hoje) {
+  return html`
+    <h3 class="modal-box__title" id="campanha-agendar-titulo">Agendar pendentes</h3>
+    <form class="campanha-form" data-role="form-agendar" novalidate>
+      <p>Cria uma tarefa de atualização para cada um dos <strong>${plural(campanha.pendentes, "cliente pendente", "clientes pendentes")}</strong> de "${campanha.titulo}". Quem já está agendado ou atualizado fica de fora.</p>
+      <div class="field">
+        <label class="field__label" for="cmp-agendar-data">Data das tarefas</label>
+        <input class="input" id="cmp-agendar-data" data-field="data" placeholder="dd/mm/aaaa" inputmode="numeric" value="${hoje}" aria-describedby="cmp-agendar-ajuda" />
+        <div class="field__help" id="cmp-agendar-ajuda">${campanha.prazo ? `Prazo da campanha: ${campanha.prazo}; as tarefas saem com prioridade Alta.` : "As tarefas saem com prioridade Normal."} O responsável é você.</div>
+      </div>
+      <p class="field__hint" data-role="erro" role="alert"></p>
+      <div class="modal-box__actions">
+        <button type="button" class="btn" data-action="cancelar">Cancelar</button>
+        <button type="submit" class="btn btn--accent" data-action="salvar">Criar ${plural(campanha.pendentes, "agendamento")}</button>
+      </div>
+    </form>`;
 }
 
 /**

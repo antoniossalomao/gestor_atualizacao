@@ -86,6 +86,7 @@ class Servidor {
     configuracaoSistema.importarValoresIniciais(this.config.ambiente || {});
     const notifications = new NotificacaoService({ webhookUrl: () => configuracaoSistema.valor("discordWebhookUrl") });
     const versoes = new VersaoService(this.db, historico);
+    const agendamentos = new AgendamentoService(this.db, historico, configuracaoSistema);
     this.services = {
       historico,
       notifications,
@@ -93,8 +94,8 @@ class Servidor {
       preferencias: new PreferenciaService(this.db),
       clientes: new ClienteService(this.db, historico),
       atualizacoes: new AtualizacaoService(this.db, historico, notifications, configuracaoSistema),
-      agendamentos: new AgendamentoService(this.db, historico, configuracaoSistema),
-      campanhas: new CampanhaService(this.db, historico),
+      agendamentos,
+      campanhas: new CampanhaService(this.db, historico, agendamentos),
       backups: new BackupService(this.db, historico),
       versoes,
       configuracaoSistema,

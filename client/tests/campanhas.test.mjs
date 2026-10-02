@@ -7,8 +7,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buscarClientes, descricaoPublico, filtrarCandidatos, filtrarClientesCampanha, filtrosEscolhaVazios, opcoesFiltroEscolha, podeFiltrarQuemFalta, textoProgresso, tarefaDaCampanha, seloPrazo } from "../js/domain/campanhas.js";
-import { acoesClienteCampanha, cabecalhoCampanha, cartaoCampanha, celulaSituacaoCampanha, filtrosCampanha, filtrosEscolhaClientes, formularioAdicionarClientes, formularioCampanha, listaCampanhas, listaEscolhaClientes } from "../js/templates/campanhas.js";
+import { buscarClientes, descricaoPublico, filtrarCandidatos, filtrarClientesCampanha, filtrosEscolhaVazios, opcoesFiltroEscolha, podeFiltrarQuemFalta, textoProgresso, seloPrazo } from "../js/domain/campanhas.js";
+import { acoesClienteCampanha, cabecalhoCampanha, cartaoCampanha, celulaSituacaoCampanha, filtrosCampanha, filtrosEscolhaClientes, formularioAdicionarClientes, formularioAgendarPendentes, formularioCampanha, listaCampanhas, listaEscolhaClientes } from "../js/templates/campanhas.js";
 
 const MALICIOSO = '"><img src=x onerror=alert(1)>';
 const CLIENTES = [
@@ -31,10 +31,6 @@ test("filtro rápido separa os grupos e a busca ignora acento", () => {
 test("progresso sem clientes não finge porcentagem", () => {
   assert.equal(textoProgresso({ totalClientes: 0, atendidos: 0, percentual: null }), "Nenhum cliente usa este sistema.");
   assert.equal(textoProgresso(CAMPANHA), "1 de 3 clientes atualizados (33%)");
-});
-
-test("tarefa criada pela campanha diz de onde veio", () => {
-  assert.equal(tarefaDaCampanha(CAMPANHA), "Atualizar B_NFe para 25/09/2026 — NT 2026.001");
 });
 
 test("selo do prazo", () => {
@@ -79,6 +75,7 @@ test("texto digitado não vira HTML", () => {
     listaEscolhaClientes([{ id: 1, nome: MALICIOSO, codigo: MALICIOSO, cidade: MALICIOSO }], new Set([1])),
     cartaoCampanha({ ...perigosa, publico: "escolhidos" }, false),
     formularioAdicionarClientes(perigosa),
+    formularioAgendarPendentes({ ...perigosa, pendentes: 2 }, MALICIOSO),
     filtrosEscolhaClientes({ cidades: [MALICIOSO, "B"], grupos: [MALICIOSO, "B"], regimes: [MALICIOSO, "B"] }, { ...filtrosEscolhaVazios(), cidade: MALICIOSO }, { podeFiltrarQuemFalta: true }),
   ]) {
     assert.doesNotMatch(String(marcacao), /<img/);
@@ -175,6 +172,24 @@ test("adicionar e retirar clientes: só em campanha de escolhidos, aberta e para
   const janela = String(formularioAdicionarClientes({ titulo: "NT 1", sistema: "B_NFe" }));
   assert.match(janela, /data-role="escolha"(?![^>]*hidden)/, "a janela já abre com a lista visível");
   assert.match(janela, /data-action="salvar"/);
+});
+
+test("Agendar pendentes: botão só com pendente, campanha aberta e quem edita; a janela diz quantos e a prioridade", () => {
+  const cab = (c, usuario) => String(cabecalhoCampanha(c, usuario));
+  assert.match(cab(CAMPANHA, { role: "operador" }), /data-action="agendar-pendentes"[^>]*>[^<]*<svg[\s\S]*Agendar pendentes \(1\)/);
+  assert.doesNotMatch(cab({ ...CAMPANHA, pendentes: 0 }, { role: "operador" }), /agendar-pendentes/);
+  assert.doesNotMatch(cab(CAMPANHA, { role: "consulta" }), /agendar-pendentes/);
+  assert.doesNotMatch(cab({ ...CAMPANHA, encerradaEm: "2026-09-30T10:00:00Z" }, { role: "operador" }), /agendar-pendentes/);
+
+  const com = String(formularioAgendarPendentes({ ...CAMPANHA, pendentes: 12 }, "02/10/2026"));
+  assert.match(com, /<strong>12 clientes pendentes<\/strong>/);
+  assert.match(com, /value="02\/10\/2026"/);
+  assert.match(com, /prioridade Alta/);
+  assert.match(com, /Criar 12 agendamentos/);
+  const sem = String(formularioAgendarPendentes({ ...CAMPANHA, prazo: "", pendentes: 1 }, "02/10/2026"));
+  assert.match(sem, /prioridade Normal/);
+  assert.match(sem, /<strong>1 cliente pendente<\/strong>/);
+  assert.match(sem, /Criar 1 agendamento</);
 });
 
 test("lista de escolha marca só quem está na seleção", () => {

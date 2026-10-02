@@ -15,6 +15,11 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Campanhas, "Agendar pendentes" (02/10/2026):** um botão no detalhe cria a tarefa de atualização de todos os clientes pendentes de uma vez, na data escolhida (a de hoje vem sugerida). Antes era um clique por cliente, na linha.
+  - Só quem está pendente agora ganha tarefa: quem já está agendado ou foi atendido fica de fora, e por isso um clique duplo não agenda ninguém duas vezes. Prioridade Alta se a campanha tem prazo, Normal se não; o responsável é quem clicou.
+  - Entra tudo ou nada, com **uma** linha na Auditoria ("N tarefas de atualização agendadas"), e não uma por tarefa.
+  - O botão "Agendar" da linha passou a usar a mesma rota (`POST /api/campanhas/:id/agendar`, só Operador e Admin): o texto da tarefa, a prioridade e a regra de "pendente" moram só no servidor e os dois caminhos saem iguais. A tarefa tem o mesmo conteúdo de antes.
+
 - **Campanhas, saiu "Exportar pendentes" (02/10/2026):** o botão, a rota `GET /api/campanhas/:id/export` e a planilha (`.xlsx`) foram removidos, a pedido da equipe. Quem falta continua na tabela da campanha, com os filtros e a busca. A exportação de outras telas (Atualizações, Clientes etc.) não mudou.
 
 - **Campanhas, adicionar e retirar cliente no detalhe (02/10/2026):** numa campanha de clientes escolhidos, "Adicionar clientes" (mesma lista com busca e filtros, sem quem já está) e um "×" em cada linha ("Retirar da campanha") evitam abrir "Editar" e refazer a lista inteira.

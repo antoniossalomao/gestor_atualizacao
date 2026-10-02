@@ -45,6 +45,12 @@ class CampanhasController {
     } catch (err) { next(err); }
   };
 
+  agendar = (req, res, next) => {
+    try {
+      res.json(this.campanhaService.agendar(req.params.id, req.body || {}, req.session.user));
+    } catch (err) { next(err); }
+  };
+
   encerrar = (req, res, next) => {
     try {
       res.json(this.campanhaService.encerrar(req.params.id, req.session.user));

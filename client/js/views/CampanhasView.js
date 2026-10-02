@@ -7,11 +7,11 @@ import { ErroApi } from "../api/ApiPainel.js";
 import { prefs } from "../app/preferencias.js";
 import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { dataBRValida, mascaraDataBR, hojeBR } from "../utils/data.js";
-import { html } from "../utils/html.js";
+import { html, plural } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
 import { comBotaoOcupado } from "../components/botaoOcupado.js";
 import { EscolhaDeClientes } from "../components/EscolhaDeClientes.js";
-import { filtrarClientesCampanha, tarefaDaCampanha } from "../domain/campanhas.js";
+import { filtrarClientesCampanha } from "../domain/campanhas.js";
 import {
   listaCampanhas,
   cabecalhoCampanha,
@@ -21,6 +21,7 @@ import {
   celulaUltimaCampanha,
   acoesClienteCampanha,
   formularioAdicionarClientes,
+  formularioAgendarPendentes,
   formularioCampanha,
   contagemClientes,
 } from "../templates/campanhas.js";
@@ -226,6 +227,7 @@ export class CampanhasView extends View {
     const acao = botao.dataset.action;
     if (acao === "editar") return this._abrirFormulario(c);
     if (acao === "adicionar") return this._abrirAdicionar(c);
+    if (acao === "agendar-pendentes") return this._abrirAgendarPendentes(c);
     if (acao === "encerrar") {
       const ok = await Modal.confirm("Encerrar campanha", `Encerrar "${c.titulo}"?\n\nO placar de hoje (${c.atendidos} de ${c.totalClientes} atualizados) fica registrado. As atualizações continuam sendo registradas normalmente, e dá para reabrir depois.`, { confirmLabel: "Encerrar", danger: false });
       if (ok) await this._mudar(() => this.api.patch(`/campanhas/${c.id}/encerrar`), "Campanha encerrada.");
@@ -266,22 +268,13 @@ export class CampanhasView extends View {
       return;
     }
     if (acao === "agendar") {
-      const c = this.detalhe;
-      // Cria a tarefa direto, sem abrir o formulário: é o "botão rápido" da
-      // campanha. A tarefa leva o sistema da campanha -- é isso que a faz
-      // aparecer como "já agendado" aqui (ver CampanhaService).
+      // O servidor monta a tarefa (texto, prioridade, responsável): a linha e o
+      // "Agendar pendentes" saem iguais, e o que ele julga pendente é o que vale.
       await comBotaoOcupado(botao, async () => {
         try {
-          await this.api.post("/agendamentos", {
-            tarefa: tarefaDaCampanha(c),
-            cliente: row.nome,
-            sistema: c.sistema,
-            responsavel: this.user?.nome || "",
-            prioridade: c.prazo ? "Alta" : "Normal",
-            data: hojeBR(),
-            obs: c.prazo ? `Prazo da campanha: ${c.prazo}` : "",
-          });
-          avisoRapido.sucesso(`Agendamento criado para ${row.nome}.`);
+          const { criadas } = await this.api.post(`/campanhas/${this.detalhe.id}/agendar`, { clientes: [row.id] });
+          if (criadas === 0) avisoRapido.informar(`${row.nome} já está agendado ou atualizado.`);
+          else avisoRapido.sucesso(`Agendamento criado para ${row.nome}.`);
           this.cache?.invalidar();
           await this.refresh();
         } catch (err) {
@@ -289,6 +282,41 @@ export class CampanhasView extends View {
         }
       })();
     }
+  }
+
+  /** "Agendar pendentes": uma tarefa para cada cliente pendente da campanha, na data escolhida. */
+  async _abrirAgendarPendentes(campanha) {
+    const { box, close } = Modal.abrirCaixa({ largura: 480 });
+    box.setAttribute("aria-labelledby", "campanha-agendar-titulo");
+    box.innerHTML = String(formularioAgendarPendentes(campanha, hojeBR()));
+    const form = /** @type {HTMLFormElement} */ (box.querySelector('[data-role="form-agendar"]'));
+    const data = /** @type {HTMLInputElement} */ (form.querySelector('[data-field="data"]'));
+    const erro = form.querySelector('[data-role="erro"]');
+    data.addEventListener("input", () => { data.value = mascaraDataBR(data.value); });
+    form.querySelector('[data-action="cancelar"]').addEventListener("click", () => close());
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!data.value.trim() || !dataBRValida(data.value.trim())) {
+        erro.textContent = "Data precisa ser dd/mm/aaaa.";
+        data.setAttribute("aria-invalid", "true");
+        data.focus();
+        return;
+      }
+      await comBotaoOcupado(/** @type {HTMLButtonElement} */ (form.querySelector('[data-action="salvar"]')), async () => {
+        try {
+          const { criadas } = await this.api.post(`/campanhas/${campanha.id}/agendar`, { data: data.value.trim() });
+          close();
+          if (criadas === 0) avisoRapido.informar("Ninguém estava pendente: todos já estão agendados ou atualizados.");
+          else avisoRapido.sucesso(`${plural(criadas, "agendamento criado", "agendamentos criados")}.`);
+          this.cache?.invalidar();
+          await this.refresh();
+        } catch (err) {
+          erro.textContent = mensagem(err);
+        }
+      })();
+    });
+    data.focus();
+    data.select();
   }
 
   async _abrirFormulario(campanha) {

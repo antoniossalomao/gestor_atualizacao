@@ -98,6 +98,24 @@ class AgendamentoService {
     return dados;
   }
 
+  /**
+   * Várias tarefas de uma vez (o "agendar pendentes" de uma campanha): valida
+   * todas ANTES de gravar e grava numa transação, então ou entram todas ou
+   * nenhuma. Registra UMA linha no histórico, com o resumo, e não uma por
+   * tarefa -- 200 linhas iguais na Auditoria escondiam o resto.
+   * @param {object[]} entradas mesmos campos de `create`
+   * @param {string} resumo texto da linha do histórico
+   */
+  createMany(entradas, usuario, resumo) {
+    const lista = entradas.map((entrada) => this._validar(entrada));
+    if (lista.length === 0) return lista;
+    this.db.transacao(() => {
+      for (const dados of lista) this.db.agendamentos.insert(dados);
+    });
+    this.historico.registrar(usuario, "criar", "agendamento", resumo);
+    return lista;
+  }
+
   // Ver o comentario equivalente em AtualizacaoService: "zero linhas
   // afetadas" precisa virar 404, senao a tela confirma uma alteracao que
   // nao aconteceu numa tarefa que outra pessoa ja excluiu.
