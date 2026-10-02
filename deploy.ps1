@@ -1,4 +1,4 @@
-# Atualiza o painel em produção: faz backup do banco e reconstrói o Docker.
+﻿# Atualiza o painel em produção: faz backup do banco e reconstrói o Docker.
 # Uso (na pasta web):  .\deploy.ps1      ou dê dois cliques em deploy.bat
 #
 # Se o backup falhar, NADA é reconstruído: subir o container novo sem cópia
@@ -23,7 +23,13 @@ if ($existe) {
     }
     # O modo WAL guarda escritas recentes no -wal; se ele tiver conteúdo, a
     # cópia só do .db ficaria de fora delas, então leva junto.
-    docker cp "${container}:/app/server/data/gestao.db-wal" "$arquivo-wal" 2>$null
+    # O deploy.bat usa o Windows PowerShell 5.1, onde qualquer texto em stderr de
+    # um comando nativo vira erro terminante sob 'Stop' (mesmo com 2>$null). Quando
+    # não existe -wal, o docker cp reclama em stderr e derrubava o deploy inteiro:
+    # por isso este passo roda com 'Continue'.
+    $ErrorActionPreference = 'Continue'
+    docker cp "${container}:/app/server/data/gestao.db-wal" "$arquivo-wal" 2>&1 | Out-Null
+    $ErrorActionPreference = 'Stop'
     if ((Test-Path "$arquivo-wal") -and (Get-Item "$arquivo-wal").Length -eq 0) {
         Remove-Item "$arquivo-wal"
     }
