@@ -7,8 +7,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { filtrarClientesCampanha, textoProgresso, tarefaDaCampanha, seloPrazo } from "../js/domain/campanhas.js";
-import { acoesClienteCampanha, cabecalhoCampanha, cartaoCampanha, celulaSituacaoCampanha, filtrosCampanha, formularioCampanha, listaCampanhas } from "../js/templates/campanhas.js";
+import { buscarClientes, descricaoPublico, filtrarClientesCampanha, textoProgresso, tarefaDaCampanha, seloPrazo } from "../js/domain/campanhas.js";
+import { acoesClienteCampanha, cabecalhoCampanha, cartaoCampanha, celulaSituacaoCampanha, filtrosCampanha, formularioCampanha, listaCampanhas, listaEscolhaClientes } from "../js/templates/campanhas.js";
 
 const MALICIOSO = '"><img src=x onerror=alert(1)>';
 const CLIENTES = [
@@ -76,6 +76,8 @@ test("texto digitado não vira HTML", () => {
     acoesClienteCampanha({ id: 1, nome: MALICIOSO, situacao: "pendente" }, { role: "admin", encerrada: false }),
     formularioCampanha({ sistemas: [{ nome: MALICIOSO, data: MALICIOSO }], cidades: [MALICIOSO] }),
     formularioCampanha({ sistemas: [], campanha: perigosa }),
+    listaEscolhaClientes([{ id: 1, nome: MALICIOSO, codigo: MALICIOSO, cidade: MALICIOSO }], new Set([1])),
+    cartaoCampanha({ ...perigosa, publico: "escolhidos" }, false),
   ]) {
     assert.doesNotMatch(String(marcacao), /<img/);
   }
@@ -87,6 +89,34 @@ test("formulário de edição não deixa mudar a meta", () => {
   assert.match(marcacao, /data-field="versaoAlvo"[^>]*disabled/);
   assert.doesNotMatch(marcacao, /<select[^>]*id="cmp-sistema"/);
   assert.match(marcacao, /<select[^>]*id="cmp-cidade"/);
+});
+
+test("campanha para clientes escolhidos: busca, descrição do público e formulário", () => {
+  assert.deepEqual(buscarClientes(CLIENTES, "uberl").map((c) => c.id), [3]);
+  assert.equal(buscarClientes(CLIENTES, "  ").length, 3, "busca em branco devolve todos");
+  assert.equal(descricaoPublico({ publico: "escolhidos", cidade: "" }), "Clientes escolhidos");
+  assert.equal(descricaoPublico({ publico: "todos", cidade: "Uberaba" }), "Uberaba");
+  assert.equal(descricaoPublico({ publico: "todos", cidade: "" }), "Todas as cidades");
+  assert.equal(descricaoPublico({}), "Todas as cidades", "campanha sem o campo (resposta antiga) vale para todos");
+  assert.match(String(cabecalhoCampanha({ ...CAMPANHA, publico: "escolhidos" }, { role: "operador" })), /Clientes escolhidos/);
+  assert.match(String(cartaoCampanha({ ...CAMPANHA, publico: "escolhidos", cidade: "" }, false)), /Clientes escolhidos/);
+  assert.equal(textoProgresso({ totalClientes: 0, atendidos: 0, percentual: null, publico: "escolhidos" }), "Nenhum cliente escolhido usa mais este sistema.");
+
+  const novo = String(formularioCampanha({ sistemas: [{ nome: "B_NFe" }], cidades: ["Uberaba"] }));
+  assert.match(novo, /name="publico" value="todos" checked/);
+  assert.match(novo, /data-role="escolha" hidden/);
+  const edicao = String(formularioCampanha({ sistemas: [], campanha: { ...CAMPANHA, publico: "escolhidos" } }));
+  assert.match(edicao, /name="publico" value="escolhidos" checked/);
+  assert.match(edicao, /data-role="campo-cidade" hidden/);
+  assert.doesNotMatch(edicao, /data-role="escolha" hidden/);
+});
+
+test("lista de escolha marca só quem está na seleção", () => {
+  const lista = String(listaEscolhaClientes(CLIENTES, new Set([2])));
+  assert.match(lista, /value="2" checked/);
+  assert.doesNotMatch(lista, /value="1" checked|value="3" checked/);
+  assert.match(lista, /Cód\. 303 · Uberlândia/);
+  assert.match(String(listaEscolhaClientes([], new Set())), /Nenhum cliente encontrado/);
 });
 
 test("filtros mostram a contagem de cada grupo; lista vazia orienta", () => {

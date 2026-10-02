@@ -15,6 +15,11 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Campanha só para clientes escolhidos (02/10/2026):** o formulário de campanha ganhou "Quem entra na campanha": todos os clientes do sistema (como sempre, com a cidade opcional) ou só os clientes marcados numa lista com busca por nome, código ou cidade, "Marcar os visíveis" e "Limpar". Serve para um piloto ou para quem uma Nota Técnica atinge, sem criar uma campanha do sistema inteiro e ignorar a maioria.
+  - Continua valendo a baixa automática pela atualização, o "já agendado" por tarefa do mesmo sistema e o placar congelado no encerramento. A planilha de pendentes traz o público na aba "Campanha".
+  - Dá para trocar a lista depois de criada (a meta, sistema e versão-alvo, continua fixa). Escolher clientes substitui a cidade.
+  - Cliente escolhido que perde o sistema no cadastro sai da lista; se todos saírem, a campanha fica vazia (0 de 0), e não vira "todos". Migração 7; decisão na [ADR-0009](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0009).
+
 - **Classificação dos sistemas em lote — F5 (01/10/2026):** a lista de Administração › Operação ganhou um filtro por nome e passou a ter um "Salvar" e um "Desfazer" só, no pé do cartão, para todas as linhas alteradas. Antes havia um Salvar por linha: reclassificar cinco sistemas eram cinco cliques, e uma linha alterada e esquecida não avisava ninguém.
   - Só vai ao servidor o que mudou de verdade (`alteracoesClassificacao`, com teste), então voltar uma linha para como estava não gera registro na Auditoria.
   - Com sistema alterado, a barra fica presa no pé da tela, voltar à aba não apaga as marcações, e sair da conta ou recarregar a página avisa.

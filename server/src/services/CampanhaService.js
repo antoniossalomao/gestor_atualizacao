@@ -34,6 +34,11 @@ const SITUACOES = { concluido: "Concluído", agendado: "Já agendado", pendente:
  *  3. **"Já agendado" é uma tarefa em aberto do MESMO sistema.** Uma
  *     tarefa de instalação de outro sistema não faz o cliente parecer
  *     encaminhado. Ser atendido ganha de estar agendado.
+ *  4. **Escolher os clientes substitui a cidade, não soma com ela.** Numa
+ *     campanha de clientes escolhidos (`publico: "escolhidos"`) a lista é o
+ *     filtro; a cidade é gravada vazia. E só entra quem tem o sistema no
+ *     cadastro: um escolhido que perdeu o sistema some da lista (e do
+ *     total) em vez de ficar "pendente" de algo que ele não usa.
  */
 class CampanhaService {
   /**
@@ -69,10 +74,35 @@ class CampanhaService {
     return this.detalhe(id);
   }
 
-  /** Título, descrição, prazo e cidade. Sistema e versão-alvo são a meta: ficam como foram criados. */
+  /**
+   * Clientes que têm o sistema no cadastro -- a lista de onde a tela escolhe
+   * quem entra numa campanha "só para clientes escolhidos".
+   */
+  clientesDoSistema(nomeSistema) {
+    const sistema = this.db.sistemas.resolver(String(nomeSistema || ""));
+    if (!sistema || !sistema.ativo) throw new ErroDeValidacao("Escolha um sistema do catálogo.");
+    return this.db.clientes
+      .clientesDoSistemaComCodigo(sistema.id)
+      .map(({ id, nome, codigo, cidade }) => ({ id, nome, codigo: codigo || "", cidade: cidade || "" }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  }
+
+  /**
+   * Título, descrição, prazo, cidade e público. Sistema e versão-alvo são a
+   * meta: ficam como foram criados. Sem `publico`/`clientes` no corpo, o
+   * público atual é mantido.
+   */
   update(id, input, usuario) {
     const atual = this._achar(id);
-    const dados = this._validar({ ...input, cidade: input.cidade ?? atual.cidade, sistema: atual.sistema, versaoAlvo: atual.versaoAlvo }, { nova: false, cidadeAtual: atual.cidade });
+    const publico = input.publico ?? atual.publico;
+    // Escolhidos que perderam o sistema ficam de fora do que é reenviado: o
+    // que o usuário não vê não pode derrubar uma edição de título.
+    const doSistema = this._idsDoSistema(atual.sistemaId);
+    const guardados = publico === "escolhidos" ? this.db.campanhas.idsClientes(atual.id).filter((cid) => doSistema.has(cid)) : [];
+    const dados = this._validar(
+      { ...input, publico, clientes: input.clientes ?? guardados, cidade: input.cidade ?? atual.cidade, sistema: atual.sistema, versaoAlvo: atual.versaoAlvo },
+      { nova: false, cidadeAtual: atual.cidade, sistemaAtual: { id: atual.sistemaId, nome: atual.sistema } }
+    );
     this.db.campanhas.update(atual.id, dados);
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${dados.titulo}"`);
     return this.detalhe(atual.id);
@@ -124,7 +154,7 @@ class CampanhaService {
       ["Sistema", campanha.sistema],
       ["Versão-alvo", campanha.versaoAlvo],
       ["Prazo", campanha.prazo || "Sem prazo"],
-      ["Cidade", campanha.cidade || "Todas as cidades"],
+      ["Público", descreverPublico(campanha)],
       ["Clientes na campanha", campanha.totalClientes],
       ["Atualizados", campanha.atendidos],
       ["Já agendados", campanha.agendados],
@@ -141,7 +171,29 @@ class CampanhaService {
     return campanha;
   }
 
-  _validar(input, { nova, cidadeAtual = "" }) {
+  _idsDoSistema(sistemaId) {
+    return new Set(this.db.clientes.clientesDoSistemaComCodigo(sistemaId).map((c) => c.id));
+  }
+
+  /**
+   * Quem entra na campanha. "todos" vale para o sistema inteiro (ou a
+   * cidade); "escolhidos" exige pelo menos um cliente que tenha o sistema.
+   * @param {any} input
+   * @param {{id: number, nome: string}} sistema
+   * @param {string} cidade
+   */
+  _publico(input, sistema, cidade) {
+    const publico = input.publico ?? "todos";
+    if (publico !== "todos" && publico !== "escolhidos") throw new ErroDeValidacao("Público da campanha inválido.");
+    if (publico === "todos") return { publico, cidade, clienteIds: [] };
+    if (!Array.isArray(input.clientes) || input.clientes.length === 0) throw new ErroDeValidacao("Escolha pelo menos um cliente para a campanha.");
+    const doSistema = this._idsDoSistema(sistema.id);
+    const clienteIds = [...new Set(input.clientes.map(Number))];
+    if (clienteIds.some((cid) => !Number.isInteger(cid) || !doSistema.has(cid))) throw new ErroDeValidacao(`Há cliente escolhido que não usa o sistema "${sistema.nome}".`);
+    return { publico, cidade: "", clienteIds };
+  }
+
+  _validar(input, { nova, cidadeAtual = "", sistemaAtual = null }) {
     const titulo = String(input.titulo || "").trim();
     const descricao = String(input.descricao || "").trim();
     const prazo = String(input.prazo || "").trim();
@@ -153,14 +205,14 @@ class CampanhaService {
     if (titulo.length > 120) throw new ErroDeValidacao("O título pode ter no máximo 120 caracteres.");
     if (descricao.length > 1000) throw new ErroDeValidacao("A descrição pode ter no máximo 1000 caracteres.");
     if (!dataValida(prazo)) throw new ErroDeValidacao("Campo 'Prazo' precisa estar no formato dd/mm/aaaa.");
-    if (!nova) return { titulo, descricao, prazo, cidade };
+    if (!nova) return { titulo, descricao, prazo, ...this._publico(input, sistemaAtual, cidade) };
     if (!versaoAlvo || !dataValida(versaoAlvo)) throw new ErroDeValidacao("Campo 'Versão-alvo' precisa estar no formato dd/mm/aaaa.");
     const sistema = this.db.sistemas.resolver(String(input.sistema || ""));
     if (!sistema || !sistema.ativo) throw new ErroDeValidacao("Escolha um sistema do catálogo.");
     // Fixos (B_Atualizador, Suporte Bredas) não têm versão para cobrar -- a
     // campanha nunca terminaria, e ficaria todo mundo "pendente" de nada.
     if (!contaParaVersao(sistema)) throw new ErroDeValidacao(`"${sistema.nome}" não controla versão e não pode ter campanha.`);
-    return { titulo, descricao, prazo, cidade, versaoAlvo, sistemaId: sistema.id, sistemaNome: sistema.nome };
+    return { titulo, descricao, prazo, versaoAlvo, sistemaId: sistema.id, sistemaNome: sistema.nome, ...this._publico(input, sistema, cidade) };
   }
 
   /** Tarefas em aberto por cliente, com os ids dos sistemas que cada uma cita. */
@@ -186,7 +238,11 @@ class CampanhaService {
       });
     }
     const { ultimas, cadastro } = porSistema.get(campanha.sistemaId);
-    const lista = cadastro.filter((cliente) => !campanha.cidade || (cliente.cidade || "").trim().toLocaleLowerCase("pt-BR") === campanha.cidade.toLocaleLowerCase("pt-BR")).map(({ id, nome, codigo, cidade }) => {
+    const escolhidos = campanha.publico === "escolhidos" ? new Set(this.db.campanhas.idsClientes(campanha.id)) : null;
+    const entra = (cliente) => escolhidos
+      ? escolhidos.has(cliente.id)
+      : !campanha.cidade || (cliente.cidade || "").trim().toLocaleLowerCase("pt-BR") === campanha.cidade.toLocaleLowerCase("pt-BR");
+    const lista = cadastro.filter(entra).map(({ id, nome, codigo, cidade }) => {
       const registro = ultimas.get(id);
       // Sem prazo, de propósito: a campanha pergunta "já chegou na meta?", e
       // o prazo depois da oficial (A07) só adia o "desatualizado" do Resumo.
@@ -225,6 +281,11 @@ class CampanhaService {
       atrasada: !encerrada && Boolean(campanha.prazo) && prazoPassou(campanha.prazo) && conta("concluido") < clientes.length,
     };
   }
+}
+
+/** "Clientes escolhidos", a cidade ou "Todas as cidades" -- o texto do público na planilha. */
+function descreverPublico(campanha) {
+  return campanha.publico === "escolhidos" ? "Clientes escolhidos" : campanha.cidade || "Todas as cidades";
 }
 
 function prazoPassou(prazo, hoje = new Date()) {

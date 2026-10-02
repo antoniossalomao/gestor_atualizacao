@@ -8,10 +8,10 @@ import { prefs } from "../app/preferencias.js";
 import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { dataBRValida, mascaraDataBR, hojeBR } from "../utils/data.js";
 import { baixarBlob } from "../components/arquivos.js";
-import { html } from "../utils/html.js";
+import { html, plural } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
 import { comBotaoOcupado } from "../components/botaoOcupado.js";
-import { filtrarClientesCampanha, tarefaDaCampanha } from "../domain/campanhas.js";
+import { buscarClientes, filtrarClientesCampanha, tarefaDaCampanha } from "../domain/campanhas.js";
 import {
   listaCampanhas,
   cabecalhoCampanha,
@@ -21,6 +21,7 @@ import {
   celulaUltimaCampanha,
   acoesClienteCampanha,
   formularioCampanha,
+  listaEscolhaClientes,
   contagemClientes,
 } from "../templates/campanhas.js";
 import { AcessosModal } from "./AcessosModal.js";
@@ -333,13 +334,77 @@ export class CampanhasView extends View {
       campo("versaoAlvo").addEventListener("input", () => { campo("versaoAlvo").dataset.editado = "1"; });
       sugerir();
     }
+
+    // Campanha só para clientes escolhidos. A seleção mora em `marcados`, e não
+    // nos checkboxes: filtrar pela busca refaz a lista, e quem estava marcado
+    // e saiu da tela não pode ser desmarcado por isso.
+    const papel = (nome) => /** @type {HTMLElement} */ (form.querySelector(`[data-role="${nome}"]`));
+    const buscaEscolha = /** @type {HTMLInputElement} */ (papel("busca-escolha"));
+    const marcados = new Set(campanha?.publico === "escolhidos" ? campanha.clientes.map((c) => c.id) : []);
+    let candidatos = [];
+    let carregadoPara = null;
+    const sistemaDaCampanha = () => (campanha ? campanha.sistema : campo("sistema").value);
+    const escolhendo = () => /** @type {HTMLInputElement} */ (form.querySelector('input[name="publico"]:checked')).value === "escolhidos";
+    const pintarEscolha = () => {
+      papel("lista-escolha").innerHTML = String(listaEscolhaClientes(buscarClientes(candidatos, buscaEscolha.value), marcados));
+      papel("contagem-escolha").textContent = `${plural(marcados.size, "cliente escolhido", "clientes escolhidos")} de ${candidatos.length}`;
+    };
+    const carregarCandidatos = async () => {
+      const sistema = sistemaDaCampanha();
+      if (carregadoPara === sistema) return;
+      try {
+        candidatos = await this.api.get("/campanhas/clientes-do-sistema", { sistema }, { key: "campanhas:candidatos" });
+      } catch (err) {
+        if (!err?.cancelled) erro.textContent = mensagem(err);
+        return;
+      }
+      carregadoPara = sistema;
+      const ids = new Set(candidatos.map((c) => c.id));
+      for (const id of [...marcados]) if (!ids.has(id)) marcados.delete(id);
+      pintarEscolha();
+    };
+    const atualizarPublico = () => {
+      papel("campo-cidade").hidden = escolhendo();
+      papel("escolha").hidden = !escolhendo();
+      if (escolhendo()) carregarCandidatos();
+    };
+    form.addEventListener("change", (e) => {
+      const alvo = /** @type {HTMLInputElement} */ (e.target);
+      if (alvo.name === "publico") return atualizarPublico();
+      if (!alvo.closest('[data-role="lista-escolha"]')) return;
+      if (alvo.checked) marcados.add(Number(alvo.value));
+      else marcados.delete(Number(alvo.value));
+      pintarEscolha();
+    });
+    buscaEscolha.addEventListener("input", aguardarPausa(pintarEscolha, 150));
+    form.querySelector('[data-action="marcar-visiveis"]').addEventListener("click", () => {
+      for (const c of buscarClientes(candidatos, buscaEscolha.value)) marcados.add(c.id);
+      pintarEscolha();
+    });
+    form.querySelector('[data-action="limpar-escolha"]').addEventListener("click", () => {
+      marcados.clear();
+      pintarEscolha();
+    });
+    // Outro sistema, outros clientes possíveis: a escolha anterior não vale mais.
+    if (!campanha) {
+      campo("sistema").addEventListener("change", () => {
+        marcados.clear();
+        carregadoPara = null;
+        if (escolhendo()) carregarCandidatos();
+      });
+    }
+    atualizarPublico();
+
     form.querySelector('[data-action="cancelar"]').addEventListener("click", () => close());
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const dados = {
         titulo: campo("titulo").value.trim(),
         prazo: campo("prazo").value.trim(),
-        cidade: campo("cidade").value,
+        publico: escolhendo() ? "escolhidos" : "todos",
+        // Com clientes escolhidos a cidade não vale: a lista já é o filtro.
+        cidade: escolhendo() ? "" : campo("cidade").value,
+        ...(escolhendo() ? { clientes: [...marcados] } : {}),
         descricao: /** @type {HTMLTextAreaElement} */ (form.querySelector('[data-field="descricao"]')).value.trim(),
         ...(campanha ? {} : { sistema: campo("sistema").value, versaoAlvo: campo("versaoAlvo").value.trim() }),
       };
@@ -348,6 +413,11 @@ export class CampanhasView extends View {
         : versaoRuim ? ["versaoAlvo", "Versão-alvo precisa ser uma data dd/mm/aaaa."]
           : dados.prazo && !dataBRValida(dados.prazo) ? ["prazo", "Prazo precisa ser uma data dd/mm/aaaa."] : null;
       for (const nome of ["titulo", "versaoAlvo", "prazo"]) campo(nome)?.setAttribute("aria-invalid", "false");
+      if (!invalido && escolhendo() && marcados.size === 0) {
+        erro.textContent = "Escolha pelo menos um cliente.";
+        buscaEscolha.focus();
+        return;
+      }
       if (invalido) {
         erro.textContent = invalido[1];
         campo(invalido[0]).setAttribute("aria-invalid", "true");

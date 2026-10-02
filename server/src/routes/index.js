@@ -200,6 +200,8 @@ class ApiRouter {
     // Campanhas: leitura para todos; criar, editar e encerrar para quem já
     // registra atualizações; excluir só Admin (apaga a meta e o placar).
     api.get("/campanhas", campanhas.list);
+    // Antes de "/campanhas/:id": senão "clientes-do-sistema" seria lido como id.
+    api.get("/campanhas/clientes-do-sistema", campanhas.clientesDoSistema);
     api.get("/campanhas/:id", campanhas.get);
     api.get("/campanhas/:id/export", campanhas.exportarXlsx);
     api.post("/campanhas", exigirPapel("operador", "admin"), campanhas.create);

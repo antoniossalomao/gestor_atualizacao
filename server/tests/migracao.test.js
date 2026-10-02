@@ -260,7 +260,7 @@ test("Migração 3 - banco já existente recebe autoria sem perder dados", () =>
     const antigo = new Sqlite3(arquivo);
     // Um banco na versão 2 de verdade não tem nada das migrações seguintes:
     // nem a autoria (3) nem as campanhas (4).
-    antigo.exec("ALTER TABLE sistemas DROP COLUMN ultima_versao_autor; ALTER TABLE sistemas DROP COLUMN ultima_versao_em; ALTER TABLE sistemas DROP COLUMN atualiza_com_principal; ALTER TABLE clientes DROP COLUMN regime_tributario; DROP TABLE campanhas");
+    antigo.exec("ALTER TABLE sistemas DROP COLUMN ultima_versao_autor; ALTER TABLE sistemas DROP COLUMN ultima_versao_em; ALTER TABLE sistemas DROP COLUMN atualiza_com_principal; ALTER TABLE clientes DROP COLUMN regime_tributario; DROP TABLE campanha_clientes; DROP TABLE campanhas");
     antigo.pragma("user_version = 2");
     antigo.close();
 
@@ -286,7 +286,7 @@ test("Migração 4 - banco na versão 3 ganha campanhas sem perder dados", () =>
     inicial.conn.close();
 
     const antigo = new Sqlite3(arquivo);
-    antigo.exec("ALTER TABLE sistemas DROP COLUMN atualiza_com_principal; ALTER TABLE clientes DROP COLUMN regime_tributario; DROP TABLE campanhas");
+    antigo.exec("ALTER TABLE sistemas DROP COLUMN atualiza_com_principal; ALTER TABLE clientes DROP COLUMN regime_tributario; DROP TABLE campanha_clientes; DROP TABLE campanhas");
     antigo.pragma("user_version = 3");
     antigo.close();
 
@@ -316,7 +316,7 @@ test("Migração 6 - NFCe e Consignado M2 passam a atualizar junto com o B_Venda
     inicial.conn.close();
 
     const antigo = new Sqlite3(arquivo);
-    antigo.exec("ALTER TABLE sistemas DROP COLUMN atualiza_com_principal");
+    antigo.exec("ALTER TABLE sistemas DROP COLUMN atualiza_com_principal; DROP TABLE campanha_clientes; ALTER TABLE campanhas DROP COLUMN so_selecionados");
     antigo.pragma("user_version = 5");
     antigo.close();
 
@@ -326,6 +326,33 @@ test("Migração 6 - NFCe e Consignado M2 passam a atualizar junto com o B_Venda
       const marcados = migrado.conn.prepare("SELECT nome FROM sistemas WHERE atualiza_com_principal = 1 ORDER BY nome").all().map((r) => r.nome);
       assert.deepEqual(marcados, ["Consignado M2", "NFCe"]);
       assert.equal(migrado.sistemas.resolver("B_Vendas").atualiza_com_principal, 0);
+    } finally { migrado.conn.close(); }
+  } finally { fs.rmSync(tmpDir, { recursive: true, force: true }); }
+});
+
+test("Migração 7 - campanhas existentes continuam valendo para o sistema inteiro", () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-migr7-"));
+  const arquivo = path.join(tmpDir, "gestao.db");
+  try {
+    const inicial = new BancoDeDados(arquivo);
+    inicial.conn.prepare("INSERT INTO clientes (nome) VALUES (?)").run("Cliente existente");
+    const sistemaId = inicial.sistemas.resolver("B_NFe").id;
+    inicial.campanhas.insert({ titulo: "Antiga", descricao: "", sistemaId, versaoAlvo: "25/09/2026", prazo: "", cidade: "", criadaPor: "t" });
+    inicial.conn.close();
+
+    const antigo = new Sqlite3(arquivo);
+    antigo.exec("DROP TABLE campanha_clientes; ALTER TABLE campanhas DROP COLUMN so_selecionados");
+    antigo.pragma("user_version = 6");
+    antigo.close();
+
+    const migrado = new BancoDeDados(arquivo);
+    try {
+      assert.equal(migrado.conn.pragma("user_version", { simple: true }), VERSAO_ATUAL);
+      const [campanha] = migrado.campanhas.list("todas");
+      assert.equal(campanha.titulo, "Antiga", "a campanha não se perde");
+      assert.equal(campanha.publico, "todos", "campanha antiga nasce para o sistema inteiro, como sempre foi");
+      assert.deepEqual(migrado.campanhas.idsClientes(campanha.id), []);
+      assert.equal(migrado.conn.pragma("foreign_key_check").length, 0);
     } finally { migrado.conn.close(); }
   } finally { fs.rmSync(tmpDir, { recursive: true, force: true }); }
 });

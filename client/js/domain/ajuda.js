@@ -35,7 +35,7 @@ export const COMO_USAR_TELAS = {
   sistemas:
     "Clientes de um sistema com a última atualização e a situação de cada um. Filtre pela situação, busque por cliente ou cidade, ou use Filtros para ver só quem teve a última atualização antes de uma data. Em \"Versões oficiais\" fica a data e a versão de referência de cada sistema.",
   campanhas:
-    "Metas de versão: escolha um sistema e uma versão e acompanhe quantos clientes já a receberam.",
+    "Metas de versão: escolha um sistema e uma versão e acompanhe quantos clientes já a receberam. A campanha pode valer para todos os clientes do sistema, para uma cidade ou só para clientes escolhidos.",
   administracao:
     "Só para administradores: contas e papéis, regras da equipe (prazos, arquivamento, classificação dos sistemas), importação de dados, integrações, backups, auditoria e diagnóstico do servidor.",
   configuracoes:

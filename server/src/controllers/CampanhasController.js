@@ -9,6 +9,12 @@ class CampanhasController {
     res.json(this.campanhaService.list(String(req.query.situacao || "ativas")));
   };
 
+  clientesDoSistema = (req, res, next) => {
+    try {
+      res.json(this.campanhaService.clientesDoSistema(req.query.sistema));
+    } catch (err) { next(err); }
+  };
+
   get = (req, res, next) => {
     try {
       res.json(this.campanhaService.detalhe(req.params.id));

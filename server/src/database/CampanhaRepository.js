@@ -3,7 +3,8 @@ const { BaseRepository } = require("./BaseRepository");
 const CAMPOS = `c.id, c.titulo, c.descricao, c.sistema_id AS sistemaId, s.nome AS sistema,
   c.versao_alvo AS versaoAlvo, c.prazo, c.cidade, c.criada_em AS criadaEm, c.criada_por AS criadaPor,
   c.encerrada_em AS encerradaEm, c.encerrada_por AS encerradaPor,
-  c.total_final AS totalFinal, c.atendidos_final AS atendidosFinal`;
+  c.total_final AS totalFinal, c.atendidos_final AS atendidosFinal,
+  CASE WHEN c.so_selecionados = 1 THEN 'escolhidos' ELSE 'todos' END AS publico`;
 
 /**
  * Campanhas de atualização (aba Campanhas). Só a meta mora aqui; os
@@ -40,19 +41,41 @@ class CampanhaRepository extends BaseRepository {
     return this.conn.prepare(`SELECT ${CAMPOS} FROM campanhas c JOIN sistemas s ON s.id = c.sistema_id WHERE c.id = ?`).get(id);
   }
 
-  insert({ titulo, descricao, sistemaId, versaoAlvo, prazo, cidade, criadaPor }) {
-    const info = this.conn
-      .prepare(
-        `INSERT INTO campanhas (titulo, descricao, sistema_id, versao_alvo, prazo, cidade, criada_em, criada_por)
-         VALUES (@titulo, @descricao, @sistemaId, @versaoAlvo, @prazo, @cidade, @criadaEm, @criadaPor)`
-      )
-      .run({ titulo, descricao, sistemaId, versaoAlvo, prazo, cidade, criadaPor, criadaEm: new Date().toISOString() });
-    return Number(info.lastInsertRowid);
+  insert({ titulo, descricao, sistemaId, versaoAlvo, prazo, cidade, criadaPor, publico = "todos", clienteIds = [] }) {
+    return this.conn.transaction(() => {
+      const info = this.conn
+        .prepare(
+          `INSERT INTO campanhas (titulo, descricao, sistema_id, versao_alvo, prazo, cidade, so_selecionados, criada_em, criada_por)
+           VALUES (@titulo, @descricao, @sistemaId, @versaoAlvo, @prazo, @cidade, @soSelecionados, @criadaEm, @criadaPor)`
+        )
+        .run({ titulo, descricao, sistemaId, versaoAlvo, prazo, cidade, criadaPor, soSelecionados: publico === "escolhidos" ? 1 : 0, criadaEm: new Date().toISOString() });
+      const id = Number(info.lastInsertRowid);
+      this.definirClientes(id, clienteIds);
+      return id;
+    })();
   }
 
   /** Sistema e versão-alvo NÃO entram: são a meta, e a meta não muda depois de criada. */
-  update(id, { titulo, descricao, prazo, cidade }) {
-    return this.conn.prepare("UPDATE campanhas SET titulo = @titulo, descricao = @descricao, prazo = @prazo, cidade = @cidade WHERE id = @id").run({ id, titulo, descricao, prazo, cidade }).changes;
+  update(id, { titulo, descricao, prazo, cidade, publico = "todos", clienteIds = [] }) {
+    return this.conn.transaction(() => {
+      const mudou = this.conn
+        .prepare("UPDATE campanhas SET titulo = @titulo, descricao = @descricao, prazo = @prazo, cidade = @cidade, so_selecionados = @soSelecionados WHERE id = @id")
+        .run({ id, titulo, descricao, prazo, cidade, soSelecionados: publico === "escolhidos" ? 1 : 0 }).changes;
+      this.definirClientes(id, clienteIds);
+      return mudou;
+    })();
+  }
+
+  /** Ids dos clientes escolhidos para a campanha (vazio quando ela vale para o sistema inteiro). */
+  idsClientes(id) {
+    return this.conn.prepare("SELECT cliente_id FROM campanha_clientes WHERE campanha_id = ?").all(id).map((r) => r.cliente_id);
+  }
+
+  /** Troca a lista de escolhidos inteira: a tela sempre manda a lista final, não o que mudou. */
+  definirClientes(id, clienteIds) {
+    this.conn.prepare("DELETE FROM campanha_clientes WHERE campanha_id = ?").run(id);
+    const ligar = this.conn.prepare("INSERT INTO campanha_clientes (campanha_id, cliente_id) VALUES (?, ?)");
+    for (const clienteId of clienteIds) ligar.run(id, clienteId);
   }
 
   encerrar(id, { usuarioNome, total, atendidos }) {

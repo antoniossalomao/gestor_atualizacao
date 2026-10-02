@@ -1,6 +1,6 @@
 import { html, plural } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
-import { FILTROS_CAMPANHA, SITUACAO_CAMPANHA, seloPrazo, textoProgresso } from "../domain/campanhas.js";
+import { FILTROS_CAMPANHA, SITUACAO_CAMPANHA, descricaoPublico, seloPrazo, textoProgresso } from "../domain/campanhas.js";
 
 /**
  * Marcação da aba Campanhas. Sem DOM: a view (views/CampanhasView.js) só
@@ -45,7 +45,7 @@ export function cartaoCampanha(c, selecionada) {
         <strong class="campanha-cartao__titulo">${c.titulo}</strong>
         <span class="campanha-cartao__pct">${c.percentual == null ? "—" : `${c.percentual}%`}</span>
       </span>
-      <span class="campanha-cartao__meta">${c.sistema} · versão ${c.versaoAlvo}${c.cidade ? ` · ${c.cidade}` : ""} ${marcaPrazo(seloPrazo(c))}</span>
+      <span class="campanha-cartao__meta">${c.sistema} · versão ${c.versaoAlvo}${c.publico === "escolhidos" ? " · Clientes escolhidos" : c.cidade ? ` · ${c.cidade}` : ""} ${marcaPrazo(seloPrazo(c))}</span>
       ${barraProgresso(c)}
       <span class="campanha-cartao__meta">${textoProgresso(c)}</span>
     </button>`;
@@ -77,7 +77,7 @@ export function cabecalhoCampanha(c, usuario) {
         <h2 class="campanha__titulo">${c.titulo} ${marcaPrazo(seloPrazo(c))}</h2>
         <p class="campanha__meta">
           <strong>${c.sistema}</strong> na versão <strong>${c.versaoAlvo}</strong> ou mais nova
-          · <strong>${c.cidade || "Todas as cidades"}</strong>
+          · <strong>${descricaoPublico(c)}</strong>
         </p>
         ${c.descricao ? html`<p class="campanha__descricao">${c.descricao}</p>` : ""}
       </div>
@@ -150,12 +150,33 @@ export function acoesClienteCampanha(row, { role, encerrada }) {
 }
 
 /**
+ * Lista de checkboxes onde se escolhem os clientes de uma campanha. Só marca
+ * o que está em `marcados`; quem decide o que fica marcado é a view, que
+ * guarda a seleção fora da lista (filtrar a busca refaz a lista inteira).
+ * @param {Array<{id: number, nome: string, codigo?: string, cidade?: string}>} clientes
+ * @param {Set<number>} marcados
+ */
+export function listaEscolhaClientes(clientes, marcados) {
+  if (clientes.length === 0) return html`<p class="campanha-escolha__vazio">Nenhum cliente encontrado.</p>`;
+  return html`${clientes.map((c) => {
+    const apoio = [c.codigo && `Cód. ${c.codigo}`, c.cidade].filter(Boolean).join(" · ");
+    return html`<label class="checkbox-item campanha-escolha__item">
+      <input type="checkbox" value="${c.id}" ${marcados.has(c.id) ? html`checked` : ""} />
+      <span class="campanha__cliente">${c.nome}${apoio ? html`<small>${apoio}</small>` : ""}</span>
+    </label>`;
+  })}`;
+}
+
+/**
  * Formulário de criação/edição. Na edição, sistema e versão-alvo aparecem
  * só para leitura: são a meta, e o servidor recusaria mudar.
+ * O público ("todos" ou "escolhidos") pode mudar nas duas situações; a lista
+ * de clientes a escolher é preenchida pela view (depende do sistema).
  * @param {{sistemas: Array<{nome: string, data?: string}>, cidades: string[], campanha?: any}} opts
  */
 export function formularioCampanha({ sistemas, cidades = [], campanha }) {
   const edicao = Boolean(campanha);
+  const escolhidos = campanha?.publico === "escolhidos";
   const opcoesCidade = campanha?.cidade && !cidades.includes(campanha.cidade) ? [...cidades, campanha.cidade] : cidades;
   return html`
     <h3 class="modal-box__title" id="campanha-form-titulo">${edicao ? "Editar campanha" : "Nova campanha"}</h3>
@@ -182,13 +203,27 @@ export function formularioCampanha({ sistemas, cidades = [], campanha }) {
           <label class="field__label" for="cmp-prazo">Prazo (opcional)</label>
           <input class="input" id="cmp-prazo" data-field="prazo" placeholder="dd/mm/aaaa" inputmode="numeric" value="${campanha?.prazo || ""}" />
         </div>
-        <div class="field">
+        <div class="field" data-role="campo-cidade" ${escolhidos ? html`hidden` : ""}>
           <label class="field__label" for="cmp-cidade">Cidade</label>
           <select class="input" id="cmp-cidade" data-field="cidade">
             <option value="">Todas as cidades</option>
             ${opcoesCidade.map((cidade) => html`<option value="${cidade}" ${campanha?.cidade === cidade ? html`selected` : ""}>${cidade}</option>`)}
           </select>
         </div>
+      </div>
+      <fieldset class="field campanha-form__publico">
+        <legend class="field__label">Quem entra na campanha</legend>
+        <label class="checkbox-item"><input type="radio" name="publico" value="todos" ${escolhidos ? "" : html`checked`} /> Todos os clientes do sistema</label>
+        <label class="checkbox-item"><input type="radio" name="publico" value="escolhidos" ${escolhidos ? html`checked` : ""} /> Só clientes escolhidos</label>
+      </fieldset>
+      <div class="field campanha-escolha" data-role="escolha" ${escolhidos ? "" : html`hidden`}>
+        <div class="campanha-escolha__barra">
+          <input class="input" type="search" data-role="busca-escolha" autocomplete="off" placeholder="Buscar cliente, código ou cidade" aria-label="Buscar cliente, código ou cidade" />
+          <button type="button" class="btn btn--small" data-action="marcar-visiveis">Marcar os visíveis</button>
+          <button type="button" class="btn btn--small" data-action="limpar-escolha">Limpar</button>
+        </div>
+        <div class="campanha-escolha__lista" data-role="lista-escolha" role="group" aria-label="Clientes da campanha"></div>
+        <div class="field__help" data-role="contagem-escolha" aria-live="polite"></div>
       </div>
       <div class="field">
         <label class="field__label" for="cmp-descricao">Descrição (opcional)</label>

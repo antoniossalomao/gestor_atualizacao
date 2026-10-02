@@ -1811,7 +1811,8 @@ Código: `server/src/services/CampanhaService.js`,
   precisa lembrar de "dar baixa" também na campanha.
 - A lista de uma campanha ativa muda sozinha quando o cadastro muda. É o
   desejado para uma meta do tipo "todo cliente do sistema"; não serve para
-  uma campanha de uma lista escolhida à mão (não pedida até aqui).
+  uma campanha de uma lista escolhida à mão (pedida em 02/10/2026; ver a
+  revisão no fim desta seção).
 - Cada leitura recalcula; com centenas de clientes e poucas campanhas, custa
   algumas consultas já existentes (`ultimaPorClienteNoSistema`).
 - Excluir uma campanha apaga só a meta e o placar. Atualizações e tarefas
@@ -1830,6 +1831,30 @@ Código: `server/src/services/CampanhaService.js`,
 - **Ligar a tarefa à campanha por uma coluna nova em `agendamentos`:** "já
   agendado" por sistema já responde a pergunta sem mexer na tabela de tarefas,
   e continua certo para tarefas criadas fora da campanha.
+
+#### Revisão de 02/10/2026: campanha só para clientes escolhidos
+
+Pedido da equipe: uma campanha para alguns clientes (um piloto, quem pediu a
+versão antes, quem a NT atinge), e não para o sistema inteiro ou uma cidade. A
+decisão da ADR continua valendo — só a meta e a lista de quem foi escolhido
+ficam guardadas; atendido, agendado e pendente seguem calculados.
+
+- **Migração 7:** tabela `campanha_clientes` (campanha, cliente; some junto com
+  a campanha ou o cliente) e a coluna `campanhas.so_selecionados`.
+- **O público é uma coluna, e não "tem linha na tabela".** Se fosse o segundo,
+  uma campanha escolhida cujos clientes foram todos excluídos ficaria sem
+  linha nenhuma e passaria a valer para o sistema inteiro: o placar mudaria de
+  "0 de 0" para centenas de clientes sem ninguém mexer nela.
+- **A lista é a interseção** entre os escolhidos e quem tem o sistema no
+  cadastro hoje. Escolhido que perdeu o sistema sai da lista e do total, em vez
+  de ficar "pendente" de algo que não usa — mesma regra de "ao vivo" de antes.
+- **Escolher substitui a cidade:** com clientes escolhidos a cidade é gravada
+  vazia. Os dois filtros juntos só confundiriam quem lê o cabeçalho.
+- **Diferente da meta, a lista pode ser editada** (trocar quem entra, ou voltar
+  para "todos"). Sistema e versão-alvo continuam imutáveis. Encerrar congela o
+  placar como antes.
+- **Quem escolhe vê só candidatos do sistema:** `GET /api/campanhas/clientes-do-sistema`,
+  e o servidor recusa id de cliente que não tenha o sistema.
 
 <a id="adr-0010"></a>
 ### 4.11 ADR-0010 — Somente HTTPS na rede, com o Caddy do compose na frente

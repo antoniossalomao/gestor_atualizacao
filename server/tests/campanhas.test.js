@@ -67,6 +67,109 @@ test("Campanhas - cidade limita público, placar e exportação", async () => {
   }
 });
 
+test("Campanhas - só para clientes escolhidos", async (t) => {
+  const env = ambiente();
+  try {
+    const nfe = env.db.sistemas.resolver("B_NFe").id;
+    const [a, b, c] = ["Loja A", "Loja B", "Loja C"].map((nome) => Number(env.cliente(nome, ["B_NFe"])));
+    const semNfe = Number(env.cliente("Sem NFe", ["B_Vendas"]));
+    const base = { titulo: "Piloto", sistema: "B_NFe", versaoAlvo: "25/09/2026" };
+
+    await t.test("só os escolhidos entram, e a cidade é ignorada", () => {
+      const campanha = env.campanhas.create({ ...base, publico: "escolhidos", clientes: [a, c], cidade: "Marília" }, USUARIO);
+      assert.equal(campanha.publico, "escolhidos");
+      assert.equal(campanha.cidade, "", "a lista é o filtro: a cidade não soma com ela");
+      assert.deepEqual(campanha.clientes.map((x) => x.nome), ["Loja A", "Loja C"]);
+      assert.equal(campanha.totalClientes, 2);
+      assert.equal(env.campanhas.list()[0].totalClientes, 2, "a lista de campanhas conta igual ao detalhe");
+    });
+
+    await t.test("baixa automática vale para o escolhido; quem ficou de fora não conta", () => {
+      const campanha = env.campanhas.list()[0];
+      env.atender("Loja A", "B_NFe", "26/09/2026");
+      env.atender("Loja B", "B_NFe", "26/09/2026");
+      const d = env.campanhas.detalhe(campanha.id);
+      assert.equal(env.situacao(campanha.id, "Loja A"), "concluido");
+      assert.equal(env.situacao(campanha.id, "Loja B"), undefined);
+      assert.deepEqual([d.totalClientes, d.atendidos, d.pendentes, d.percentual], [2, 1, 1, 50]);
+    });
+
+    await t.test("exigir pelo menos um cliente, e só de quem usa o sistema", () => {
+      assert.throws(() => env.campanhas.create({ ...base, publico: "escolhidos", clientes: [] }, USUARIO), /pelo menos um cliente/);
+      assert.throws(() => env.campanhas.create({ ...base, publico: "escolhidos" }, USUARIO), /pelo menos um cliente/);
+      assert.throws(() => env.campanhas.create({ ...base, publico: "escolhidos", clientes: [a, semNfe] }, USUARIO), /não usa o sistema "B_NFe"/);
+      assert.throws(() => env.campanhas.create({ ...base, publico: "escolhidos", clientes: [a, 99999] }, USUARIO), /não usa o sistema/);
+      assert.throws(() => env.campanhas.create({ ...base, publico: "escolhidos", clientes: ["x"] }, USUARIO), /não usa o sistema/);
+      assert.throws(() => env.campanhas.create({ ...base, publico: "qualquer" }, USUARIO), /Público/);
+    });
+
+    await t.test("repetidos entram uma vez só", () => {
+      const campanha = env.campanhas.create({ ...base, titulo: "Repetidos", publico: "escolhidos", clientes: [a, a, String(a)] }, USUARIO);
+      assert.equal(campanha.totalClientes, 1);
+    });
+
+    await t.test("editar sem mandar o público mantém quem estava; editar a lista troca", () => {
+      const campanha = env.campanhas.create({ ...base, titulo: "Edição", publico: "escolhidos", clientes: [a] }, USUARIO);
+      const titulo = env.campanhas.update(campanha.id, { titulo: "Edição 2" }, USUARIO);
+      assert.deepEqual(titulo.clientes.map((x) => x.nome), ["Loja A"]);
+      const trocada = env.campanhas.update(campanha.id, { titulo: "Edição 2", publico: "escolhidos", clientes: [b, c] }, USUARIO);
+      assert.deepEqual(trocada.clientes.map((x) => x.nome), ["Loja B", "Loja C"]);
+      assert.throws(() => env.campanhas.update(campanha.id, { titulo: "x", publico: "escolhidos", clientes: [] }, USUARIO), /pelo menos um cliente/);
+    });
+
+    await t.test("voltar para 'todos' solta a lista, e a campanha passa a valer para o sistema inteiro", () => {
+      const campanha = env.campanhas.create({ ...base, titulo: "Volta", publico: "escolhidos", clientes: [a] }, USUARIO);
+      const todos = env.campanhas.update(campanha.id, { titulo: "Volta", publico: "todos" }, USUARIO);
+      assert.equal(todos.publico, "todos");
+      assert.equal(todos.totalClientes, 3);
+      assert.deepEqual(env.db.campanhas.idsClientes(campanha.id), []);
+    });
+
+    await t.test("escolhido que perdeu o sistema sai da lista e não derruba a edição", () => {
+      const campanha = env.campanhas.create({ ...base, titulo: "Perdeu", publico: "escolhidos", clientes: [b, c] }, USUARIO);
+      env.db.conn.prepare("DELETE FROM cliente_sistemas WHERE cliente_id = ? AND sistema_id = ?").run(c, nfe);
+      assert.deepEqual(env.campanhas.detalhe(campanha.id).clientes.map((x) => x.nome), ["Loja B"]);
+      const editada = env.campanhas.update(campanha.id, { titulo: "Perdeu 2" }, USUARIO);
+      assert.deepEqual(editada.clientes.map((x) => x.nome), ["Loja B"]);
+    });
+
+    await t.test("escolhidos todos excluídos: a campanha fica vazia, não vira 'todos'", () => {
+      const campanha = env.campanhas.create({ ...base, titulo: "Esvaziada", publico: "escolhidos", clientes: [b] }, USUARIO);
+      env.db.conn.prepare("DELETE FROM clientes WHERE id = ?").run(b);
+      const d = env.campanhas.detalhe(campanha.id);
+      assert.equal(d.publico, "escolhidos");
+      assert.equal(d.totalClientes, 0);
+      assert.equal(d.percentual, null);
+    });
+
+    await t.test("excluir a campanha leva só as ligações, não os clientes", () => {
+      const campanha = env.campanhas.create({ ...base, titulo: "Some", publico: "escolhidos", clientes: [a] }, USUARIO);
+      env.campanhas.remove(campanha.id, USUARIO);
+      assert.equal(env.db.conn.prepare("SELECT COUNT(*) AS n FROM campanha_clientes WHERE campanha_id = ?").get(campanha.id).n, 0);
+      assert.equal(env.db.conn.prepare("SELECT COUNT(*) AS n FROM clientes WHERE id = ?").get(a).n, 1);
+    });
+
+    await t.test("a planilha diz que o público é de clientes escolhidos", async () => {
+      const campanha = env.campanhas.create({ ...base, titulo: "Planilha", publico: "escolhidos", clientes: [a] }, USUARIO);
+      const { buffer } = await env.campanhas.exportarPendentesXlsx(campanha.id);
+      const ExcelJS = require("exceljs");
+      const planilha = new ExcelJS.Workbook();
+      await planilha.xlsx.load(buffer);
+      const linhas = planilha.getWorksheet("Campanha").getSheetValues().filter(Boolean);
+      assert.ok(linhas.some(([, rotulo, valor]) => rotulo === "Público" && valor === "Clientes escolhidos"));
+    });
+
+    await t.test("clientesDoSistema lista só quem tem o sistema, em ordem de nome", () => {
+      const nomes = env.campanhas.clientesDoSistema("B_NFe").map((x) => x.nome);
+      assert.ok(!nomes.includes("Sem NFe"));
+      assert.deepEqual(nomes, [...nomes].sort((x, y) => x.localeCompare(y, "pt-BR")));
+      assert.throws(() => env.campanhas.clientesDoSistema("Inexistente"), /catálogo/);
+    });
+  } finally {
+    env.cleanup();
+  }
+});
+
 test("Campanhas - meta, baixa automática e placar", async (t) => {
   const env = ambiente();
   try {
@@ -280,6 +383,13 @@ test("Campanhas - rotas e permissões", async (t) => {
     assert.equal(r.status, 200);
     assert.match(r.tipo, /spreadsheetml/);
     assert.match(r.disposicao, /campanha-pendentes-B_NFe-25-09-2026\.xlsx/);
+  });
+  await t.test("candidatos de uma campanha de escolhidos: rota própria, antes do :id", async () => {
+    const lista = await pedir("/campanhas/clientes-do-sistema?sistema=B_NFe", { cookie: consulta });
+    assert.equal(lista.status, 200);
+    assert.ok(Array.isArray(lista.corpo));
+    assert.equal((await pedir("/campanhas/clientes-do-sistema?sistema=Inexistente", { cookie: consulta })).status, 400);
+    assert.equal((await pedir("/campanhas", { metodo: "POST", cookie: operador, corpo: { ...nova, publico: "escolhidos", clientes: [] } })).status, 400);
   });
   await t.test("admin exclui; depois disso é 404", async () => {
     assert.equal((await pedir(`/campanhas/${id}`, { metodo: "DELETE", cookie: admin })).status, 204);

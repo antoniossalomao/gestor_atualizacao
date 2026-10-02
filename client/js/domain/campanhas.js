@@ -32,21 +32,40 @@ export const SITUACAO_CAMPANHA = {
  * @returns {T[]}
  */
 export function filtrarClientesCampanha(clientes, filtro, busca = "") {
+  return buscarClientes(clientes.filter((c) => filtro === "todos" || c.situacao === filtro), busca);
+}
+
+/**
+ * Busca por nome, código ou cidade, sem acento nem caixa. Serve à tabela da
+ * campanha e à lista onde se escolhem os clientes dela.
+ * @template {{nome: string, codigo?: string, cidade?: string}} T
+ * @param {T[]} clientes
+ * @param {string} [busca]
+ * @returns {T[]}
+ */
+export function buscarClientes(clientes, busca = "") {
   const termo = normalizar(busca);
-  return clientes.filter((c) => {
-    if (filtro !== "todos" && c.situacao !== filtro) return false;
-    if (!termo) return true;
-    return [c.nome, c.codigo, c.cidade].some((v) => normalizar(v).includes(termo));
-  });
+  if (!termo) return clientes;
+  return clientes.filter((c) => [c.nome, c.codigo, c.cidade].some((v) => normalizar(v).includes(termo)));
+}
+
+/**
+ * Quem a campanha cobre, em uma frase curta: os clientes escolhidos, uma
+ * cidade ou o sistema inteiro.
+ * @param {{publico?: string, cidade?: string}} c
+ */
+export function descricaoPublico(c) {
+  if (c.publico === "escolhidos") return "Clientes escolhidos";
+  return c.cidade || "Todas as cidades";
 }
 
 /**
  * Frase do placar: "12 de 40 clientes atualizados (30%)". Sem clientes, diz
  * isso em vez de um "0%" ou "100%" que não significa nada.
- * @param {{totalClientes: number, atendidos: number, percentual: number|null}} c
+ * @param {{totalClientes: number, atendidos: number, percentual: number|null, publico?: string}} c
  */
 export function textoProgresso(c) {
-  if (!c.totalClientes) return "Nenhum cliente usa este sistema.";
+  if (!c.totalClientes) return c.publico === "escolhidos" ? "Nenhum cliente escolhido usa mais este sistema." : "Nenhum cliente usa este sistema.";
   return `${c.atendidos} de ${c.totalClientes} ${c.totalClientes === 1 ? "cliente atualizado" : "clientes atualizados"} (${c.percentual}%)`;
 }
 
