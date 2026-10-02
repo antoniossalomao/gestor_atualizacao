@@ -57,7 +57,7 @@ const SITUACOES_DE_AGENTE = [
 /**
  * O que a pessoa escolheu ver no sino (Configurações > Notificações). Tudo
  * ligado e "equipe" é o comportamento de antes.
- * @typedef {{atrasados?: boolean, hoje?: boolean, agentes?: boolean, escopo?: "equipe"|"minhas", usuario?: string}} FiltroSino
+ * @typedef {{atrasados?: boolean, hoje?: boolean, agentes?: boolean, campanhas?: boolean, escopo?: "equipe"|"minhas", usuario?: string}} FiltroSino
  */
 
 /**
@@ -68,16 +68,17 @@ const SITUACOES_DE_AGENTE = [
  * número responde "quanto", os primeiros nomes respondem "quem", e o clique
  * leva à tela que responde o resto.
  *
- * @param {{lembretes?: any, painel?: any}} [dados] como vieram da API --
+ * @param {{lembretes?: any, painel?: any, campanhas?: any}} [dados] como vieram da API --
  *   `lembretes` de `/agendamentos/lembretes`, `painel` de `/versoes/painel`
- *   (que é `null` com o Atualizador desativado).
+ *   (que é `null` com o Atualizador desativado), `campanhas` de
+ *   `/campanhas?situacao=ativas` (com o placar de cada uma).
  * @param {FiltroSino} [filtro] tipos desligados somem da lista -- e, com
  *   ela, do contador do sino e do título da aba, que somam esta mesma lista.
- *   "Só as minhas" vale para tarefas; agente não tem responsável.
+ *   "Só as minhas" vale para tarefas; agente e campanha não têm responsável.
  * @returns {Notificacao[]}
  */
-export function montarNotificacoes({ lembretes, painel } = {}, filtro = {}) {
-  const { atrasados: verAtrasados = true, hoje: verHoje = true, agentes: verAgentes = true, escopo = "equipe", usuario = "" } = filtro;
+export function montarNotificacoes({ lembretes, painel, campanhas } = {}, filtro = {}) {
+  const { atrasados: verAtrasados = true, hoje: verHoje = true, agentes: verAgentes = true, campanhas: verCampanhas = true, escopo = "equipe", usuario = "" } = filtro;
   const todas = Array.isArray(lembretes) ? lembretes : [];
   // Sem nome de usuário não há como saber o que é "meu": mostrar tudo é
   // melhor do que esconder tudo em silêncio.
@@ -92,6 +93,7 @@ export function montarNotificacoes({ lembretes, painel } = {}, filtro = {}) {
   const deHoje = tarefas.filter((t) => !atrasadas.includes(t));
 
   const agentes = verAgentes && Array.isArray(painel?.agentes) ? painel.agentes : [];
+  const { vencidas: campanhasVencidas, comPrazoHoje: campanhasDeHoje } = campanhasComPrazo(verCampanhas ? campanhas : [], hoje);
 
   return [
     grupo({
@@ -103,6 +105,16 @@ export function montarNotificacoes({ lembretes, painel } = {}, filtro = {}) {
       plural: "agendamentos atrasados",
       nomeDe: (t) => t?.cliente || t?.tarefa,
       destino: "agendamentos",
+    }),
+    grupo({
+      chave: "campanhas-vencidas",
+      tom: "erro",
+      icone: "campanhas",
+      itens: campanhasVencidas,
+      singular: "campanha com o prazo vencido",
+      plural: "campanhas com o prazo vencido",
+      nomeDe: (c) => c?.titulo,
+      destino: "campanhas",
     }),
     ...SITUACOES_DE_AGENTE.map((s) =>
       grupo({
@@ -127,7 +139,37 @@ export function montarNotificacoes({ lembretes, painel } = {}, filtro = {}) {
       nomeDe: (t) => t?.cliente || t?.tarefa,
       destino: "agendamentos",
     }),
+    grupo({
+      chave: "campanhas-hoje",
+      tom: "alerta",
+      icone: "relogio",
+      itens: campanhasDeHoje,
+      singular: "campanha com prazo hoje",
+      plural: "campanhas com prazo hoje",
+      nomeDe: (c) => c?.titulo,
+      destino: "campanhas",
+    }),
   ].filter((n) => n !== null);
+}
+
+/**
+ * Das campanhas ativas, as que pedem aviso: prazo vencido sem a meta cumprida
+ * e prazo que cai hoje. Mesmos dois baldes dos agendamentos -- e, como lá,
+ * nada de "vence em N dias": um aviso antecipado seria uma regra de prazo da
+ * equipe, e essas moram em Administração.
+ *
+ * A campanha que já cumpriu a meta (todo mundo atendido) não avisa nada:
+ * prazo passando sobre trabalho feito é ruído. `atrasada` vem calculada pelo
+ * servidor (CampanhaService._placar), que é quem sabe o que é "cumprida";
+ * aqui só se confere o resto.
+ * @param {any} campanhas
+ * @param {number} hoje aaaammdd
+ */
+function campanhasComPrazo(campanhas, hoje) {
+  const ativas = (Array.isArray(campanhas) ? campanhas : []).filter((c) => c && !c.encerradaEm);
+  const vencidas = ativas.filter((c) => c.atrasada === true);
+  const comPrazoHoje = ativas.filter((c) => c.atrasada !== true && c.totalClientes > 0 && c.atendidos < c.totalClientes && dataComoNumero(c.prazo) === hoje);
+  return { vencidas, comPrazoHoje };
 }
 
 /** Quanto o contador do sino mostra. @param {Notificacao[]} notificacoes */

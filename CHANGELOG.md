@@ -15,6 +15,10 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Campanhas no sino (02/10/2026):** campanha ativa com o prazo vencido sem a meta cumprida ("1 campanha com o prazo vencido") e campanha com prazo hoje ("1 campanha com prazo hoje") agora aparecem no sino e no contador da aba, com clique direto na tela de Campanhas. Antes só se via o selo de prazo vencido dentro da própria aba.
+  - Mesmos dois baldes dos agendamentos (vencido e hoje), sem "vence em N dias": um aviso antecipado seria uma regra de prazo da equipe, e essas ficam em Administração. Campanha com a meta cumprida, sem clientes ou encerrada não avisa.
+  - Novo ajuste em Configurações › Notificações, "Prazos das campanhas", ligado por padrão (`sinoCampanhas`). "Só as minhas" não esconde campanha: ela não tem responsável. O sino passa a ler também `GET /api/campanhas?situacao=ativas` a cada ciclo de 5 minutos.
+
 - **Campanhas, "Campanha com quem falta" (02/10/2026):** no detalhe de qualquer campanha (inclusive a encerrada) um botão abre o formulário de nova campanha já preenchido: mesmo sistema e versão-alvo, só "clientes escolhidos" marcados com quem ainda não cumpriu a meta (pendentes e já agendados), título "… — quem falta" e a descrição herdada. Serve para fechar a conta de uma campanha que acabou com gente faltando, sem remarcar os clientes à mão.
   - O prazo não vem: o da campanha anterior já passou. A lista de clientes é a mesma de sempre e dá para ajustar antes de criar; trocar para "todos" também vale.
 

@@ -188,11 +188,18 @@ test("Busca de ajustes", async (t) => {
 test("Preferências de notificação e relatório (13.4)", async (t) => {
   zerar();
   await t.test("padrões: sino com tudo, sem som, sem silêncio, relatório abre na atualização", () => {
-    assert.deepEqual(aparencia.sino(), { atrasados: true, hoje: true, agentes: true, escopo: "equipe" });
+    assert.deepEqual(aparencia.sino(), { atrasados: true, hoje: true, agentes: true, campanhas: true, escopo: "equipe" });
     assert.equal(aparencia.somAvisos(), false);
     assert.deepEqual(aparencia.silencio(), { ativo: false, inicio: "19:00", fim: "07:00", criticos: true });
     assert.equal(aparencia.relatorioAba(), "atualizacao");
     assert.equal(aparencia.relatorioFecharAoCopiar(), false);
+  });
+
+  await t.test("o sino das campanhas liga por padrão e a preferência é respeitada", () => {
+    assert.equal(aparencia.sino().campanhas, true);
+    aparencia.aplicar({ sinoCampanhas: false });
+    assert.equal(aparencia.sino().campanhas, false);
+    zerar();
   });
 
   await t.test("valor salvo fora da lista cai no padrão, em vez de chegar à regra", () => {

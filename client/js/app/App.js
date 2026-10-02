@@ -226,21 +226,22 @@ export class App {
   }
 
   /**
-   * Busca o que alimenta o sino: agendamentos vencidos/de hoje e o painel dos
-   * agentes. As duas chamadas juntas, e cada uma com o seu próprio `catch`:
-   * com o Atualizador desativado `/versoes/painel` responde 403 (ver
-   * `exigirAtualizadorHabilitado`), e uma falha de rede numa delas não pode
-   * apagar o que a outra tinha a dizer.
+   * Busca o que alimenta o sino: agendamentos vencidos/de hoje, o painel dos
+   * agentes e as campanhas ativas (os prazos). As chamadas juntas, e cada uma
+   * com o seu próprio `catch`: com o Atualizador desativado `/versoes/painel`
+   * responde 403 (ver `exigirAtualizadorHabilitado`), e uma falha de rede
+   * numa delas não pode apagar o que as outras tinham a dizer.
    */
   async _carregarNotificacoes() {
-    const [lembretes, painel] = await Promise.all([
+    const [lembretes, painel, campanhas] = await Promise.all([
       this.api.get("/agendamentos/lembretes").catch(() => null),
       this.atualizadorHabilitado ? this.api.get("/versoes/painel").catch(() => null) : Promise.resolve(null),
+      this.api.get("/campanhas", { situacao: "ativas" }).catch(() => null),
     ]);
-    // Os dois fora do ar é o único caso em que nada se pode afirmar: zerar o
+    // Todos fora do ar é o único caso em que nada se pode afirmar: zerar o
     // sino aí apagaria avisos que continuam valendo, só que invisíveis.
-    if (lembretes === null && painel === null) return;
-    this._dadosSino = { lembretes, painel };
+    if (lembretes === null && painel === null && campanhas === null) return;
+    this._dadosSino = { lembretes, painel, campanhas };
     this._redesenharSino({ podeTocar: true });
     // Falhas guardadas durante o horário silencioso: o fim do silêncio é
     // percebido aqui, no ritmo do sino (ver notificacoes.liberarAcumuladas).

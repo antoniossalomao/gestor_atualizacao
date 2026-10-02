@@ -239,6 +239,7 @@ const PADROES = {
   sinoAtrasados: true,
   sinoHoje: true,
   sinoAgentes: true,
+  sinoCampanhas: true,
   sinoEscopo: "equipe",
   somAvisos: false,
   silencioAtivo: false,
@@ -296,6 +297,7 @@ const VALIDOS = {
   sinoAtrasados: [true, false],
   sinoHoje: [true, false],
   sinoAgentes: [true, false],
+  sinoCampanhas: [true, false],
   sinoEscopo: ESCOPOS_AGENDA.map((e) => e.valor),
   somAvisos: [true, false],
   silencioAtivo: [true, false],
@@ -484,7 +486,7 @@ export const aparencia = {
   /**
    * O que o sino conta. Cada tipo desligado some do sino E do contador no
    * título da aba -- os dois leem a mesma lista (ver App._carregarNotificacoes).
-   * @returns {{atrasados: boolean, hoje: boolean, agentes: boolean, escopo: "equipe"|"minhas"}}
+   * @returns {{atrasados: boolean, hoje: boolean, agentes: boolean, campanhas: boolean, escopo: "equipe"|"minhas"}}
    */
   sino() {
     const escopo = umDe("sinoEscopo", ESCOPOS_AGENDA, PADROES.sinoEscopo);
@@ -492,6 +494,7 @@ export const aparencia = {
       atrasados: duradouras.get("sinoAtrasados", true) !== false,
       hoje: duradouras.get("sinoHoje", true) !== false,
       agentes: duradouras.get("sinoAgentes", true) !== false,
+      campanhas: duradouras.get("sinoCampanhas", true) !== false,
       escopo: escopo === "minhas" ? "minhas" : "equipe",
     };
   },
@@ -675,7 +678,7 @@ export const aparencia = {
     for (const chave of ["fonte", "largura", "foco", "duracaoAvisos", "periodoAtualizacoes", "sinoEscopo", "silencioInicio", "silencioFim", "relatorioAba"]) {
       if (mudancas[chave] !== undefined && valorValido(chave, mudancas[chave])) duradouras.set(chave, mudancas[chave]);
     }
-    for (const chave of ["dicasAtalho", "confirmarSaida", "contadorNoTitulo", "sinoAtrasados", "sinoHoje", "sinoAgentes", "somAvisos", "silencioAtivo", "silencioCriticos", "relatorioFecharAoCopiar"]) {
+    for (const chave of ["dicasAtalho", "confirmarSaida", "contadorNoTitulo", "sinoAtrasados", "sinoHoje", "sinoAgentes", "sinoCampanhas", "somAvisos", "silencioAtivo", "silencioCriticos", "relatorioFecharAoCopiar"]) {
       if (mudancas[chave] !== undefined) duradouras.set(chave, Boolean(mudancas[chave]));
     }
 
