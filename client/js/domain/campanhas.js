@@ -114,6 +114,30 @@ export function textoProgresso(c) {
   return `${c.atendidos} de ${c.totalClientes} ${c.totalClientes === 1 ? "cliente atualizado" : "clientes atualizados"} (${c.percentual}%)`;
 }
 
+/** Sufixo do título de uma campanha criada a partir de quem falta em outra. */
+const SUFIXO_QUEM_FALTA = " — quem falta";
+const MAX_TITULO = 120;
+
+/**
+ * Ponto de partida de uma nova campanha para quem ainda não cumpriu a meta
+ * de outra: mesmo sistema e versão-alvo, só os clientes que não estão
+ * "concluídos" (pendentes e já agendados), título e descrição herdados. O
+ * prazo NÃO vem: o da campanha anterior já passou, ou deixou de valer.
+ * @param {{titulo: string, descricao?: string, sistema: string, versaoAlvo: string, clientes: Array<{id: number, situacao: string}>}} campanha
+ * @returns {{sistema: string, versaoAlvo: string, titulo: string, descricao: string, clienteIds: number[]}}
+ */
+export function modeloComQuemFalta(campanha) {
+  const base = campanha.titulo.endsWith(SUFIXO_QUEM_FALTA) ? campanha.titulo.slice(0, -SUFIXO_QUEM_FALTA.length) : campanha.titulo;
+  return {
+    sistema: campanha.sistema,
+    versaoAlvo: campanha.versaoAlvo,
+    // O limite do título é o do servidor: passar dele faria o formulário nascer inválido.
+    titulo: `${base.slice(0, MAX_TITULO - SUFIXO_QUEM_FALTA.length)}${SUFIXO_QUEM_FALTA}`,
+    descricao: campanha.descricao || "",
+    clienteIds: campanha.clientes.filter((c) => c.situacao !== "concluido").map((c) => c.id),
+  };
+}
+
 /**
  * Situação do prazo, para o selo do cartão.
  * @param {{prazo: string, encerradaEm?: string|null, atrasada?: boolean}} c

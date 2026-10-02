@@ -82,6 +82,7 @@ export function cabecalhoCampanha(c, usuario) {
         ${c.descricao ? html`<p class="campanha__descricao">${c.descricao}</p>` : ""}
       </div>
       <div class="campanha__acoes">
+        ${podeEditar && c.pendentes + c.agendados > 0 ? html`<button type="button" class="btn btn--small" data-action="nova-quem-falta">${iconeHtml("campanhas")} Campanha com quem falta</button>` : ""}
         ${podeEditar && !encerrada && c.pendentes > 0 ? html`<button type="button" class="btn btn--small" data-action="agendar-pendentes">${iconeHtml("calendario")} Agendar pendentes (${c.pendentes})</button>` : ""}
         ${podeEditar && !encerrada && c.publico === "escolhidos" ? html`<button type="button" class="btn btn--small" data-action="adicionar">${iconeHtml("plus")} Adicionar clientes</button>` : ""}
         ${podeEditar && !encerrada ? html`<button type="button" class="btn btn--small" data-action="editar">${iconeHtml("editar")} Editar</button>` : ""}
@@ -269,14 +270,18 @@ export function formularioAdicionarClientes(campanha) {
  * só para leitura: são a meta, e o servidor recusaria mudar.
  * O público ("todos" ou "escolhidos") pode mudar nas duas situações; a lista
  * de clientes a escolher é preenchida pela view (depende do sistema).
- * @param {{sistemas: Array<{nome: string, data?: string}>, cidades: string[], campanha?: any}} opts
+ * `modelo` (só na criação) pré-preenche o formulário com quem falta numa
+ * campanha anterior: ver `modeloComQuemFalta` em domain/campanhas.js.
+ * @param {{sistemas: Array<{nome: string, data?: string}>, cidades: string[], campanha?: any, modelo?: ReturnType<typeof import("../domain/campanhas.js").modeloComQuemFalta>}} opts
  */
-export function formularioCampanha({ sistemas, cidades = [], campanha }) {
+export function formularioCampanha({ sistemas, cidades = [], campanha, modelo }) {
   const edicao = Boolean(campanha);
-  const escolhidos = campanha?.publico === "escolhidos";
+  const escolhidos = edicao ? campanha.publico === "escolhidos" : Boolean(modelo);
+  const base = campanha || modelo;
   const opcoesCidade = campanha?.cidade && !cidades.includes(campanha.cidade) ? [...cidades, campanha.cidade] : cidades;
   return html`
-    <h3 class="modal-box__title" id="campanha-form-titulo">${edicao ? "Editar campanha" : "Nova campanha"}</h3>
+    <h3 class="modal-box__title" id="campanha-form-titulo">${edicao ? "Editar campanha" : modelo ? "Nova campanha com quem falta" : "Nova campanha"}</h3>
+    ${modelo ? html`<p class="campanha__nota">${plural(modelo.clienteIds.length, "cliente que ainda não cumpriu", "clientes que ainda não cumpriram")} a meta já vêm marcados. Confira a lista e defina o novo prazo.</p>` : ""}
     <form class="campanha-form" data-role="form" novalidate>
       <div class="form-grid form-grid--2">
         <div class="field">
@@ -284,17 +289,17 @@ export function formularioCampanha({ sistemas, cidades = [], campanha }) {
           ${edicao
             ? html`<input class="input" id="cmp-sistema" value="${campanha.sistema}" disabled />`
             : html`<select class="input" id="cmp-sistema" data-field="sistema" required>
-                ${sistemas.map((s) => html`<option value="${s.nome}" data-oficial="${s.data || ""}">${s.nome}</option>`)}
+                ${sistemas.map((s) => html`<option value="${s.nome}" data-oficial="${s.data || ""}" ${modelo?.sistema === s.nome ? html`selected` : ""}>${s.nome}</option>`)}
               </select>`}
         </div>
         <div class="field">
           <label class="field__label" for="cmp-versao">Versão-alvo</label>
-          <input class="input" id="cmp-versao" data-field="versaoAlvo" placeholder="dd/mm/aaaa" inputmode="numeric" value="${campanha?.versaoAlvo || ""}" ${edicao ? html`disabled` : html`required`} aria-describedby="cmp-versao-ajuda" />
+          <input class="input" id="cmp-versao" data-field="versaoAlvo" placeholder="dd/mm/aaaa" inputmode="numeric" value="${base?.versaoAlvo || ""}" ${edicao ? html`disabled` : html`required`} aria-describedby="cmp-versao-ajuda" />
           <div class="field__help" id="cmp-versao-ajuda">${edicao ? "A meta não muda depois de criada." : "Quem for atualizado nesta data ou depois conta como atualizado."}</div>
         </div>
         <div class="field">
           <label class="field__label" for="cmp-titulo">Título</label>
-          <input class="input" id="cmp-titulo" data-field="titulo" maxlength="120" value="${campanha?.titulo || ""}" required placeholder="ex.: NT 2026.001 da SEFAZ" />
+          <input class="input" id="cmp-titulo" data-field="titulo" maxlength="120" value="${base?.titulo || ""}" required placeholder="ex.: NT 2026.001 da SEFAZ" />
         </div>
         <div class="field">
           <label class="field__label" for="cmp-prazo">Prazo (opcional)</label>
@@ -316,7 +321,7 @@ export function formularioCampanha({ sistemas, cidades = [], campanha }) {
       ${blocoEscolhaClientes({ oculto: !escolhidos })}
       <div class="field">
         <label class="field__label" for="cmp-descricao">Descrição (opcional)</label>
-        <textarea class="input" id="cmp-descricao" data-field="descricao" rows="3" maxlength="1000">${campanha?.descricao || ""}</textarea>
+        <textarea class="input" id="cmp-descricao" data-field="descricao" rows="3" maxlength="1000">${base?.descricao || ""}</textarea>
       </div>
       <p class="field__hint" data-role="erro" role="alert"></p>
       <div class="modal-box__actions">

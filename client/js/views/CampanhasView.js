@@ -11,7 +11,7 @@ import { html, plural } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
 import { comBotaoOcupado } from "../components/botaoOcupado.js";
 import { EscolhaDeClientes } from "../components/EscolhaDeClientes.js";
-import { filtrarClientesCampanha } from "../domain/campanhas.js";
+import { filtrarClientesCampanha, modeloComQuemFalta } from "../domain/campanhas.js";
 import {
   listaCampanhas,
   cabecalhoCampanha,
@@ -227,6 +227,7 @@ export class CampanhasView extends View {
     const acao = botao.dataset.action;
     if (acao === "editar") return this._abrirFormulario(c);
     if (acao === "adicionar") return this._abrirAdicionar(c);
+    if (acao === "nova-quem-falta") return this._abrirFormulario(undefined, modeloComQuemFalta(c));
     if (acao === "agendar-pendentes") return this._abrirAgendarPendentes(c);
     if (acao === "encerrar") {
       const ok = await Modal.confirm("Encerrar campanha", `Encerrar "${c.titulo}"?\n\nO placar de hoje (${c.atendidos} de ${c.totalClientes} atualizados) fica registrado. As atualizações continuam sendo registradas normalmente, e dá para reabrir depois.`, { confirmLabel: "Encerrar", danger: false });
@@ -319,7 +320,11 @@ export class CampanhasView extends View {
     data.select();
   }
 
-  async _abrirFormulario(campanha) {
+  /**
+   * @param {any} [campanha] a campanha sendo editada (sem ela, é uma criação)
+   * @param {ReturnType<typeof modeloComQuemFalta>} [modelo] pré-preenchimento de uma criação
+   */
+  async _abrirFormulario(campanha, modelo) {
     let sistemas = [];
     let cidades = [];
     try {
@@ -334,10 +339,12 @@ export class CampanhasView extends View {
         return Modal.alert("Erro", mensagem(err), "error");
       }
       if (sistemas.length === 0) return Modal.alert("Nova campanha", "Nenhum sistema atualizável cadastrado. Os sistemas fixos não têm versão para cobrar.", "info");
+      // Sem isto o formulário abriria no primeiro sistema da lista, calado, com a lista de clientes de outro.
+      if (modelo && !sistemas.some((s) => s.nome === modelo.sistema)) return Modal.alert("Nova campanha", `"${modelo.sistema}" não aceita mais campanha (inativo ou sem controle de versão).`, "info");
     }
     const { box, close } = Modal.abrirCaixa({ largura: 600 });
     box.setAttribute("aria-labelledby", "campanha-form-titulo");
-    box.innerHTML = String(formularioCampanha({ sistemas, cidades, campanha }));
+    box.innerHTML = String(formularioCampanha({ sistemas, cidades, campanha, modelo }));
     const form = /** @type {HTMLFormElement} */ (box.querySelector('[data-role="form"]'));
     const campo = (nome) => /** @type {HTMLInputElement} */ (form.querySelector(`[data-field="${nome}"]`));
     const erro = form.querySelector('[data-role="erro"]');
@@ -356,13 +363,15 @@ export class CampanhasView extends View {
     if (!campanha) {
       campo("sistema").addEventListener("change", sugerir);
       campo("versaoAlvo").addEventListener("input", () => { campo("versaoAlvo").dataset.editado = "1"; });
+      // A meta herdada de outra campanha vale mais que a oficial de hoje.
+      if (modelo) campo("versaoAlvo").dataset.editado = "1";
       sugerir();
     }
 
     // Campanha só para clientes escolhidos: lista, busca e filtros ficam no
     // componente; aqui só se decide quando carregar e o que mandar.
     const escolha = new EscolhaDeClientes(form.querySelector('[data-role="escolha"]'), this.api, {
-      marcados: campanha?.publico === "escolhidos" ? campanha.clientes.map((c) => c.id) : [],
+      marcados: campanha ? (campanha.publico === "escolhidos" ? campanha.clientes.map((c) => c.id) : []) : modelo?.clienteIds ?? [],
       aoErro: (err) => { erro.textContent = mensagem(err); },
     });
     const escolhendo = () => /** @type {HTMLInputElement} */ (form.querySelector('input[name="publico"]:checked')).value === "escolhidos";

@@ -7,7 +7,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buscarClientes, descricaoPublico, filtrarCandidatos, filtrarClientesCampanha, filtrosEscolhaVazios, opcoesFiltroEscolha, podeFiltrarQuemFalta, textoProgresso, seloPrazo } from "../js/domain/campanhas.js";
+import { buscarClientes, descricaoPublico, modeloComQuemFalta, filtrarCandidatos, filtrarClientesCampanha, filtrosEscolhaVazios, opcoesFiltroEscolha, podeFiltrarQuemFalta, textoProgresso, seloPrazo } from "../js/domain/campanhas.js";
 import { acoesClienteCampanha, cabecalhoCampanha, cartaoCampanha, celulaSituacaoCampanha, filtrosCampanha, filtrosEscolhaClientes, formularioAdicionarClientes, formularioAgendarPendentes, formularioCampanha, listaCampanhas, listaEscolhaClientes } from "../js/templates/campanhas.js";
 
 const MALICIOSO = '"><img src=x onerror=alert(1)>';
@@ -76,6 +76,7 @@ test("texto digitado não vira HTML", () => {
     cartaoCampanha({ ...perigosa, publico: "escolhidos" }, false),
     formularioAdicionarClientes(perigosa),
     formularioAgendarPendentes({ ...perigosa, pendentes: 2 }, MALICIOSO),
+    formularioCampanha({ sistemas: [{ nome: MALICIOSO }], cidades: [], modelo: { sistema: MALICIOSO, versaoAlvo: MALICIOSO, titulo: MALICIOSO, descricao: MALICIOSO, clienteIds: [1] } }),
     filtrosEscolhaClientes({ cidades: [MALICIOSO, "B"], grupos: [MALICIOSO, "B"], regimes: [MALICIOSO, "B"] }, { ...filtrosEscolhaVazios(), cidade: MALICIOSO }, { podeFiltrarQuemFalta: true }),
   ]) {
     assert.doesNotMatch(String(marcacao), /<img/);
@@ -190,6 +191,44 @@ test("Agendar pendentes: botão só com pendente, campanha aberta e quem edita; 
   assert.match(sem, /prioridade Normal/);
   assert.match(sem, /<strong>1 cliente pendente<\/strong>/);
   assert.match(sem, /Criar 1 agendamento</);
+});
+
+test("campanha com quem falta: herda sistema, meta e quem não concluiu; prazo não", () => {
+  const origem = { ...CAMPANHA, titulo: "NT 2026.001", descricao: "Cobrar até sexta", prazo: "30/09/2026", clientes: CLIENTES };
+  const modelo = modeloComQuemFalta(origem);
+  assert.deepEqual(modelo.clienteIds, [2, 3], "pendente e já agendado entram; concluído, não");
+  assert.equal(modelo.sistema, "B_NFe");
+  assert.equal(modelo.versaoAlvo, "25/09/2026");
+  assert.equal(modelo.titulo, "NT 2026.001 — quem falta");
+  assert.equal(modelo.descricao, "Cobrar até sexta");
+  assert.ok(!("prazo" in modelo), "o prazo antigo não vem");
+  assert.equal(modeloComQuemFalta({ ...origem, titulo: modelo.titulo }).titulo, "NT 2026.001 — quem falta", "não empilha o sufixo");
+  assert.ok(modeloComQuemFalta({ ...origem, titulo: "x".repeat(120) }).titulo.length <= 120, "respeita o limite do título");
+  assert.deepEqual(modeloComQuemFalta({ ...origem, clientes: [CLIENTES[0]] }).clienteIds, []);
+});
+
+test("botão 'Campanha com quem falta': só com alguém faltando, para quem edita, também na encerrada", () => {
+  const cab = (c, usuario) => String(cabecalhoCampanha(c, usuario));
+  assert.match(cab(CAMPANHA, { role: "operador" }), /data-action="nova-quem-falta"/);
+  assert.match(cab({ ...CAMPANHA, encerradaEm: "2026-09-30T10:00:00Z" }, { role: "operador" }), /data-action="nova-quem-falta"/, "o uso principal: a campanha que acabou com gente faltando");
+  assert.doesNotMatch(cab({ ...CAMPANHA, pendentes: 0, agendados: 0 }, { role: "operador" }), /nova-quem-falta/);
+  assert.match(cab({ ...CAMPANHA, pendentes: 0, agendados: 2 }, { role: "operador" }), /nova-quem-falta/, "já agendado ainda não cumpriu");
+  assert.doesNotMatch(cab(CAMPANHA, { role: "consulta" }), /nova-quem-falta/);
+});
+
+test("formulário com modelo: abre no sistema e meta herdados, com 'só escolhidos' marcado", () => {
+  const modelo = modeloComQuemFalta({ ...CAMPANHA, descricao: "d", clientes: CLIENTES });
+  const marcacao = String(formularioCampanha({ sistemas: [{ nome: "B_Vendas" }, { nome: "B_NFe", data: "20/09/2026" }], cidades: [], modelo }));
+  assert.match(marcacao, /<option value="B_NFe"[^>]*selected/);
+  assert.doesNotMatch(marcacao, /<option value="B_Vendas"[^>]*selected/);
+  assert.match(marcacao, /id="cmp-versao"[^>]*value="25\/09\/2026"/);
+  assert.match(marcacao, /value="NT 2026.001 — quem falta"/);
+  assert.match(marcacao, /name="publico" value="escolhidos" checked/);
+  assert.match(marcacao, /data-role="campo-cidade" hidden/);
+  assert.doesNotMatch(marcacao, /data-role="escolha" hidden/);
+  assert.match(marcacao, /Nova campanha com quem falta/);
+  assert.match(marcacao, /2 clientes que ainda não cumpriram a meta/);
+  assert.doesNotMatch(String(formularioCampanha({ sistemas: [{ nome: "B_NFe" }], cidades: [] })), /quem falta/, "sem modelo, formulário como sempre");
 });
 
 test("lista de escolha marca só quem está na seleção", () => {

@@ -15,6 +15,9 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Campanhas, "Campanha com quem falta" (02/10/2026):** no detalhe de qualquer campanha (inclusive a encerrada) um botão abre o formulário de nova campanha já preenchido: mesmo sistema e versão-alvo, só "clientes escolhidos" marcados com quem ainda não cumpriu a meta (pendentes e já agendados), título "… — quem falta" e a descrição herdada. Serve para fechar a conta de uma campanha que acabou com gente faltando, sem remarcar os clientes à mão.
+  - O prazo não vem: o da campanha anterior já passou. A lista de clientes é a mesma de sempre e dá para ajustar antes de criar; trocar para "todos" também vale.
+
 - **Campanhas, "Agendar pendentes" (02/10/2026):** um botão no detalhe cria a tarefa de atualização de todos os clientes pendentes de uma vez, na data escolhida (a de hoje vem sugerida). Antes era um clique por cliente, na linha.
   - Só quem está pendente agora ganha tarefa: quem já está agendado ou foi atendido fica de fora, e por isso um clique duplo não agenda ninguém duas vezes. Prioridade Alta se a campanha tem prazo, Normal se não; o responsável é quem clicou.
   - Entra tudo ou nada, com **uma** linha na Auditoria ("N tarefas de atualização agendadas"), e não uma por tarefa.
