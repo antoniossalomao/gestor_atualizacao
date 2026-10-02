@@ -15,6 +15,32 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Campanhas no sino (02/10/2026):** campanha ativa com o prazo vencido sem a meta cumprida ("1 campanha com o prazo vencido") e campanha com prazo hoje ("1 campanha com prazo hoje") agora aparecem no sino e no contador da aba, com clique direto na tela de Campanhas. Antes só se via o selo de prazo vencido dentro da própria aba.
+  - Mesmos dois baldes dos agendamentos (vencido e hoje), sem "vence em N dias": um aviso antecipado seria uma regra de prazo da equipe, e essas ficam em Administração. Campanha com a meta cumprida, sem clientes ou encerrada não avisa.
+  - Novo ajuste em Configurações › Notificações, "Prazos das campanhas", ligado por padrão (`sinoCampanhas`). "Só as minhas" não esconde campanha: ela não tem responsável. O sino passa a ler também `GET /api/campanhas?situacao=ativas` a cada ciclo de 5 minutos.
+
+- **Campanhas, "Campanha com quem falta" (02/10/2026):** no detalhe de qualquer campanha (inclusive a encerrada) um botão abre o formulário de nova campanha já preenchido: mesmo sistema e versão-alvo, só "clientes escolhidos" marcados com quem ainda não cumpriu a meta (pendentes e já agendados), título "… — quem falta" e a descrição herdada. Serve para fechar a conta de uma campanha que acabou com gente faltando, sem remarcar os clientes à mão.
+  - O prazo não vem: o da campanha anterior já passou. A lista de clientes é a mesma de sempre e dá para ajustar antes de criar; trocar para "todos" também vale.
+
+- **Campanhas, "Agendar pendentes" (02/10/2026):** um botão no detalhe cria a tarefa de atualização de todos os clientes pendentes de uma vez, na data escolhida (a de hoje vem sugerida). Antes era um clique por cliente, na linha.
+  - Só quem está pendente agora ganha tarefa: quem já está agendado ou foi atendido fica de fora, e por isso um clique duplo não agenda ninguém duas vezes. Prioridade Alta se a campanha tem prazo, Normal se não; o responsável é quem clicou.
+  - Entra tudo ou nada, com **uma** linha na Auditoria ("N tarefas de atualização agendadas"), e não uma por tarefa.
+  - O botão "Agendar" da linha passou a usar a mesma rota (`POST /api/campanhas/:id/agendar`, só Operador e Admin): o texto da tarefa, a prioridade e a regra de "pendente" moram só no servidor e os dois caminhos saem iguais. A tarefa tem o mesmo conteúdo de antes.
+
+- **Campanhas, saiu "Exportar pendentes" (02/10/2026):** o botão, a rota `GET /api/campanhas/:id/export` e a planilha (`.xlsx`) foram removidos, a pedido da equipe. Quem falta continua na tabela da campanha, com os filtros e a busca. A exportação de outras telas (Atualizações, Clientes etc.) não mudou.
+
+- **Campanhas, adicionar e retirar cliente no detalhe (02/10/2026):** numa campanha de clientes escolhidos, "Adicionar clientes" (mesma lista com busca e filtros, sem quem já está) e um "×" em cada linha ("Retirar da campanha") evitam abrir "Editar" e refazer a lista inteira.
+  - Só em campanha de clientes escolhidos e aberta: a de "todos" não tem lista (edite o público) e a encerrada tem o placar congelado (reabra antes). A campanha não fica sem nenhum cliente. Retirar não mexe no cadastro nem nas atualizações do cliente.
+  - Rotas `POST /api/campanhas/:id/clientes` e `DELETE /api/campanhas/:id/clientes/:clienteId`, só Operador e Admin; o servidor confere que o cliente usa o sistema.
+
+- **Campanhas, filtros na lista de escolha (02/10/2026):** acima da lista de clientes do formulário agora há filtro por cidade, grupo/rede e regime tributário, e "Só quem ainda não está na versão-alvo". "Marcar os visíveis" respeita os filtros, então marcar todo o regime X de uma Nota Técnica é um clique. Antes só havia a busca por texto.
+  - O "já cumpre" usa a mesma regra da campanha, contra a versão-alvo digitada no formulário; sem uma data completa e real o filtro fica desabilitado (o servidor devolve `atendido: null`, e não "pendente" para todos). Seletor com uma opção só não aparece.
+
+- **Campanha só para clientes escolhidos (02/10/2026):** o formulário de campanha ganhou "Quem entra na campanha": todos os clientes do sistema (como sempre, com a cidade opcional) ou só os clientes marcados numa lista com busca por nome, código ou cidade, "Marcar os visíveis" e "Limpar". Serve para um piloto ou para quem uma Nota Técnica atinge, sem criar uma campanha do sistema inteiro e ignorar a maioria.
+  - Continua valendo a baixa automática pela atualização, o "já agendado" por tarefa do mesmo sistema e o placar congelado no encerramento.
+  - Dá para trocar a lista depois de criada (a meta, sistema e versão-alvo, continua fixa). Escolher clientes substitui a cidade.
+  - Cliente escolhido que perde o sistema no cadastro sai da lista; se todos saírem, a campanha fica vazia (0 de 0), e não vira "todos". Migração 7; decisão na [ADR-0009](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0009).
+
 - **Classificação dos sistemas em lote — F5 (01/10/2026):** a lista de Administração › Operação ganhou um filtro por nome e passou a ter um "Salvar" e um "Desfazer" só, no pé do cartão, para todas as linhas alteradas. Antes havia um Salvar por linha: reclassificar cinco sistemas eram cinco cliques, e uma linha alterada e esquecida não avisava ninguém.
   - Só vai ao servidor o que mudou de verdade (`alteracoesClassificacao`, com teste), então voltar uma linha para como estava não gera registro na Auditoria.
   - Com sistema alterado, a barra fica presa no pé da tela, voltar à aba não apaga as marcações, e sair da conta ou recarregar a página avisa.

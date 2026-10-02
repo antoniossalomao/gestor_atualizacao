@@ -29,6 +29,7 @@ const FORMATOS = {
   sinoAtrasados: SIM_NAO,
   sinoHoje: SIM_NAO,
   sinoAgentes: SIM_NAO,
+  sinoCampanhas: SIM_NAO,
   sinoEscopo: (v) => v === "equipe" || v === "minhas",
   somAvisos: SIM_NAO,
   silencioAtivo: SIM_NAO,

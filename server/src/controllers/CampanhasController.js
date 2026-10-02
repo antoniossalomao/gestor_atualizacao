@@ -9,6 +9,12 @@ class CampanhasController {
     res.json(this.campanhaService.list(String(req.query.situacao || "ativas")));
   };
 
+  clientesDoSistema = (req, res, next) => {
+    try {
+      res.json(this.campanhaService.clientesDoSistema(req.query.sistema, req.query.versaoAlvo));
+    } catch (err) { next(err); }
+  };
+
   get = (req, res, next) => {
     try {
       res.json(this.campanhaService.detalhe(req.params.id));
@@ -24,6 +30,24 @@ class CampanhasController {
   update = (req, res, next) => {
     try {
       res.json(this.campanhaService.update(req.params.id, req.body || {}, req.session.user));
+    } catch (err) { next(err); }
+  };
+
+  adicionarClientes = (req, res, next) => {
+    try {
+      res.json(this.campanhaService.adicionarClientes(req.params.id, req.body?.clientes, req.session.user));
+    } catch (err) { next(err); }
+  };
+
+  removerCliente = (req, res, next) => {
+    try {
+      res.json(this.campanhaService.removerCliente(req.params.id, req.params.clienteId, req.session.user));
+    } catch (err) { next(err); }
+  };
+
+  agendar = (req, res, next) => {
+    try {
+      res.json(this.campanhaService.agendar(req.params.id, req.body || {}, req.session.user));
     } catch (err) { next(err); }
   };
 
@@ -43,17 +67,6 @@ class CampanhasController {
     try {
       this.campanhaService.remove(req.params.id, req.session.user);
       res.status(204).end();
-    } catch (err) { next(err); }
-  };
-
-  exportarXlsx = async (req, res, next) => {
-    try {
-      const { buffer, campanha } = await this.campanhaService.exportarPendentesXlsx(req.params.id);
-      // Nome de arquivo identificável e só com caracteres seguros no cabeçalho.
-      const sufixo = `${campanha.sistema}-${campanha.versaoAlvo}`.replace(/[^a-zA-Z0-9_-]+/g, "-");
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", `attachment; filename="campanha-pendentes-${sufixo}.xlsx"`);
-      res.send(Buffer.from(buffer));
     } catch (err) { next(err); }
   };
 }

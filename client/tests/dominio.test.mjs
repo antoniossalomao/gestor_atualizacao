@@ -269,6 +269,54 @@ test("domain/notificacoes - montarNotificacoes", async (t) => {
     assert.equal(achar(lista, "agendamentos-hoje").quantidade, 2);
   });
 
+  await t.test("campanha com prazo vencido sem a meta cumprida e campanha com prazo hoje viram linhas", () => {
+    const campanha = (extra) => ({ titulo: "NT 2026.001", prazo: dataDe(0), totalClientes: 4, atendidos: 1, atrasada: false, encerradaEm: null, ...extra });
+    const lista = montarNotificacoes({
+      campanhas: [
+        campanha({ titulo: "Vencida", prazo: dataDe(2), atrasada: true }),
+        campanha({ titulo: "Vence hoje" }),
+        campanha({ titulo: "Vence amanhã", prazo: dataDe(-1) }),
+        campanha({ titulo: "Sem prazo", prazo: "" }),
+      ],
+    });
+    const vencidas = achar(lista, "campanhas-vencidas");
+    assert.equal(vencidas.quantidade, 1);
+    assert.equal(vencidas.detalhe, "Vencida");
+    assert.equal(vencidas.tom, "erro");
+    assert.equal(vencidas.destino, "campanhas");
+    assert.equal(vencidas.titulo, "1 campanha com o prazo vencido");
+    const hoje = achar(lista, "campanhas-hoje");
+    assert.equal(hoje.detalhe, "Vence hoje", "amanhã e sem prazo não avisam: só vencida e hoje, como os agendamentos");
+    assert.equal(hoje.tom, "alerta");
+  });
+
+  await t.test("campanha com a meta cumprida, vazia ou encerrada não avisa", () => {
+    const base = { prazo: dataDe(0), totalClientes: 4, atendidos: 1, atrasada: false, encerradaEm: null };
+    const lista = montarNotificacoes({
+      campanhas: [
+        { ...base, titulo: "Todos atendidos", atendidos: 4 },
+        { ...base, titulo: "Sem clientes", totalClientes: 0, atendidos: 0 },
+        { ...base, titulo: "Encerrada", encerradaEm: "2026-09-30T10:00:00Z", atrasada: true },
+      ],
+    });
+    assert.equal(achar(lista, "campanhas-hoje"), undefined);
+    assert.equal(achar(lista, "campanhas-vencidas"), undefined);
+    assert.deepEqual(lista, []);
+  });
+
+  await t.test("o filtro do sino desliga as campanhas, e dado ausente ou torto não quebra", () => {
+    const dados = { campanhas: [{ titulo: "Vencida", prazo: dataDe(2), totalClientes: 2, atendidos: 0, atrasada: true }] };
+    assert.equal(achar(montarNotificacoes(dados), "campanhas-vencidas").quantidade, 1);
+    assert.deepEqual(montarNotificacoes(dados, { campanhas: false }), []);
+    for (const ruim of [null, undefined, {}, "x", [null, undefined]]) assert.deepEqual(montarNotificacoes({ campanhas: ruim }), []);
+    assert.equal(totalDe(montarNotificacoes(dados)), 1, "entra na contagem do sino");
+  });
+
+  await t.test("'só as minhas' não esconde campanha: ela não tem responsável", () => {
+    const dados = { campanhas: [{ titulo: "Vencida", prazo: dataDe(2), totalClientes: 2, atendidos: 0, atrasada: true }] };
+    assert.equal(achar(montarNotificacoes(dados, { escopo: "minhas", usuario: "Camila" }), "campanhas-vencidas").quantidade, 1);
+  });
+
   await t.test("cada situação de agente vira uma linha com o filtro que a abre", () => {
     const lista = montarNotificacoes({
       painel: {

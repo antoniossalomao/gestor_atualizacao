@@ -1,6 +1,6 @@
 import { html, plural } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
-import { FILTROS_CAMPANHA, SITUACAO_CAMPANHA, seloPrazo, textoProgresso } from "../domain/campanhas.js";
+import { FILTROS_CAMPANHA, SITUACAO_CAMPANHA, descricaoPublico, seloPrazo, textoProgresso } from "../domain/campanhas.js";
 
 /**
  * Marcação da aba Campanhas. Sem DOM: a view (views/CampanhasView.js) só
@@ -45,7 +45,7 @@ export function cartaoCampanha(c, selecionada) {
         <strong class="campanha-cartao__titulo">${c.titulo}</strong>
         <span class="campanha-cartao__pct">${c.percentual == null ? "—" : `${c.percentual}%`}</span>
       </span>
-      <span class="campanha-cartao__meta">${c.sistema} · versão ${c.versaoAlvo}${c.cidade ? ` · ${c.cidade}` : ""} ${marcaPrazo(seloPrazo(c))}</span>
+      <span class="campanha-cartao__meta">${c.sistema} · versão ${c.versaoAlvo}${c.publico === "escolhidos" ? " · Clientes escolhidos" : c.cidade ? ` · ${c.cidade}` : ""} ${marcaPrazo(seloPrazo(c))}</span>
       ${barraProgresso(c)}
       <span class="campanha-cartao__meta">${textoProgresso(c)}</span>
     </button>`;
@@ -77,12 +77,14 @@ export function cabecalhoCampanha(c, usuario) {
         <h2 class="campanha__titulo">${c.titulo} ${marcaPrazo(seloPrazo(c))}</h2>
         <p class="campanha__meta">
           <strong>${c.sistema}</strong> na versão <strong>${c.versaoAlvo}</strong> ou mais nova
-          · <strong>${c.cidade || "Todas as cidades"}</strong>
+          · <strong>${descricaoPublico(c)}</strong>
         </p>
         ${c.descricao ? html`<p class="campanha__descricao">${c.descricao}</p>` : ""}
       </div>
       <div class="campanha__acoes">
-        <button type="button" class="btn btn--small" data-action="exportar">${iconeHtml("download")} Exportar pendentes (.xlsx)</button>
+        ${podeEditar && c.pendentes + c.agendados > 0 ? html`<button type="button" class="btn btn--small" data-action="nova-quem-falta">${iconeHtml("campanhas")} Campanha com quem falta</button>` : ""}
+        ${podeEditar && !encerrada && c.pendentes > 0 ? html`<button type="button" class="btn btn--small" data-action="agendar-pendentes">${iconeHtml("calendario")} Agendar pendentes (${c.pendentes})</button>` : ""}
+        ${podeEditar && !encerrada && c.publico === "escolhidos" ? html`<button type="button" class="btn btn--small" data-action="adicionar">${iconeHtml("plus")} Adicionar clientes</button>` : ""}
         ${podeEditar && !encerrada ? html`<button type="button" class="btn btn--small" data-action="editar">${iconeHtml("editar")} Editar</button>` : ""}
         ${podeEditar ? html`<button type="button" class="btn btn--small" data-action="${encerrada ? "reabrir" : "encerrar"}">${encerrada ? "Reabrir" : "Encerrar"}</button>` : ""}
         ${usuario?.role === "admin" ? html`<button type="button" class="btn btn--small btn--danger" data-action="excluir">${iconeHtml("alerta")} Excluir</button>` : ""}
@@ -136,29 +138,150 @@ export function celulaSituacaoCampanha(row) {
 
 /**
  * Botões da linha. Ícone sem texto, então nome acessível e dica sempre.
- * "Agendar" só para quem ainda não está atendido nem agendado.
+ * "Agendar" só para quem ainda não está atendido nem agendado. "Retirar da
+ * campanha" só numa campanha de clientes escolhidos ainda aberta, e não no
+ * último cliente (o servidor recusaria).
+ * @param {any} row
+ * @param {{role?: string, encerrada: boolean, podeRetirar?: boolean}} opcoes
  */
-export function acoesClienteCampanha(row, { role, encerrada }) {
+export function acoesClienteCampanha(row, { role, encerrada, podeRetirar = false }) {
   /** @type {Array<[string, Parameters<typeof iconeHtml>[0], string]>} */
   const botoes = [];
   if (role !== "consulta" && !encerrada && row.situacao === "pendente") botoes.push(["agendar", "calendario", "Criar agendamento"]);
   if (role !== "consulta") botoes.push(["acessos", "acessos", "Gerenciar acessos remotos"]);
   botoes.push(["ficha", "olho", "Abrir ficha do cliente"]);
+  if (role !== "consulta" && !encerrada && podeRetirar) botoes.push(["remover", "fechar", "Retirar da campanha"]);
   return html`<div class="row-actions">${botoes.map(
     ([acao, ico, titulo]) => html`<button type="button" class="btn btn--icon" data-row-action="${acao}" data-id="${row.id}" title="${titulo}" aria-label="${titulo}: ${row.nome}">${iconeHtml(ico)}</button>`
   )}</div>`;
 }
 
 /**
+ * Lista de checkboxes onde se escolhem os clientes de uma campanha. Só marca
+ * o que está em `marcados`; quem decide o que fica marcado é a view, que
+ * guarda a seleção fora da lista (filtrar a busca refaz a lista inteira).
+ * @param {Array<{id: number, nome: string, codigo?: string, cidade?: string}>} clientes
+ * @param {Set<number>} marcados
+ */
+export function listaEscolhaClientes(clientes, marcados) {
+  if (clientes.length === 0) return html`<p class="campanha-escolha__vazio">Nenhum cliente encontrado.</p>`;
+  return html`${clientes.map((c) => {
+    const apoio = [c.codigo && `Cód. ${c.codigo}`, c.cidade].filter(Boolean).join(" · ");
+    return html`<label class="checkbox-item campanha-escolha__item">
+      <input type="checkbox" value="${c.id}" ${marcados.has(c.id) ? html`checked` : ""} />
+      <span class="campanha__cliente">${c.nome}${apoio ? html`<small>${apoio}</small>` : ""}</span>
+    </label>`;
+  })}`;
+}
+
+/**
+ * Filtros acima da lista de escolha: cidade, grupo/rede, regime tributário e
+ * "só quem ainda não está na versão-alvo". Só aparece o seletor que tem mais
+ * de uma opção; com uma só (ou nenhuma) ele não filtra nada.
+ * @param {{cidades: string[], grupos: string[], regimes: string[]}} opcoes
+ * @param {import("../domain/campanhas.js").FiltrosEscolha} filtros
+ * @param {{podeFiltrarQuemFalta: boolean}} contexto
+ */
+export function filtrosEscolhaClientes(opcoes, filtros, { podeFiltrarQuemFalta }) {
+  /** @type {Array<[string, string, string[]]>} */
+  const seletores = [
+    ["cidade", "Cidade", opcoes.cidades],
+    ["grupo", "Grupo/rede", opcoes.grupos],
+    ["regime", "Regime tributário", opcoes.regimes],
+  ];
+  return html`
+    ${seletores.filter(([, , lista]) => lista.length > 1).map(
+      ([chave, rotulo, lista]) => html`<select class="input campanha-escolha__filtro" data-filtro-escolha="${chave}" aria-label="${rotulo}">
+        <option value="">${rotulo}: todos</option>
+        ${lista.map((valor) => html`<option value="${valor}" ${filtros[chave] === valor ? html`selected` : ""}>${valor}</option>`)}
+      </select>`
+    )}
+    <label class="checkbox-item campanha-escolha__so-falta">
+      <input type="checkbox" data-filtro-escolha="soQuemFalta" ${filtros.soQuemFalta ? html`checked` : ""} ${podeFiltrarQuemFalta ? "" : html`disabled`} />
+      <span>${podeFiltrarQuemFalta ? "Só quem ainda não está na versão-alvo" : "Só quem falta (informe a versão-alvo)"}</span>
+    </label>`;
+}
+
+/**
+ * Bloco de escolha de clientes (busca, filtros, lista e contagem), que o
+ * componente EscolhaDeClientes liga. Fica oculto no formulário enquanto o
+ * público for "todos".
+ * @param {{oculto?: boolean}} [opcoes]
+ */
+export function blocoEscolhaClientes({ oculto = false } = {}) {
+  return html`
+    <div class="field campanha-escolha" data-role="escolha" ${oculto ? html`hidden` : ""}>
+      <div class="campanha-escolha__barra">
+        <input class="input" type="search" data-role="busca-escolha" autocomplete="off" placeholder="Buscar cliente, código ou cidade" aria-label="Buscar cliente, código ou cidade" />
+        <button type="button" class="btn btn--small" data-action="marcar-visiveis">Marcar os visíveis</button>
+        <button type="button" class="btn btn--small" data-action="limpar-escolha">Limpar</button>
+      </div>
+      <div class="campanha-escolha__filtros" data-role="filtros-escolha"></div>
+      <div class="campanha-escolha__lista" data-role="lista-escolha" role="group" aria-label="Clientes da campanha"></div>
+      <div class="field__help" data-role="contagem-escolha" aria-live="polite"></div>
+    </div>`;
+}
+
+/**
+ * Janela "Agendar pendentes": cria uma tarefa de atualização para cada
+ * cliente pendente. A data é a única escolha; o resto (texto, prioridade,
+ * responsável) o servidor decide.
+ * @param {{titulo: string, prazo?: string, pendentes: number}} campanha
+ * @param {string} hoje dd/mm/aaaa, a data sugerida
+ */
+export function formularioAgendarPendentes(campanha, hoje) {
+  return html`
+    <h3 class="modal-box__title" id="campanha-agendar-titulo">Agendar pendentes</h3>
+    <form class="campanha-form" data-role="form-agendar" novalidate>
+      <p>Cria uma tarefa de atualização para cada um dos <strong>${plural(campanha.pendentes, "cliente pendente", "clientes pendentes")}</strong> de "${campanha.titulo}". Quem já está agendado ou atualizado fica de fora.</p>
+      <div class="field">
+        <label class="field__label" for="cmp-agendar-data">Data das tarefas</label>
+        <input class="input" id="cmp-agendar-data" data-field="data" placeholder="dd/mm/aaaa" inputmode="numeric" value="${hoje}" aria-describedby="cmp-agendar-ajuda" />
+        <div class="field__help" id="cmp-agendar-ajuda">${campanha.prazo ? `Prazo da campanha: ${campanha.prazo}; as tarefas saem com prioridade Alta.` : "As tarefas saem com prioridade Normal."} O responsável é você.</div>
+      </div>
+      <p class="field__hint" data-role="erro" role="alert"></p>
+      <div class="modal-box__actions">
+        <button type="button" class="btn" data-action="cancelar">Cancelar</button>
+        <button type="submit" class="btn btn--accent" data-action="salvar">Criar ${plural(campanha.pendentes, "agendamento")}</button>
+      </div>
+    </form>`;
+}
+
+/**
+ * Janela "Adicionar clientes" do detalhe de uma campanha de clientes escolhidos.
+ * @param {{titulo: string, sistema: string}} campanha
+ */
+export function formularioAdicionarClientes(campanha) {
+  return html`
+    <h3 class="modal-box__title" id="campanha-add-titulo">Adicionar clientes</h3>
+    <p class="campanha__nota">${campanha.titulo} · ${campanha.sistema}</p>
+    <form class="campanha-form" data-role="form-adicionar" novalidate>
+      ${blocoEscolhaClientes()}
+      <p class="field__hint" data-role="erro" role="alert"></p>
+      <div class="modal-box__actions">
+        <button type="button" class="btn" data-action="cancelar">Cancelar</button>
+        <button type="submit" class="btn btn--accent" data-action="salvar">Adicionar</button>
+      </div>
+    </form>`;
+}
+
+/**
  * Formulário de criação/edição. Na edição, sistema e versão-alvo aparecem
  * só para leitura: são a meta, e o servidor recusaria mudar.
- * @param {{sistemas: Array<{nome: string, data?: string}>, cidades: string[], campanha?: any}} opts
+ * O público ("todos" ou "escolhidos") pode mudar nas duas situações; a lista
+ * de clientes a escolher é preenchida pela view (depende do sistema).
+ * `modelo` (só na criação) pré-preenche o formulário com quem falta numa
+ * campanha anterior: ver `modeloComQuemFalta` em domain/campanhas.js.
+ * @param {{sistemas: Array<{nome: string, data?: string}>, cidades: string[], campanha?: any, modelo?: ReturnType<typeof import("../domain/campanhas.js").modeloComQuemFalta>}} opts
  */
-export function formularioCampanha({ sistemas, cidades = [], campanha }) {
+export function formularioCampanha({ sistemas, cidades = [], campanha, modelo }) {
   const edicao = Boolean(campanha);
+  const escolhidos = edicao ? campanha.publico === "escolhidos" : Boolean(modelo);
+  const base = campanha || modelo;
   const opcoesCidade = campanha?.cidade && !cidades.includes(campanha.cidade) ? [...cidades, campanha.cidade] : cidades;
   return html`
-    <h3 class="modal-box__title" id="campanha-form-titulo">${edicao ? "Editar campanha" : "Nova campanha"}</h3>
+    <h3 class="modal-box__title" id="campanha-form-titulo">${edicao ? "Editar campanha" : modelo ? "Nova campanha com quem falta" : "Nova campanha"}</h3>
+    ${modelo ? html`<p class="campanha__nota">${plural(modelo.clienteIds.length, "cliente que ainda não cumpriu", "clientes que ainda não cumpriram")} a meta já vêm marcados. Confira a lista e defina o novo prazo.</p>` : ""}
     <form class="campanha-form" data-role="form" novalidate>
       <div class="form-grid form-grid--2">
         <div class="field">
@@ -166,23 +289,23 @@ export function formularioCampanha({ sistemas, cidades = [], campanha }) {
           ${edicao
             ? html`<input class="input" id="cmp-sistema" value="${campanha.sistema}" disabled />`
             : html`<select class="input" id="cmp-sistema" data-field="sistema" required>
-                ${sistemas.map((s) => html`<option value="${s.nome}" data-oficial="${s.data || ""}">${s.nome}</option>`)}
+                ${sistemas.map((s) => html`<option value="${s.nome}" data-oficial="${s.data || ""}" ${modelo?.sistema === s.nome ? html`selected` : ""}>${s.nome}</option>`)}
               </select>`}
         </div>
         <div class="field">
           <label class="field__label" for="cmp-versao">Versão-alvo</label>
-          <input class="input" id="cmp-versao" data-field="versaoAlvo" placeholder="dd/mm/aaaa" inputmode="numeric" value="${campanha?.versaoAlvo || ""}" ${edicao ? html`disabled` : html`required`} aria-describedby="cmp-versao-ajuda" />
+          <input class="input" id="cmp-versao" data-field="versaoAlvo" placeholder="dd/mm/aaaa" inputmode="numeric" value="${base?.versaoAlvo || ""}" ${edicao ? html`disabled` : html`required`} aria-describedby="cmp-versao-ajuda" />
           <div class="field__help" id="cmp-versao-ajuda">${edicao ? "A meta não muda depois de criada." : "Quem for atualizado nesta data ou depois conta como atualizado."}</div>
         </div>
         <div class="field">
           <label class="field__label" for="cmp-titulo">Título</label>
-          <input class="input" id="cmp-titulo" data-field="titulo" maxlength="120" value="${campanha?.titulo || ""}" required placeholder="ex.: NT 2026.001 da SEFAZ" />
+          <input class="input" id="cmp-titulo" data-field="titulo" maxlength="120" value="${base?.titulo || ""}" required placeholder="ex.: NT 2026.001 da SEFAZ" />
         </div>
         <div class="field">
           <label class="field__label" for="cmp-prazo">Prazo (opcional)</label>
           <input class="input" id="cmp-prazo" data-field="prazo" placeholder="dd/mm/aaaa" inputmode="numeric" value="${campanha?.prazo || ""}" />
         </div>
-        <div class="field">
+        <div class="field" data-role="campo-cidade" ${escolhidos ? html`hidden` : ""}>
           <label class="field__label" for="cmp-cidade">Cidade</label>
           <select class="input" id="cmp-cidade" data-field="cidade">
             <option value="">Todas as cidades</option>
@@ -190,9 +313,15 @@ export function formularioCampanha({ sistemas, cidades = [], campanha }) {
           </select>
         </div>
       </div>
+      <fieldset class="field campanha-form__publico">
+        <legend class="field__label">Quem entra na campanha</legend>
+        <label class="checkbox-item"><input type="radio" name="publico" value="todos" ${escolhidos ? "" : html`checked`} /> Todos os clientes do sistema</label>
+        <label class="checkbox-item"><input type="radio" name="publico" value="escolhidos" ${escolhidos ? html`checked` : ""} /> Só clientes escolhidos</label>
+      </fieldset>
+      ${blocoEscolhaClientes({ oculto: !escolhidos })}
       <div class="field">
         <label class="field__label" for="cmp-descricao">Descrição (opcional)</label>
-        <textarea class="input" id="cmp-descricao" data-field="descricao" rows="3" maxlength="1000">${campanha?.descricao || ""}</textarea>
+        <textarea class="input" id="cmp-descricao" data-field="descricao" rows="3" maxlength="1000">${base?.descricao || ""}</textarea>
       </div>
       <p class="field__hint" data-role="erro" role="alert"></p>
       <div class="modal-box__actions">

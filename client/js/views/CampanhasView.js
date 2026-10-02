@@ -7,11 +7,11 @@ import { ErroApi } from "../api/ApiPainel.js";
 import { prefs } from "../app/preferencias.js";
 import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { dataBRValida, mascaraDataBR, hojeBR } from "../utils/data.js";
-import { baixarBlob } from "../components/arquivos.js";
-import { html } from "../utils/html.js";
+import { html, plural } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
 import { comBotaoOcupado } from "../components/botaoOcupado.js";
-import { filtrarClientesCampanha, tarefaDaCampanha } from "../domain/campanhas.js";
+import { EscolhaDeClientes } from "../components/EscolhaDeClientes.js";
+import { filtrarClientesCampanha, modeloComQuemFalta } from "../domain/campanhas.js";
 import {
   listaCampanhas,
   cabecalhoCampanha,
@@ -20,6 +20,8 @@ import {
   celulaClienteCampanha,
   celulaUltimaCampanha,
   acoesClienteCampanha,
+  formularioAdicionarClientes,
+  formularioAgendarPendentes,
   formularioCampanha,
   contagemClientes,
 } from "../templates/campanhas.js";
@@ -85,13 +87,13 @@ export class CampanhasView extends View {
     this.table = new TabelaOrdenavel(this.tableEl, {
       // Ao lado da lista de campanhas não cabem sete colunas: código e
       // cidade vão embaixo do nome, a versão recebida embaixo da data (a
-      // busca e a planilha continuam com tudo). Só as colunas curtas têm
+      // busca continua com tudo). Só as colunas curtas têm
       // largura fixa; o nome fica com o resto.
       columns: [
         { key: "nome", label: "Cliente", title: (row) => row.nome, render: (row) => no(celulaClienteCampanha(row)) },
         { key: "ultima", label: "Última atualização", type: "date", largura: "150px", render: (row) => no(celulaUltimaCampanha(row)) },
         { key: "situacao", label: "Situação", largura: "170px", render: (row) => no(celulaSituacaoCampanha(row)) },
-        { key: "acoes", label: "Ações", largura: "116px", render: (row) => no(acoesClienteCampanha(row, { role: this.user?.role, encerrada: Boolean(this.detalhe?.encerradaEm) })) },
+        { key: "acoes", label: "Ações", largura: "152px", render: (row) => no(acoesClienteCampanha(row, { role: this.user?.role, encerrada: Boolean(this.detalhe?.encerradaEm), podeRetirar: this.detalhe?.publico === "escolhidos" && this.detalhe.clientes.length > 1 })) },
       ],
       rowKey: (row) => row.id,
       caption: "Clientes da campanha",
@@ -223,8 +225,10 @@ export class CampanhasView extends View {
     if (!botao || !this.detalhe) return;
     const c = this.detalhe;
     const acao = botao.dataset.action;
-    if (acao === "exportar") return comBotaoOcupado(botao, () => this._exportar())();
     if (acao === "editar") return this._abrirFormulario(c);
+    if (acao === "adicionar") return this._abrirAdicionar(c);
+    if (acao === "nova-quem-falta") return this._abrirFormulario(undefined, modeloComQuemFalta(c));
+    if (acao === "agendar-pendentes") return this._abrirAgendarPendentes(c);
     if (acao === "encerrar") {
       const ok = await Modal.confirm("Encerrar campanha", `Encerrar "${c.titulo}"?\n\nO placar de hoje (${c.atendidos} de ${c.totalClientes} atualizados) fica registrado. As atualizações continuam sendo registradas normalmente, e dá para reabrir depois.`, { confirmLabel: "Encerrar", danger: false });
       if (ok) await this._mudar(() => this.api.patch(`/campanhas/${c.id}/encerrar`), "Campanha encerrada.");
@@ -249,16 +253,6 @@ export class CampanhasView extends View {
     }
   }
 
-  async _exportar() {
-    const c = this.detalhe;
-    try {
-      const blob = await this.api.getFile(`/campanhas/${c.id}/export`);
-      baixarBlob(blob, `campanha-pendentes-${c.sistema}-${c.versaoAlvo.replaceAll("/", "-")}.xlsx`);
-    } catch (err) {
-      Modal.alert("Erro ao exportar", mensagem(err), "error");
-    }
-  }
-
   async _acaoLinha(e) {
     const botao = /** @type {HTMLButtonElement|null} */ (e.target.closest("[data-row-action]"));
     if (!botao || !this.detalhe) return;
@@ -268,23 +262,20 @@ export class CampanhasView extends View {
     const acao = botao.dataset.rowAction;
     if (acao === "ficha") return this.navigate("consulta", { cliente: row.nome });
     if (acao === "acessos") return new AcessosModal(this.api, { id: row.id, nome: row.nome }).open();
-    if (acao === "agendar") {
+    if (acao === "remover") {
       const c = this.detalhe;
-      // Cria a tarefa direto, sem abrir o formulário: é o "botão rápido" da
-      // campanha. A tarefa leva o sistema da campanha -- é isso que a faz
-      // aparecer como "já agendado" aqui (ver CampanhaService).
+      const ok = await Modal.confirm("Retirar da campanha", `Retirar "${row.nome}" de "${c.titulo}"?\n\nO cliente continua cadastrado, e as atualizações dele ficam. Só deixa de contar nesta campanha.`, { confirmLabel: "Retirar", danger: false });
+      if (ok) await this._mudar(() => this.api.delete(`/campanhas/${c.id}/clientes/${row.id}`), "Cliente retirado da campanha.");
+      return;
+    }
+    if (acao === "agendar") {
+      // O servidor monta a tarefa (texto, prioridade, responsável): a linha e o
+      // "Agendar pendentes" saem iguais, e o que ele julga pendente é o que vale.
       await comBotaoOcupado(botao, async () => {
         try {
-          await this.api.post("/agendamentos", {
-            tarefa: tarefaDaCampanha(c),
-            cliente: row.nome,
-            sistema: c.sistema,
-            responsavel: this.user?.nome || "",
-            prioridade: c.prazo ? "Alta" : "Normal",
-            data: hojeBR(),
-            obs: c.prazo ? `Prazo da campanha: ${c.prazo}` : "",
-          });
-          avisoRapido.sucesso(`Agendamento criado para ${row.nome}.`);
+          const { criadas } = await this.api.post(`/campanhas/${this.detalhe.id}/agendar`, { clientes: [row.id] });
+          if (criadas === 0) avisoRapido.informar(`${row.nome} já está agendado ou atualizado.`);
+          else avisoRapido.sucesso(`Agendamento criado para ${row.nome}.`);
           this.cache?.invalidar();
           await this.refresh();
         } catch (err) {
@@ -294,7 +285,46 @@ export class CampanhasView extends View {
     }
   }
 
-  async _abrirFormulario(campanha) {
+  /** "Agendar pendentes": uma tarefa para cada cliente pendente da campanha, na data escolhida. */
+  async _abrirAgendarPendentes(campanha) {
+    const { box, close } = Modal.abrirCaixa({ largura: 480 });
+    box.setAttribute("aria-labelledby", "campanha-agendar-titulo");
+    box.innerHTML = String(formularioAgendarPendentes(campanha, hojeBR()));
+    const form = /** @type {HTMLFormElement} */ (box.querySelector('[data-role="form-agendar"]'));
+    const data = /** @type {HTMLInputElement} */ (form.querySelector('[data-field="data"]'));
+    const erro = form.querySelector('[data-role="erro"]');
+    data.addEventListener("input", () => { data.value = mascaraDataBR(data.value); });
+    form.querySelector('[data-action="cancelar"]').addEventListener("click", () => close());
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!data.value.trim() || !dataBRValida(data.value.trim())) {
+        erro.textContent = "Data precisa ser dd/mm/aaaa.";
+        data.setAttribute("aria-invalid", "true");
+        data.focus();
+        return;
+      }
+      await comBotaoOcupado(/** @type {HTMLButtonElement} */ (form.querySelector('[data-action="salvar"]')), async () => {
+        try {
+          const { criadas } = await this.api.post(`/campanhas/${campanha.id}/agendar`, { data: data.value.trim() });
+          close();
+          if (criadas === 0) avisoRapido.informar("Ninguém estava pendente: todos já estão agendados ou atualizados.");
+          else avisoRapido.sucesso(`${plural(criadas, "agendamento criado", "agendamentos criados")}.`);
+          this.cache?.invalidar();
+          await this.refresh();
+        } catch (err) {
+          erro.textContent = mensagem(err);
+        }
+      })();
+    });
+    data.focus();
+    data.select();
+  }
+
+  /**
+   * @param {any} [campanha] a campanha sendo editada (sem ela, é uma criação)
+   * @param {ReturnType<typeof modeloComQuemFalta>} [modelo] pré-preenchimento de uma criação
+   */
+  async _abrirFormulario(campanha, modelo) {
     let sistemas = [];
     let cidades = [];
     try {
@@ -309,10 +339,12 @@ export class CampanhasView extends View {
         return Modal.alert("Erro", mensagem(err), "error");
       }
       if (sistemas.length === 0) return Modal.alert("Nova campanha", "Nenhum sistema atualizável cadastrado. Os sistemas fixos não têm versão para cobrar.", "info");
+      // Sem isto o formulário abriria no primeiro sistema da lista, calado, com a lista de clientes de outro.
+      if (modelo && !sistemas.some((s) => s.nome === modelo.sistema)) return Modal.alert("Nova campanha", `"${modelo.sistema}" não aceita mais campanha (inativo ou sem controle de versão).`, "info");
     }
     const { box, close } = Modal.abrirCaixa({ largura: 600 });
     box.setAttribute("aria-labelledby", "campanha-form-titulo");
-    box.innerHTML = String(formularioCampanha({ sistemas, cidades, campanha }));
+    box.innerHTML = String(formularioCampanha({ sistemas, cidades, campanha, modelo }));
     const form = /** @type {HTMLFormElement} */ (box.querySelector('[data-role="form"]'));
     const campo = (nome) => /** @type {HTMLInputElement} */ (form.querySelector(`[data-field="${nome}"]`));
     const erro = form.querySelector('[data-role="erro"]');
@@ -331,15 +363,51 @@ export class CampanhasView extends View {
     if (!campanha) {
       campo("sistema").addEventListener("change", sugerir);
       campo("versaoAlvo").addEventListener("input", () => { campo("versaoAlvo").dataset.editado = "1"; });
+      // A meta herdada de outra campanha vale mais que a oficial de hoje.
+      if (modelo) campo("versaoAlvo").dataset.editado = "1";
       sugerir();
     }
+
+    // Campanha só para clientes escolhidos: lista, busca e filtros ficam no
+    // componente; aqui só se decide quando carregar e o que mandar.
+    const escolha = new EscolhaDeClientes(form.querySelector('[data-role="escolha"]'), this.api, {
+      marcados: campanha ? (campanha.publico === "escolhidos" ? campanha.clientes.map((c) => c.id) : []) : modelo?.clienteIds ?? [],
+      aoErro: (err) => { erro.textContent = mensagem(err); },
+    });
+    const escolhendo = () => /** @type {HTMLInputElement} */ (form.querySelector('input[name="publico"]:checked')).value === "escolhidos";
+    // Só uma data completa e real serve de versão-alvo para julgar quem já a cumpre.
+    const alvoDaEscolha = () => {
+      const texto = campanha ? campanha.versaoAlvo : campo("versaoAlvo").value.trim();
+      return { sistema: campanha ? campanha.sistema : campo("sistema").value, versaoAlvo: texto && dataBRValida(texto) ? texto : "" };
+    };
+    const atualizarPublico = () => {
+      form.querySelector('[data-role="campo-cidade"]').hidden = escolhendo();
+      form.querySelector('[data-role="escolha"]').hidden = !escolhendo();
+      if (escolhendo()) escolha.carregar(alvoDaEscolha());
+    };
+    form.addEventListener("change", (e) => {
+      if (/** @type {HTMLInputElement} */ (e.target).name === "publico") atualizarPublico();
+    });
+    if (!campanha) {
+      campo("sistema").addEventListener("change", () => {
+        escolha.esquecer();
+        if (escolhendo()) escolha.carregar(alvoDaEscolha());
+      });
+      // A versão-alvo decide quem "já cumpre": digitá-la refaz o julgamento.
+      campo("versaoAlvo").addEventListener("input", () => { if (escolhendo()) escolha.carregar(alvoDaEscolha()); });
+    }
+    atualizarPublico();
+
     form.querySelector('[data-action="cancelar"]').addEventListener("click", () => close());
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const dados = {
         titulo: campo("titulo").value.trim(),
         prazo: campo("prazo").value.trim(),
-        cidade: campo("cidade").value,
+        publico: escolhendo() ? "escolhidos" : "todos",
+        // Com clientes escolhidos a cidade não vale: a lista já é o filtro.
+        cidade: escolhendo() ? "" : campo("cidade").value,
+        ...(escolhendo() ? { clientes: escolha.ids() } : {}),
         descricao: /** @type {HTMLTextAreaElement} */ (form.querySelector('[data-field="descricao"]')).value.trim(),
         ...(campanha ? {} : { sistema: campo("sistema").value, versaoAlvo: campo("versaoAlvo").value.trim() }),
       };
@@ -348,6 +416,11 @@ export class CampanhasView extends View {
         : versaoRuim ? ["versaoAlvo", "Versão-alvo precisa ser uma data dd/mm/aaaa."]
           : dados.prazo && !dataBRValida(dados.prazo) ? ["prazo", "Prazo precisa ser uma data dd/mm/aaaa."] : null;
       for (const nome of ["titulo", "versaoAlvo", "prazo"]) campo(nome)?.setAttribute("aria-invalid", "false");
+      if (!invalido && escolhendo() && escolha.ids().length === 0) {
+        erro.textContent = "Escolha pelo menos um cliente.";
+        escolha.focar();
+        return;
+      }
       if (invalido) {
         erro.textContent = invalido[1];
         campo(invalido[0]).setAttribute("aria-invalid", "true");
@@ -371,6 +444,42 @@ export class CampanhasView extends View {
       })();
     });
     campo(campanha ? "titulo" : "sistema").focus();
+  }
+
+  /** "Adicionar clientes" de uma campanha de clientes escolhidos: só quem ainda não está nela. */
+  async _abrirAdicionar(campanha) {
+    const { box, close } = Modal.abrirCaixa({ largura: 600 });
+    box.setAttribute("aria-labelledby", "campanha-add-titulo");
+    box.innerHTML = String(formularioAdicionarClientes(campanha));
+    const form = /** @type {HTMLFormElement} */ (box.querySelector('[data-role="form-adicionar"]'));
+    const erro = form.querySelector('[data-role="erro"]');
+    const escolha = new EscolhaDeClientes(form.querySelector('[data-role="escolha"]'), this.api, {
+      excluir: new Set(campanha.clientes.map((c) => c.id)),
+      contagem: (n, total) => `${n} de ${total} ${total === 1 ? "cliente disponível" : "clientes disponíveis"} para adicionar`,
+      aoErro: (err) => { erro.textContent = mensagem(err); },
+    });
+    await escolha.carregar({ sistema: campanha.sistema, versaoAlvo: campanha.versaoAlvo });
+    form.querySelector('[data-action="cancelar"]').addEventListener("click", () => close());
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (escolha.ids().length === 0) {
+        erro.textContent = "Escolha pelo menos um cliente.";
+        escolha.focar();
+        return;
+      }
+      await comBotaoOcupado(/** @type {HTMLButtonElement} */ (form.querySelector('[data-action="salvar"]')), async () => {
+        try {
+          await this.api.post(`/campanhas/${campanha.id}/clientes`, { clientes: escolha.ids() });
+          close();
+          avisoRapido.sucesso(`${escolha.ids().length === 1 ? "Cliente adicionado" : "Clientes adicionados"} à campanha.`);
+          this.cache?.invalidar();
+          await this.refresh();
+        } catch (err) {
+          erro.textContent = mensagem(err);
+        }
+      })();
+    });
+    escolha.focar();
   }
 
   _salvar() {

@@ -8187,6 +8187,33 @@ h1, h2, h3, strong {
 /* A Descrição fica fora da grade (ocupa a largura toda), e a grade não tem
    margem própria: sem isto, ela colava no campo Cidade logo acima. */
 .campanha-form > .form-grid { margin-bottom: var(--sp-4); }
+/* Quem entra na campanha: os dois rádios lado a lado, e embaixo a lista de
+   clientes (só aparece em "Só clientes escolhidos"). A lista rola sozinha:
+   um sistema com centenas de clientes esticaria o modal além da tela. */
+.campanha-form__publico { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-5); margin: 0 0 var(--sp-3); padding: 0; border: 0; min-width: 0; }
+.campanha-form__publico .field__label { width: 100%; padding: 0; }
+.modal-box .campanha__nota { margin: 0 0 var(--sp-3); }
+.campanha-escolha { margin-bottom: var(--sp-3); }
+.campanha-escolha[hidden], .campanha-form [data-role="campo-cidade"][hidden] { display: none; }
+.campanha-escolha__barra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.campanha-escolha__barra .input { flex: 1 1 200px; min-width: 0; }
+/* Filtros da lista de escolha: seletores lado a lado e, embaixo, "só quem
+   falta" em linha própria. Sem opção nenhuma (lista ainda carregando), a faixa some. */
+.campanha-escolha__filtros { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.campanha-escolha__filtros:empty { display: none; }
+.campanha-escolha__filtro { flex: 1 1 150px; width: auto; min-width: 0; }
+.campanha-escolha__so-falta { flex: 1 1 100%; padding: 0; font-size: var(--txt-sm); }
+.campanha-escolha__so-falta input:disabled + span { color: var(--cor-texto-fraco); }
+.campanha-escolha__lista {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+}
+.campanha-escolha__item { align-items: flex-start; padding: 6px 0; }
+.campanha-escolha__item input { margin-top: 3px; flex: 0 0 auto; }
+.campanha-escolha__vazio { margin: var(--sp-2) 0; color: var(--cor-texto-fraco); font-size: var(--txt-sm); }
 .campanha__cliente { display: flex; flex-direction: column; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .campanha__cliente small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
 

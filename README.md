@@ -81,10 +81,12 @@ relatório em texto limpo.
 **Campanhas** — metas temporárias de versão: "todo cliente de B_NFe na
 25/09/2026 até o dia 30". Mostra o progresso (atualizados, já agendados,
 pendentes), a lista de clientes com filtros rápidos, cria o agendamento de
-quem falta com um clique e exporta os pendentes em `.xlsx`. A baixa é
+quem falta com um clique. A baixa é
 automática: registrar a atualização em Atualizações com a versão da meta (ou
 mais nova) tira o cliente dos pendentes. Uma versão oficial nova em Sistemas
-não muda a meta; encerrar a campanha congela o placar (ADR-0009).
+não muda a meta; encerrar a campanha congela o placar (ADR-0009). Uma campanha
+vale para todos os clientes do sistema (opcionalmente de uma cidade) ou só para
+os clientes escolhidos na lista.
 
 **Administração** — restrita a administradores e organizada em 7 seções por finalidade:
 1. **Pessoas e permissões** (usuários, perfis e permissões);

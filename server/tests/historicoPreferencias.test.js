@@ -183,14 +183,14 @@ test("PreferenciaService - o que pode ser guardado", async (t) => {
 
     await t.test("chaves que mudam comportamento têm formato próprio (13.4)", () => {
       const validas = {
-        sinoAtrasados: false, sinoHoje: true, sinoAgentes: true, sinoEscopo: "minhas", somAvisos: true,
+        sinoAtrasados: false, sinoHoje: true, sinoAgentes: true, sinoCampanhas: false, sinoEscopo: "minhas", somAvisos: true,
         silencioAtivo: true, silencioInicio: "19:00", silencioFim: "07:30", silencioCriticos: false,
         relatorioAba: "cliente", relatorioFecharAoCopiar: true,
       };
       assert.deepEqual(env.prefs.salvar(usuario, validas), validas);
       for (const [chave, ruim] of [
         ["silencioInicio", "25:00"], ["silencioInicio", "7:00"], ["silencioFim", "07:15"],
-        ["sinoEscopo", "todos"], ["relatorioAba", "periodo"], ["somAvisos", "sim"], ["sinoHoje", 1],
+        ["sinoEscopo", "todos"], ["relatorioAba", "periodo"], ["somAvisos", "sim"], ["sinoHoje", 1], ["sinoCampanhas", "nao"],
       ]) {
         // Descartado, sem derrubar o resto do conjunto (que sincroniza tudo junto).
         const salvo = env.prefs.salvar(usuario, { [chave]: ruim, tema: "escuro" });

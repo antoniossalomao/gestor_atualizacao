@@ -47,6 +47,11 @@ const MIGRACOES = [
     descricao: "sistemas que atualizam junto com o B_Vendas",
     aplicar: migracao6,
   },
+  {
+    versao: 7,
+    descricao: "campanhas só para clientes escolhidos",
+    aplicar: migracao7,
+  },
 ];
 
 /**
@@ -252,6 +257,34 @@ function migracao6(conn) {
     const sistema = sistemas.resolver(nome);
     if (sistema) marcar.run(sistema.id);
   }
+}
+
+/**
+ * Campanha para clientes específicos: em vez de "todo cliente do sistema"
+ * (ou da cidade), a equipe escolhe quem entra.
+ *
+ * `so_selecionados` é uma coluna, e não "tem linha em campanha_clientes", de
+ * propósito: uma campanha escolhida cujos clientes foram todos excluídos
+ * ficaria sem linha nenhuma e passaria a valer para o sistema inteiro -- o
+ * placar mudaria de "0 de 0" para centenas de clientes sem ninguém ter
+ * mexido na campanha.
+ *
+ * As linhas saem junto com o cliente ou com a campanha (ON DELETE CASCADE).
+ * Quem perde o sistema no cadastro continua ligado, mas some da lista: a
+ * lista da campanha é sempre a interseção entre os escolhidos e quem tem o
+ * sistema hoje (ver CampanhaService._clientes).
+ */
+function migracao7(conn) {
+  conn.exec(`
+    ALTER TABLE campanhas ADD COLUMN so_selecionados INTEGER NOT NULL DEFAULT 0;
+
+    CREATE TABLE campanha_clientes (
+      campanha_id INTEGER NOT NULL REFERENCES campanhas(id) ON DELETE CASCADE,
+      cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+      PRIMARY KEY (campanha_id, cliente_id)
+    ) WITHOUT ROWID;
+    CREATE INDEX idx_campanha_clientes_cliente ON campanha_clientes (cliente_id);
+  `);
 }
 
 function lerMapa(texto) {
