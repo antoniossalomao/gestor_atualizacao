@@ -8,7 +8,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { buscarClientes, descricaoPublico, filtrarCandidatos, filtrarClientesCampanha, filtrosEscolhaVazios, opcoesFiltroEscolha, podeFiltrarQuemFalta, textoProgresso, tarefaDaCampanha, seloPrazo } from "../js/domain/campanhas.js";
-import { acoesClienteCampanha, cabecalhoCampanha, cartaoCampanha, celulaSituacaoCampanha, filtrosCampanha, filtrosEscolhaClientes, formularioCampanha, listaCampanhas, listaEscolhaClientes } from "../js/templates/campanhas.js";
+import { acoesClienteCampanha, cabecalhoCampanha, cartaoCampanha, celulaSituacaoCampanha, filtrosCampanha, filtrosEscolhaClientes, formularioAdicionarClientes, formularioCampanha, listaCampanhas, listaEscolhaClientes } from "../js/templates/campanhas.js";
 
 const MALICIOSO = '"><img src=x onerror=alert(1)>';
 const CLIENTES = [
@@ -78,6 +78,7 @@ test("texto digitado não vira HTML", () => {
     formularioCampanha({ sistemas: [], campanha: perigosa }),
     listaEscolhaClientes([{ id: 1, nome: MALICIOSO, codigo: MALICIOSO, cidade: MALICIOSO }], new Set([1])),
     cartaoCampanha({ ...perigosa, publico: "escolhidos" }, false),
+    formularioAdicionarClientes(perigosa),
     filtrosEscolhaClientes({ cidades: [MALICIOSO, "B"], grupos: [MALICIOSO, "B"], regimes: [MALICIOSO, "B"] }, { ...filtrosEscolhaVazios(), cidade: MALICIOSO }, { podeFiltrarQuemFalta: true }),
   ]) {
     assert.doesNotMatch(String(marcacao), /<img/);
@@ -153,6 +154,27 @@ test("filtros da escolha: seletor com uma opção só não aparece; 'só quem fa
   const sem = String(filtrosEscolhaClientes(opcoes, filtrosEscolhaVazios(), { podeFiltrarQuemFalta: false }));
   assert.match(sem, /type="checkbox"[^>]*disabled/);
   assert.match(sem, /informe a versão-alvo/);
+});
+
+test("adicionar e retirar clientes: só em campanha de escolhidos, aberta e para quem edita", () => {
+  const cab = (c, usuario) => String(cabecalhoCampanha(c, usuario));
+  const escolhida = { ...CAMPANHA, publico: "escolhidos" };
+  assert.match(cab(escolhida, { role: "operador" }), /data-action="adicionar"/);
+  assert.doesNotMatch(cab(CAMPANHA, { role: "operador" }), /data-action="adicionar"/, "campanha de todos não tem lista");
+  assert.doesNotMatch(cab({ ...CAMPANHA, publico: "todos" }, { role: "admin" }), /data-action="adicionar"/);
+  assert.doesNotMatch(cab(escolhida, { role: "consulta" }), /data-action="adicionar"/);
+  assert.doesNotMatch(cab({ ...escolhida, encerradaEm: "2026-09-30T10:00:00Z" }, { role: "operador" }), /data-action="adicionar"/);
+
+  const acoes = (opts) => String(acoesClienteCampanha(CLIENTES[0], { encerrada: false, ...opts }));
+  assert.match(acoes({ role: "operador", podeRetirar: true }), /data-row-action="remover"/);
+  assert.doesNotMatch(acoes({ role: "operador" }), /remover/, "sem podeRetirar (campanha de todos, ou o último cliente)");
+  assert.doesNotMatch(acoes({ role: "consulta", podeRetirar: true }), /remover/);
+  assert.doesNotMatch(acoes({ role: "operador", encerrada: true, podeRetirar: true }), /remover/);
+  assert.match(acoes({ role: "operador", podeRetirar: true }).match(/<button[^>]*data-row-action="remover"[^>]*>/)[0], /title="[^"]+"[^>]*aria-label="[^"]+"|aria-label="[^"]+"[^>]*title="[^"]+"/);
+
+  const janela = String(formularioAdicionarClientes({ titulo: "NT 1", sistema: "B_NFe" }));
+  assert.match(janela, /data-role="escolha"(?![^>]*hidden)/, "a janela já abre com a lista visível");
+  assert.match(janela, /data-action="salvar"/);
 });
 
 test("lista de escolha marca só quem está na seleção", () => {

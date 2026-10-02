@@ -170,6 +170,68 @@ test("Campanhas - só para clientes escolhidos", async (t) => {
   }
 });
 
+test("Campanhas - acrescentar e retirar cliente direto no detalhe", async (t) => {
+  const env = ambiente();
+  try {
+    const [a, b, c] = ["Loja A", "Loja B", "Loja C"].map((nome) => Number(env.cliente(nome, ["B_NFe"])));
+    const semNfe = Number(env.cliente("Sem NFe", ["B_Vendas"]));
+    const base = { titulo: "Lista viva", sistema: "B_NFe", versaoAlvo: "25/09/2026" };
+    const escolhida = env.campanhas.create({ ...base, publico: "escolhidos", clientes: [a] }, USUARIO);
+    const nomes = (id) => env.campanhas.detalhe(id).clientes.map((x) => x.nome);
+
+    await t.test("acrescenta sem reenviar a lista, e repetido não duplica", () => {
+      const depois = env.campanhas.adicionarClientes(escolhida.id, [b, a, b], USUARIO);
+      assert.deepEqual(depois.clientes.map((x) => x.nome), ["Loja A", "Loja B"]);
+      assert.equal(depois.totalClientes, 2);
+      assert.equal(env.db.campanhas.idsClientes(escolhida.id).length, 2);
+    });
+
+    await t.test("só cliente que usa o sistema, e pelo menos um", () => {
+      assert.throws(() => env.campanhas.adicionarClientes(escolhida.id, [semNfe], USUARIO), /não usa o sistema "B_NFe"/);
+      assert.throws(() => env.campanhas.adicionarClientes(escolhida.id, [99999], USUARIO), /não usa o sistema/);
+      assert.throws(() => env.campanhas.adicionarClientes(escolhida.id, [], USUARIO), /pelo menos um cliente/);
+      assert.throws(() => env.campanhas.adicionarClientes(escolhida.id, undefined, USUARIO), /pelo menos um cliente/);
+      assert.deepEqual(nomes(escolhida.id), ["Loja A", "Loja B"], "o pedido recusado não deixa nada pela metade");
+    });
+
+    await t.test("retira um cliente; a atualização dele continua no histórico", () => {
+      env.atender("Loja B", "B_NFe", "26/09/2026");
+      const antes = env.db.atualizacoes.count();
+      const depois = env.campanhas.removerCliente(escolhida.id, b, USUARIO);
+      assert.deepEqual(depois.clientes.map((x) => x.nome), ["Loja A"]);
+      assert.equal(env.db.atualizacoes.count(), antes);
+      assert.throws(() => env.campanhas.removerCliente(escolhida.id, b, USUARIO), /não está na campanha/);
+    });
+
+    await t.test("não deixa a campanha sem nenhum cliente", () => {
+      assert.throws(() => env.campanhas.removerCliente(escolhida.id, a, USUARIO), /pelo menos um cliente/);
+      assert.deepEqual(nomes(escolhida.id), ["Loja A"]);
+    });
+
+    await t.test("campanha de 'todos' não tem lista para mexer", () => {
+      const todos = env.campanhas.create({ ...base, titulo: "Todos" }, USUARIO);
+      assert.throws(() => env.campanhas.adicionarClientes(todos.id, [a], USUARIO), /todos os clientes do sistema/);
+      assert.throws(() => env.campanhas.removerCliente(todos.id, a, USUARIO), /todos os clientes do sistema/);
+    });
+
+    await t.test("encerrada congela a lista; reabrir libera", () => {
+      env.campanhas.encerrar(escolhida.id, USUARIO);
+      assert.throws(() => env.campanhas.adicionarClientes(escolhida.id, [c], USUARIO), /Reabra a campanha/);
+      assert.throws(() => env.campanhas.removerCliente(escolhida.id, a, USUARIO), /Reabra a campanha/);
+      env.campanhas.reabrir(escolhida.id, USUARIO);
+      assert.deepEqual(env.campanhas.adicionarClientes(escolhida.id, [c], USUARIO).clientes.map((x) => x.nome), ["Loja A", "Loja C"]);
+    });
+
+    await t.test("quem perdeu o sistema não conta como escolhido na hora de retirar", () => {
+      env.db.conn.prepare("DELETE FROM cliente_sistemas WHERE cliente_id = ? AND sistema_id = ?").run(c, env.db.sistemas.resolver("B_NFe").id);
+      assert.throws(() => env.campanhas.removerCliente(escolhida.id, c, USUARIO), /não está na campanha/);
+      assert.throws(() => env.campanhas.removerCliente(escolhida.id, a, USUARIO), /pelo menos um cliente/, "Loja C saiu da lista: Loja A é a última");
+    });
+  } finally {
+    env.cleanup();
+  }
+});
+
 test("Campanhas - candidatos trazem grupo, regime e quem já cumpre a versão-alvo", async (t) => {
   const env = ambiente();
   try {
@@ -420,6 +482,12 @@ test("Campanhas - rotas e permissões", async (t) => {
     assert.ok(Array.isArray(lista.corpo));
     assert.equal((await pedir("/campanhas/clientes-do-sistema?sistema=Inexistente", { cookie: consulta })).status, 400);
     assert.equal((await pedir("/campanhas", { metodo: "POST", cookie: operador, corpo: { ...nova, publico: "escolhidos", clientes: [] } })).status, 400);
+  });
+  await t.test("acrescentar e retirar cliente: Consulta não pode, Operador pode", async () => {
+    const lista = (await pedir("/campanhas/clientes-do-sistema?sistema=B_NFe", { cookie: operador })).corpo;
+    assert.equal((await pedir(`/campanhas/${id}/clientes`, { metodo: "POST", cookie: consulta, corpo: { clientes: [] } })).status, 403);
+    assert.equal((await pedir(`/campanhas/${id}/clientes/1`, { metodo: "DELETE", cookie: consulta })).status, 403);
+    assert.equal((await pedir(`/campanhas/${id}/clientes`, { metodo: "POST", cookie: operador, corpo: { clientes: lista.map((x) => x.id) } })).status, 400, "a campanha do teste vale para todos: não tem lista");
   });
   await t.test("admin exclui; depois disso é 404", async () => {
     assert.equal((await pedir(`/campanhas/${id}`, { metodo: "DELETE", cookie: admin })).status, 204);

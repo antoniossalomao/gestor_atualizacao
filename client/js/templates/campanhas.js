@@ -83,6 +83,7 @@ export function cabecalhoCampanha(c, usuario) {
       </div>
       <div class="campanha__acoes">
         <button type="button" class="btn btn--small" data-action="exportar">${iconeHtml("download")} Exportar pendentes (.xlsx)</button>
+        ${podeEditar && !encerrada && c.publico === "escolhidos" ? html`<button type="button" class="btn btn--small" data-action="adicionar">${iconeHtml("plus")} Adicionar clientes</button>` : ""}
         ${podeEditar && !encerrada ? html`<button type="button" class="btn btn--small" data-action="editar">${iconeHtml("editar")} Editar</button>` : ""}
         ${podeEditar ? html`<button type="button" class="btn btn--small" data-action="${encerrada ? "reabrir" : "encerrar"}">${encerrada ? "Reabrir" : "Encerrar"}</button>` : ""}
         ${usuario?.role === "admin" ? html`<button type="button" class="btn btn--small btn--danger" data-action="excluir">${iconeHtml("alerta")} Excluir</button>` : ""}
@@ -136,14 +137,19 @@ export function celulaSituacaoCampanha(row) {
 
 /**
  * Botões da linha. Ícone sem texto, então nome acessível e dica sempre.
- * "Agendar" só para quem ainda não está atendido nem agendado.
+ * "Agendar" só para quem ainda não está atendido nem agendado. "Retirar da
+ * campanha" só numa campanha de clientes escolhidos ainda aberta, e não no
+ * último cliente (o servidor recusaria).
+ * @param {any} row
+ * @param {{role?: string, encerrada: boolean, podeRetirar?: boolean}} opcoes
  */
-export function acoesClienteCampanha(row, { role, encerrada }) {
+export function acoesClienteCampanha(row, { role, encerrada, podeRetirar = false }) {
   /** @type {Array<[string, Parameters<typeof iconeHtml>[0], string]>} */
   const botoes = [];
   if (role !== "consulta" && !encerrada && row.situacao === "pendente") botoes.push(["agendar", "calendario", "Criar agendamento"]);
   if (role !== "consulta") botoes.push(["acessos", "acessos", "Gerenciar acessos remotos"]);
   botoes.push(["ficha", "olho", "Abrir ficha do cliente"]);
+  if (role !== "consulta" && !encerrada && podeRetirar) botoes.push(["remover", "fechar", "Retirar da campanha"]);
   return html`<div class="row-actions">${botoes.map(
     ([acao, ico, titulo]) => html`<button type="button" class="btn btn--icon" data-row-action="${acao}" data-id="${row.id}" title="${titulo}" aria-label="${titulo}: ${row.nome}">${iconeHtml(ico)}</button>`
   )}</div>`;
@@ -196,6 +202,44 @@ export function filtrosEscolhaClientes(opcoes, filtros, { podeFiltrarQuemFalta }
 }
 
 /**
+ * Bloco de escolha de clientes (busca, filtros, lista e contagem), que o
+ * componente EscolhaDeClientes liga. Fica oculto no formulário enquanto o
+ * público for "todos".
+ * @param {{oculto?: boolean}} [opcoes]
+ */
+export function blocoEscolhaClientes({ oculto = false } = {}) {
+  return html`
+    <div class="field campanha-escolha" data-role="escolha" ${oculto ? html`hidden` : ""}>
+      <div class="campanha-escolha__barra">
+        <input class="input" type="search" data-role="busca-escolha" autocomplete="off" placeholder="Buscar cliente, código ou cidade" aria-label="Buscar cliente, código ou cidade" />
+        <button type="button" class="btn btn--small" data-action="marcar-visiveis">Marcar os visíveis</button>
+        <button type="button" class="btn btn--small" data-action="limpar-escolha">Limpar</button>
+      </div>
+      <div class="campanha-escolha__filtros" data-role="filtros-escolha"></div>
+      <div class="campanha-escolha__lista" data-role="lista-escolha" role="group" aria-label="Clientes da campanha"></div>
+      <div class="field__help" data-role="contagem-escolha" aria-live="polite"></div>
+    </div>`;
+}
+
+/**
+ * Janela "Adicionar clientes" do detalhe de uma campanha de clientes escolhidos.
+ * @param {{titulo: string, sistema: string}} campanha
+ */
+export function formularioAdicionarClientes(campanha) {
+  return html`
+    <h3 class="modal-box__title" id="campanha-add-titulo">Adicionar clientes</h3>
+    <p class="campanha__nota">${campanha.titulo} · ${campanha.sistema}</p>
+    <form class="campanha-form" data-role="form-adicionar" novalidate>
+      ${blocoEscolhaClientes()}
+      <p class="field__hint" data-role="erro" role="alert"></p>
+      <div class="modal-box__actions">
+        <button type="button" class="btn" data-action="cancelar">Cancelar</button>
+        <button type="submit" class="btn btn--accent" data-action="salvar">Adicionar</button>
+      </div>
+    </form>`;
+}
+
+/**
  * Formulário de criação/edição. Na edição, sistema e versão-alvo aparecem
  * só para leitura: são a meta, e o servidor recusaria mudar.
  * O público ("todos" ou "escolhidos") pode mudar nas duas situações; a lista
@@ -244,16 +288,7 @@ export function formularioCampanha({ sistemas, cidades = [], campanha }) {
         <label class="checkbox-item"><input type="radio" name="publico" value="todos" ${escolhidos ? "" : html`checked`} /> Todos os clientes do sistema</label>
         <label class="checkbox-item"><input type="radio" name="publico" value="escolhidos" ${escolhidos ? html`checked` : ""} /> Só clientes escolhidos</label>
       </fieldset>
-      <div class="field campanha-escolha" data-role="escolha" ${escolhidos ? "" : html`hidden`}>
-        <div class="campanha-escolha__barra">
-          <input class="input" type="search" data-role="busca-escolha" autocomplete="off" placeholder="Buscar cliente, código ou cidade" aria-label="Buscar cliente, código ou cidade" />
-          <button type="button" class="btn btn--small" data-action="marcar-visiveis">Marcar os visíveis</button>
-          <button type="button" class="btn btn--small" data-action="limpar-escolha">Limpar</button>
-        </div>
-        <div class="campanha-escolha__filtros" data-role="filtros-escolha"></div>
-        <div class="campanha-escolha__lista" data-role="lista-escolha" role="group" aria-label="Clientes da campanha"></div>
-        <div class="field__help" data-role="contagem-escolha" aria-live="polite"></div>
-      </div>
+      ${blocoEscolhaClientes({ oculto: !escolhidos })}
       <div class="field">
         <label class="field__label" for="cmp-descricao">Descrição (opcional)</label>
         <textarea class="input" id="cmp-descricao" data-field="descricao" rows="3" maxlength="1000">${campanha?.descricao || ""}</textarea>

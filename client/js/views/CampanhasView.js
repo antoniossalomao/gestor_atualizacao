@@ -8,10 +8,11 @@ import { prefs } from "../app/preferencias.js";
 import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { dataBRValida, mascaraDataBR, hojeBR } from "../utils/data.js";
 import { baixarBlob } from "../components/arquivos.js";
-import { html, plural } from "../utils/html.js";
+import { html } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
 import { comBotaoOcupado } from "../components/botaoOcupado.js";
-import { filtrarCandidatos, filtrarClientesCampanha, filtrosEscolhaVazios, opcoesFiltroEscolha, podeFiltrarQuemFalta, tarefaDaCampanha } from "../domain/campanhas.js";
+import { EscolhaDeClientes } from "../components/EscolhaDeClientes.js";
+import { filtrarClientesCampanha, tarefaDaCampanha } from "../domain/campanhas.js";
 import {
   listaCampanhas,
   cabecalhoCampanha,
@@ -20,9 +21,8 @@ import {
   celulaClienteCampanha,
   celulaUltimaCampanha,
   acoesClienteCampanha,
-  filtrosEscolhaClientes,
+  formularioAdicionarClientes,
   formularioCampanha,
-  listaEscolhaClientes,
   contagemClientes,
 } from "../templates/campanhas.js";
 import { AcessosModal } from "./AcessosModal.js";
@@ -93,7 +93,7 @@ export class CampanhasView extends View {
         { key: "nome", label: "Cliente", title: (row) => row.nome, render: (row) => no(celulaClienteCampanha(row)) },
         { key: "ultima", label: "Última atualização", type: "date", largura: "150px", render: (row) => no(celulaUltimaCampanha(row)) },
         { key: "situacao", label: "Situação", largura: "170px", render: (row) => no(celulaSituacaoCampanha(row)) },
-        { key: "acoes", label: "Ações", largura: "116px", render: (row) => no(acoesClienteCampanha(row, { role: this.user?.role, encerrada: Boolean(this.detalhe?.encerradaEm) })) },
+        { key: "acoes", label: "Ações", largura: "152px", render: (row) => no(acoesClienteCampanha(row, { role: this.user?.role, encerrada: Boolean(this.detalhe?.encerradaEm), podeRetirar: this.detalhe?.publico === "escolhidos" && this.detalhe.clientes.length > 1 })) },
       ],
       rowKey: (row) => row.id,
       caption: "Clientes da campanha",
@@ -227,6 +227,7 @@ export class CampanhasView extends View {
     const acao = botao.dataset.action;
     if (acao === "exportar") return comBotaoOcupado(botao, () => this._exportar())();
     if (acao === "editar") return this._abrirFormulario(c);
+    if (acao === "adicionar") return this._abrirAdicionar(c);
     if (acao === "encerrar") {
       const ok = await Modal.confirm("Encerrar campanha", `Encerrar "${c.titulo}"?\n\nO placar de hoje (${c.atendidos} de ${c.totalClientes} atualizados) fica registrado. As atualizações continuam sendo registradas normalmente, e dá para reabrir depois.`, { confirmLabel: "Encerrar", danger: false });
       if (ok) await this._mudar(() => this.api.patch(`/campanhas/${c.id}/encerrar`), "Campanha encerrada.");
@@ -270,6 +271,12 @@ export class CampanhasView extends View {
     const acao = botao.dataset.rowAction;
     if (acao === "ficha") return this.navigate("consulta", { cliente: row.nome });
     if (acao === "acessos") return new AcessosModal(this.api, { id: row.id, nome: row.nome }).open();
+    if (acao === "remover") {
+      const c = this.detalhe;
+      const ok = await Modal.confirm("Retirar da campanha", `Retirar "${row.nome}" de "${c.titulo}"?\n\nO cliente continua cadastrado, e as atualizações dele ficam. Só deixa de contar nesta campanha.`, { confirmLabel: "Retirar", danger: false });
+      if (ok) await this._mudar(() => this.api.delete(`/campanhas/${c.id}/clientes/${row.id}`), "Cliente retirado da campanha.");
+      return;
+    }
     if (acao === "agendar") {
       const c = this.detalhe;
       // Cria a tarefa direto, sem abrir o formulário: é o "botão rápido" da
@@ -336,93 +343,33 @@ export class CampanhasView extends View {
       sugerir();
     }
 
-    // Campanha só para clientes escolhidos. A seleção mora em `marcados`, e não
-    // nos checkboxes: filtrar pela busca refaz a lista, e quem estava marcado
-    // e saiu da tela não pode ser desmarcado por isso.
-    const papel = (nome) => /** @type {HTMLElement} */ (form.querySelector(`[data-role="${nome}"]`));
-    const buscaEscolha = /** @type {HTMLInputElement} */ (papel("busca-escolha"));
-    const marcados = new Set(campanha?.publico === "escolhidos" ? campanha.clientes.map((c) => c.id) : []);
-    const filtros = filtrosEscolhaVazios();
-    let candidatos = [];
-    let carregadoPara = null;
-    const sistemaDaCampanha = () => (campanha ? campanha.sistema : campo("sistema").value);
-    // Só uma data completa e real serve de versão-alvo para julgar quem já a cumpre.
-    const versaoAlvoDaCampanha = () => {
-      const texto = campanha ? campanha.versaoAlvo : campo("versaoAlvo").value.trim();
-      return texto && dataBRValida(texto) ? texto : "";
-    };
+    // Campanha só para clientes escolhidos: lista, busca e filtros ficam no
+    // componente; aqui só se decide quando carregar e o que mandar.
+    const escolha = new EscolhaDeClientes(form.querySelector('[data-role="escolha"]'), this.api, {
+      marcados: campanha?.publico === "escolhidos" ? campanha.clientes.map((c) => c.id) : [],
+      aoErro: (err) => { erro.textContent = mensagem(err); },
+    });
     const escolhendo = () => /** @type {HTMLInputElement} */ (form.querySelector('input[name="publico"]:checked')).value === "escolhidos";
-    const pintarEscolha = () => {
-      const visiveis = filtrarCandidatos(candidatos, filtros);
-      papel("lista-escolha").innerHTML = String(listaEscolhaClientes(visiveis, marcados));
-      papel("contagem-escolha").textContent = `${plural(marcados.size, "cliente escolhido", "clientes escolhidos")} de ${candidatos.length}`;
-    };
-    const pintarFiltros = () => {
-      const pode = podeFiltrarQuemFalta(candidatos);
-      if (!pode) filtros.soQuemFalta = false;
-      papel("filtros-escolha").innerHTML = String(filtrosEscolhaClientes(opcoesFiltroEscolha(candidatos), filtros, { podeFiltrarQuemFalta: pode }));
-    };
-    const carregarCandidatos = async () => {
-      const sistema = sistemaDaCampanha();
-      const versaoAlvo = versaoAlvoDaCampanha();
-      const chave = `${sistema}|${versaoAlvo}`;
-      if (carregadoPara === chave) return;
-      try {
-        candidatos = await this.api.get("/campanhas/clientes-do-sistema", { sistema, versaoAlvo }, { key: "campanhas:candidatos" });
-      } catch (err) {
-        if (!err?.cancelled) erro.textContent = mensagem(err);
-        return;
-      }
-      carregadoPara = chave;
-      const ids = new Set(candidatos.map((c) => c.id));
-      for (const id of [...marcados]) if (!ids.has(id)) marcados.delete(id);
-      // Outro sistema pode não ter a cidade/grupo/regime que estava filtrado.
-      const opcoes = opcoesFiltroEscolha(candidatos);
-      if (!opcoes.cidades.includes(filtros.cidade)) filtros.cidade = "";
-      if (!opcoes.grupos.includes(filtros.grupo)) filtros.grupo = "";
-      if (!opcoes.regimes.includes(filtros.regime)) filtros.regime = "";
-      pintarFiltros();
-      pintarEscolha();
+    // Só uma data completa e real serve de versão-alvo para julgar quem já a cumpre.
+    const alvoDaEscolha = () => {
+      const texto = campanha ? campanha.versaoAlvo : campo("versaoAlvo").value.trim();
+      return { sistema: campanha ? campanha.sistema : campo("sistema").value, versaoAlvo: texto && dataBRValida(texto) ? texto : "" };
     };
     const atualizarPublico = () => {
-      papel("campo-cidade").hidden = escolhendo();
-      papel("escolha").hidden = !escolhendo();
-      if (escolhendo()) carregarCandidatos();
+      form.querySelector('[data-role="campo-cidade"]').hidden = escolhendo();
+      form.querySelector('[data-role="escolha"]').hidden = !escolhendo();
+      if (escolhendo()) escolha.carregar(alvoDaEscolha());
     };
     form.addEventListener("change", (e) => {
-      const alvo = /** @type {HTMLInputElement} */ (e.target);
-      if (alvo.name === "publico") return atualizarPublico();
-      const filtro = alvo.dataset?.filtroEscolha;
-      if (filtro) {
-        filtros[filtro] = alvo.type === "checkbox" ? alvo.checked : alvo.value;
-        return pintarEscolha();
-      }
-      if (!alvo.closest('[data-role="lista-escolha"]')) return;
-      if (alvo.checked) marcados.add(Number(alvo.value));
-      else marcados.delete(Number(alvo.value));
-      pintarEscolha();
+      if (/** @type {HTMLInputElement} */ (e.target).name === "publico") atualizarPublico();
     });
-    buscaEscolha.addEventListener("input", aguardarPausa(() => {
-      filtros.busca = buscaEscolha.value;
-      pintarEscolha();
-    }, 150));
-    form.querySelector('[data-action="marcar-visiveis"]').addEventListener("click", () => {
-      for (const c of filtrarCandidatos(candidatos, filtros)) marcados.add(c.id);
-      pintarEscolha();
-    });
-    form.querySelector('[data-action="limpar-escolha"]').addEventListener("click", () => {
-      marcados.clear();
-      pintarEscolha();
-    });
-    // Outro sistema, outros clientes possíveis: a escolha anterior não vale mais.
     if (!campanha) {
       campo("sistema").addEventListener("change", () => {
-        marcados.clear();
-        carregadoPara = null;
-        if (escolhendo()) carregarCandidatos();
+        escolha.esquecer();
+        if (escolhendo()) escolha.carregar(alvoDaEscolha());
       });
       // A versão-alvo decide quem "já cumpre": digitá-la refaz o julgamento.
-      campo("versaoAlvo").addEventListener("input", () => { if (escolhendo()) carregarCandidatos(); });
+      campo("versaoAlvo").addEventListener("input", () => { if (escolhendo()) escolha.carregar(alvoDaEscolha()); });
     }
     atualizarPublico();
 
@@ -435,7 +382,7 @@ export class CampanhasView extends View {
         publico: escolhendo() ? "escolhidos" : "todos",
         // Com clientes escolhidos a cidade não vale: a lista já é o filtro.
         cidade: escolhendo() ? "" : campo("cidade").value,
-        ...(escolhendo() ? { clientes: [...marcados] } : {}),
+        ...(escolhendo() ? { clientes: escolha.ids() } : {}),
         descricao: /** @type {HTMLTextAreaElement} */ (form.querySelector('[data-field="descricao"]')).value.trim(),
         ...(campanha ? {} : { sistema: campo("sistema").value, versaoAlvo: campo("versaoAlvo").value.trim() }),
       };
@@ -444,9 +391,9 @@ export class CampanhasView extends View {
         : versaoRuim ? ["versaoAlvo", "Versão-alvo precisa ser uma data dd/mm/aaaa."]
           : dados.prazo && !dataBRValida(dados.prazo) ? ["prazo", "Prazo precisa ser uma data dd/mm/aaaa."] : null;
       for (const nome of ["titulo", "versaoAlvo", "prazo"]) campo(nome)?.setAttribute("aria-invalid", "false");
-      if (!invalido && escolhendo() && marcados.size === 0) {
+      if (!invalido && escolhendo() && escolha.ids().length === 0) {
         erro.textContent = "Escolha pelo menos um cliente.";
-        buscaEscolha.focus();
+        escolha.focar();
         return;
       }
       if (invalido) {
@@ -472,6 +419,42 @@ export class CampanhasView extends View {
       })();
     });
     campo(campanha ? "titulo" : "sistema").focus();
+  }
+
+  /** "Adicionar clientes" de uma campanha de clientes escolhidos: só quem ainda não está nela. */
+  async _abrirAdicionar(campanha) {
+    const { box, close } = Modal.abrirCaixa({ largura: 600 });
+    box.setAttribute("aria-labelledby", "campanha-add-titulo");
+    box.innerHTML = String(formularioAdicionarClientes(campanha));
+    const form = /** @type {HTMLFormElement} */ (box.querySelector('[data-role="form-adicionar"]'));
+    const erro = form.querySelector('[data-role="erro"]');
+    const escolha = new EscolhaDeClientes(form.querySelector('[data-role="escolha"]'), this.api, {
+      excluir: new Set(campanha.clientes.map((c) => c.id)),
+      contagem: (n, total) => `${n} de ${total} ${total === 1 ? "cliente disponível" : "clientes disponíveis"} para adicionar`,
+      aoErro: (err) => { erro.textContent = mensagem(err); },
+    });
+    await escolha.carregar({ sistema: campanha.sistema, versaoAlvo: campanha.versaoAlvo });
+    form.querySelector('[data-action="cancelar"]').addEventListener("click", () => close());
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (escolha.ids().length === 0) {
+        erro.textContent = "Escolha pelo menos um cliente.";
+        escolha.focar();
+        return;
+      }
+      await comBotaoOcupado(/** @type {HTMLButtonElement} */ (form.querySelector('[data-action="salvar"]')), async () => {
+        try {
+          await this.api.post(`/campanhas/${campanha.id}/clientes`, { clientes: escolha.ids() });
+          close();
+          avisoRapido.sucesso(`${escolha.ids().length === 1 ? "Cliente adicionado" : "Clientes adicionados"} à campanha.`);
+          this.cache?.invalidar();
+          await this.refresh();
+        } catch (err) {
+          erro.textContent = mensagem(err);
+        }
+      })();
+    });
+    escolha.focar();
   }
 
   _salvar() {

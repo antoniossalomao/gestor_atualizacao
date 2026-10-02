@@ -15,6 +15,10 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Campanhas, adicionar e retirar cliente no detalhe (02/10/2026):** numa campanha de clientes escolhidos, "Adicionar clientes" (mesma lista com busca e filtros, sem quem já está) e um "×" em cada linha ("Retirar da campanha") evitam abrir "Editar" e refazer a lista inteira.
+  - Só em campanha de clientes escolhidos e aberta: a de "todos" não tem lista (edite o público) e a encerrada tem o placar congelado (reabra antes). A campanha não fica sem nenhum cliente. Retirar não mexe no cadastro nem nas atualizações do cliente.
+  - Rotas `POST /api/campanhas/:id/clientes` e `DELETE /api/campanhas/:id/clientes/:clienteId`, só Operador e Admin; o servidor confere que o cliente usa o sistema.
+
 - **Campanhas, filtros na lista de escolha (02/10/2026):** acima da lista de clientes do formulário agora há filtro por cidade, grupo/rede e regime tributário, e "Só quem ainda não está na versão-alvo". "Marcar os visíveis" respeita os filtros, então marcar todo o regime X de uma Nota Técnica é um clique. Antes só havia a busca por texto.
   - O "já cumpre" usa a mesma regra da campanha, contra a versão-alvo digitada no formulário; sem uma data completa e real o filtro fica desabilitado (o servidor devolve `atendido: null`, e não "pendente" para todos). Seletor com uma opção só não aparece.
 

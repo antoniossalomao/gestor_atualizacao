@@ -33,6 +33,18 @@ class CampanhasController {
     } catch (err) { next(err); }
   };
 
+  adicionarClientes = (req, res, next) => {
+    try {
+      res.json(this.campanhaService.adicionarClientes(req.params.id, req.body?.clientes, req.session.user));
+    } catch (err) { next(err); }
+  };
+
+  removerCliente = (req, res, next) => {
+    try {
+      res.json(this.campanhaService.removerCliente(req.params.id, req.params.clienteId, req.session.user));
+    } catch (err) { next(err); }
+  };
+
   encerrar = (req, res, next) => {
     try {
       res.json(this.campanhaService.encerrar(req.params.id, req.session.user));

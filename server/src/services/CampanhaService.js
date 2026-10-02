@@ -115,8 +115,7 @@ class CampanhaService {
     const publico = input.publico ?? atual.publico;
     // Escolhidos que perderam o sistema ficam de fora do que é reenviado: o
     // que o usuário não vê não pode derrubar uma edição de título.
-    const doSistema = this._idsDoSistema(atual.sistemaId);
-    const guardados = publico === "escolhidos" ? this.db.campanhas.idsClientes(atual.id).filter((cid) => doSistema.has(cid)) : [];
+    const guardados = publico === "escolhidos" ? this._escolhidosDoSistema(atual) : [];
     const dados = this._validar(
       { ...input, publico, clientes: input.clientes ?? guardados, cidade: input.cidade ?? atual.cidade, sistema: atual.sistema, versaoAlvo: atual.versaoAlvo },
       { nova: false, cidadeAtual: atual.cidade, sistemaAtual: { id: atual.sistemaId, nome: atual.sistema } }
@@ -124,6 +123,40 @@ class CampanhaService {
     this.db.campanhas.update(atual.id, dados);
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${dados.titulo}"`);
     return this.detalhe(atual.id);
+  }
+
+  /**
+   * Acrescenta clientes a uma campanha de clientes escolhidos, sem reenviar a
+   * lista toda (é o que o botão "Adicionar cliente" do detalhe faz).
+   * @param {number|string} id
+   * @param {unknown} clientes ids dos clientes a acrescentar
+   */
+  adicionarClientes(id, clientes, usuario) {
+    const campanha = this._achar(id);
+    this._exigirListaEditavel(campanha);
+    if (!Array.isArray(clientes) || clientes.length === 0) throw new ErroDeValidacao("Escolha pelo menos um cliente para acrescentar.");
+    const doSistema = this._idsDoSistema(campanha.sistemaId);
+    const ids = [...new Set(clientes.map(Number))];
+    if (ids.some((cid) => !Number.isInteger(cid) || !doSistema.has(cid))) throw new ErroDeValidacao(`Há cliente que não usa o sistema "${campanha.sistema}".`);
+    const jaEstavam = new Set(this._escolhidosDoSistema(campanha));
+    const novos = ids.filter((cid) => !jaEstavam.has(cid));
+    this.db.campanhas.adicionarClientes(campanha.id, novos);
+    if (novos.length > 0) this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${campanha.titulo}": ${novos.length} cliente(s) acrescentado(s)`);
+    return this.detalhe(campanha.id);
+  }
+
+  /** Tira um cliente de uma campanha de clientes escolhidos. A campanha não fica sem nenhum. */
+  removerCliente(id, clienteId, usuario) {
+    const campanha = this._achar(id);
+    this._exigirListaEditavel(campanha);
+    const cid = Number(clienteId);
+    const escolhidos = this._escolhidosDoSistema(campanha);
+    if (!escolhidos.includes(cid)) throw new ErroNaoEncontrado("Este cliente não está na campanha.");
+    if (escolhidos.length === 1) throw new ErroDeValidacao("A campanha precisa de pelo menos um cliente. Para desfazê-la, exclua ou encerre a campanha.");
+    this.db.campanhas.removerCliente(campanha.id, cid);
+    const nome = this.db.clientes.obterPorId(cid)?.nome || `#${cid}`;
+    this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${campanha.titulo}": cliente "${nome}" retirado`);
+    return this.detalhe(campanha.id);
   }
 
   /** Encerra e congela o placar: a campanha encerrada mostra o resultado que teve. */
@@ -187,6 +220,25 @@ class CampanhaService {
     const campanha = this.db.campanhas.find(Number(id));
     if (!campanha) throw new ErroNaoEncontrado("Esta campanha não existe mais.");
     return campanha;
+  }
+
+  /**
+   * Só nas campanhas de clientes escolhidas e ainda abertas: a de "todos"
+   * não tem lista para mexer (o certo é editar o público), e a encerrada
+   * mostra o placar congelado, que uma lista nova desmentiria.
+   */
+  _exigirListaEditavel(campanha) {
+    if (campanha.publico !== "escolhidos") throw new ErroDeValidacao("Esta campanha vale para todos os clientes do sistema. Para escolher clientes, edite a campanha.");
+    if (campanha.encerradaEm) throw new ErroDeValidacao("Reabra a campanha para mudar quem entra nela.");
+  }
+
+  /**
+   * Escolhidos que ainda têm o sistema: o que a tela vê. Quem perdeu o
+   * sistema continua ligado, mas fica de fora -- e do que é reenviado.
+   */
+  _escolhidosDoSistema(campanha) {
+    const doSistema = this._idsDoSistema(campanha.sistemaId);
+    return this.db.campanhas.idsClientes(campanha.id).filter((cid) => doSistema.has(cid));
   }
 
   _idsDoSistema(sistemaId) {

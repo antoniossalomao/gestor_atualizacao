@@ -206,6 +206,8 @@ class ApiRouter {
     api.get("/campanhas/:id/export", campanhas.exportarXlsx);
     api.post("/campanhas", exigirPapel("operador", "admin"), campanhas.create);
     api.put("/campanhas/:id", exigirPapel("operador", "admin"), campanhas.update);
+    api.post("/campanhas/:id/clientes", exigirPapel("operador", "admin"), campanhas.adicionarClientes);
+    api.delete("/campanhas/:id/clientes/:clienteId", exigirPapel("operador", "admin"), campanhas.removerCliente);
     api.patch("/campanhas/:id/encerrar", exigirPapel("operador", "admin"), campanhas.encerrar);
     api.patch("/campanhas/:id/reabrir", exigirPapel("operador", "admin"), campanhas.reabrir);
     api.delete("/campanhas/:id", exigirPapel("admin"), campanhas.remove);

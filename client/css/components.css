@@ -8192,6 +8192,7 @@ h1, h2, h3, strong {
    um sistema com centenas de clientes esticaria o modal além da tela. */
 .campanha-form__publico { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-5); margin: 0 0 var(--sp-3); padding: 0; border: 0; min-width: 0; }
 .campanha-form__publico .field__label { width: 100%; padding: 0; }
+.modal-box .campanha__nota { margin: 0 0 var(--sp-3); }
 .campanha-escolha { margin-bottom: var(--sp-3); }
 .campanha-escolha[hidden], .campanha-form [data-role="campo-cidade"][hidden] { display: none; }
 .campanha-escolha__barra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }

@@ -71,6 +71,19 @@ class CampanhaRepository extends BaseRepository {
     return this.conn.prepare("SELECT cliente_id FROM campanha_clientes WHERE campanha_id = ?").all(id).map((r) => r.cliente_id);
   }
 
+  /** Acrescenta à lista de escolhidos; quem já está nela é ignorado. */
+  adicionarClientes(id, clienteIds) {
+    const ligar = this.conn.prepare("INSERT OR IGNORE INTO campanha_clientes (campanha_id, cliente_id) VALUES (?, ?)");
+    this.conn.transaction(() => {
+      for (const clienteId of clienteIds) ligar.run(id, clienteId);
+    })();
+  }
+
+  /** Tira um cliente da lista de escolhidos. Devolve quantas ligações saíram (0 = ele não estava). */
+  removerCliente(id, clienteId) {
+    return this.conn.prepare("DELETE FROM campanha_clientes WHERE campanha_id = ? AND cliente_id = ?").run(id, clienteId).changes;
+  }
+
   /** Troca a lista de escolhidos inteira: a tela sempre manda a lista final, não o que mudou. */
   definirClientes(id, clienteIds) {
     this.conn.prepare("DELETE FROM campanha_clientes WHERE campanha_id = ?").run(id);
