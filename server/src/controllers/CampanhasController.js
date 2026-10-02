@@ -11,7 +11,7 @@ class CampanhasController {
 
   clientesDoSistema = (req, res, next) => {
     try {
-      res.json(this.campanhaService.clientesDoSistema(req.query.sistema));
+      res.json(this.campanhaService.clientesDoSistema(req.query.sistema, req.query.versaoAlvo));
     } catch (err) { next(err); }
   };
 

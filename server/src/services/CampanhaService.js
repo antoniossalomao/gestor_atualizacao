@@ -77,13 +77,31 @@ class CampanhaService {
   /**
    * Clientes que têm o sistema no cadastro -- a lista de onde a tela escolhe
    * quem entra numa campanha "só para clientes escolhidos".
+   *
+   * `atendido` diz se o cliente JÁ cumpre a versão-alvo informada (a mesma
+   * regra da campanha), para a tela filtrar "só quem ainda falta". Sem
+   * versão-alvo válida não há como dizer, e vai `null` -- e não `false`, que
+   * faria todo mundo parecer pendente.
+   * @param {string} nomeSistema
+   * @param {string} [versaoAlvo] dd/mm/aaaa
    */
-  clientesDoSistema(nomeSistema) {
+  clientesDoSistema(nomeSistema, versaoAlvo = "") {
     const sistema = this.db.sistemas.resolver(String(nomeSistema || ""));
     if (!sistema || !sistema.ativo) throw new ErroDeValidacao("Escolha um sistema do catálogo.");
+    const alvo = String(versaoAlvo || "").trim();
+    const julga = alvo !== "" && dataValida(alvo);
+    const ultimas = julga ? new Map(this.db.atualizacoes.ultimaPorClienteNoSistema(sistema.id).map((r) => [r.cliente_id, r])) : null;
     return this.db.clientes
       .clientesDoSistemaComCodigo(sistema.id)
-      .map(({ id, nome, codigo, cidade }) => ({ id, nome, codigo: codigo || "", cidade: cidade || "" }))
+      .map(({ id, nome, codigo, cidade, grupo, regime }) => ({
+        id,
+        nome,
+        codigo: codigo || "",
+        cidade: (cidade || "").trim(),
+        grupo: (grupo || "").trim(),
+        regime: (regime || "").trim(),
+        atendido: ultimas ? situacaoDoSistema(ultimas.get(id), alvo).situacao === "Em dia" : null,
+      }))
       .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
   }
 

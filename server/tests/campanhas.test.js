@@ -170,6 +170,36 @@ test("Campanhas - só para clientes escolhidos", async (t) => {
   }
 });
 
+test("Campanhas - candidatos trazem grupo, regime e quem já cumpre a versão-alvo", async (t) => {
+  const env = ambiente();
+  try {
+    const nfe = env.db.sistemas.resolver("B_NFe").id;
+    env.db.clientes.insert("10", "Loja Rede", "Marília", [nfe], "Rede Sul", "Simples Nacional");
+    env.db.clientes.insert("11", "Loja Solta", "Bauru", [nfe], "", "Lucro Presumido");
+    env.atender("Loja Rede", "B_NFe", "26/09/2026");
+
+    await t.test("com a versão-alvo, cada candidato diz se já cumpre", () => {
+      const lista = env.campanhas.clientesDoSistema("B_NFe", "25/09/2026");
+      const rede = lista.find((x) => x.nome === "Loja Rede");
+      assert.deepEqual([rede.grupo, rede.regime, rede.cidade, rede.codigo], ["Rede Sul", "Simples Nacional", "Marília", "10"]);
+      assert.equal(rede.atendido, true);
+      assert.equal(lista.find((x) => x.nome === "Loja Solta").atendido, false);
+    });
+
+    await t.test("atualização anterior à meta não cumpre", () => {
+      assert.equal(env.campanhas.clientesDoSistema("B_NFe", "28/09/2026").find((x) => x.nome === "Loja Rede").atendido, false);
+    });
+
+    await t.test("sem versão-alvo válida não há como dizer: null, e não 'pendente'", () => {
+      for (const alvo of [undefined, "", "31/02/2026", "texto"]) {
+        assert.ok(env.campanhas.clientesDoSistema("B_NFe", alvo).every((x) => x.atendido === null), String(alvo));
+      }
+    });
+  } finally {
+    env.cleanup();
+  }
+});
+
 test("Campanhas - meta, baixa automática e placar", async (t) => {
   const env = ambiente();
   try {

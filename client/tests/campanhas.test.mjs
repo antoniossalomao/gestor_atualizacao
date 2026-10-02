@@ -7,8 +7,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buscarClientes, descricaoPublico, filtrarClientesCampanha, textoProgresso, tarefaDaCampanha, seloPrazo } from "../js/domain/campanhas.js";
-import { acoesClienteCampanha, cabecalhoCampanha, cartaoCampanha, celulaSituacaoCampanha, filtrosCampanha, formularioCampanha, listaCampanhas, listaEscolhaClientes } from "../js/templates/campanhas.js";
+import { buscarClientes, descricaoPublico, filtrarCandidatos, filtrarClientesCampanha, filtrosEscolhaVazios, opcoesFiltroEscolha, podeFiltrarQuemFalta, textoProgresso, tarefaDaCampanha, seloPrazo } from "../js/domain/campanhas.js";
+import { acoesClienteCampanha, cabecalhoCampanha, cartaoCampanha, celulaSituacaoCampanha, filtrosCampanha, filtrosEscolhaClientes, formularioCampanha, listaCampanhas, listaEscolhaClientes } from "../js/templates/campanhas.js";
 
 const MALICIOSO = '"><img src=x onerror=alert(1)>';
 const CLIENTES = [
@@ -78,6 +78,7 @@ test("texto digitado não vira HTML", () => {
     formularioCampanha({ sistemas: [], campanha: perigosa }),
     listaEscolhaClientes([{ id: 1, nome: MALICIOSO, codigo: MALICIOSO, cidade: MALICIOSO }], new Set([1])),
     cartaoCampanha({ ...perigosa, publico: "escolhidos" }, false),
+    filtrosEscolhaClientes({ cidades: [MALICIOSO, "B"], grupos: [MALICIOSO, "B"], regimes: [MALICIOSO, "B"] }, { ...filtrosEscolhaVazios(), cidade: MALICIOSO }, { podeFiltrarQuemFalta: true }),
   ]) {
     assert.doesNotMatch(String(marcacao), /<img/);
   }
@@ -109,6 +110,49 @@ test("campanha para clientes escolhidos: busca, descrição do público e formul
   assert.match(edicao, /name="publico" value="escolhidos" checked/);
   assert.match(edicao, /data-role="campo-cidade" hidden/);
   assert.doesNotMatch(edicao, /data-role="escolha" hidden/);
+});
+
+const CANDIDATOS = [
+  { id: 1, nome: "Loja Rede A", codigo: "10", cidade: "Marília", grupo: "Rede Sul", regime: "Simples Nacional", atendido: true },
+  { id: 2, nome: "Loja Rede B", codigo: "11", cidade: "Bauru", grupo: "Rede Sul", regime: "Lucro Presumido", atendido: false },
+  { id: 3, nome: "Loja Solta", codigo: "12", cidade: "Marília", grupo: "", regime: "Simples Nacional", atendido: false },
+];
+
+test("filtros da lista de escolha combinam entre si, com a busca", () => {
+  const nomes = (filtros) => filtrarCandidatos(CANDIDATOS, { ...filtrosEscolhaVazios(), ...filtros }).map((c) => c.id);
+  assert.deepEqual(nomes({}), [1, 2, 3]);
+  assert.deepEqual(nomes({ cidade: "Marília" }), [1, 3]);
+  assert.deepEqual(nomes({ grupo: "Rede Sul" }), [1, 2]);
+  assert.deepEqual(nomes({ regime: "Simples Nacional" }), [1, 3]);
+  assert.deepEqual(nomes({ cidade: "Marília", regime: "Simples Nacional", grupo: "Rede Sul" }), [1]);
+  assert.deepEqual(nomes({ soQuemFalta: true }), [2, 3], "quem já cumpre a versão-alvo sai");
+  assert.deepEqual(nomes({ soQuemFalta: true, cidade: "Marília" }), [3]);
+  assert.deepEqual(nomes({ busca: "marilia", soQuemFalta: true }), [3], "a busca ignora acento e soma com os filtros");
+});
+
+test("'só quem falta' não tira ninguém quando a versão-alvo não julgou ninguém", () => {
+  const sem = CANDIDATOS.map((c) => ({ ...c, atendido: null }));
+  assert.equal(podeFiltrarQuemFalta(sem), false);
+  assert.equal(podeFiltrarQuemFalta(CANDIDATOS), true);
+  assert.equal(filtrarCandidatos(sem, { ...filtrosEscolhaVazios(), soQuemFalta: true }).length, 3);
+});
+
+test("opções dos filtros: só o que existe, sem repetição, em ordem", () => {
+  assert.deepEqual(opcoesFiltroEscolha(CANDIDATOS), { cidades: ["Bauru", "Marília"], grupos: ["Rede Sul"], regimes: ["Lucro Presumido", "Simples Nacional"] });
+  assert.deepEqual(opcoesFiltroEscolha([]), { cidades: [], grupos: [], regimes: [] });
+});
+
+test("filtros da escolha: seletor com uma opção só não aparece; 'só quem falta' desabilita sem versão-alvo", () => {
+  const opcoes = opcoesFiltroEscolha(CANDIDATOS);
+  const marcacao = String(filtrosEscolhaClientes(opcoes, { ...filtrosEscolhaVazios(), cidade: "Bauru" }, { podeFiltrarQuemFalta: true }));
+  assert.match(marcacao, /data-filtro-escolha="cidade"/);
+  assert.match(marcacao, /value="Bauru" selected/);
+  assert.match(marcacao, /data-filtro-escolha="regime"/);
+  assert.doesNotMatch(marcacao, /data-filtro-escolha="grupo"/, "só um grupo: filtro inútil");
+  assert.doesNotMatch(marcacao, /type="checkbox"[^>]*disabled/);
+  const sem = String(filtrosEscolhaClientes(opcoes, filtrosEscolhaVazios(), { podeFiltrarQuemFalta: false }));
+  assert.match(sem, /type="checkbox"[^>]*disabled/);
+  assert.match(sem, /informe a versão-alvo/);
 });
 
 test("lista de escolha marca só quem está na seleção", () => {

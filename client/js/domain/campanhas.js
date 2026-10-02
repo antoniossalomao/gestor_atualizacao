@@ -49,6 +49,51 @@ export function buscarClientes(clientes, busca = "") {
   return clientes.filter((c) => [c.nome, c.codigo, c.cidade].some((v) => normalizar(v).includes(termo)));
 }
 
+/** @typedef {{busca: string, cidade: string, grupo: string, regime: string, soQuemFalta: boolean}} FiltrosEscolha */
+
+/**
+ * Estado inicial dos filtros da lista de escolha de clientes.
+ * @returns {FiltrosEscolha}
+ */
+export function filtrosEscolhaVazios() {
+  return { busca: "", cidade: "", grupo: "", regime: "", soQuemFalta: false };
+}
+
+/**
+ * Valores que existem entre os candidatos, para montar as opções dos filtros:
+ * só o que dá resultado (um filtro com opção que não acha ninguém confunde).
+ * @param {Array<{cidade?: string, grupo?: string, regime?: string}>} candidatos
+ */
+export function opcoesFiltroEscolha(candidatos) {
+  const unicos = (campo) => [...new Set(candidatos.map((c) => (c[campo] || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  return { cidades: unicos("cidade"), grupos: unicos("grupo"), regimes: unicos("regime") };
+}
+
+/**
+ * Candidatos que passam pelos filtros da lista de escolha. "Só quem falta"
+ * tira quem já cumpre a versão-alvo; com `atendido` nulo (sem versão-alvo
+ * válida não há como julgar) não tira ninguém.
+ * @template {{nome: string, codigo?: string, cidade?: string, grupo?: string, regime?: string, atendido?: boolean|null}} T
+ * @param {T[]} candidatos
+ * @param {FiltrosEscolha} filtros
+ * @returns {T[]}
+ */
+export function filtrarCandidatos(candidatos, filtros) {
+  const porCampo = candidatos.filter((c) => {
+    if (filtros.cidade && (c.cidade || "") !== filtros.cidade) return false;
+    if (filtros.grupo && (c.grupo || "") !== filtros.grupo) return false;
+    if (filtros.regime && (c.regime || "") !== filtros.regime) return false;
+    if (filtros.soQuemFalta && c.atendido === true) return false;
+    return true;
+  });
+  return buscarClientes(porCampo, filtros.busca);
+}
+
+/** O filtro "só quem falta" só faz sentido se algum candidato foi julgado. */
+export function podeFiltrarQuemFalta(candidatos) {
+  return candidatos.some((c) => c.atendido === true || c.atendido === false);
+}
+
 /**
  * Quem a campanha cobre, em uma frase curta: os clientes escolhidos, uma
  * cidade ou o sistema inteiro.

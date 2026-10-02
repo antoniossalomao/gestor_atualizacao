@@ -168,6 +168,34 @@ export function listaEscolhaClientes(clientes, marcados) {
 }
 
 /**
+ * Filtros acima da lista de escolha: cidade, grupo/rede, regime tributário e
+ * "só quem ainda não está na versão-alvo". Só aparece o seletor que tem mais
+ * de uma opção; com uma só (ou nenhuma) ele não filtra nada.
+ * @param {{cidades: string[], grupos: string[], regimes: string[]}} opcoes
+ * @param {import("../domain/campanhas.js").FiltrosEscolha} filtros
+ * @param {{podeFiltrarQuemFalta: boolean}} contexto
+ */
+export function filtrosEscolhaClientes(opcoes, filtros, { podeFiltrarQuemFalta }) {
+  /** @type {Array<[string, string, string[]]>} */
+  const seletores = [
+    ["cidade", "Cidade", opcoes.cidades],
+    ["grupo", "Grupo/rede", opcoes.grupos],
+    ["regime", "Regime tributário", opcoes.regimes],
+  ];
+  return html`
+    ${seletores.filter(([, , lista]) => lista.length > 1).map(
+      ([chave, rotulo, lista]) => html`<select class="input campanha-escolha__filtro" data-filtro-escolha="${chave}" aria-label="${rotulo}">
+        <option value="">${rotulo}: todos</option>
+        ${lista.map((valor) => html`<option value="${valor}" ${filtros[chave] === valor ? html`selected` : ""}>${valor}</option>`)}
+      </select>`
+    )}
+    <label class="checkbox-item campanha-escolha__so-falta">
+      <input type="checkbox" data-filtro-escolha="soQuemFalta" ${filtros.soQuemFalta ? html`checked` : ""} ${podeFiltrarQuemFalta ? "" : html`disabled`} />
+      <span>${podeFiltrarQuemFalta ? "Só quem ainda não está na versão-alvo" : "Só quem falta (informe a versão-alvo)"}</span>
+    </label>`;
+}
+
+/**
  * Formulário de criação/edição. Na edição, sistema e versão-alvo aparecem
  * só para leitura: são a meta, e o servidor recusaria mudar.
  * O público ("todos" ou "escolhidos") pode mudar nas duas situações; a lista
@@ -222,6 +250,7 @@ export function formularioCampanha({ sistemas, cidades = [], campanha }) {
           <button type="button" class="btn btn--small" data-action="marcar-visiveis">Marcar os visíveis</button>
           <button type="button" class="btn btn--small" data-action="limpar-escolha">Limpar</button>
         </div>
+        <div class="campanha-escolha__filtros" data-role="filtros-escolha"></div>
         <div class="campanha-escolha__lista" data-role="lista-escolha" role="group" aria-label="Clientes da campanha"></div>
         <div class="field__help" data-role="contagem-escolha" aria-live="polite"></div>
       </div>

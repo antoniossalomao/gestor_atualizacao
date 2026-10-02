@@ -94,10 +94,14 @@ class ClienteRepository extends BaseRepository {
       .all(sistemaId);
   }
 
-  /** O mesmo, com o código -- a planilha de pendentes de uma campanha leva o código para a equipe achar o cliente. */
+  /**
+   * O mesmo, com o código -- a planilha de pendentes de uma campanha leva o
+   * código para a equipe achar o cliente -- e com grupo e regime tributário,
+   * que são o que a equipe usa para escolher quem entra numa campanha.
+   */
   clientesDoSistemaComCodigo(sistemaId) {
     return this.conn
-      .prepare("SELECT c.id, c.nome, c.codigo, c.cidade FROM clientes c JOIN cliente_sistemas x ON x.cliente_id = c.id WHERE x.sistema_id = ?")
+      .prepare("SELECT c.id, c.nome, c.codigo, c.cidade, c.grupo, c.regime_tributario AS regime FROM clientes c JOIN cliente_sistemas x ON x.cliente_id = c.id WHERE x.sistema_id = ?")
       .all(sistemaId);
   }
 

@@ -11,7 +11,7 @@ import { baixarBlob } from "../components/arquivos.js";
 import { html, plural } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
 import { comBotaoOcupado } from "../components/botaoOcupado.js";
-import { buscarClientes, filtrarClientesCampanha, tarefaDaCampanha } from "../domain/campanhas.js";
+import { filtrarCandidatos, filtrarClientesCampanha, filtrosEscolhaVazios, opcoesFiltroEscolha, podeFiltrarQuemFalta, tarefaDaCampanha } from "../domain/campanhas.js";
 import {
   listaCampanhas,
   cabecalhoCampanha,
@@ -20,6 +20,7 @@ import {
   celulaClienteCampanha,
   celulaUltimaCampanha,
   acoesClienteCampanha,
+  filtrosEscolhaClientes,
   formularioCampanha,
   listaEscolhaClientes,
   contagemClientes,
@@ -341,26 +342,46 @@ export class CampanhasView extends View {
     const papel = (nome) => /** @type {HTMLElement} */ (form.querySelector(`[data-role="${nome}"]`));
     const buscaEscolha = /** @type {HTMLInputElement} */ (papel("busca-escolha"));
     const marcados = new Set(campanha?.publico === "escolhidos" ? campanha.clientes.map((c) => c.id) : []);
+    const filtros = filtrosEscolhaVazios();
     let candidatos = [];
     let carregadoPara = null;
     const sistemaDaCampanha = () => (campanha ? campanha.sistema : campo("sistema").value);
+    // Só uma data completa e real serve de versão-alvo para julgar quem já a cumpre.
+    const versaoAlvoDaCampanha = () => {
+      const texto = campanha ? campanha.versaoAlvo : campo("versaoAlvo").value.trim();
+      return texto && dataBRValida(texto) ? texto : "";
+    };
     const escolhendo = () => /** @type {HTMLInputElement} */ (form.querySelector('input[name="publico"]:checked')).value === "escolhidos";
     const pintarEscolha = () => {
-      papel("lista-escolha").innerHTML = String(listaEscolhaClientes(buscarClientes(candidatos, buscaEscolha.value), marcados));
+      const visiveis = filtrarCandidatos(candidatos, filtros);
+      papel("lista-escolha").innerHTML = String(listaEscolhaClientes(visiveis, marcados));
       papel("contagem-escolha").textContent = `${plural(marcados.size, "cliente escolhido", "clientes escolhidos")} de ${candidatos.length}`;
+    };
+    const pintarFiltros = () => {
+      const pode = podeFiltrarQuemFalta(candidatos);
+      if (!pode) filtros.soQuemFalta = false;
+      papel("filtros-escolha").innerHTML = String(filtrosEscolhaClientes(opcoesFiltroEscolha(candidatos), filtros, { podeFiltrarQuemFalta: pode }));
     };
     const carregarCandidatos = async () => {
       const sistema = sistemaDaCampanha();
-      if (carregadoPara === sistema) return;
+      const versaoAlvo = versaoAlvoDaCampanha();
+      const chave = `${sistema}|${versaoAlvo}`;
+      if (carregadoPara === chave) return;
       try {
-        candidatos = await this.api.get("/campanhas/clientes-do-sistema", { sistema }, { key: "campanhas:candidatos" });
+        candidatos = await this.api.get("/campanhas/clientes-do-sistema", { sistema, versaoAlvo }, { key: "campanhas:candidatos" });
       } catch (err) {
         if (!err?.cancelled) erro.textContent = mensagem(err);
         return;
       }
-      carregadoPara = sistema;
+      carregadoPara = chave;
       const ids = new Set(candidatos.map((c) => c.id));
       for (const id of [...marcados]) if (!ids.has(id)) marcados.delete(id);
+      // Outro sistema pode não ter a cidade/grupo/regime que estava filtrado.
+      const opcoes = opcoesFiltroEscolha(candidatos);
+      if (!opcoes.cidades.includes(filtros.cidade)) filtros.cidade = "";
+      if (!opcoes.grupos.includes(filtros.grupo)) filtros.grupo = "";
+      if (!opcoes.regimes.includes(filtros.regime)) filtros.regime = "";
+      pintarFiltros();
       pintarEscolha();
     };
     const atualizarPublico = () => {
@@ -371,14 +392,22 @@ export class CampanhasView extends View {
     form.addEventListener("change", (e) => {
       const alvo = /** @type {HTMLInputElement} */ (e.target);
       if (alvo.name === "publico") return atualizarPublico();
+      const filtro = alvo.dataset?.filtroEscolha;
+      if (filtro) {
+        filtros[filtro] = alvo.type === "checkbox" ? alvo.checked : alvo.value;
+        return pintarEscolha();
+      }
       if (!alvo.closest('[data-role="lista-escolha"]')) return;
       if (alvo.checked) marcados.add(Number(alvo.value));
       else marcados.delete(Number(alvo.value));
       pintarEscolha();
     });
-    buscaEscolha.addEventListener("input", aguardarPausa(pintarEscolha, 150));
+    buscaEscolha.addEventListener("input", aguardarPausa(() => {
+      filtros.busca = buscaEscolha.value;
+      pintarEscolha();
+    }, 150));
     form.querySelector('[data-action="marcar-visiveis"]').addEventListener("click", () => {
-      for (const c of buscarClientes(candidatos, buscaEscolha.value)) marcados.add(c.id);
+      for (const c of filtrarCandidatos(candidatos, filtros)) marcados.add(c.id);
       pintarEscolha();
     });
     form.querySelector('[data-action="limpar-escolha"]').addEventListener("click", () => {
@@ -392,6 +421,8 @@ export class CampanhasView extends View {
         carregadoPara = null;
         if (escolhendo()) carregarCandidatos();
       });
+      // A versão-alvo decide quem "já cumpre": digitá-la refaz o julgamento.
+      campo("versaoAlvo").addEventListener("input", () => { if (escolhendo()) carregarCandidatos(); });
     }
     atualizarPublico();
 

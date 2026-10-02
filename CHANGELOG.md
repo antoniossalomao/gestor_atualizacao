@@ -15,6 +15,9 @@ Para o agente C#, o equivalente é
 
 ### Setembro de 2026
 
+- **Campanhas, filtros na lista de escolha (02/10/2026):** acima da lista de clientes do formulário agora há filtro por cidade, grupo/rede e regime tributário, e "Só quem ainda não está na versão-alvo". "Marcar os visíveis" respeita os filtros, então marcar todo o regime X de uma Nota Técnica é um clique. Antes só havia a busca por texto.
+  - O "já cumpre" usa a mesma regra da campanha, contra a versão-alvo digitada no formulário; sem uma data completa e real o filtro fica desabilitado (o servidor devolve `atendido: null`, e não "pendente" para todos). Seletor com uma opção só não aparece.
+
 - **Campanha só para clientes escolhidos (02/10/2026):** o formulário de campanha ganhou "Quem entra na campanha": todos os clientes do sistema (como sempre, com a cidade opcional) ou só os clientes marcados numa lista com busca por nome, código ou cidade, "Marcar os visíveis" e "Limpar". Serve para um piloto ou para quem uma Nota Técnica atinge, sem criar uma campanha do sistema inteiro e ignorar a maioria.
   - Continua valendo a baixa automática pela atualização, o "já agendado" por tarefa do mesmo sistema e o placar congelado no encerramento. A planilha de pendentes traz o público na aba "Campanha".
   - Dá para trocar a lista depois de criada (a meta, sistema e versão-alvo, continua fixa). Escolher clientes substitui a cidade.

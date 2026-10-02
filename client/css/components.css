@@ -8196,6 +8196,13 @@ h1, h2, h3, strong {
 .campanha-escolha[hidden], .campanha-form [data-role="campo-cidade"][hidden] { display: none; }
 .campanha-escolha__barra { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
 .campanha-escolha__barra .input { flex: 1 1 200px; min-width: 0; }
+/* Filtros da lista de escolha: seletores lado a lado e, embaixo, "só quem
+   falta" em linha própria. Sem opção nenhuma (lista ainda carregando), a faixa some. */
+.campanha-escolha__filtros { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.campanha-escolha__filtros:empty { display: none; }
+.campanha-escolha__filtro { flex: 1 1 150px; width: auto; min-width: 0; }
+.campanha-escolha__so-falta { flex: 1 1 100%; padding: 0; font-size: var(--txt-sm); }
+.campanha-escolha__so-falta input:disabled + span { color: var(--cor-texto-fraco); }
 .campanha-escolha__lista {
   max-height: 220px;
   overflow-y: auto;
