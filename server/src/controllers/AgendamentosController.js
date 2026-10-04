@@ -1,9 +1,11 @@
 const { lerPaginacao } = require("./paginacao");
+const { BaseController } = require("./BaseController");
 
 /** Rotas da agenda de tarefas internas (aba Agendamentos). */
-class AgendamentosController {
+class AgendamentosController extends BaseController {
   /** @param {import('../services/AgendamentoService').AgendamentoService} agendamentoService */
   constructor(agendamentoService) {
+    super();
     this.agendamentoService = agendamentoService;
   }
 
@@ -17,54 +19,33 @@ class AgendamentosController {
   };
 
   create = (req, res, next) => {
-    try {
-      res.status(201).json(this.agendamentoService.create(req.body || {}, req.session.user));
-    } catch (err) {
-      next(err);
-    }
+    this.handleSync(() => this.agendamentoService.create(req.body || {}, req.session.user), req, res, next, 201);
   };
 
   update = (req, res, next) => {
-    try {
-      res.json(this.agendamentoService.update(Number(req.params.id), req.body || {}, req.session.user));
-    } catch (err) {
-      next(err);
-    }
+    this.handleSync(() => this.agendamentoService.update(Number(req.params.id), req.body || {}, req.session.user), req, res, next);
   };
 
   remove = (req, res, next) => {
-    try {
+    this.handleSync(() => {
       this.agendamentoService.delete(Number(req.params.id), req.session.user);
-      res.status(204).end();
-    } catch (err) {
-      next(err);
-    }
+    }, req, res, next, 204);
   };
 
   marcarConcluida = (req, res, next) => {
-    try {
+    this.handleSync(() => {
       this.agendamentoService.marcarConcluida(Number(req.params.id), req.session.user);
-      res.status(204).end();
-    } catch (err) {
-      next(err);
-    }
+    }, req, res, next, 204);
   };
 
   reabrir = (req, res, next) => {
-    try {
-      res.json(this.agendamentoService.reabrir(Number(req.params.id), req.session.user));
-    } catch (err) {
-      next(err);
-    }
+    this.handleSync(() => this.agendamentoService.reabrir(Number(req.params.id), req.session.user), req, res, next);
   };
 
   arquivar = (req, res, next) => {
-    try {
+    this.handleSync(() => {
       this.agendamentoService.arquivar(Number(req.params.id), req.session.user);
-      res.status(204).end();
-    } catch (err) {
-      next(err);
-    }
+    }, req, res, next, 204);
   };
 
 }

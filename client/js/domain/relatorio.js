@@ -1,4 +1,4 @@
-import { splitSistemas } from "./matrizVersoes.js";
+import { splitSistemas, versaoRegistrada } from "./utilitariosVersao.js";
 import { plural } from "../utils/html.js";
 
 /**
@@ -153,17 +153,6 @@ export function haQuantoTempo(dataBR) {
   if (meses < 12) return `há ${meses} ${meses === 1 ? "mês" : "meses"}`;
   const anos = Math.floor(meses / 12);
   return `há ${anos} ${anos === 1 ? "ano" : "anos"}`;
-}
-
-/** Versão registrada na atualização, nunca a referência oficial atual. */
-export function versaoRegistrada(registro, sistema) {
-  if (!registro) return "";
-  if (registro.versoes_sistemas != null) {
-    const mapa = JSON.parse(registro.versoes_sistemas);
-    const chave = Object.keys(mapa).find((s) => s.toLowerCase() === sistema.toLowerCase());
-    return chave ? mapa[chave] || "" : "";
-  }
-  return splitSistemas(registro.sistema).length === 1 ? registro.versao || "" : "";
 }
 
 export function relatorioSituacao(situacao) {

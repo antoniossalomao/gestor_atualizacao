@@ -1,5 +1,5 @@
 import { tempoRelativo, formatarDataHora } from "../utils/data.js";
-import { versaoRegistrada } from "./relatorio.js";
+import { versaoRegistrada, splitSistemas } from "./utilitariosVersao.js";
 
 /**
  * Matriz de versões da ficha do cliente (aba Consultar Cliente): uma linha por
@@ -8,24 +8,6 @@ import { versaoRegistrada } from "./relatorio.js";
  * versão instalada, quando um cliente conta como atrasado), não desenho, e
  * dentro da view não havia como testá-la.
  */
-
-/**
- * Um log de atualização pode registrar vários sistemas de uma vez, separados
- * por vírgula (ex.: "B_Vendas, B_NFe, B_Importa" quando o lote atualiza os
- * três juntos). Sem separar esses nomes, a matriz de versões tratava a
- * string inteira como se fosse um "sistema" só, e cada sistema individual
- * (ex.: "B_Vendas" sozinho) nunca batia com o registro combinado -- mesmo
- * instalado, aparecia como "Não instalado". Mesmo critério de split usado no
- * backend (ver separarSistemas em AtualizacaoRepository.js).
- * @param {string|null|undefined} texto
- * @returns {string[]}
- */
-export function splitSistemas(texto) {
-  return String(texto || "")
-    .split(/,|\s+e\s+/i)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
 
 /** Situação do agente (ver derivarSituacao no VersaoService) -> rótulo e cor do selo. */
 const ESTADO_POR_SITUACAO = {

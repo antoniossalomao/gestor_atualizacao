@@ -208,6 +208,8 @@ class BancoDeDados {
       )
     `);
 
+    conn.exec(`CREATE INDEX IF NOT EXISTS idx_agendamentos_status_data ON agendamentos (status, data DESC)`);
+
     conn.exec(`
       CREATE TABLE IF NOT EXISTS sistemas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
