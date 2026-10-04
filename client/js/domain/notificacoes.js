@@ -149,7 +149,7 @@ export function montarNotificacoes({ lembretes, painel, campanhas } = {}, filtro
       nomeDe: (c) => c?.titulo,
       destino: "campanhas",
     }),
-  ].filter((n) => n !== null);
+  ].filter(/** @type {(n: any) => n is Notificacao} */ ((n) => n !== null));
 }
 
 /**
