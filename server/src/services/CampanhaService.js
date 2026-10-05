@@ -142,7 +142,12 @@ class CampanhaService {
     return this.detalhe(campanha.id);
   }
 
-  /** Tira um cliente de uma campanha de clientes escolhidos. A campanha não fica sem nenhum. */
+  /**
+   * Tira um cliente de uma campanha de clientes escolhidos. A campanha não fica sem nenhum.
+   * @param {number|string} id
+   * @param {number|string} clienteId
+   * @param {object} usuario
+   */
   removerCliente(id, clienteId, usuario) {
     const campanha = this._achar(id);
     this._exigirListaEditavel(campanha);

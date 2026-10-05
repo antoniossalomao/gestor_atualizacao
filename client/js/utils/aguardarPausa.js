@@ -5,7 +5,7 @@
  * por `delayMs`) realmente dispara a busca.
  */
 export function aguardarPausa(fn, delayMs = 200) {
-  let timer = null;
+  let timer = undefined;
   return (...args) => {
     clearTimeout(timer);
     timer = setTimeout(() => fn(...args), delayMs);
