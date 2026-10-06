@@ -28,7 +28,7 @@ export class RegistroDePendencias {
   lista() {
     const itens = [];
     for (const fonte of this.fontes) {
-      let texto = null;
+      let texto = /** @type {string | null} */ (null);
       try {
         texto = fonte();
       } catch {

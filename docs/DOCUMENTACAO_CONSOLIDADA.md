@@ -2859,10 +2859,13 @@ Substitui a proposta anterior da Central de pendências. Permite criar metas tem
 - [x] Imutabilidade da meta: a versão-alvo é copiada na criação; editar a campanha muda só título, descrição e prazo, e uma oficial nova em Sistemas não altera a meta.
 - [x] Painel visual executivo: barra de progresso com atendidos, já agendados e pendentes (mesmas cores do card de situação do Resumo), contagens e percentual. Sem clientes, mostra "—" em vez de 0% ou 100%.
 - [x] Tabela de clientes com filtros rápidos (Pendentes, Já agendados, Concluídos, Todos), cada um com a contagem, e busca por nome, código ou cidade.
-- [x] Ações na linha: Agendar (cria a tarefa na hora, com o sistema da campanha, prioridade Alta se houver prazo e a origem no título), gerenciar acessos remotos e abrir a ficha. Agendar só aparece para pendente e para quem pode editar.
-- [x] ~~Exportação em planilha (.xlsx) dos clientes que faltam (pendentes e já agendados), com código, cidade, última atualização, versão recebida e a tarefa; segunda aba com o resumo da campanha. (removida em 02/10/2026, a pedido da equipe)~~
+- [x] Campanhas no sino: prazos vencidos ou vencendo hoje nas campanhas geram avisos nas notificações.
+- [x] Campanha com quem falta: botão para criar uma nova campanha restrita aos clientes pendentes da campanha original, para facilitar a conclusão de metas incompletas.
+- [x] Agendamento em lote: botão "Agendar pendentes" no detalhe da campanha permite agendar a atualização para todos os clientes pendentes com um só clique, respeitando se há prazo para prioridade Alta.
+- [x] Lista de clientes personalizada: a campanha permite adicionar ou remover clientes específicos diretamente na tela de detalhes, e a tela de criação tem filtros na lista de clientes.
+- [x] Ações na linha: Agendar, gerenciar acessos remotos e abrir a ficha. Agendar só aparece para pendente e para quem pode editar. A exportação (.xlsx) de pendentes foi removida para manter a fluidez, já que há agendamento em lote.
 - [x] Ciclo de vida: ativa → encerrada (placar congelado no encerramento) → reabrir, se preciso. Excluir é só do admin e não apaga atualizações nem tarefas. Tudo registrado no Histórico (tipo "Campanha").
-- [x] Estrutura leve no SQLite: migração 4 cria só `campanhas` (a meta). Os clientes saem ao vivo de `cliente_sistemas`; "já agendado" é uma tarefa em aberto do mesmo sistema. Nenhuma tabela de clientes duplicada.
+- [x] Estrutura leve no SQLite: migração 4 cria só `campanhas` (a meta) e migração 7 traz campanhas para clientes escolhidos. Os clientes saem ao vivo de `cliente_sistemas` ou `campanha_clientes`; "já agendado" é uma tarefa em aberto do mesmo sistema. Nenhuma tabela de clientes duplicada.
 
 **Revisão visual (28/09/2026):** o cartão da aba ocupa a altura da tela (lista e detalhe rolam cada um por si); sem campanhas, a coluna da lista some e o aviso fica centralizado no cartão (antes eram dois avisos, um espremido no canto); Ativas/Encerradas virou um seletor alinhado com "Nova campanha"; o placar ganhou painel próprio com o percentual em destaque; o prazo deixou de aparecer duas vezes no cabeçalho; a busca fica na linha dos filtros.
 

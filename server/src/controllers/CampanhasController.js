@@ -33,18 +33,31 @@ class CampanhasController {
     } catch (err) { next(err); }
   };
 
+  /**
+   * Adiciona um ou mais clientes à campanha escolhida, desde que não estejam nela e tenham o sistema.
+   * Rota: POST /api/campanhas/:id/clientes
+   */
   adicionarClientes = (req, res, next) => {
     try {
       res.json(this.campanhaService.adicionarClientes(req.params.id, req.body?.clientes, req.session.user));
     } catch (err) { next(err); }
   };
 
+  /**
+   * Remove um cliente da campanha escolhida, atualizando o total de clientes.
+   * Rota: DELETE /api/campanhas/:id/clientes/:clienteId
+   */
   removerCliente = (req, res, next) => {
     try {
       res.json(this.campanhaService.removerCliente(req.params.id, req.params.clienteId, req.session.user));
     } catch (err) { next(err); }
   };
 
+  /**
+   * Agenda a tarefa de atualização para os clientes da campanha.
+   * Pode agendar para todos os pendentes ou para uma lista específica.
+   * Rota: POST /api/campanhas/:id/agendar
+   */
   agendar = (req, res, next) => {
     try {
       res.json(this.campanhaService.agendar(req.params.id, req.body || {}, req.session.user));

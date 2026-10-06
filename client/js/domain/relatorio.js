@@ -20,8 +20,8 @@ import { plural } from "../utils/html.js";
 /**
  * Relatório de UMA atualização.
  *
- * @param {object} registro linha da grid (id, cliente, sistema, versao, ...)
- * @param {{anterior?: object|null, cliente?: object|null}} [contexto]
+ * @param {Record<string, any>} registro linha da grid (id, cliente, sistema, versao, ...)
+ * @param {{anterior?: Record<string, any>|null, cliente?: Record<string, any>|null}} [contexto]
  *   `anterior` contém as últimas versões anteriores dos mesmos sistemas,
  *   encontradas no histórico do cliente.
  */
@@ -56,8 +56,8 @@ export function relatorioDeAtualizacao(registro, { anterior = null, cliente = nu
  * mais recente para a mais antiga.
  *
  * @param {string} nome nome do cliente como está gravado nas atualizações
- * @param {object[]} historico de /atualizacoes/recent-by-client, já em ordem
- * @param {object|null} [cliente] de /clientes/by-nome; nulo se não cadastrado
+ * @param {Record<string, any>[]} historico de /atualizacoes/recent-by-client, já em ordem
+ * @param {Record<string, any>|null} [cliente] de /clientes/by-nome; nulo se não cadastrado
  */
 export function relatorioDoCliente(nome, historico, cliente = null) {
   const registros = Array.isArray(historico) ? historico : [];
@@ -72,7 +72,7 @@ export function relatorioDoCliente(nome, historico, cliente = null) {
     resumo.push(`última em ${ultima.data}${tempo ? ` (${tempo})` : ""}`);
   }
   linhas.push(resumo.join(" · "));
-  campo(linhas, "Sistemas do cliente", Array.isArray(cliente?.sistemas) ? cliente.sistemas.join(", ") : cliente?.sistemas);
+  campo(linhas, "Sistemas do cliente", Array.isArray(cliente?.sistemas) ? cliente?.sistemas.join(", ") : cliente?.sistemas);
 
   if (registros.length === 0) {
     linhas.push("", "Nenhuma atualização registrada para este cliente.");
