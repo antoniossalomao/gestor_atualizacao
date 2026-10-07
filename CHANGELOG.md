@@ -13,7 +13,11 @@ do painel): é um diário de decisões, em ordem cronológica.
 Para o agente C#, o equivalente é
 [`atualizador/RISCOS-CONHECIDOS.md`](../atualizador/RISCOS-CONHECIDOS.md).
 
-### Setembro de 2026
+### Outubro de 2026
+
+- **Revisão e limpeza (07/10/2026):** correções de concorrência e datas nos agendamentos; download por snapshot SQLite; restauração com cópia de segurança obrigatória e recuperação do banco anterior em caso de falha. O deploy também usa snapshot íntegro, com nome único.
+- **Robustez (07/10/2026):** sessões revogadas não são recriadas por respostas atrasadas; falha de inicialização libera recursos; campos textuais inválidos recebem erro de validação; paginação, regras e preferências rejeitam valores inadequados. Caminhos estáticos codificados respeitam o bloqueio de arquivos de desenvolvimento, e o cliente tolera hash malformado e armazenamento indisponível.
+- **Manutenção (07/10/2026):** cache de statements aplicado a 71 consultas fixas; remoção de método/import sem consumidores e do lockfile sem dependências do cliente; comentários corrigidos. Escopo e verificações em [PLANO_DE_REFATORACAO.md](PLANO_DE_REFATORACAO.md).
 
 - **Campanhas no sino (02/10/2026):** campanha ativa com o prazo vencido sem a meta cumprida ("1 campanha com o prazo vencido") e campanha com prazo hoje ("1 campanha com prazo hoje") agora aparecem no sino e no contador da aba, com clique direto na tela de Campanhas. Antes só se via o selo de prazo vencido dentro da própria aba.
   - Mesmos dois baldes dos agendamentos (vencido e hoje), sem "vence em N dias": um aviso antecipado seria uma regra de prazo da equipe, e essas ficam em Administração. Campanha com a meta cumprida, sem clientes ou encerrada não avisa.
