@@ -18,7 +18,7 @@ class SistemaRepository extends BaseRepository {
 
   /** Nomes do catálogo ativo -- os checkboxes de Clientes e o select de Sistemas. */
   list() {
-    return this.conn.prepare("SELECT nome FROM sistemas WHERE ativo = 1 ORDER BY nome").all().map((r) => r.nome);
+    return this._preparado("SELECT nome FROM sistemas WHERE ativo = 1 ORDER BY nome").all().map((r) => r.nome);
   }
 
   /**
@@ -28,19 +28,19 @@ class SistemaRepository extends BaseRepository {
    * lista explícita quebraria a migração de toda instalação antiga.
    */
   todos() {
-    return this.conn.prepare("SELECT * FROM sistemas ORDER BY nome").all();
+    return this._preparado("SELECT * FROM sistemas ORDER BY nome").all();
   }
 
   versoes() {
-    return this.conn.prepare("SELECT nome, ultima_versao AS data, ultima_versao_autor AS autor, ultima_versao_em AS alteradaEm FROM sistemas WHERE ativo = 1 AND controla_versao = 1 ORDER BY nome").all();
+    return this._preparado("SELECT nome, ultima_versao AS data, ultima_versao_autor AS autor, ultima_versao_em AS alteradaEm FROM sistemas WHERE ativo = 1 AND controla_versao = 1 ORDER BY nome").all();
   }
 
   salvarVersao(nome, data) {
-    return this.conn.prepare("UPDATE sistemas SET ultima_versao = ? WHERE lower(nome) = lower(?) AND ativo = 1 AND controla_versao = 1").run(data, nome).changes;
+    return this._preparado("UPDATE sistemas SET ultima_versao = ? WHERE lower(nome) = lower(?) AND ativo = 1 AND controla_versao = 1").run(data, nome).changes;
   }
 
   salvarVersaoSeAtual(nome, data, esperada, autor) {
-    return this.conn.prepare(`UPDATE sistemas
+    return this._preparado(`UPDATE sistemas
       SET ultima_versao = @data, ultima_versao_autor = @autor, ultima_versao_em = @em
       WHERE lower(nome) = lower(@nome) AND ativo = 1 AND controla_versao = 1 AND ultima_versao = @esperada`)
       .run({ nome, data, esperada, autor, em: new Date().toISOString() }).changes;
@@ -48,20 +48,20 @@ class SistemaRepository extends BaseRepository {
 
   /** Classificação e referência preservada, inclusive dos inativos do histórico. */
   catalogo() {
-    return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, atualiza_com_principal AS atualizaComPrincipal, ultima_versao AS ultimaVersao FROM sistemas ORDER BY nome").all();
+    return this._preparado("SELECT id, nome, ativo, controla_versao AS controlaVersao, atualiza_com_principal AS atualizaComPrincipal, ultima_versao AS ultimaVersao FROM sistemas ORDER BY nome").all();
   }
 
   obterPorId(id) {
-    return this.conn.prepare("SELECT id, nome, ativo, controla_versao AS controlaVersao, atualiza_com_principal AS atualizaComPrincipal, ultima_versao AS ultimaVersao FROM sistemas WHERE id = ?").get(id);
+    return this._preparado("SELECT id, nome, ativo, controla_versao AS controlaVersao, atualiza_com_principal AS atualizaComPrincipal, ultima_versao AS ultimaVersao FROM sistemas WHERE id = ?").get(id);
   }
 
   classificar(id, controlaVersao) {
-    return this.conn.prepare("UPDATE sistemas SET controla_versao = ? WHERE id = ? AND ativo = 1").run(controlaVersao ? 1 : 0, id).changes;
+    return this._preparado("UPDATE sistemas SET controla_versao = ? WHERE id = ? AND ativo = 1").run(controlaVersao ? 1 : 0, id).changes;
   }
 
   /** Marca o sistema como dependente do B_Vendas (ver migracoes.js, migração 6). */
   marcarDependente(id, atualizaComPrincipal) {
-    return this.conn.prepare("UPDATE sistemas SET atualiza_com_principal = ? WHERE id = ? AND ativo = 1").run(atualizaComPrincipal ? 1 : 0, id).changes;
+    return this._preparado("UPDATE sistemas SET atualiza_com_principal = ? WHERE id = ? AND ativo = 1").run(atualizaComPrincipal ? 1 : 0, id).changes;
   }
 
   /**
@@ -70,13 +70,13 @@ class SistemaRepository extends BaseRepository {
    * devolve false se já existia ativo.
    */
   add(nome) {
-    const existente = this.conn.prepare("SELECT id, ativo FROM sistemas WHERE lower(nome) = lower(?)").get(nome);
+    const existente = this._preparado("SELECT id, ativo FROM sistemas WHERE lower(nome) = lower(?)").get(nome);
     if (existente?.ativo) return false;
     if (existente) {
-      this.conn.prepare("UPDATE sistemas SET ativo = 1 WHERE id = ?").run(existente.id);
+      this._preparado("UPDATE sistemas SET ativo = 1 WHERE id = ?").run(existente.id);
       return true;
     }
-    this.conn.prepare("INSERT INTO sistemas (nome) VALUES (?)").run(nome);
+    this._preparado("INSERT INTO sistemas (nome) VALUES (?)").run(nome);
     return true;
   }
 
@@ -88,11 +88,11 @@ class SistemaRepository extends BaseRepository {
    * @returns {{id: number, clientesAfetados: number} | null}
    */
   remove(nome) {
-    const linha = this.conn.prepare("SELECT id FROM sistemas WHERE lower(nome) = lower(?) AND ativo = 1").get(nome);
+    const linha = this._preparado("SELECT id FROM sistemas WHERE lower(nome) = lower(?) AND ativo = 1").get(nome);
     if (!linha) return null;
     return this.conn.transaction(() => {
-      this.conn.prepare("UPDATE sistemas SET ativo = 0 WHERE id = ?").run(linha.id);
-      const clientesAfetados = this.conn.prepare("DELETE FROM cliente_sistemas WHERE sistema_id = ?").run(linha.id).changes;
+      this._preparado("UPDATE sistemas SET ativo = 0 WHERE id = ?").run(linha.id);
+      const clientesAfetados = this._preparado("DELETE FROM cliente_sistemas WHERE sistema_id = ?").run(linha.id).changes;
       return { id: linha.id, clientesAfetados };
     })();
   }

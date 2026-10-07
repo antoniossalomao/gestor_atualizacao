@@ -10,8 +10,8 @@ class ClienteAcessoRepository extends BaseRepository {
   }
 
   listarPorCliente(clienteId) {
-    return this.conn
-      .prepare(
+    return this
+      ._preparado(
         `SELECT id, cliente_id AS clienteId, maquina, anydesk, suporte_bredas AS suporteBredas, observacoes
            FROM cliente_acessos
           WHERE cliente_id = ?
@@ -22,8 +22,8 @@ class ClienteAcessoRepository extends BaseRepository {
 
   obterPorId(id) {
     return (
-      this.conn
-        .prepare(
+      this
+        ._preparado(
           `SELECT id, cliente_id AS clienteId, maquina, anydesk, suporte_bredas AS suporteBredas, observacoes
              FROM cliente_acessos
             WHERE id = ?`
@@ -33,15 +33,15 @@ class ClienteAcessoRepository extends BaseRepository {
   }
 
   insert(clienteId, maquina, anydesk, suporteBredas, observacoes) {
-    const info = this.conn
-      .prepare("INSERT INTO cliente_acessos (cliente_id, maquina, anydesk, suporte_bredas, observacoes) VALUES (?, ?, ?, ?, ?)")
+    const info = this
+      ._preparado("INSERT INTO cliente_acessos (cliente_id, maquina, anydesk, suporte_bredas, observacoes) VALUES (?, ?, ?, ?, ?)")
       .run(clienteId, maquina, anydesk, suporteBredas, observacoes);
     return info.lastInsertRowid;
   }
 
   update(id, maquina, anydesk, suporteBredas, observacoes) {
-    this.conn
-      .prepare("UPDATE cliente_acessos SET maquina = ?, anydesk = ?, suporte_bredas = ?, observacoes = ? WHERE id = ?")
+    this
+      ._preparado("UPDATE cliente_acessos SET maquina = ?, anydesk = ?, suporte_bredas = ?, observacoes = ? WHERE id = ?")
       .run(maquina, anydesk, suporteBredas, observacoes, id);
   }
 }

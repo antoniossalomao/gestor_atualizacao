@@ -137,8 +137,8 @@ class AtualizacaoRepository extends BaseRepository {
 
   /** Versão recebida em cada sistema de uma atualização: [{ id, versao }] na ordem gravada. */
   sistemasDe(id) {
-    return this.conn
-      .prepare("SELECT sistema_id AS id, versao FROM atualizacao_sistemas WHERE atualizacao_id = ? ORDER BY ordem")
+    return this
+      ._preparado("SELECT sistema_id AS id, versao FROM atualizacao_sistemas WHERE atualizacao_id = ? ORDER BY ordem")
       .all(id);
   }
 
@@ -434,7 +434,7 @@ class AtualizacaoRepository extends BaseRepository {
    * @returns {Array<{cliente: string, data: string, sistema: string}>}
    */
   linhasParaDuplicidade() {
-    return this.conn.prepare("SELECT cliente, data, sistema FROM atualizacoes_v").all();
+    return this._preparado("SELECT cliente, data, sistema FROM atualizacoes_v").all();
   }
 
   /**

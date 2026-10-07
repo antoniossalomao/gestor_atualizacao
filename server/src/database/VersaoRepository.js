@@ -202,8 +202,8 @@ class VersaoRepository extends BaseRepository {
    * mais rapido.
    */
   agentes() {
-    return this.conn
-      .prepare(
+    return this
+      ._preparado(
         // ROW_NUMBER em vez de MAX(id): "ultimo contato" e um conceito de
         // TEMPO, e id so coincide com ordem cronologica enquanto os retornos
         // chegam perfeitamente em ordem. Basta um agente com relogio atrasado,
@@ -275,8 +275,8 @@ class VersaoRepository extends BaseRepository {
 
   /** Distribuicao de retornos por status, para os indicadores do topo. */
   contagemPorStatus(desde) {
-    return this.conn
-      .prepare(
+    return this
+      ._preparado(
         `SELECT UPPER(status) AS status, COUNT(*) AS total
          FROM atualizador_logs
          WHERE (@desde IS NULL OR criado_em >= @desde)
@@ -287,8 +287,8 @@ class VersaoRepository extends BaseRepository {
   }
 
   adicionarRegistro(data) {
-    this.conn
-      .prepare(
+    this
+      ._preparado(
         `INSERT INTO atualizador_logs (cnpj, hwid, maquina, sistema, versao, versao_anterior, duracao_ms, fase, status, detalhes, criado_em)
          VALUES (@cnpj, @hwid, @maquina, @sistema, @versao, @versaoAnterior, @duracaoMs, @fase, @status, @detalhes, @criadoEm)`
       )
@@ -302,14 +302,14 @@ class VersaoRepository extends BaseRepository {
    * enquanto o problema continua.
    */
   situacaoAlertada(cnpj) {
-    const row = this.conn.prepare("SELECT situacao FROM agente_alertas WHERE cnpj = ?").get(cnpj);
+    const row = this._preparado("SELECT situacao FROM agente_alertas WHERE cnpj = ?").get(cnpj);
     return row ? row.situacao : null;
   }
 
   /** Marca (ou atualiza) que este agente está em alerta por causa desta situação. */
   marcarSituacaoAlertada(cnpj, situacao) {
-    this.conn
-      .prepare(
+    this
+      ._preparado(
         `INSERT INTO agente_alertas (cnpj, situacao, atualizado_em) VALUES (@cnpj, @situacao, @agora)
          ON CONFLICT(cnpj) DO UPDATE SET situacao = excluded.situacao, atualizado_em = excluded.atualizado_em`
       )
@@ -318,13 +318,13 @@ class VersaoRepository extends BaseRepository {
 
   /** Tira o agente do alerta -- chamado quando ele normaliza. */
   limparSituacaoAlertada(cnpj) {
-    this.conn.prepare("DELETE FROM agente_alertas WHERE cnpj = ?").run(cnpj);
+    this._preparado("DELETE FROM agente_alertas WHERE cnpj = ?").run(cnpj);
   }
 
   /** Pausa (ou atualiza o motivo de uma pausa já existente) um agente por CNPJ. */
   pausarAgente(cnpj, usuarioId, motivo) {
-    this.conn
-      .prepare(
+    this
+      ._preparado(
         `INSERT INTO agente_pausas (cnpj, motivo, pausado_em, pausado_por) VALUES (@cnpj, @motivo, @agora, @usuarioId)
          ON CONFLICT(cnpj) DO UPDATE SET motivo = excluded.motivo, pausado_em = excluded.pausado_em, pausado_por = excluded.pausado_por`
       )
@@ -333,7 +333,7 @@ class VersaoRepository extends BaseRepository {
 
   /** Retoma um agente pausado. Sem efeito (nao lança) se ele já não estava pausado. */
   retomarAgente(cnpj) {
-    this.conn.prepare("DELETE FROM agente_pausas WHERE cnpj = ?").run(cnpj);
+    this._preparado("DELETE FROM agente_pausas WHERE cnpj = ?").run(cnpj);
   }
 
   /**
@@ -343,7 +343,7 @@ class VersaoRepository extends BaseRepository {
    * 10 segundos por agente.
    */
   pausado(cnpj) {
-    return Boolean(this.conn.prepare("SELECT 1 FROM agente_pausas WHERE cnpj = ?").get(cnpj));
+    return Boolean(this._preparado("SELECT 1 FROM agente_pausas WHERE cnpj = ?").get(cnpj));
   }
 }
 

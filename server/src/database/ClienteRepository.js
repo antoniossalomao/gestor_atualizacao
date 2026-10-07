@@ -40,13 +40,13 @@ class ClienteRepository extends BaseRepository {
 
   /** Lista simples de nomes, usada para preencher sugestoes de autocompletar. */
   names() {
-    return this.conn.prepare("SELECT nome FROM clientes ORDER BY nome").all().map((r) => r.nome);
+    return this._preparado("SELECT nome FROM clientes ORDER BY nome").all().map((r) => r.nome);
   }
 
   /** Opções enxutas para seletores que identificam o cliente pelo código. */
   opcoesPorCodigo() {
-    return this.conn
-      .prepare("SELECT codigo, nome, cidade FROM clientes WHERE codigo IS NOT NULL AND trim(codigo) != '' ORDER BY nome COLLATE NOCASE")
+    return this
+      ._preparado("SELECT codigo, nome, cidade FROM clientes WHERE codigo IS NOT NULL AND trim(codigo) != '' ORDER BY nome COLLATE NOCASE")
       .all();
   }
 
@@ -62,19 +62,19 @@ class ClienteRepository extends BaseRepository {
 
   /** Nomes de grupo/rede já usados, para sugestão de autocompletar (mesmo padrão de "names"). */
   grupos() {
-    return this.conn
-      .prepare("SELECT DISTINCT grupo FROM clientes WHERE grupo IS NOT NULL AND grupo != '' ORDER BY grupo")
+    return this
+      ._preparado("SELECT DISTINCT grupo FROM clientes WHERE grupo IS NOT NULL AND grupo != '' ORDER BY grupo")
       .all()
       .map((r) => r.grupo);
   }
 
   cidades() {
-    return this.conn.prepare("SELECT DISTINCT trim(cidade) AS cidade FROM clientes WHERE trim(coalesce(cidade, '')) != '' ORDER BY cidade COLLATE NOCASE").all().map((r) => r.cidade);
+    return this._preparado("SELECT DISTINCT trim(cidade) AS cidade FROM clientes WHERE trim(coalesce(cidade, '')) != '' ORDER BY cidade COLLATE NOCASE").all().map((r) => r.cidade);
   }
 
   /** (id, codigo, nome, cidade) de todos os clientes -- usado no calculo de desatualizados. */
   todasBasicas() {
-    return this.conn.prepare("SELECT id, codigo, nome, cidade FROM clientes").all();
+    return this._preparado("SELECT id, codigo, nome, cidade FROM clientes").all();
   }
 
   /**
@@ -82,15 +82,15 @@ class ClienteRepository extends BaseRepository {
    * de toda conta de situação, e isso não aparecia em lugar nenhum.
    */
   semSistema() {
-    return this.conn
-      .prepare("SELECT c.id, c.nome, c.cidade FROM clientes c WHERE NOT EXISTS (SELECT 1 FROM cliente_sistemas x WHERE x.cliente_id = c.id) ORDER BY c.nome COLLATE NOCASE")
+    return this
+      ._preparado("SELECT c.id, c.nome, c.cidade FROM clientes c WHERE NOT EXISTS (SELECT 1 FROM cliente_sistemas x WHERE x.cliente_id = c.id) ORDER BY c.nome COLLATE NOCASE")
       .all();
   }
 
   /** Clientes que têm um sistema marcado no cadastro -- relatório por sistema. */
   clientesDoSistema(sistemaId) {
-    return this.conn
-      .prepare("SELECT c.id, c.nome, c.cidade FROM clientes c JOIN cliente_sistemas x ON x.cliente_id = c.id WHERE x.sistema_id = ?")
+    return this
+      ._preparado("SELECT c.id, c.nome, c.cidade FROM clientes c JOIN cliente_sistemas x ON x.cliente_id = c.id WHERE x.sistema_id = ?")
       .all(sistemaId);
   }
 
@@ -100,19 +100,19 @@ class ClienteRepository extends BaseRepository {
    * que são o que a equipe usa para escolher quem entra numa campanha.
    */
   clientesDoSistemaComCodigo(sistemaId) {
-    return this.conn
-      .prepare("SELECT c.id, c.nome, c.codigo, c.cidade, c.grupo, c.regime_tributario AS regime FROM clientes c JOIN cliente_sistemas x ON x.cliente_id = c.id WHERE x.sistema_id = ?")
+    return this
+      ._preparado("SELECT c.id, c.nome, c.codigo, c.cidade, c.grupo, c.regime_tributario AS regime FROM clientes c JOIN cliente_sistemas x ON x.cliente_id = c.id WHERE x.sistema_id = ?")
       .all(sistemaId);
   }
 
   /** Todas as marcações cliente x sistema do cadastro: [{ cliente_id, sistema_id }] -- Resumo. */
   sistemasDeTodos() {
-    return this.conn.prepare("SELECT cliente_id, sistema_id FROM cliente_sistemas").all();
+    return this._preparado("SELECT cliente_id, sistema_id FROM cliente_sistemas").all();
   }
 
   /** Ids dos sistemas marcados num cliente, na ordem do cadastro. */
   sistemasDoCliente(clienteId) {
-    return this.conn.prepare("SELECT sistema_id FROM cliente_sistemas WHERE cliente_id = ? ORDER BY ordem").all(clienteId).map((r) => r.sistema_id);
+    return this._preparado("SELECT sistema_id FROM cliente_sistemas WHERE cliente_id = ? ORDER BY ordem").all(clienteId).map((r) => r.sistema_id);
   }
 
   obterPorNome(nome) {
@@ -156,12 +156,12 @@ class ClienteRepository extends BaseRepository {
    */
   nomeExiste(nome, excludeId = null) {
     if (excludeId != null) {
-      const row = this.conn
-        .prepare("SELECT COUNT(*) AS total FROM clientes WHERE lower(nome) = lower(?) AND id != ?")
+      const row = this
+        ._preparado("SELECT COUNT(*) AS total FROM clientes WHERE lower(nome) = lower(?) AND id != ?")
         .get(nome, excludeId);
       return row.total > 0;
     }
-    const row = this.conn.prepare("SELECT COUNT(*) AS total FROM clientes WHERE lower(nome) = lower(?)").get(nome);
+    const row = this._preparado("SELECT COUNT(*) AS total FROM clientes WHERE lower(nome) = lower(?)").get(nome);
     return row.total > 0;
   }
 
@@ -169,7 +169,7 @@ class ClienteRepository extends BaseRepository {
   insert(codigo, nome, cidade, sistemaIds, grupo, regimeTributario = "") {
     return this.conn.transaction(() => {
       const id = Number(
-        this.conn.prepare("INSERT INTO clientes (codigo, nome, cidade, grupo, regime_tributario) VALUES (?, ?, ?, ?, ?)").run(codigo, nome, cidade, grupo, regimeTributario).lastInsertRowid
+        this._preparado("INSERT INTO clientes (codigo, nome, cidade, grupo, regime_tributario) VALUES (?, ?, ?, ?, ?)").run(codigo, nome, cidade, grupo, regimeTributario).lastInsertRowid
       );
       this._gravarSistemas(id, sistemaIds);
       this._adotarAtualizacoesSemVinculo(id, nome);
@@ -185,13 +185,13 @@ class ClienteRepository extends BaseRepository {
    */
   update(id, codigo, nome, cidade, sistemaIds, grupo, revisaoEsperada = null, usuarioNome = "", regimeTributario = "") {
     return this.conn.transaction(() => {
-      const resultado = this.conn
-        .prepare("UPDATE clientes SET codigo = @codigo, nome = @nome, cidade = @cidade, grupo = @grupo, regime_tributario = @regimeTributario, revisao = revisao + 1, atualizado_em = @atualizadoEm, atualizado_por = @atualizadoPor WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)")
+      const resultado = this
+        ._preparado("UPDATE clientes SET codigo = @codigo, nome = @nome, cidade = @cidade, grupo = @grupo, regime_tributario = @regimeTributario, revisao = revisao + 1, atualizado_em = @atualizadoEm, atualizado_por = @atualizadoPor WHERE id = @id AND (@revisaoEsperada IS NULL OR revisao = @revisaoEsperada)")
         .run({ codigo, nome, cidade, grupo, regimeTributario, id, revisaoEsperada, atualizadoEm: new Date().toISOString(), atualizadoPor: usuarioNome });
       if (resultado.changes) {
         this._gravarSistemas(id, sistemaIds);
-        this.conn.prepare("UPDATE atualizacoes SET cliente = ? WHERE cliente_id = ?").run(nome, id);
-        this.conn.prepare("UPDATE agendamentos SET cliente = ? WHERE cliente_id = ?").run(nome, id);
+        this._preparado("UPDATE atualizacoes SET cliente = ? WHERE cliente_id = ?").run(nome, id);
+        this._preparado("UPDATE agendamentos SET cliente = ? WHERE cliente_id = ?").run(nome, id);
         this._adotarAtualizacoesSemVinculo(id, nome);
       }
       return resultado.changes;
@@ -214,8 +214,8 @@ class ClienteRepository extends BaseRepository {
   }
 
   _gravarSistemas(clienteId, sistemaIds) {
-    this.conn.prepare("DELETE FROM cliente_sistemas WHERE cliente_id = ?").run(clienteId);
-    const ligar = this.conn.prepare("INSERT OR IGNORE INTO cliente_sistemas (cliente_id, sistema_id, ordem) VALUES (?, ?, ?)");
+    this._preparado("DELETE FROM cliente_sistemas WHERE cliente_id = ?").run(clienteId);
+    const ligar = this._preparado("INSERT OR IGNORE INTO cliente_sistemas (cliente_id, sistema_id, ordem) VALUES (?, ?, ?)");
     sistemaIds.forEach((sistemaId, i) => ligar.run(clienteId, sistemaId, i));
   }
 
@@ -244,8 +244,8 @@ class ClienteRepository extends BaseRepository {
 
   _marcar(clienteId, sistemaId) {
     return (
-      this.conn
-        .prepare(
+      this
+        ._preparado(
           `INSERT OR IGNORE INTO cliente_sistemas (cliente_id, sistema_id, ordem)
            SELECT @cliente, @sistema, coalesce(MAX(ordem) + 1, 0) FROM cliente_sistemas WHERE cliente_id = @cliente`
         )

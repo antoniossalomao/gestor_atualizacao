@@ -10,24 +10,24 @@ class UsuarioRepository extends BaseRepository {
   }
 
   buscarPorUsuario(usuario) {
-    return this.conn.prepare("SELECT * FROM usuarios WHERE usuario = ?").get(usuario) || null;
+    return this._preparado("SELECT * FROM usuarios WHERE usuario = ?").get(usuario) || null;
   }
 
   buscarPorId(id) {
     return (
-      this.conn.prepare("SELECT id, nome, usuario, role, criado_em, ultimo_login FROM usuarios WHERE id = ?").get(id) || null
+      this._preparado("SELECT id, nome, usuario, role, criado_em, ultimo_login FROM usuarios WHERE id = ?").get(id) || null
     );
   }
 
   /** Todas as contas (sem o hash da senha), para a tela de gerenciar usuários. */
   list() {
-    return this.conn.prepare("SELECT id, nome, usuario, role, criado_em, ultimo_login FROM usuarios ORDER BY nome").all();
+    return this._preparado("SELECT id, nome, usuario, role, criado_em, ultimo_login FROM usuarios ORDER BY nome").all();
   }
 
   insert(nome, usuario, senhaHash, role = "operador") {
     const criadoEm = new Date().toISOString();
-    const info = this.conn
-      .prepare("INSERT INTO usuarios (nome, usuario, senha_hash, role, criado_em) VALUES (?, ?, ?, ?, ?)")
+    const info = this
+      ._preparado("INSERT INTO usuarios (nome, usuario, senha_hash, role, criado_em) VALUES (?, ?, ?, ?, ?)")
       .run(nome, usuario, senhaHash, role, criadoEm);
     return this.buscarPorId(info.lastInsertRowid);
   }
@@ -35,23 +35,23 @@ class UsuarioRepository extends BaseRepository {
   /** Atualiza nome e papel de um usuário existente. */
   alterarUsuario(id, { nome, role }) {
     if (nome && role) {
-      this.conn.prepare("UPDATE usuarios SET nome = ?, role = ? WHERE id = ?").run(nome, role, id);
+      this._preparado("UPDATE usuarios SET nome = ?, role = ? WHERE id = ?").run(nome, role, id);
     } else if (nome) {
-      this.conn.prepare("UPDATE usuarios SET nome = ? WHERE id = ?").run(nome, id);
+      this._preparado("UPDATE usuarios SET nome = ? WHERE id = ?").run(nome, id);
     } else if (role) {
-      this.conn.prepare("UPDATE usuarios SET role = ? WHERE id = ?").run(role, id);
+      this._preparado("UPDATE usuarios SET role = ? WHERE id = ?").run(role, id);
     }
     return this.buscarPorId(id);
   }
 
   /** Troca só o hash da senha -- usado tanto pela troca de senha própria quanto por um reset futuro. */
   alterarHashDaSenha(id, senhaHash) {
-    this.conn.prepare("UPDATE usuarios SET senha_hash = ? WHERE id = ?").run(senhaHash, id);
+    this._preparado("UPDATE usuarios SET senha_hash = ? WHERE id = ?").run(senhaHash, id);
   }
 
   /** Registra o instante do login bem-sucedido -- ver buscarPorId/list, que agora devolvem "ultimo_login". */
   registrarLogin(id) {
-    this.conn.prepare("UPDATE usuarios SET ultimo_login = ? WHERE id = ?").run(new Date().toISOString(), id);
+    this._preparado("UPDATE usuarios SET ultimo_login = ? WHERE id = ?").run(new Date().toISOString(), id);
   }
 
   /**
@@ -64,7 +64,7 @@ class UsuarioRepository extends BaseRepository {
    * muito melhor que ele nao abrir.
    */
   preferencias(usuarioId) {
-    const linha = this.conn.prepare("SELECT prefs_json FROM usuario_preferencias WHERE usuario_id = ?").get(usuarioId);
+    const linha = this._preparado("SELECT prefs_json FROM usuario_preferencias WHERE usuario_id = ?").get(usuarioId);
     if (!linha) return {};
     try {
       const valor = JSON.parse(linha.prefs_json);
@@ -76,8 +76,8 @@ class UsuarioRepository extends BaseRepository {
 
   /** Grava o conjunto INTEIRO de preferencias da conta (substitui o anterior). */
   salvarPreferencias(usuarioId, prefs) {
-    this.conn
-      .prepare(
+    this
+      ._preparado(
         `INSERT INTO usuario_preferencias (usuario_id, prefs_json, atualizado_em) VALUES (@id, @json, @agora)
          ON CONFLICT(usuario_id) DO UPDATE SET prefs_json = @json, atualizado_em = @agora`
       )

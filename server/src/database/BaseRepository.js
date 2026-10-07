@@ -9,9 +9,9 @@
  *
  * Usa "better-sqlite3", que e SINCRONO (nao usa "await" pra ler/escrever
  * no banco) -- diferente da maioria das bibliotecas Node. Isso deixa o codigo
- * mais direto de ler e evita uma camada de Promises encadeadas que aqui nao
- * traz beneficio nenhum: o SQLite le do disco tao rapido que "esperar de
- * forma assincrona" nao ajudaria em nada.
+ * mais direto de ler; envolver as consultas em Promises não as tornaria
+ * assíncronas. Consultas caras ainda bloqueiam o event loop, então cache de
+ * statements, limites de planilha e agregações continuam necessários.
  */
 class BaseRepository {
   /** @param {import('better-sqlite3').Database} conn conexao aberta com o banco */

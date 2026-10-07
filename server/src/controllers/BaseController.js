@@ -1,21 +1,7 @@
-const { lerPaginacao } = require("./paginacao");
-
 /**
- * Encapsula a lógica de paginação e captura de erros para reduzir o boilerplate nos controllers.
+ * Centraliza respostas e captura de erros dos controllers síncronos.
  */
 class BaseController {
-
-  handle(promise, res, next, status = 200) {
-    promise
-      .then(result => {
-        if (result === undefined) {
-          res.status(status).end();
-        } else {
-          res.status(status).json(result);
-        }
-      })
-      .catch(next);
-  }
 
   handleSync(fn, req, res, next, status = 200) {
     try {
