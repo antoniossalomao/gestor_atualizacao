@@ -37,7 +37,7 @@ class ConfiguracaoSistemaService {
 
   /** Valor atual de uma regra, já no tipo certo. */
   valor(nome) {
-    if (!REGRAS[nome]) throw new Error(`Regra desconhecida: ${nome}`);
+    if (!Object.hasOwn(REGRAS, nome)) throw new Error(`Regra desconhecida: ${nome}`);
     return converterRegra(nome, this.db.configuracoesSistema.get(REGRAS[nome].chave));
   }
 

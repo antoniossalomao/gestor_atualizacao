@@ -88,6 +88,9 @@ test("Regras - validação de cada tipo", async (t) => {
 
   await t.test("regra desconhecida é recusada", () => {
     assert.throws(() => validarRegra("sessionSecret", "x"), /desconhecida/);
+    for (const nome of ["constructor", "toString", "__proto__"]) {
+      assert.throws(() => validarRegra(nome, "https://example.com"), (e) => e.statusCode === 400 && /desconhecida/.test(e.message));
+    }
   });
 
   await t.test("valor gravado inválido cai no padrão em vez de derrubar a leitura", () => {

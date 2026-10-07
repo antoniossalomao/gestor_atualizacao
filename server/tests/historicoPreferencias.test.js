@@ -149,6 +149,8 @@ test("PreferenciaService - o que pode ser guardado", async (t) => {
       // a acompanhar a conta.
       const salvo = env.prefs.salvar(usuario, { opcaoInventadaHoje: "sim" });
       assert.equal(salvo.opcaoInventadaHoje, "sim");
+      const herdadas = { constructor: "minha opção", toString: "texto", valueOf: 42 };
+      assert.deepEqual(env.prefs.salvar(usuario, herdadas), herdadas, "nomes herdados não são validadores");
     });
 
     await t.test("grava o conjunto INTEIRO, não mescla", () => {

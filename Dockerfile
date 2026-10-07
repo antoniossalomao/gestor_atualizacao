@@ -11,7 +11,7 @@
 #
 # 2. O contexto de build é "web/" inteiro, não "web/server/": a imagem leva o
 #    servidor E o front-end, e o servidor procura o front-end dois níveis
-#    acima de src/ (CLIENT_DIR em Server.js). Por isso o código fica em
+#    acima de src/ (CLIENT_DIR em Servidor.js). Por isso o código fica em
 #    /app/server e o front-end em /app/client, como em desenvolvimento.
 
 # ---------------------------------------------------------------- build ---
@@ -42,7 +42,7 @@ RUN npm ci --omit=dev --prefix server
 FROM node:22-bookworm-slim AS runtime
 
 # O código lê a data do relógio LOCAL para decidir o que é "hoje" (ver
-# AgendamentoRepository.dueSoon). Container sem TZ roda em UTC: das 21h à
+# AgendamentoRepository.venceEmBreve). Container sem TZ roda em UTC: das 21h à
 # meia-noite, horário de Brasília, o servidor já estaria no dia seguinte e
 # os agendamentos de amanhã apareceriam como atrasados no sino de
 # notificações -- errado em silêncio, sem erro nenhum no log. Ajuste aqui se

@@ -60,6 +60,10 @@ test("AtualizacaoService - validação", async (t) => {
   try {
     await t.test("cliente é obrigatório", () => {
       assert.throws(() => env.service.create({ cliente: "  " }, USUARIO), /Cliente/);
+      for (const cliente of [123, {}, [], true]) {
+        assert.throws(() => env.service.create({ cliente }, USUARIO), (e) => e.statusCode === 400);
+      }
+      assert.throws(() => env.service.create({ cliente: "X", obs: {} }, USUARIO), (e) => e.statusCode === 400);
     });
 
     await t.test("data fora de dd/mm/aaaa é recusada", () => {

@@ -29,6 +29,21 @@ const { AuthService } = require("../src/services/AuthService");
 
 const SENHA = "senha-de-teste-123";
 
+test("autenticação recusa tipos inválidos como erro de validação", () => {
+  const env = ambiente();
+  try {
+    for (const valor of [{}, [], 123, true]) {
+      assert.throws(() => env.auth.configurarAdmin({ nome: valor, usuario: "admin", senha: SENHA }), (e) => e.statusCode === 400);
+      assert.throws(() => env.auth.configurarAdmin({ nome: "Admin", usuario: "admin", senha: valor }), (e) => e.statusCode === 400);
+      assert.throws(() => env.auth.login(valor, SENHA), (e) => e.statusCode === 400 && e.message === "Usuário ou senha inválidos.");
+    }
+    const admin = env.auth.configurarAdmin({ nome: "Admin", usuario: "admin", senha: SENHA });
+    assert.throws(() => env.auth.login("admin", {}), (e) => e.statusCode === 400);
+    assert.throws(() => env.auth.trocarSenha(admin, {}, SENHA), (e) => e.statusCode === 400);
+    assert.throws(() => env.auth.trocarSenha(admin, SENHA, {}), (e) => e.statusCode === 400);
+  } finally { env.cleanup(); }
+});
+
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-auth-"));
   const db = new BancoDeDados(path.join(tmpDir, "gestao.db"));

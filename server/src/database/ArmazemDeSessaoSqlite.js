@@ -132,13 +132,21 @@ class ArmazemDeSessaoSqlite extends session.Store {
     }
   }
 
-  /** Renova o prazo de expiracao quando o usuario continua ativo (chamado pelo express-session). */
+  /** Renova somente uma sessão que ainda existe (chamado pelo express-session). */
   touch(sid, sessionData, callback) {
-    this.set(sid, sessionData, callback);
+    try {
+      const maxAge = sessionData.cookie?.maxAge ?? UM_DIA_MS;
+      // set faz upsert. Usá-lo aqui recriava uma sessão revogada quando uma
+      // leitura HTTP iniciada antes da revogação terminava depois dela.
+      this.conn.prepare("UPDATE sessoes SET expira_em = ? WHERE sid = ?").run(Date.now() + maxAge, sid);
+      if (callback) callback(null);
+    } catch (err) {
+      if (callback) callback(err);
+    }
   }
 
   /**
-   * Fecha o arquivo de sessoes. Chamado por Server.stop() -- sem isto, o
+   * Fecha o arquivo de sessões. Chamado por Servidor.stop() -- sem isto, o
    * handle do SQLite fica aberto depois do servidor "parar": em producao
    * apenas atrasa a liberacao do arquivo, mas num teste que sobe e derruba
    * o servidor num diretorio temporario o Windows recusa apagar a pasta

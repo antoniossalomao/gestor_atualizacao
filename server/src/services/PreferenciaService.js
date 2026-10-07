@@ -98,7 +98,7 @@ class PreferenciaService {
     const limpo = Object.create(null);
     for (const [chave, valor] of entradas) {
       if (!NOME_CHAVE.test(chave)) throw new ErroDeValidacao(`Nome de preferência inválido: "${String(chave).slice(0, 40)}".`);
-      const formato = FORMATOS[chave];
+      const formato = Object.hasOwn(FORMATOS, chave) ? FORMATOS[chave] : null;
       // Valor fora do formato é DESCARTADO (a opção volta ao padrão na tela),
       // e não motivo para recusar o conjunto: o cliente manda todas as
       // preferências juntas, e um valor velho ou corrompido numa delas

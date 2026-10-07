@@ -19,12 +19,17 @@ class BackupsController {
     }
   };
 
-  downloadCurrent = (_req, res, next) => {
+  downloadCurrent = async (_req, res, next) => {
+    let copia;
     try {
-      const caminho = this.backupService.caminhoDoBancoAtual();
+      copia = await this.backupService.criarCopiaTemporaria();
       const filename = `gestao_atual_${new Date().toISOString().replace(/[:.]/g, "-")}.db`;
-      res.download(caminho, filename);
+      res.download(copia.caminho, filename, (err) => {
+        copia.limpar();
+        if (err) next(err);
+      });
     } catch (err) {
+      copia?.limpar();
       next(err);
     }
   };

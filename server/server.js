@@ -70,6 +70,11 @@ server.start().then(() => {
   if (config.sessionSecure) console.log(`Gestor de Atualizações rodando em ${local}, só para o proxy HTTPS`);
   else console.log(`Gestor de Atualizações rodando em ${local} (HTTP só nesta máquina; para a rede, ver "HTTPS" no README)`);
   console.log(`Banco de dados: ${config.dbPath}`);
+}).catch(async (err) => {
+  console.error(`O servidor NÃO foi iniciado: ${err.message}`);
+  await server.stop();
+  server.db.close();
+  process.exit(1);
 });
 
 // Encerra a conexao com o banco de forma organizada ao parar o processo

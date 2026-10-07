@@ -20,7 +20,7 @@ const PREFIXO = "gestor:";
 
 function ler(store, chave, padrao) {
   try {
-    const bruto = store.getItem(PREFIXO + chave);
+    const bruto = store().getItem(PREFIXO + chave);
     return bruto == null ? padrao : JSON.parse(bruto);
   } catch {
     return padrao;
@@ -29,7 +29,7 @@ function ler(store, chave, padrao) {
 
 function gravar(store, chave, valor) {
   try {
-    store.setItem(PREFIXO + chave, JSON.stringify(valor));
+    store().setItem(PREFIXO + chave, JSON.stringify(valor));
   } catch {
     // Sem espaço ou sem permissão: seguir sem persistir é melhor que quebrar.
   }
@@ -46,7 +46,7 @@ function gravar(store, chave, valor) {
  * barato demais para valer esse risco.
  */
 function lembrando() {
-  return ler(localStorage, "lembrarFiltros", true) !== false;
+  return ler(() => localStorage, "lembrarFiltros", true) !== false;
 }
 
 /**
@@ -58,9 +58,9 @@ function lembrando() {
  * acumulando no storage para nunca ser lido.
  */
 export const prefs = {
-  get: (chave, padrao = null) => (lembrando() ? ler(sessionStorage, chave, padrao) : padrao),
+  get: (chave, padrao = null) => (lembrando() ? ler(() => sessionStorage, chave, padrao) : padrao),
   set: (chave, valor) => {
-    if (lembrando()) gravar(sessionStorage, chave, valor);
+    if (lembrando()) gravar(() => sessionStorage, chave, valor);
   },
   remove: (chave) => {
     try {
@@ -110,9 +110,9 @@ let enviarAgora = async () => {};
 
 /** Preferências duradouras (tema, cor de destaque, sidebar recolhida). */
 export const duradouras = {
-  get: (chave, padrao = null) => ler(localStorage, chave, padrao),
+  get: (chave, padrao = null) => ler(() => localStorage, chave, padrao),
   set: (chave, valor) => {
-    gravar(localStorage, chave, valor);
+    gravar(() => localStorage, chave, valor);
     if (!SO_DESTE_APARELHO.has(chave)) enviarAoServidor();
   },
   /**
@@ -155,7 +155,7 @@ function coletarDuradouras() {
       // por uma versão antiga não pode parar a sincronização de todas as
       // outras -- fica só neste navegador.
       if (!NOME_CHAVE.test(chave)) continue;
-      tudo[chave] = ler(localStorage, chave, null);
+      tudo[chave] = ler(() => localStorage, chave, null);
     }
   } catch {
     /* localStorage bloqueado: manda o que der, que é nada */
@@ -196,10 +196,10 @@ function limparDuradouras() {
  *   cache -- é quem manda a tela se redesenhar com as preferências certas.
  */
 export async function conectarPreferencias(api, usuario, aoAplicar = () => {}) {
-  const dono = ler(localStorage, CHAVE_DONO, null);
+  const dono = ler(() => localStorage, CHAVE_DONO, null);
   const trocouDeConta = dono != null && dono !== usuario?.id;
   if (trocouDeConta) limparDuradouras();
-  gravar(localStorage, CHAVE_DONO, usuario?.id ?? null);
+  gravar(() => localStorage, CHAVE_DONO, usuario?.id ?? null);
 
   // Agrupado: mudar a cor de destaque no painel dispara um `set` por clique, e
   // cada um deles não precisa de uma viagem própria até o servidor.
@@ -236,8 +236,8 @@ export async function conectarPreferencias(api, usuario, aoAplicar = () => {}) {
 
   let mudou = trocouDeConta;
   for (const [chave, valor] of Object.entries(doServidor)) {
-    if (JSON.stringify(ler(localStorage, chave, null)) === JSON.stringify(valor)) continue;
-    gravar(localStorage, chave, valor);
+    if (JSON.stringify(ler(() => localStorage, chave, null)) === JSON.stringify(valor)) continue;
+    gravar(() => localStorage, chave, valor);
     mudou = true;
   }
   if (mudou) aoAplicar();

@@ -34,6 +34,10 @@ class BackupService {
     return this.db.caminhoDoBancoAtual();
   }
 
+  criarCopiaTemporaria() {
+    return this.db.criarCopiaTemporaria();
+  }
+
   /**
    * Uma cópia agora, pedida pela tela -- antes de mexer em muita coisa (uma
    * importação grande, uma reclassificação de sistemas), quando a última
@@ -66,11 +70,11 @@ class BackupService {
       throw new ErroDePermissao("Apenas administradores podem restaurar backups.");
     }
 
-    if ((confirmacao || "").trim() !== "RESTAURAR") {
+    if (typeof confirmacao !== "string" || confirmacao.trim() !== "RESTAURAR") {
       throw new ErroDeValidacao('Confirmação inválida. Digite exatamente a palavra "RESTAURAR" em maiúsculas.');
     }
 
-    if (!senha) {
+    if (typeof senha !== "string" || !senha) {
       throw new ErroDeValidacao("Informe sua senha atual de administrador para autorizar a restauração.");
     }
 

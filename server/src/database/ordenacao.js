@@ -25,7 +25,7 @@ function montarOrdenacao(sortMap, sortBy, sortDir, fallback) {
   // Nao e' injecao -- nada que o atacante escreve chega ao SQL --, mas e' SQL
   // invalido: a consulta lanca, e qualquer pessoa logada derrubava com 500 toda
   // listagem paginada mudando um parametro na barra de endereco. Encontrado ao
-  // escrever o teste desta funcao (tests/shared.test.js).
+  // escrever o teste desta função (tests/ordenacao.test.js).
   const expr = typeof sortBy === "string" && Object.hasOwn(sortMap, sortBy) ? sortMap[sortBy] : null;
   if (typeof expr !== "string" || !expr) return fallback;
   const dir = sortDir === "asc" ? "ASC" : "DESC";

@@ -92,6 +92,9 @@ test("AgendamentoService - validação de entrada", async (t) => {
     await t.test("tarefa vazia é recusada", () => {
       assert.throws(() => env.service.create({ tarefa: "   " }, USUARIO), /Tarefa/);
       assert.throws(() => env.service.create({}, USUARIO), /Tarefa/);
+      for (const tarefa of [123, {}, [], true]) {
+        assert.throws(() => env.service.create({ tarefa }, USUARIO), (e) => e.statusCode === 400);
+      }
     });
 
     await t.test("data fora de dd/mm/aaaa é recusada", () => {
@@ -145,6 +148,36 @@ test("AgendamentoService - concorrência otimista e geração em lote", () => {
       }
     }
     assert.equal(env.db.agendamentos.find(linha.id).status, CONCLUIDO);
+  } finally { env.cleanup(); }
+});
+
+test("AgendamentoService - atalhos invalidam edições antigas e preservam a conclusão", () => {
+  const env = ambiente();
+  try {
+    const inicial = criar(env.service, env.db);
+    const camila = { id: 2, nome: "Camila" };
+    env.service.marcarConcluida(inicial.id, camila);
+    const concluida = env.db.agendamentos.find(inicial.id);
+    assert.equal(concluida.revisao, inicial.revisao + 1);
+    assert.throws(() => env.service.update(inicial.id, inicial, USUARIO), (e) => e.statusCode === 409);
+    const dataOriginal = "2026-01-01T12:00:00.000Z";
+    env.db.conn.prepare("UPDATE agendamentos SET concluido_em = ? WHERE id = ?").run(dataOriginal, inicial.id);
+    env.service.marcarConcluida(inicial.id, camila);
+    const repetida = env.db.agendamentos.find(inicial.id);
+    assert.equal(repetida.concluidoEm, dataOriginal, "clicar de novo não reinicia o tempo de resolução");
+    env.service.arquivar(inicial.id, camila);
+    assert.throws(() => env.service.update(inicial.id, repetida, USUARIO), (e) => e.statusCode === 409);
+    const arquivada = env.db.agendamentos.find(inicial.id);
+    const reaberta = env.service.reabrir(inicial.id, camila);
+    assert.equal(reaberta.revisao, arquivada.revisao + 1);
+    assert.equal(reaberta.atualizadoPor, "Camila");
+    assert.throws(() => env.service.update(inicial.id, arquivada, USUARIO), (e) => e.statusCode === 409);
+
+    const fechada = criar(env.service, env.db, { status: CONCLUIDO });
+    assert.equal(fechada.concluidoEm, fechada.criadoEm, "uma tarefa criada concluída também entra nas métricas");
+    env.db.conn.prepare("UPDATE agendamentos SET concluido_em = ? WHERE id = ?").run(dataOriginal, fechada.id);
+    env.service.arquivarAntigas();
+    assert.throws(() => env.service.update(fechada.id, fechada, USUARIO), (e) => e.statusCode === 409);
   } finally { env.cleanup(); }
 });
 

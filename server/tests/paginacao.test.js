@@ -10,6 +10,13 @@ const assert = require("node:assert/strict");
 const { lerPaginacao } = require("../src/controllers/paginacao");
 
 test("paginacao - lerPaginacao", async (t) => {
+  await t.test("página enorme mantém o offset dentro da faixa segura do SQLite", () => {
+    for (const page of ["9".repeat(400), String(Number.MAX_SAFE_INTEGER), "9007199254740992"]) {
+      const p = lerPaginacao({ page, pageSize: "200" });
+      assert.ok(Number.isSafeInteger((p.page - 1) * p.pageSize));
+      assert.ok(p.page >= 1);
+    }
+  });
   await t.test("sem query nenhuma, usa os padrões", () => {
     assert.deepEqual(lerPaginacao({}), { page: 1, pageSize: 50, sortBy: undefined, sortDir: "desc" });
   });

@@ -24,8 +24,13 @@ export class Roteador {
 
   /** Rota atual da URL, ou `null` se a URL não aponta para uma aba conhecida. */
   atual() {
-    const rota = decodeURIComponent(location.hash.replace(/^#\/?/, "")).trim();
-    return this.rotasValidas.has(rota) ? rota : null;
+    try {
+      const rota = decodeURIComponent(location.hash.replace(/^#\/?/, "")).trim();
+      return this.rotasValidas.has(rota) ? rota : null;
+    } catch {
+      // Um link com escape incompleto ("#/%") não pode impedir o app de abrir.
+      return null;
+    }
   }
 
   /**

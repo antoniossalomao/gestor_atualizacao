@@ -36,8 +36,51 @@ async function subirServidor() {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   };
 
-  return { base: `http://127.0.0.1:${port}`, encerrar };
+  return { base: `http://127.0.0.1:${port}`, encerrar, server };
 }
+
+test("porta ocupada rejeita a subida e permite liberar os recursos", async (t) => {
+  const primeiro = await subirServidor();
+  t.after(primeiro.encerrar);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-porta-"));
+  const segundo = new Servidor({ port: Number(new URL(primeiro.base).port), dbPath: path.join(tmp, "gestao.db"), sessionSecret: "segredo-de-teste", sessionSecure: false });
+  try {
+    await assert.rejects(segundo.start(), (e) => e.code === "EADDRINUSE");
+    await segundo.stop();
+    assert.equal(segundo.sessionStore.conn.open, false);
+  } finally {
+    await segundo.stop();
+    segundo.db.close();
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("download HTTP do banco atual é um SQLite íntegro com os dados recentes", async (t) => {
+  const { base, encerrar, server } = await subirServidor();
+  t.after(encerrar);
+  const setup = await fetch(`${base}/api/auth/setup`, {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ nome: "Admin", usuario: "admin", senha: "senha-de-teste-123" }),
+  });
+  assert.equal(setup.status, 201);
+  const cookie = setup.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+  server.db.conn.pragma("wal_autocheckpoint = 0");
+  server.db.clientes.insert("C1", "Loja recém-criada", "", [], "");
+  const r = await fetch(`${base}/api/backups/atual/download`, { headers: { cookie } });
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get("content-disposition"), /gestao_atual_/);
+  const pasta = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-http-download-"));
+  const arquivo = path.join(pasta, "baixado.db");
+  fs.writeFileSync(arquivo, Buffer.from(await r.arrayBuffer()));
+  const Sqlite = require("better-sqlite3");
+  const copia = new Sqlite(arquivo, { readonly: true });
+  try {
+    assert.equal(copia.pragma("integrity_check", { simple: true }), "ok");
+    assert.equal(copia.prepare("SELECT nome FROM clientes").get().nome, "Loja recém-criada");
+  } finally { copia.close(); fs.rmSync(pasta, { recursive: true, force: true }); }
+  const grande = await fetch(`${base}/api/clientes?page=${"9".repeat(400)}`, { headers: { cookie } });
+  assert.equal(grande.status, 200, "página fora da faixa não vira erro de SQL");
+});
 
 test("Roteamento HTTP - montagem do Express", async (t) => {
   const { base, encerrar } = await subirServidor();
@@ -132,7 +175,7 @@ test("Roteamento HTTP - montagem do Express", async (t) => {
     // client/package.json e client/tests/ existem para "npm test", nao para o
     // navegador. Ficam dentro da pasta servida por express.static, entao sem um
     // bloqueio explicito seriam baixaveis por qualquer um que abrisse o painel.
-    for (const caminho of ["/package.json", "/tests/agenteStatus.test.mjs", "/tests"]) {
+    for (const caminho of ["/package.json", "/tsconfig.json", "/tests/agenteStatus.test.mjs", "/tests", "/%74ests/agenteStatus.test.mjs", "/%70ackage.json", "/js%2f..%2ftests/agenteStatus.test.mjs", "/TESTS/agenteStatus.test.mjs"]) {
       const r = await fetch(`${base}${caminho}`);
       assert.equal(r.status, 404, `${caminho} nao deveria ser servido`);
       assert.doesNotMatch(

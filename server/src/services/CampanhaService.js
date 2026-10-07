@@ -13,11 +13,11 @@ const STATUS_ENCERRADOS = [STATUS_CONCLUIDO, "Sem resposta"];
  * Campanhas de atualização (E11): "todo cliente de B_NFe precisa estar na
  * 25/09/2026". A meta fica na tabela; o andamento é calculado a cada leitura.
  *
- * Três regras que erram em silêncio e por isso têm teste
+ * Quatro regras que erram em silêncio e por isso têm teste
  * (server/tests/campanhas.test.js):
  *
  *  1. **Atendido é quem cumpre a meta pela regra de sempre.** O último
- *     atualização do cliente no sistema passa por `situacaoDoSistema`
+ *     registro de atualização do cliente no sistema passa por `situacaoDoSistema`
  *     contra a VERSÃO-ALVO (não contra a oficial de hoje): atendido na data
  *     da versão-alvo ou depois conta (ADR-0008). Não existe "dar baixa"
  *     manual -- a baixa é registrar a atualização em Atualizações, como

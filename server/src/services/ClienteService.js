@@ -1,5 +1,6 @@
 const { ErroDeValidacao, ErroNaoEncontrado, ErroDeConflito } = require("../shared/erros");
 const { SISTEMA_PRINCIPAL } = require("./situacaoVersao");
+const { textoDoCampo } = require("./validacao");
 
 /**
  * Regras de negocio da aba Clientes, em cima do ClienteRepository /
@@ -138,7 +139,7 @@ class ClienteService {
    * checkbox individualmente.
    */
   adicionarSistemaEmLote(ids, nomeSistema, usuario) {
-    const limpo = (nomeSistema || "").trim();
+    const limpo = textoDoCampo(nomeSistema, "Sistema");
     if (!limpo) throw new ErroDeValidacao("Escolha um sistema.");
     const registros = this.db.clientes.buscarPorIds(ids);
     if (registros.length === 0) {
@@ -204,7 +205,7 @@ class ClienteService {
 
   /** @returns {{created: boolean}} created=false quando o sistema ja existia */
   addSistema(nome, usuario) {
-    const limpo = (nome || "").trim();
+    const limpo = textoDoCampo(nome, "Sistema");
     if (!limpo) throw new ErroDeValidacao("Informe um nome para o sistema.");
     const created = this.db.sistemas.add(limpo);
     if (!created) throw new ErroDeValidacao(`O sistema '${limpo}' já existe.`);
@@ -228,7 +229,7 @@ class ClienteService {
    * @returns {{removed: true, clientesAfetados: number}}
    */
   removerSistema(nome, usuario) {
-    const limpo = (nome || "").trim();
+    const limpo = textoDoCampo(nome, "Sistema");
     if (!limpo) throw new ErroDeValidacao("Informe o nome do sistema.");
     const removido = this.db.sistemas.remove(limpo);
     if (!removido) throw new ErroNaoEncontrado(`O sistema "${limpo}" não está cadastrado.`);
@@ -245,11 +246,11 @@ class ClienteService {
   }
 
   _validar(input) {
-    const nome = (input.nome || "").trim();
+    const nome = textoDoCampo(input.nome, "Cliente");
     if (!nome) throw new ErroDeValidacao("Campo 'Cliente' é obrigatório.");
-    const codigo = (input.codigo || "").trim();
-    const cidade = (input.cidade || "").trim();
-    const grupo = (input.grupo || "").trim();
+    const codigo = textoDoCampo(input.codigo, "Código");
+    const cidade = textoDoCampo(input.cidade, "Cidade");
+    const grupo = textoDoCampo(input.grupo, "Grupo");
     const regimeTributario = String(input.regimeTributario || "").trim();
     if (regimeTributario.length > 100) throw new ErroDeValidacao("Regime tributário pode ter no máximo 100 caracteres.");
     const sistemas = Array.isArray(input.sistemas) ? input.sistemas.map((s) => String(s || "").trim()).filter(Boolean) : [];
@@ -296,11 +297,11 @@ class ClienteService {
   }
 
   _validarAcesso(input) {
-    const maquina = (input.maquina || "").trim();
+    const maquina = textoDoCampo(input.maquina, "Máquina");
     if (!maquina) throw new ErroDeValidacao("Campo 'Máquina' é obrigatório.");
-    const anydesk = (input.anydesk || "").trim();
-    const suporteBredas = (input.suporteBredas || "").trim();
-    const observacoes = (input.observacoes || "").trim();
+    const anydesk = textoDoCampo(input.anydesk, "AnyDesk");
+    const suporteBredas = textoDoCampo(input.suporteBredas, "Suporte Bredas");
+    const observacoes = textoDoCampo(input.observacoes, "Observações");
     return { maquina, anydesk, suporteBredas, observacoes };
   }
 }

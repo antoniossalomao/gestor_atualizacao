@@ -90,6 +90,7 @@ class NotificacaoService {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
+        signal: AbortSignal.timeout(10_000),
       });
       if (!res.ok) {
         // eslint-disable-next-line no-console

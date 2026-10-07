@@ -1,8 +1,22 @@
 /**
- * Validacoes compartilhadas entre servicos (por enquanto, so a de datas).
+ * Validações de campos, datas e horários compartilhadas entre serviços.
  */
 
 const DATA_REGEX = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+const { ErroDeValidacao } = require("../shared/erros");
+
+/**
+ * Campo textual opcional de um pedido JSON. O corpo da API não é tipado:
+ * chamar trim() em objeto, array ou número transformava entrada inválida em
+ * erro interno 500 antes de a validação do formulário poder responder.
+ * @param {unknown} valor
+ * @param {string} campo
+ */
+function textoDoCampo(valor, campo) {
+  if (valor == null) return "";
+  if (typeof valor !== "string") throw new ErroDeValidacao(`Campo '${campo}' precisa ser texto.`);
+  return valor.trim();
+}
 
 /**
  * True se `texto` estiver vazio ou for uma data real no formato dd/mm/aaaa.
@@ -43,4 +57,4 @@ function horaValida(texto) {
   return HORA_REGEX.test(texto);
 }
 
-module.exports = { dataValida, lerData, horaValida };
+module.exports = { dataValida, lerData, horaValida, textoDoCampo };

@@ -134,9 +134,11 @@ class AgendamentoRepository extends BaseRepository {
   }
 
   insert(data) {
-    const columns = [...COLUNAS_ATUALIZACOES, "criado_em", "cliente_id"].join(", ");
-    const placeholders = [...COLUNAS_ATUALIZACOES.map((c) => `@${c}`), "@criadoEm", CLIENTE_ID_EXPR].join(", ");
-    this.conn.prepare(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`).run({ ...data, criadoEm: new Date().toISOString() });
+    const columns = [...COLUNAS_ATUALIZACOES, "criado_em", "concluido_em", "cliente_id"].join(", ");
+    const placeholders = [...COLUNAS_ATUALIZACOES.map((c) => `@${c}`), "@criadoEm", "@concluidoEm", CLIENTE_ID_EXPR].join(", ");
+    const criadoEm = new Date().toISOString();
+    this._preparado(`INSERT INTO ${this.table} (${columns}) VALUES (${placeholders})`)
+      .run({ ...data, criadoEm, concluidoEm: data.status === STATUS_CONCLUIDO ? criadoEm : null });
   }
 
   /**
@@ -154,10 +156,15 @@ class AgendamentoRepository extends BaseRepository {
   }
 
   /** Atalho para marcar rapidamente uma tarefa como concluida agora. */
-  marcarConcluida(id, doneLabel) {
+  marcarConcluida(id, doneLabel, usuarioNome = "") {
+    // Repetir o atalho preserva a conclusão original. A revisão também muda
+    // aqui: um formulário aberto antes do atalho precisa receber conflito.
     return this.conn
-      .prepare(`UPDATE ${this.table} SET status = @status, concluido_em = @concluidoEm WHERE id = @id`)
-      .run({ id, status: doneLabel, concluidoEm: new Date().toISOString() }).changes;
+      .prepare(`UPDATE ${this.table}
+        SET status = @status, concluido_em = CASE WHEN status = @status THEN coalesce(concluido_em, @agora) ELSE @agora END,
+            revisao = revisao + 1, atualizado_em = @agora, atualizado_por = @usuarioNome
+        WHERE id = @id AND arquivado_em IS NULL`)
+      .run({ id, status: doneLabel, agora: new Date().toISOString(), usuarioNome }).changes;
   }
 
   /**
@@ -208,7 +215,7 @@ class AgendamentoRepository extends BaseRepository {
     const corte = new Date(Date.now() - dias * 24 * 60 * 60 * 1000).toISOString();
     return this.conn
       .prepare(
-        `UPDATE ${this.table} SET arquivado_em = @agora
+        `UPDATE ${this.table} SET arquivado_em = @agora, revisao = revisao + 1, atualizado_em = @agora, atualizado_por = 'Sistema'
          WHERE arquivado_em IS NULL
            AND status = @status
            AND concluido_em IS NOT NULL
@@ -219,12 +226,13 @@ class AgendamentoRepository extends BaseRepository {
 
   /**
    * Arquiva uma tarefa na hora, sem esperar a varredura automatica alcancar
-   * o prazo do .env. So toca quem ainda nao esta arquivado.
+   * o prazo definido na Administração. Só toca quem ainda não está arquivado.
    */
-  arquivar(id) {
+  arquivar(id, usuarioNome = "") {
     return this.conn
-      .prepare(`UPDATE ${this.table} SET arquivado_em = @agora WHERE id = @id AND arquivado_em IS NULL`)
-      .run({ id, agora: new Date().toISOString() }).changes;
+      .prepare(`UPDATE ${this.table} SET arquivado_em = @agora, revisao = revisao + 1, atualizado_em = @agora, atualizado_por = @usuarioNome
+        WHERE id = @id AND arquivado_em IS NULL`)
+      .run({ id, agora: new Date().toISOString(), usuarioNome }).changes;
   }
 
   /** Quantas tarefas estao arquivadas -- o contador ao lado do filtro. */
@@ -241,13 +249,14 @@ class AgendamentoRepository extends BaseRepository {
    * apenas "desarquivasse" sumiria de novo no mesmo instante. E quem traz
    * uma tarefa de volta quer justamente fazer algo com ela.
    */
-  reabrir(id, statusInicial) {
+  reabrir(id, statusInicial, usuarioNome = "") {
     return this.conn
       .prepare(
-        `UPDATE ${this.table} SET arquivado_em = NULL, concluido_em = NULL, status = @status
+        `UPDATE ${this.table} SET arquivado_em = NULL, concluido_em = NULL, status = @status,
+            revisao = revisao + 1, atualizado_em = @agora, atualizado_por = @usuarioNome
          WHERE id = @id AND arquivado_em IS NOT NULL`
       )
-      .run({ id, status: statusInicial }).changes;
+      .run({ id, status: statusInicial, agora: new Date().toISOString(), usuarioNome }).changes;
   }
 
   /**

@@ -2,6 +2,7 @@ const crypto = require("node:crypto");
 const bcrypt = require("bcryptjs");
 
 const { ErroDeValidacao, ErroDePermissao } = require("../shared/erros");
+const { textoDoCampo } = require("./validacao");
 
 const SALT_ROUNDS = 10;
 const SENHA_MIN_LENGTH = 8;
@@ -68,9 +69,9 @@ class AuthService {
     if (usuarioLogado && usuarioLogado.role !== "admin") {
       throw new ErroDePermissao("Apenas administradores podem criar novos usuários.");
     }
-    const nomeLimpo = (nome || "").trim();
-    const usuarioLimpo = (usuario || "").trim();
-    const papelEscolhido = (role || papelPadrao || "operador").toLowerCase();
+    const nomeLimpo = textoDoCampo(nome, "Nome");
+    const usuarioLimpo = textoDoCampo(usuario, "Usuário");
+    const papelEscolhido = textoDoCampo(role || papelPadrao || "operador", "Papel").toLowerCase();
     const papeisValidos = ["admin", "operador", "consulta", "user"];
 
     if (!nomeLimpo) throw new ErroDeValidacao("Informe o nome da pessoa.");
@@ -80,7 +81,7 @@ class AuthService {
     }
     const papelFinal = papelEscolhido === "user" ? "operador" : papelEscolhido;
 
-    if (!senha || senha.length < SENHA_MIN_LENGTH) {
+    if (typeof senha !== "string" || senha.length < SENHA_MIN_LENGTH) {
       throw new ErroDeValidacao(`A senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
     }
     if (this.db.usuarios.buscarPorUsuario(usuarioLimpo)) {
@@ -120,7 +121,7 @@ class AuthService {
     const alvo = this.db.usuarios.buscarPorId(id);
     if (!alvo) throw new ErroDeValidacao("Usuário não encontrado.");
 
-    let novoPapel = role ? role.toLowerCase() : alvo.role;
+    let novoPapel = role ? textoDoCampo(role, "Papel").toLowerCase() : alvo.role;
     if (novoPapel === "user") novoPapel = "operador";
     if (!["admin", "operador", "consulta"].includes(novoPapel)) {
       throw new ErroDeValidacao("Papel inválido. Escolha entre Administrador, Operador ou Consulta.");
@@ -271,11 +272,12 @@ class AuthService {
 
   /** @returns {{id:number, nome:string, usuario:string, role:string}} usuario autenticado (sem o hash da senha) */
   login(usuario, senha) {
-    const linha = this.db.usuarios.buscarPorUsuario((usuario || "").trim());
     // Mensagem generica de proposito (nao diz se foi o usuario ou a senha
     // que estava errada) -- evita que alguem descubra, por tentativa, quais
     // nomes de usuario existem no sistema.
     const erroPadrao = new ErroDeValidacao("Usuário ou senha inválidos.");
+    if (typeof usuario !== "string" || typeof senha !== "string") throw erroPadrao;
+    const linha = this.db.usuarios.buscarPorUsuario(usuario.trim());
     if (!linha) throw erroPadrao;
     const confere = bcrypt.compareSync(senha || "", linha.senha_hash);
     if (!confere) throw erroPadrao;
@@ -298,10 +300,10 @@ class AuthService {
     // abrir e este pedido chegar -- não é um caminho que a tela normal
     // alcança, mas devolve um erro claro em vez de travar num bcrypt.compareSync(null).
     if (!linha) throw new ErroDeValidacao("Sua conta não foi encontrada. Faça login novamente.");
-    if (!bcrypt.compareSync(senhaAtual || "", linha.senha_hash)) {
+    if (typeof senhaAtual !== "string" || !bcrypt.compareSync(senhaAtual, linha.senha_hash)) {
       throw new ErroDeValidacao("Senha atual incorreta.");
     }
-    if (!senhaNova || senhaNova.length < SENHA_MIN_LENGTH) {
+    if (typeof senhaNova !== "string" || senhaNova.length < SENHA_MIN_LENGTH) {
       throw new ErroDeValidacao(`A nova senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
     }
     this.db.usuarios.alterarHashDaSenha(linha.id, bcrypt.hashSync(senhaNova, SALT_ROUNDS));

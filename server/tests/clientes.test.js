@@ -45,6 +45,9 @@ test("ClienteService - cadastro", async (t) => {
     await t.test("nome é obrigatório", () => {
       assert.throws(() => env.service.create({ nome: "   " }, USUARIO), /Cliente/);
       assert.throws(() => env.service.create({}, USUARIO), /Cliente/);
+      for (const nome of [123, {}, [], true]) {
+        assert.throws(() => env.service.create({ nome }, USUARIO), (e) => e.statusCode === 400);
+      }
     });
 
     await t.test("cria e devolve o cliente com sistemas como array", () => {

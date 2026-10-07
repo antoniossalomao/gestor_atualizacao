@@ -122,8 +122,8 @@ const REGRAS = {
  * @returns {boolean|number|string}
  */
 function validarRegra(nome, valor) {
+  if (!Object.hasOwn(REGRAS, nome)) throw new ErroDeValidacao(`Regra desconhecida: ${nome}.`);
   const regra = REGRAS[nome];
-  if (!regra) throw new ErroDeValidacao(`Regra desconhecida: ${nome}.`);
 
   if (regra.tipo === "booleano") {
     if (typeof valor !== "boolean") throw new ErroDeValidacao(`"${regra.rotulo}" precisa ser sim ou não.`);

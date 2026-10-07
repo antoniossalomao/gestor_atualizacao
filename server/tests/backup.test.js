@@ -23,6 +23,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
+const Sqlite3 = require("better-sqlite3");
 
 const { BancoDeDados } = require("../src/database/BancoDeDados");
 const { HistoricoService } = require("../src/services/HistoricoService");
@@ -30,6 +31,89 @@ const { AuthService } = require("../src/services/AuthService");
 const { BackupService } = require("../src/services/BackupService");
 
 const SENHA = "senha-de-teste-123";
+
+test("restaurar a cópia mais antiga funciona com a retenção cheia", () => {
+  const env = ambiente();
+  try {
+    env.db.configuracoesSistema.set("backups_manter", "3");
+    env.db.clientes.insert("C1", "Guardado", "", [], "");
+    const escolhido = criarBackup(env);
+    env.db.clientes.insert("C2", "Mais recente", "", [], "");
+    criarBackup(env);
+    criarBackup(env);
+    env.service.restore(escolhido, env.admin, { senha: SENHA, confirmacao: "RESTAURAR" });
+    assert.ok(env.db.clientes.obterPorNome("Guardado"));
+    assert.equal(env.db.clientes.obterPorNome("Mais recente"), null);
+    assert.ok(!fs.readdirSync(env.tmpDir).some((n) => n.startsWith(".restauracao-")));
+  } finally { env.cleanup(); }
+});
+
+test("restauração recusa corrupção e falta de cópia de segurança sem fechar o banco", () => {
+  const env = ambiente();
+  try {
+    const escolhido = criarBackup(env);
+    const caminho = env.service.caminhoDoBackup(escolhido);
+    const original = fs.readFileSync(caminho);
+    fs.writeFileSync(caminho, "arquivo corrompido");
+    assert.throws(() => env.db.restaurarDe(escolhido), /integridade/);
+    assert.equal(env.db.usuarios.count(), 1);
+    fs.writeFileSync(caminho, original);
+    const backup = env.db._backup;
+    env.db._backup = () => null;
+    try {
+      assert.throws(() => env.db.restaurarDe(escolhido), /cópia íntegra/);
+      assert.equal(env.db.usuarios.count(), 1);
+    } finally { env.db._backup = backup; }
+  } finally { env.cleanup(); }
+});
+
+test("restauração recupera o banco anterior se o esquema da cópia não puder abrir", () => {
+  const env = ambiente();
+  try {
+    const escolhido = criarBackup(env);
+    const caminho = env.service.caminhoDoBackup(escolhido);
+    fs.rmSync(caminho);
+    const incompleto = new Sqlite3(caminho);
+    incompleto.pragma("user_version = 7");
+    incompleto.close();
+    assert.throws(() => env.db.restaurarDe(escolhido), /no such table/);
+    assert.equal(env.db.usuarios.count(), 1, "o banco anterior continua utilizável");
+    assert.equal(env.db.verificarIntegridade(), "ok");
+  } finally { env.cleanup(); }
+});
+
+test("snapshot de download inclui escritas no WAL e é descartado depois do uso", async () => {
+  const env = ambiente();
+  let copia;
+  try {
+    env.db.conn.pragma("wal_autocheckpoint = 0");
+    env.db.clientes.insert("C1", "No WAL", "", [], "");
+    assert.ok(fs.statSync(`${env.db.path}-wal`).size > 0);
+    copia = await env.service.criarCopiaTemporaria();
+    env.db.clientes.insert("C2", "Depois do snapshot", "", [], "");
+    const lido = new Sqlite3(copia.caminho, { readonly: true });
+    try {
+      assert.deepEqual(lido.prepare("SELECT nome FROM clientes ORDER BY id").all(), [{ nome: "No WAL" }]);
+      assert.equal(lido.pragma("integrity_check", { simple: true }), "ok");
+    } finally { lido.close(); }
+    copia.limpar();
+    assert.ok(!fs.existsSync(copia.caminho));
+    assert.equal(env.service.list().length, 0, "download não altera retenção");
+  } finally { copia?.limpar(); env.cleanup(); }
+});
+
+test("backup não copia o banco se outra leitura impedir a consolidação do WAL", () => {
+  const env = ambiente();
+  const leitor = new Sqlite3(env.db.path);
+  try {
+    env.db.conn.pragma("busy_timeout = 5");
+    leitor.exec("BEGIN");
+    leitor.prepare("SELECT * FROM clientes").all();
+    env.db.clientes.insert("C1", "Escrita recente", "", [], "");
+    assert.equal(env.db._backup(), null);
+    assert.deepEqual(env.db.listarBackups(), []);
+  } finally { leitor.exec("ROLLBACK"); leitor.close(); env.cleanup(); }
+});
 
 function ambiente() {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-bkp-"));

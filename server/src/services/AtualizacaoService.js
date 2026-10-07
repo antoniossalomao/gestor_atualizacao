@@ -2,7 +2,7 @@ const ExcelJS = require("exceljs");
 
 const { COLUNAS_ATUALIZACOES, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constantes");
 const { REGRAS } = require("../config/regrasEquipe");
-const { dataValida, lerData } = require("./validacao");
+const { dataValida, lerData, textoDoCampo } = require("./validacao");
 const { normalizarSistemas, normalizarResponsavel, separarSistemas } = require("../shared/normalizacao");
 const { ErroDeValidacao, ErroNaoEncontrado, ErroDeConflito } = require("../shared/erros");
 const { situacaoDoSistema, situacaoDoCliente, sistemasQueExplicam, contaComoAtraso, contaParaVersao, registroQueDecide, SISTEMA_PRINCIPAL } = require("./situacaoVersao");
@@ -352,13 +352,13 @@ class AtualizacaoService {
   }
 
   _validar(input) {
-    const cliente = (input.cliente || "").trim();
+    const cliente = textoDoCampo(input.cliente, "Cliente");
     if (!cliente) throw new ErroDeValidacao("Campo 'Cliente' é obrigatório.");
-    const data = (input.data || "").trim();
+    const data = textoDoCampo(input.data, "Data");
     if (!dataValida(data)) throw new ErroDeValidacao("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
     const registro = { cliente, data };
-    for (const { key } of COLUNAS_ATUALIZACOES) {
-      if (key !== "cliente" && key !== "data") registro[key] = (input[key] || "").trim();
+    for (const { key, label } of COLUNAS_ATUALIZACOES) {
+      if (key !== "cliente" && key !== "data") registro[key] = textoDoCampo(input[key], label);
     }
     return this._normalizar(registro, this._contextoNormalizacao());
   }

@@ -51,7 +51,7 @@ const EXTENSAO_DE_ARQUIVO = /\.[a-zA-Z0-9]{1,8}$/;
 
 // Caminhos dentro de client/ que existem para o desenvolvimento e nao devem
 // ser servidos pelo navegador -- ver _servirApiEArquivos().
-const NAO_SERVIR = [/^\/package(-lock)?\.json$/, /^\/tests(\/|$)/];
+const NAO_SERVIR = [/^\/(?:package(?:-lock)?|tsconfig)\.json$/i, /^\/tests(\/|$)/i];
 
 /**
  * Classe raiz do backend: abre o banco, monta os servicos/controllers
@@ -86,6 +86,7 @@ class Servidor {
     configuracaoSistema.importarValoresIniciais(this.config.ambiente || {});
     const notifications = new NotificacaoService({ webhookUrl: () => configuracaoSistema.valor("discordWebhookUrl") });
     const versoes = new VersaoService(this.db, historico);
+    const backups = new BackupService(this.db, historico);
     const agendamentos = new AgendamentoService(this.db, historico, configuracaoSistema);
     this.services = {
       historico,
@@ -96,7 +97,7 @@ class Servidor {
       atualizacoes: new AtualizacaoService(this.db, historico, notifications, configuracaoSistema),
       agendamentos,
       campanhas: new CampanhaService(this.db, historico, agendamentos),
-      backups: new BackupService(this.db, historico),
+      backups,
       versoes,
       configuracaoSistema,
       // Verifica a situação dos agentes C# periodicamente e avisa o
@@ -105,7 +106,7 @@ class Servidor {
       // Recebe "configuracaoSistema" para não rodar nenhuma checagem
       // (nem gerar alarme falso) enquanto o Atualizador estiver desativado.
       alertaAgentes: new AlertaAgenteService(this.db, versoes, notifications, configuracaoSistema),
-      saude: new SaudeService({ db: this.db, backups: new BackupService(this.db, historico), versoes }),
+      saude: new SaudeService({ db: this.db, backups, versoes }),
     };
   }
 
@@ -147,8 +148,8 @@ class Servidor {
     // `req.protocol === "http"` e o express-session, com `cookie.secure`
     // ligado, se recusa a mandar o cookie de login. O sintoma seria "ninguem
     // consegue entrar", sem erro nenhum aparecendo. Tambem e o que faz
-    // `req.get("host")` devolver o dominio publico em vez do host interno,
-    // usado pelo VersoesController para montar a URL dos pacotes.
+    // `req.hostname` reconhecer o host encaminhado pelo proxy. `req.get("host")`
+    // continua lendo o cabeçalho Host recebido; links usam a URL pública configurada.
     // Configuravel via TRUST_PROXY=true no .env: falso por padrao (rede
     // local sem proxy) para que o IP real do cliente nunca venha de um
     // cabecalho X-Forwarded-For que o cliente possa forjar e usar para
@@ -169,7 +170,7 @@ class Servidor {
     // <head> para client/js/temaInicial.js (ver index.html). style-src
     // precisa de 'unsafe-inline' porque várias views montam HTML com
     // atributo style="" direto (ex.: ClientesView, AtualizacoesView,
-    // GraficoDeBarras/PieChart) -- CSP não bloqueia style.propriedade via JS, só
+    // GraficoDeBarras) -- CSP não bloqueia style.propriedade via JS, só
     // style="" no HTML e <style> inline, então isso não abre brecha nova
     // pra script, só pra CSS. fonts.googleapis.com/gstatic.com liberados
     // porque é de lá que vem a fonte do tema (ver index.html).
@@ -253,7 +254,15 @@ class Servidor {
     // estarem acessiveis. Bloqueado ANTES do express.static: depois ja seria
     // tarde, o arquivo teria sido enviado.
     this.app.use((req, res, next) => {
-      if (!NAO_SERVIR.some((padrao) => padrao.test(req.path))) return next();
+      let caminho;
+      try {
+        // express.static decodifica escapes e normaliza o caminho. O bloqueio
+        // precisa fazer o mesmo: /%74ests e /js%2f..%2ftests também são tests/.
+        caminho = path.posix.normalize(decodeURIComponent(req.path).replace(/\\/g, "/"));
+      } catch {
+        return res.status(400).type("txt").send("Caminho inválido.");
+      }
+      if (!NAO_SERVIR.some((padrao) => padrao.test(caminho))) return next();
       // 404 direto, no mesmo formato do rotaNaoEncontrada. Nao e' "next()" com
       // desvio: "next('router')" aqui, no nivel do app, tem semantica sutil
       // (encerra o router atual) e deixaria "/tests" -- sem extensao -- cair
@@ -297,11 +306,23 @@ class Servidor {
         alertaAgentes.reprogramar();
       }
     });
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       // host indefinido = todas as interfaces (o Node no container, atrás do
       // proxy). Em HTTP puro, server.js passa 127.0.0.1: a rede não alcança
       // -- ver config/transporte.js.
-      this.httpServer = this.app.listen(this.config.port, this.config.host, () => resolve(this.httpServer));
+      this.httpServer = this.app.listen(this.config.port, this.config.host, (err) => {
+        // Express 5 também encaminha o erro de listen para este callback.
+        if (err) return falhou(err);
+        this.httpServer.removeListener("error", falhou);
+        resolve(this.httpServer);
+      });
+      const falhou = (err) => {
+        this.services.alertaAgentes.stop();
+        reject(err);
+      };
+      // Express 5 informa falhas pelo callback e pelo evento error.
+      // Ambos precisam rejeitar start(), inclusive quando a porta está ocupada.
+      this.httpServer.once("error", falhou);
     });
   }
 
@@ -310,10 +331,16 @@ class Servidor {
     // O store de sessoes tem um arquivo SQLite proprio, separado do banco
     // principal -- ele nao fecha junto com `db.close()` do chamador, entao
     // precisa ser fechado aqui, senao o handle sobrevive ao "stop".
-    this.sessionStore?.close();
     return new Promise((resolve, reject) => {
-      if (!this.httpServer) return resolve();
-      this.httpServer.close((err) => (err ? reject(err) : resolve()));
+      const concluir = (err) => {
+        // Pedidos em andamento ainda podem salvar/tocar a sessão na resposta.
+        // Fecha o store depois do HTTP para não usar uma conexão já encerrada.
+        this.sessionStore?.close();
+        if (err) reject(err);
+        else resolve();
+      };
+      if (!this.httpServer?.listening) return concluir();
+      this.httpServer.close(concluir);
     });
   }
 }

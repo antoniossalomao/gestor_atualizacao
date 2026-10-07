@@ -1,6 +1,8 @@
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const Sqlite3 = require("better-sqlite3");
+const { ErroDeValidacao } = require("../shared/erros");
 
 const { SISTEMAS_CONHECIDOS, SISTEMA_SUPORTE_BREDAS, OBS_SUPORTE_BREDAS } = require("../config/constantes");
 const { lerRegra } = require("../config/regrasEquipe");
@@ -456,10 +458,9 @@ class BancoDeDados {
     `);
 
     // Chave-valor para configurações do sistema como um todo (não da conta
-    // de quem está logado) -- ver ConfiguracaoSistemaRepository. Hoje só
-    // guarda "atualizador_habilitado", que liga/desliga as telas de
-    // Distribuição/Versões e o alerta de agente offline sem precisar
-    // reiniciar o servidor nem editar o .env.
+    // de quem está logado) -- ver ConfiguracaoSistemaRepository. Guarda as
+    // regras de config/regrasEquipe.js sem precisar reiniciar o servidor
+    // nem editar o .env.
     conn.exec(`
       CREATE TABLE IF NOT EXISTS configuracoes_sistema (
         chave TEXT PRIMARY KEY,
@@ -622,8 +623,8 @@ class BancoDeDados {
   /**
    * Copia gestao.db para a pasta "backups" (ao lado dele). Qualquer falha
    * aqui (disco cheio, sem permissao) e ignorada silenciosamente: um
-   * backup que falha nao pode impedir o servidor de subir nem uma
-   * restauracao de continuar.
+   * backup que falha não impede o servidor de subir. Quem vai restaurar
+   * exige uma cópia íntegra antes de substituir o banco.
    */
   _backup() {
     if (!fs.existsSync(this.path)) return null;
@@ -635,7 +636,10 @@ class BancoDeDados {
       // mais recentes. "TRUNCATE" força esse merge agora e esvazia o -wal,
       // deixando o .db principal sozinho já com tudo -- um arquivo só,
       // completo, do jeito que os backups sempre foram (antes do WAL).
-      this.conn.pragma("wal_checkpoint(TRUNCATE)");
+      const [checkpoint] = this.conn.pragma("wal_checkpoint(TRUNCATE)");
+      // Outra conexão pode manter uma leitura aberta e impedir o checkpoint.
+      // integrity_check não detecta registros que ficaram apenas no WAL.
+      if (checkpoint.busy) throw new Error("Banco ocupado: não foi possível consolidar o WAL.");
 
       const dir = path.join(path.dirname(this.path), "backups");
       fs.mkdirSync(dir, { recursive: true });
@@ -650,15 +654,14 @@ class BancoDeDados {
       //
       // Subir o carimbo para milissegundos mudaria o formato do nome de todos
       // os backups ja existentes; acrescentar um sufixo so no caso de colisao
-      // mantem o nome de sempre no caso normal. `formatarCarimbo` nao reconhece o
-      // sufixo e devolve null, e `listarBackups` ja cai no proprio nome do
-      // arquivo como rotulo nesse caso -- degrada sozinho, sem quebrar a tela.
+      // mantém o nome de sempre no caso normal. `formatarCarimbo` reconhece
+      // o sufixo e o mostra como desempate no rótulo.
       const arquivoBackup = nomeLivre(dir, name, timestamp(), ext);
       const destino = path.join(dir, arquivoBackup);
       fs.copyFileSync(this.path, destino);
 
       // Confere se a cópia recém-feita abre e passa no integrity_check do
-      // próprio SQLite -- ver _verificarIntegridadeBackup. Different do
+      // próprio SQLite -- ver _verificarIntegridadeBackup. Diferente do
       // resto deste método: uma cópia corrompida NÃO fica silenciosa,
       // porque ela anula o propósito de existir um backup (a corrupção só
       // seria descoberta no pior momento possível -- tentando restaurar de
@@ -799,6 +802,25 @@ class BancoDeDados {
   }
 
   /**
+   * Snapshot para download: inclui o WAL e fica imutável enquanto o HTTP
+   * envia. Copiar o .db ativo perderia escritas recentes e poderia misturar
+   * páginas de instantes diferentes. Não entra na retenção de backups.
+   */
+  async criarCopiaTemporaria() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-download-"));
+    const caminho = path.join(dir, "gestao.db");
+    const limpar = () => fs.rmSync(dir, { recursive: true, force: true });
+    try {
+      await this.conn.backup(caminho);
+      if (!this._verificarIntegridadeBackup(caminho)) throw new Error("A cópia para download não passou na verificação de integridade.");
+      return { caminho, limpar };
+    } catch (err) {
+      limpar();
+      throw err;
+    }
+  }
+
+  /**
    * Restaura o banco a partir de um dos arquivos de backups/. `arquivo`
    * precisa ser exatamente um nome devolvido por listarBackups() -- nunca um
    * caminho vindo direto do cliente HTTP, para nao abrir brecha de "path
@@ -811,23 +833,39 @@ class BancoDeDados {
     const dir = path.join(path.dirname(this.path), "backups");
     const origem = path.join(dir, arquivo);
 
-    // Backup de seguranca do estado atual, ANTES de sobrescrever --
-    // restaurar e uma acao que a tela nao deixa desfazer, entao vale a
-    // pena poder voltar atras manualmente se algo der errado. Precisa
-    // acontecer com a conexao AINDA aberta (_backup faz um checkpoint do
-    // WAL por ela) -- por isso vem antes do close() logo abaixo.
-    this._backup();
-    this.conn.close();
-
-    // Restos de uma sessao WAL anterior deste MESMO arquivo (this.path)
-    // ficariam "presos" a ele por posição/tamanho -- copiar um banco
-    // diferente por cima sem limpar esses restos arriscaria o SQLite
-    // tentar aplicar um WAL que não corresponde mais ao conteúdo novo.
-    fs.rmSync(`${this.path}-wal`, { force: true });
-    fs.rmSync(`${this.path}-shm`, { force: true });
-    fs.copyFileSync(origem, this.path);
-
-    this._open();
+    // A cópia pré-restauração pode remover a origem pela retenção, se ela
+    // for a mais antiga. Guarda e valida o escolhido ANTES dessa cópia.
+    const temporaria = fs.mkdtempSync(path.join(path.dirname(this.path), ".restauracao-"));
+    const escolhida = path.join(temporaria, "escolhida.db");
+    try {
+      fs.copyFileSync(origem, escolhida);
+      if (!this._verificarIntegridadeBackup(escolhida)) {
+        throw new ErroDeValidacao("O backup escolhido não passou na verificação de integridade. Restauração cancelada.");
+      }
+      const seguranca = this._backup();
+      if (!seguranca?.integro) {
+        throw new ErroDeValidacao("Não foi possível guardar uma cópia íntegra do banco atual. Restauração cancelada.");
+      }
+      this.conn.close();
+      try {
+        // O WAL antigo pertence ao conteúdo anterior, nunca ao restaurado.
+        fs.rmSync(`${this.path}-wal`, { force: true });
+        fs.rmSync(`${this.path}-shm`, { force: true });
+        fs.copyFileSync(escolhida, this.path);
+        this._open();
+      } catch (err) {
+        // Falha na cópia ou no esquema não deixa a aplicação sem conexão:
+        // recompõe o estado de antes pela cópia que acabou de ser validada.
+        if (this.conn.open) this.conn.close();
+        fs.rmSync(`${this.path}-wal`, { force: true });
+        fs.rmSync(`${this.path}-shm`, { force: true });
+        fs.copyFileSync(path.join(dir, seguranca.arquivo), this.path);
+        this._open();
+        throw err;
+      }
+    } finally {
+      fs.rmSync(temporaria, { recursive: true, force: true });
+    }
   }
 }
 

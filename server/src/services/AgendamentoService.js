@@ -1,6 +1,6 @@
 const { OPCOES_STATUS, OPCOES_PRIORIDADE } = require("../config/constantes");
 const { REGRAS } = require("../config/regrasEquipe");
-const { dataValida, horaValida } = require("./validacao");
+const { dataValida, horaValida, textoDoCampo } = require("./validacao");
 const { normalizarResponsavel } = require("../shared/normalizacao");
 const { ErroDeValidacao, ErroNaoEncontrado, ErroDeConflito } = require("../shared/erros");
 
@@ -59,16 +59,16 @@ class AgendamentoService {
   reabrir(id, usuario) {
     const tarefa = this.db.agendamentos.find(id);
     if (!tarefa) throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
-    if (this.db.agendamentos.reabrir(id, OPCOES_STATUS[0]) === 0) {
+    if (this.db.agendamentos.reabrir(id, OPCOES_STATUS[0], usuario?.nome || "") === 0) {
       throw new ErroNaoEncontrado("Esta tarefa não está arquivada.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${tarefa.tarefa}" desarquivada e reaberta`);
-    return { ...tarefa, status: OPCOES_STATUS[0], concluidoEm: null };
+    return this.db.agendamentos.find(id);
   }
 
   /**
    * Arquiva uma tarefa concluida na hora, sem esperar `arquivarAntigas`
-   * alcancar o prazo do .env. Restrito a tarefas "Concluído" pelo mesmo
+   * alcançar o prazo definido na Administração. Restrito a tarefas "Concluído" pelo mesmo
    * motivo da varredura automatica: arquivar uma tarefa ainda pendente faria
    * "Reabrir" resetar o status dela para o primeiro da lista sem necessidade
    * (ver AgendamentoRepository.reabrir).
@@ -80,7 +80,7 @@ class AgendamentoService {
     if (tarefa.status !== statusConcluido) {
       throw new ErroDeValidacao(`Só é possível arquivar tarefas "${statusConcluido}".`);
     }
-    if (this.db.agendamentos.arquivar(id) === 0) {
+    if (this.db.agendamentos.arquivar(id, usuario?.nome || "") === 0) {
       throw new ErroNaoEncontrado("Esta tarefa já está arquivada.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${tarefa.tarefa}" arquivada`);
@@ -157,25 +157,25 @@ class AgendamentoService {
 
   /** Atalho: marca a tarefa com o ultimo status da lista ("Concluído"). */
   marcarConcluida(id, usuario) {
-    if (this.db.agendamentos.marcarConcluida(id, OPCOES_STATUS[OPCOES_STATUS.length - 1]) === 0) {
+    if (this.db.agendamentos.marcarConcluida(id, OPCOES_STATUS[OPCOES_STATUS.length - 1], usuario?.nome || "") === 0) {
       throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
     }
     this.historico.registrar(usuario, "marcar_concluida", "agendamento", `Tarefa #${id} concluída`);
   }
 
   _validar(input) {
-    const tarefa = (input.tarefa || "").trim();
+    const tarefa = textoDoCampo(input.tarefa, "Tarefa");
     if (!tarefa) throw new ErroDeValidacao("Campo 'Tarefa' é obrigatório.");
-    const data = (input.data || "").trim();
+    const data = textoDoCampo(input.data, "Data");
     if (!dataValida(data)) throw new ErroDeValidacao("Campo 'Data' precisa estar no formato dd/mm/aaaa.");
-    const horario = (input.horario || "").trim();
+    const horario = textoDoCampo(input.horario, "Horário");
     if (!horaValida(horario)) throw new ErroDeValidacao("Campo 'Horário' precisa estar no formato hh:mm.");
     const status = OPCOES_STATUS.includes(input.status) ? input.status : OPCOES_STATUS[0];
     const prioridade = OPCOES_PRIORIDADE.includes(input.prioridade) ? input.prioridade : "Normal";
     return {
       tarefa,
-      cliente: (input.cliente || "").trim(),
-      sistema: (input.sistema || "").trim(),
+      cliente: textoDoCampo(input.cliente, "Cliente"),
+      sistema: textoDoCampo(input.sistema, "Sistema"),
       // Mesma grafia canônica das Atualizações, e de propósito buscada LÁ: é
       // a mesma equipe, e é lá que está o volume que define qual grafia vale
       // ("Camila", não "CAMILA"). Sem isto, o campo Responsável de uma aba
@@ -185,7 +185,7 @@ class AgendamentoService {
       data,
       horario,
       status,
-      obs: (input.obs || "").trim(),
+      obs: textoDoCampo(input.obs, "Observações"),
     };
   }
 }

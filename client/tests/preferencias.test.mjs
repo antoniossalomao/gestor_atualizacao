@@ -41,6 +41,26 @@ globalThis.CustomEvent ??= class CustomEvent {
 
 const { aparencia, PERFIS } = await import("../js/app/aparencia.js");
 const { normalizarBusca, casaBusca, filtrarPorBusca } = await import("../js/utils/busca.js");
+const { prefs, duradouras, conectarPreferencias } = await import("../js/app/preferencias.js");
+
+test("preferências continuam funcionando quando acessar o próprio storage lança", async () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const sessao = Object.getOwnPropertyDescriptor(globalThis, "sessionStorage");
+  const bloqueado = { configurable: true, get() { throw new Error("Storage bloqueado"); } };
+  Object.defineProperty(globalThis, "localStorage", bloqueado);
+  Object.defineProperty(globalThis, "sessionStorage", bloqueado);
+  try {
+    assert.equal(duradouras.get("tema", "escuro"), "escuro");
+    assert.equal(prefs.get("busca", ""), "");
+    assert.doesNotThrow(() => duradouras.set("notificarFalhas", true));
+    assert.doesNotThrow(() => prefs.set("busca", "loja"));
+    await assert.doesNotReject(conectarPreferencias({ get: async () => ({ tema: "claro" }), put: async () => ({}) }, { id: 1 }));
+  } finally {
+    Object.defineProperty(globalThis, "localStorage", original);
+    if (sessao) Object.defineProperty(globalThis, "sessionStorage", sessao);
+    else delete globalThis.sessionStorage;
+  }
+});
 
 const NOVAS = ["fonte", "largura", "foco", "dicasAtalho", "periodoAtualizacoes", "confirmarSaida", "duracaoAvisos", "contadorNoTitulo"];
 
