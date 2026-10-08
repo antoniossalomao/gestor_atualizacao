@@ -7626,6 +7626,17 @@ h1, h2, h3, strong {
   min-width: 150px;
   padding-block: 4px;
   font-size: var(--txt-sm);
+  vertical-align: middle;
+}
+.admin-papel.admin-papel--leitura {
+  display: inline-block;
+  padding: 5px 12px;
+  background: var(--cor-superficie-hover);
+  border: 1px solid var(--cor-borda-forte);
+  border-radius: var(--raio-pequeno);
+  color: var(--cor-texto-sub);
+  text-align: left;
+  user-select: none;
 }
 
 /* -- formulários de regras -- */
@@ -8521,4 +8532,89 @@ h1, h2, h3, strong {
   .atualizacoes-toolbar .field { min-width: 150px; }
   .atualizacoes-toolbar .field:has(input[type="search"]) { min-width: 200px; flex: 1 1 220px; }
   .atualizacoes-toolbar .toolbar__clear:not(:has(:not([hidden]))) { display: none; }
+}
+
+/* Tabela de Sistemas - indicador lateral */
+.data-table tbody tr.row--com-situacao td:first-child {
+  box-shadow: inset 4px 0 0 var(--indicador-situacao, transparent);
+}
+
+/* Refinamento da organização de filtros e painel de versões oficiais */
+.sistemas-oficiais {
+  background: var(--cor-superficie);
+  box-shadow: var(--sombra-card);
+}
+.sistemas-oficiais__cabecalho p {
+  margin-top: 4px;
+}
+.sistemas-referencia {
+  padding-left: var(--sp-2);
+  border-left: 2px solid var(--cor-borda);
+}
+
+/* Polimento das Campanhas (Etapa 3) */
+.campanhas__topo {
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--cor-borda);
+}
+.campanha__cabecalho h2 {
+  font-family: var(--fonte-display);
+  font-weight: var(--peso-extra);
+  font-size: var(--txt-xl);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--sp-2);
+}
+.campanha__cabecalho p {
+  color: var(--cor-texto-sub);
+  margin-top: 0;
+}
+.campanha__progresso {
+  margin: var(--sp-4) 0;
+  padding: var(--sp-4);
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+}
+.campanha__progresso .campanha__numeros {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: baseline;
+}
+.campanha__progresso .campanha__pct {
+  font-family: var(--fonte-display);
+  font-size: var(--txt-numero);
+  font-weight: var(--peso-forte);
+}
+.campanha__progresso .campanha__barra {
+  margin-top: var(--sp-2);
+  height: 8px;
+}
+.campanhas__detalhe .campanhas__toolbar {
+  margin-top: var(--sp-4);
+  padding: var(--sp-3) 0;
+}
+
+/* Polimento das Configurações (Etapa 5) */
+.cfg-group__help {
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.cfg-linha {
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+.cfg-linhas > .cfg-linha:last-child {
+  border-bottom: none;
+}
+.cfg-group__title {
+  color: var(--cor-texto);
+  font-size: var(--txt-md);
+  font-weight: var(--peso-forte);
+}
+.cfg-cartao {
+  margin-bottom: var(--sp-4);
+  background: var(--cor-superficie);
+  box-shadow: var(--sombra-card);
 }

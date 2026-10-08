@@ -50,11 +50,11 @@ function linha({ titulo, ajuda, id }) {
   el.className = "cfg-group";
   el.innerHTML = html`
     <div class="cfg-group__labels">
-      <span class="cfg-group__title-row">
-        <span class="cfg-group__title" id="cfg-titulo-${id}">${titulo}</span>
+      <div class="cfg-group__title-row">
+        <label class="cfg-group__title" id="cfg-titulo-${id}">${titulo}</label>
         <span class="cfg-group__selo" hidden>alterado</span>
-      </span>
-      ${ajuda && html`<span class="cfg-group__help">${ajuda}</span>`}
+      </div>
+      ${ajuda && html`<p class="cfg-group__help" id="cfg-help-${id}">${ajuda}</p>`}
     </div>`.toString();
   return el;
 }
