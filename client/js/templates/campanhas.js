@@ -82,23 +82,23 @@ export function cabecalhoCampanha(c, usuario) {
         ${c.descricao ? html`<p class="campanha__descricao">${c.descricao}</p>` : ""}
       </div>
       <div class="campanha__acoes">
+        ${podeEditar && !encerrada && c.pendentes > 0 ? html`<button type="button" class="btn btn--small btn--accent" data-action="agendar-pendentes">${iconeHtml("calendario")} Agendar pendentes (${c.pendentes})</button>` : ""}
         ${podeEditar && c.pendentes + c.agendados > 0 ? html`<button type="button" class="btn btn--small" data-action="nova-quem-falta">${iconeHtml("campanhas")} Campanha com quem falta</button>` : ""}
-        ${podeEditar && !encerrada && c.pendentes > 0 ? html`<button type="button" class="btn btn--small" data-action="agendar-pendentes">${iconeHtml("calendario")} Agendar pendentes (${c.pendentes})</button>` : ""}
         ${podeEditar && !encerrada && c.publico === "escolhidos" ? html`<button type="button" class="btn btn--small" data-action="adicionar">${iconeHtml("plus")} Adicionar clientes</button>` : ""}
         ${podeEditar && !encerrada ? html`<button type="button" class="btn btn--small" data-action="editar">${iconeHtml("editar")} Editar</button>` : ""}
         ${podeEditar ? html`<button type="button" class="btn btn--small" data-action="${encerrada ? "reabrir" : "encerrar"}">${encerrada ? "Reabrir" : "Encerrar"}</button>` : ""}
         ${usuario?.role === "admin" ? html`<button type="button" class="btn btn--small btn--danger" data-action="excluir">${iconeHtml("alerta")} Excluir</button>` : ""}
       </div>
     </div>
-    <div class="campanha__painel">
-      <div class="campanha__placar">
-        <div class="campanha__numero campanha__numero--pct"><strong>${c.percentual == null ? "—" : `${c.percentual}%`}</strong>concluído</div>
-        <div class="campanha__numero is-boa"><strong><span class="situacao__marca" aria-hidden="true"></span>${c.atendidos}</strong>atualizados</div>
-        ${encerrada ? "" : html`<div class="campanha__numero is-media"><strong><span class="situacao__marca" aria-hidden="true"></span>${c.agendados}</strong>já agendados</div>`}
-        <div class="campanha__numero is-alta"><strong><span class="situacao__marca" aria-hidden="true"></span>${c.pendentes}</strong>pendentes</div>
+    <div class="campanha__progresso">
+      <div class="campanha__numeros">
+        <div class="campanha__pct">${c.percentual == null ? "—" : `${c.percentual}%`} concluído</div>
+        <div class="campanha__numero is-boa"><strong>${c.atendidos}</strong> atualizados</div>
+        ${encerrada ? "" : html`<div class="campanha__numero is-media"><strong>${c.agendados}</strong> já agendados</div>`}
+        <div class="campanha__numero is-alta"><strong>${c.pendentes}</strong> pendentes</div>
       </div>
       ${barraProgresso(c)}
-      <p class="campanha__nota">${encerrada
+      <p class="campanha__nota" style="margin-top: var(--sp-2); font-size: var(--txt-sm); color: var(--cor-texto-sub);">${encerrada
       ? `Encerrada em ${new Date(c.encerradaEm).toLocaleDateString("pt-BR")}${c.encerradaPor ? ` por ${c.encerradaPor}` : ""}: o placar acima é o do encerramento.`
       : "A baixa é automática: registre a atualização em Atualizações e o cliente sai dos pendentes. Uma versão oficial nova em Sistemas não muda a meta."}</p>
     </div>`;

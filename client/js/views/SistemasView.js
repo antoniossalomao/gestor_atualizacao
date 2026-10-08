@@ -111,7 +111,8 @@ export class SistemasView extends View {
       ],
       rowKey: (row) => row.cliente,
       caption: "Clientes por sistema",
-      rowStyle: (row, index) => ({ background: severidadeCor(row.situacao, index) }),
+      rowStyle: (row) => ({ "--indicador-situacao": situacaoCor(row.situacao) }),
+      rowClass: (row) => row.situacao !== "Sem informação" ? "row--com-situacao" : "",
       onSelect: (row) => this.navigate("consulta", { cliente: row.cliente }),
       emptyNode: () => estadoVazio({
         titulo: "Nenhum cliente para os filtros",
@@ -338,12 +339,11 @@ export class SistemasView extends View {
   }
 }
 
-function severidadeCor(situacao, index) {
-  const base = index % 2 === 0 ? tokenHex("--zebra-a") : tokenHex("--zebra-b");
-  if (situacao === "Nunca atualizado") return misturarHex(base, tokenHex("--severidade-alta"), 0.28);
-  if (situacao === "Desatualizado") return misturarHex(base, tokenHex("--severidade-alta"), 0.14);
-  if (situacao === "Em dia") return misturarHex(base, tokenHex("--severidade-boa"), 0.08);
-  return base;
+function situacaoCor(situacao) {
+  if (situacao === "Nunca atualizado") return tokenHex("--severidade-alta");
+  if (situacao === "Desatualizado") return tokenHex("--severidade-alta");
+  if (situacao === "Em dia") return tokenHex("--severidade-boa");
+  return tokenHex("--cor-borda-campo");
 }
 
 function mensagemDeErro(err) {
