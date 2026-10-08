@@ -1,0 +1,206 @@
+# Planejamento de polimento visual do painel
+
+Data: 08/10/2026. Status: proposta, aguardando aprovação para implementar.
+
+Escopo: Sistemas, Campanhas, Administração e Configurações. Referência visual: Configurações → Sobre e ajuda.
+
+## 1. Objetivo e base da análise
+
+Deixar as quatro telas mais discretas, alinhadas e fáceis de ler, preservando a identidade do projeto e os fluxos existentes. A intervenção deve melhorar a hierarquia das informações, o uso de cores, os espaçamentos e a organização das ações.
+
+Este plano foi elaborado a partir do código atual e das observações do usuário. Ainda não houve inspeção visual dessas telas no navegador nesta sessão: desalinhamentos específicos, contraste e distribuição do espaço devem ser confirmados na etapa inicial. Nenhuma alteração de interface está autorizada por este documento.
+
+### Constatações no código
+
+| Tela | Evidência atual | Consequência para o plano |
+|---|---|---|
+| Sistemas | `SistemasView.js` aplica `rowStyle` com fundo por situação; `severidadeCor` mistura a cor de severidade com a zebra da tabela. | Substituir o preenchimento colorido por um indicador lateral discreto, mantendo a situação escrita. |
+| Campanhas | Tela com lista lateral e detalhe, filtros rápidos, placar e ações; há altura calculada e rolagens internas no desktop. | Harmonizar os componentes e verificar espaço útil, quebras e rolagem antes de mudar a estrutura. |
+| Administração | A própria pessoa recebe um badge na coluna Papel; as outras recebem `select.input.admin-papel`, com largura mínima de 150px. | Uniformizar o tamanho e alinhamento do campo, distinguindo edição e leitura de maneira acessível. |
+| Configurações | Cabeçalho, cartão e ajuste já têm níveis distintos: `--txt-xl`, `--txt-lg` e `--txt-md`. | A queixa não deve ser tratada apenas aumentando fontes: avaliar peso, espaçamento, agrupamento e competição visual. |
+| Sobre e ajuda | Cada assunto tem uma apresentação própria: visão geral, novidades, grade de telas, legenda e suporte, com índice da página. | Reaproveitar a hierarquia e organização; adaptar a apresentação à função de cada tela. |
+
+### Limites
+
+- Preservar permissões, validações, filtros, ordenação, paginação e navegação.
+- Preservar regras de situação e a distinção entre versão recebida e oficial, inclusive a referência pela data do B_Vendas.
+- Preservar metas, público por cidade ou clientes escolhidos, baixa automática e placar congelado das campanhas encerradas.
+- Manter preferências pessoais separadas das regras da equipe e respeitar a forma atual de aplicação e salvamento.
+- Não alterar banco, APIs ou regras de negócio para viabilizar o polimento.
+- Manter JavaScript/CSS do projeto, sem framework, dependência de frontend ou build adicional.
+- Atualizador Automático, agentes, Distribuição, pacotes e publicação ficam fora desta iniciativa. Na Administração, preservar esses controles existentes sem reformulá-los.
+- Não expandir o escopo para outras telas; componentes compartilhados exigem verificação de regressão nos seus consumidores.
+
+## 2. Direção visual comum
+
+### Hierarquia
+
+Adotar a leitura: título da seção → explicação breve → título do bloco → nome do campo ou informação → texto de apoio → controle/ação. Usar os tokens atuais como ponto de partida; só introduzir ajustes de escala após comparação no navegador.
+
+Títulos de bloco devem se destacar por peso e respiro. Rótulos de campos devem ter menor protagonismo e textos de ajuda devem ser legíveis, próximos ao assunto e mais discretos. Valores importantes, como progresso e versão, podem ter destaque adequado à tarefa.
+
+### Cores, superfícies e alinhamentos
+
+- Fundos predominantemente neutros, com bordas suaves e sombras contidas.
+- Cor de destaque para seleção e ação principal; cores de situação para estado operacional.
+- Não utilizar vermelho, amarelo ou verde como decoração sem significado.
+- Mesma referência de altura para campos, seletores e botões que compartilham uma linha.
+- Alinhar títulos, descrições e conteúdo ao mesmo eixo; permitir que textos longos quebrem sem deslocar ações indevidamente.
+- Usar espaçamentos e raios existentes, evitando valores isolados e compensações por margens negativas.
+- Manter estados de foco, hover, seleção, carregamento, erro, vazio e desabilitado identificáveis.
+
+### Como usar Sobre e ajuda
+
+Copiar os princípios: assuntos bem separados, destaque seletivo, textos curtos, bom respiro e variação de apresentação conforme o conteúdo. Manter tabelas onde há comparação, controles onde há ajustes e indicadores onde há acompanhamento. O índice lateral só será considerado em seções realmente longas, após verificar necessidade; não será acrescentado a todas as telas.
+
+## 3. Etapa 1 — Referência e padrão compartilhado
+
+Prioridade: alta. Dependência: nenhuma.
+
+- [ ] Abrir as quatro telas e Sobre e ajuda; registrar os pontos de comparação e exemplos relevantes.
+- [ ] Conferir temas claro e escuro, escala de fonte e densidade disponíveis.
+- [ ] Definir a hierarquia de títulos, rótulos e textos auxiliares usando os tokens existentes.
+- [ ] Definir alinhamentos de cabeçalhos, cartões, toolbars e controles.
+- [ ] Conferir consumidores de `cabecalhoSecao`, `tituloCartao`, `.cfg-group` e estilos de tabela antes de ajustes compartilhados.
+- [ ] Implementar apenas a base compartilhada aprovada, evitando grandes mudanças globais em `.card`, `.input` e `.data-table`.
+- [ ] Conferir a base em Configurações e Administração e observar efeitos nas demais telas que a usam.
+
+Aceite: os níveis de informação se distinguem no navegador; controles de uma mesma linha estão alinhados; Sobre e ajuda mantém sua organização; não aparecem regressões nos componentes compartilhados.
+
+## 4. Etapa 2 — Sistemas: cores discretas e organização
+
+Prioridade: alta. Dependência: etapa 1.
+
+### Proposta
+
+Substituir o fundo inteiro colorido por uma faixa lateral de aproximadamente 3px na linha/cartão do cliente. No desktop, tratar a tabela conforme sua estrutura; no celular, a faixa acompanha o cartão. Usar fundo neutro e preservar a zebra configurada pelo usuário.
+
+A cor atual é de situação, não uma cor exclusiva de cadastro do cliente. Manter esse significado: boa para Em dia, atenção para Aguardando atualização, alta para Desatualizado/Nunca atualizado, e neutra para ausência de referência. Confirmar a correspondência com os estados reais e com a legenda de ajuda; não criar nova classificação.
+
+- [ ] Retirar o preenchimento por severidade sem perder zebra, hover ou foco.
+- [ ] Aplicar indicador lateral por situação sem alterar a altura ou largura útil das linhas.
+- [ ] Manter o texto da situação; a faixa não será a única forma de identificar o estado.
+- [ ] Conferir legibilidade das cores nos dois temas e em alto contraste.
+- [ ] Alinhar nome do cliente, última atualização, situação e cidade; manter a referência oficial fora das linhas, como já ocorre.
+- [ ] Tratar nomes e cidades longos, datas ausentes e notas pela data do B_Vendas. Preservar versões recebidas onde já são apresentadas, sem acrescentar essa coluna à consulta de Sistemas.
+- [ ] Organizar filtros, busca, contagem e referência oficial com menos competição visual.
+- [ ] Polir o painel de versões oficiais: campos, datas, autoria, ações e mensagens de retorno.
+- [ ] Conferir passagem entre linha de tabela e cartão responsivo, clique na ficha, filtros e ordenação.
+
+Aceite: cada cliente aparece sobre fundo neutro, com identificação discreta da situação; informações e ações não se sobrepõem; a navegação para Consulta e as regras de versão permanecem iguais.
+
+## 5. Etapa 3 — Campanhas: integração com o padrão do painel
+
+Prioridade: média-alta. Dependência: etapa 1; executar após Sistemas para manter a sequência de revisão.
+
+### Proposta
+
+Preservar lista e detalhe, tornando o cabeçalho, o placar, os filtros e as ações compatíveis com o restante do painel. A sequência de leitura do detalhe será: campanha selecionada → sistema, meta, público e prazo → progresso → clientes e ações.
+
+- [ ] Harmonizar o cabeçalho da tela e o botão Nova campanha com o padrão compartilhado.
+- [ ] Deixar Ativas/Encerradas e seleção da campanha claramente identificáveis, com destaque contido.
+- [ ] Ajustar títulos, porcentagens e metadados dos cartões da lista lateral.
+- [ ] Separar título, descrição, sistema, meta, cidade/público e prazo no detalhe.
+- [ ] Equalizar os indicadores de progresso: rótulos consistentes, números alinhados e barra legível.
+- [ ] Dar prioridade à ação mais útil no contexto; agrupar ações secundárias para evitar uma faixa de botões competindo com o título.
+- [ ] Revisar filtros de clientes, busca e contagem quando faltar espaço.
+- [ ] Alinhar células de cliente, última atualização, situação e ações; acomodar detalhes de agendamento.
+- [ ] Padronizar formulários de criação/edição, escolha de público e agendamento em lote.
+- [ ] Conferir mensagens de campanha encerrada, vazio, nenhum resultado e carregamento.
+- [ ] Verificar altura mínima e rolagens internas; ajustar apenas se a inspeção confirmar corte ou rolagem desnecessária.
+- [ ] No celular, apresentar lista e detalhe em ordem clara, sem reduzir a tabela até ficar ilegível; preservar a seleção ao navegar.
+
+Aceite: a campanha tem leitura clara e ações previsíveis; o placar não domina a tela; nomes e descrições longos não prejudicam os controles; criação, edição, filtros, agendamento, exportação e encerramento conservam seu comportamento.
+
+## 6. Etapa 4 — Administração: padronizar Papel e os blocos
+
+Prioridade: alta para Papel; média para os demais ajustes. Dependência: etapa 1.
+
+### Pessoas e permissões
+
+Manter o papel editável na própria linha para as demais contas. A própria conta continua em leitura: usar uma apresentação com altura, tipografia e alinhamento compatíveis, sem fingir que o valor pode ser alterado.
+
+- [ ] Uniformizar o campo Papel: altura, tamanho de texto, largura adequada e alinhamento vertical.
+- [ ] Preservar os rótulos centralizados de Administrador, Operador e Consulta.
+- [ ] Evitar que o selo da própria conta e os seletores pareçam elementos de telas diferentes.
+- [ ] Explicar discretamente a restrição da própria conta, com informação acessível além de tooltip.
+- [ ] Preservar indicação de salvamento e restauração do valor anterior em cancelamento ou falha.
+- [ ] Alinhar pessoa, usuário, papel, último acesso e Gerenciar; conferir nomes longos e Nunca entrou.
+- [ ] Harmonizar resumo de pessoas, busca e legenda de permissões; verificar comportamento em celular.
+- [ ] Preservar confirmações, bloqueios e efeitos existentes das alterações de papel sobre sessões.
+
+### Demais seções
+
+- [ ] Operação: alinhar regras numéricas, unidades, classificações de sistemas e rodapé de salvar/desfazer.
+- [ ] Dados: organizar importação, exportação e download com títulos e descrições de peso adequado.
+- [ ] Integrações: harmonizar os blocos gerais de comunicação/endereço, preservando os controles do Atualizador fora do escopo.
+- [ ] Backups e recuperação: distinguir política, lista de cópias e restauração, mantendo avisos e confirmações existentes.
+- [ ] Auditoria: alinhar filtros, registros e detalhes sem reduzir a legibilidade dos valores anteriores/novos.
+- [ ] Diagnóstico: organizar resumo, indicadores e detalhes; reservar destaque forte para problemas reais.
+- [ ] Conferir abas, contadores e faixa de pendências sem acrescentar avisos redundantes.
+
+Aceite: a coluna Papel tem apresentação consistente e edição compreensível; a Administração mantém suas sete seções; salvar/desfazer e operações sensíveis continuam claros e funcionais.
+
+## 7. Etapa 5 — Configurações: hierarquia e explicações
+
+Prioridade: alta. Dependência: etapa 1; aproveitar os ajustes compartilhados já revisados na Administração.
+
+### Proposta
+
+Preservar as abas atuais e organizar cada cartão em assunto, finalidade breve e ajustes. Reduzir a competição entre o título do cartão, os nomes dos campos e os controles. Manter próximo ao controle o texto necessário para escolher bem.
+
+- [ ] Revisar todas as abas atuais: Minha conta, Trabalho diário, Notificações, Interface e acessibilidade, Regras da equipe e Sobre e ajuda.
+- [ ] Diferenciar visualmente título da seção, título de cartão, rótulo do ajuste e explicação.
+- [ ] Reduzir títulos repetidos quando o cartão e o campo comunicarem exatamente o mesmo assunto.
+- [ ] Encurtar descrições vagas ou repetitivas, preservando efeitos, limites e informações úteis.
+- [ ] Alinhar campos, interruptores, seletores e opções, com quebra adequada em telas estreitas.
+- [ ] Usar agrupamentos por finalidade e separadores leves; evitar fragmentar cada ajuste em um cartão isolado.
+- [ ] Organizar Perfil rápido, tema, contraste e prévia para que a prévia complemente os ajustes sem comprimi-los.
+- [ ] Manter busca, destaque do resultado, contadores por aba e indicação de ajuste alterado.
+- [ ] Preservar restauração por seção, exportação/importação de preferências e aplicação imediata dos ajustes pessoais.
+- [ ] Deixar explícito quando algo vale só para a pessoa e quando é uma regra da equipe.
+- [ ] Polir conta, senha e sessões sem perder orientação ou ações existentes.
+- [ ] Preservar a estrutura de Sobre e ajuda, adaptando apenas o necessário para consistência.
+
+Aceite: é possível identificar o assunto de um cartão antes de ler seus campos; o texto explica a consequência do ajuste; controles não comprimem descrições; busca e preferências continuam funcionando.
+
+## 8. Validação e entrega por etapa
+
+A execução será uma etapa por vez. Para cada etapa, informar o que mudou, como foi verificado e limitações ainda existentes. Prioridade não autoriza execução antecipada das demais etapas.
+
+### Validação visual e funcional
+
+- [ ] Conferir 390, 768, 1280 e 1440px, nos temas claro e escuro.
+- [ ] Conferir fonte ampliada, densidade compacta/confortável, alto contraste e sidebar recolhida.
+- [ ] Não aceitar corte de nomes, controles sobrepostos ou dependência de rolagem horizontal para usar a tela no celular.
+- [ ] Conferir teclado, foco visível, rótulos de controles e compreensão dos estados sem depender apenas de cores.
+- [ ] Conferir listas vazias, muitos registros, nomes/descrições longos e dados ausentes.
+- [ ] Verificar ações e restrições dos perfis relevantes: admin, operador e consulta.
+- [ ] Reproduzir fluxos afetados no navegador; testes de código não substituem validação visual.
+
+### Verificação técnica
+
+Para alterações de interface, executar a partir de `web/`: `npm run check`, `npm test` e `git diff --check`. Acrescentar teste de comportamento apenas quando houver mudança com risco real; evitar testes que somente reproduzem CSS ou markup.
+
+Como esta entrega contém apenas planejamento, validar o Markdown, seus caminhos e o diff. Não registrar os testes da aplicação como executados nesta fase.
+
+### Mapa técnico
+
+| Parte | Arquivos principais |
+|---|---|
+| Base | `client/css/theme.css`, `client/css/components.css`, `client/js/templates/secao.js` |
+| Sistemas | `client/js/views/SistemasView.js`, `client/js/components/TabelaOrdenavel.js` |
+| Campanhas | `client/js/views/CampanhasView.js`, `client/js/templates/campanhas.js` |
+| Administração | `client/js/views/AdministracaoView.js`, `client/js/views/administracao/*.js`, `client/js/templates/administracao.js` |
+| Configurações | `client/js/views/ConfiguracoesView.js`, `client/js/views/configuracoes/ajustes.js`, `SecaoAjustes.js`, `controles.js`, `ContaConfig.js`, `RegrasEquipeConfig.js`, `client/js/templates/configuracoes.js` |
+| Referência | `client/js/views/configuracoes/SobreAjuda.js`, `client/js/templates/sobre.js` |
+
+## 9. Sequência recomendada
+
+1. Referência e padrão compartilhado.
+2. Sistemas: fundo neutro, faixa de situação e alinhamentos.
+3. Campanhas: cabeçalho, lista, progresso, ações e responsividade.
+4. Administração: Papel e organização das seções.
+5. Configurações: hierarquia, explicações e organização dos controles.
+
+Começar pela etapa 1 permite confirmar a direção no navegador antes de espalhá-la pelas quatro telas. O resultado esperado é um painel mais coeso, com cor reservada ao que ajuda a decidir e informações organizadas pela tarefa de cada tela.
