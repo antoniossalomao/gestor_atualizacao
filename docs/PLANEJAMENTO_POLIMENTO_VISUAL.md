@@ -1,16 +1,16 @@
 # Planejamento de polimento visual do painel
 
-Data: 08/10/2026. Status: proposta, aguardando aprovação para implementar.
+Data: 08/10/2026. Atualizado em 09/10/2026. Status: etapa 1 implementada, com validação e ressalvas registradas abaixo.
 
-Escopo: Sistemas, Campanhas, Administração e Configurações. Referência visual: Configurações → Sobre e ajuda.
+Escopo: Sistemas, Campanhas, Administração e Configurações, exclusivamente em desktop. Referência visual: Configurações → Sobre e ajuda.
 
 ## 1. Objetivo e base da análise
 
 Deixar as quatro telas mais discretas, alinhadas e fáceis de ler, preservando a identidade do projeto e os fluxos existentes. A intervenção deve melhorar a hierarquia das informações, o uso de cores, os espaçamentos e a organização das ações.
 
-Este plano foi elaborado a partir do código atual e das observações do usuário. Ainda não houve inspeção visual dessas telas no navegador nesta sessão: desalinhamentos específicos, contraste e distribuição do espaço devem ser confirmados na etapa inicial. Nenhuma alteração de interface está autorizada por este documento.
+Este plano foi elaborado a partir do código e das observações do usuário. A execução foi autorizada em 09/10/2026, uma etapa por vez. Na etapa 1, as quatro telas e Sobre e ajuda foram inspecionadas no navegador com banco descartável. Na mesma sessão, o usuário restringiu a iniciativa a desktop: adaptações e validação para celular ficam excluídas de todas as etapas.
 
-### Constatações no código
+### Constatações na elaboração do plano
 
 | Tela | Evidência atual | Consequência para o plano |
 |---|---|---|
@@ -57,13 +57,13 @@ Copiar os princípios: assuntos bem separados, destaque seletivo, textos curtos,
 
 Prioridade: alta. Dependência: nenhuma.
 
-- [ ] Abrir as quatro telas e Sobre e ajuda; registrar os pontos de comparação e exemplos relevantes.
-- [ ] Conferir temas claro e escuro, escala de fonte e densidade disponíveis.
-- [ ] Definir a hierarquia de títulos, rótulos e textos auxiliares usando os tokens existentes.
-- [ ] Definir alinhamentos de cabeçalhos, cartões, toolbars e controles.
-- [ ] Conferir consumidores de `cabecalhoSecao`, `tituloCartao`, `.cfg-group` e estilos de tabela antes de ajustes compartilhados.
-- [ ] Implementar apenas a base compartilhada aprovada, evitando grandes mudanças globais em `.card`, `.input` e `.data-table`.
-- [ ] Conferir a base em Configurações e Administração e observar efeitos nas demais telas que a usam.
+- [x] Abrir as quatro telas e Sobre e ajuda; registrar os pontos de comparação e exemplos relevantes.
+- [x] Conferir temas claro e escuro, escala de fonte e densidade disponíveis.
+- [x] Definir a hierarquia de títulos, rótulos e textos auxiliares usando os tokens existentes.
+- [x] Definir alinhamentos de cabeçalhos, cartões, toolbars e controles.
+- [x] Conferir consumidores de `cabecalhoSecao`, `tituloCartao`, `.cfg-group` e estilos de tabela antes de ajustes compartilhados.
+- [x] Implementar apenas a base compartilhada aprovada, evitando grandes mudanças globais em `.card`, `.input` e `.data-table`.
+- [x] Conferir a base em Configurações e Administração e observar efeitos nas demais telas que a usam.
 
 Aceite: os níveis de informação se distinguem no navegador; controles de uma mesma linha estão alinhados; Sobre e ajuda mantém sua organização; não aparecem regressões nos componentes compartilhados.
 
@@ -73,7 +73,7 @@ Prioridade: alta. Dependência: etapa 1.
 
 ### Proposta
 
-Substituir o fundo inteiro colorido por uma faixa lateral de aproximadamente 3px na linha/cartão do cliente. No desktop, tratar a tabela conforme sua estrutura; no celular, a faixa acompanha o cartão. Usar fundo neutro e preservar a zebra configurada pelo usuário.
+Substituir o fundo inteiro colorido por uma faixa lateral de aproximadamente 3px na linha do cliente, respeitando a estrutura da tabela de desktop. Usar fundo neutro e preservar a zebra configurada pelo usuário.
 
 A cor atual é de situação, não uma cor exclusiva de cadastro do cliente. Manter esse significado: boa para Em dia, atenção para Aguardando atualização, alta para Desatualizado/Nunca atualizado, e neutra para ausência de referência. Confirmar a correspondência com os estados reais e com a legenda de ajuda; não criar nova classificação.
 
@@ -85,7 +85,7 @@ A cor atual é de situação, não uma cor exclusiva de cadastro do cliente. Man
 - [ ] Tratar nomes e cidades longos, datas ausentes e notas pela data do B_Vendas. Preservar versões recebidas onde já são apresentadas, sem acrescentar essa coluna à consulta de Sistemas.
 - [ ] Organizar filtros, busca, contagem e referência oficial com menos competição visual.
 - [ ] Polir o painel de versões oficiais: campos, datas, autoria, ações e mensagens de retorno.
-- [ ] Conferir passagem entre linha de tabela e cartão responsivo, clique na ficha, filtros e ordenação.
+- [ ] Conferir linhas da tabela, clique na ficha, filtros e ordenação em desktop.
 
 Aceite: cada cliente aparece sobre fundo neutro, com identificação discreta da situação; informações e ações não se sobrepõem; a navegação para Consulta e as regras de versão permanecem iguais.
 
@@ -108,7 +108,7 @@ Preservar lista e detalhe, tornando o cabeçalho, o placar, os filtros e as aç�
 - [ ] Padronizar formulários de criação/edição, escolha de público e agendamento em lote.
 - [ ] Conferir mensagens de campanha encerrada, vazio, nenhum resultado e carregamento.
 - [ ] Verificar altura mínima e rolagens internas; ajustar apenas se a inspeção confirmar corte ou rolagem desnecessária.
-- [ ] No celular, apresentar lista e detalhe em ordem clara, sem reduzir a tabela até ficar ilegível; preservar a seleção ao navegar.
+- [ ] Conferir lista e detalhe nas larguras de desktop, preservando a seleção ao navegar.
 
 Aceite: a campanha tem leitura clara e ações previsíveis; o placar não domina a tela; nomes e descrições longos não prejudicam os controles; criação, edição, filtros, agendamento, exportação e encerramento conservam seu comportamento.
 
@@ -126,7 +126,7 @@ Manter o papel editável na própria linha para as demais contas. A própria con
 - [ ] Explicar discretamente a restrição da própria conta, com informação acessível além de tooltip.
 - [ ] Preservar indicação de salvamento e restauração do valor anterior em cancelamento ou falha.
 - [ ] Alinhar pessoa, usuário, papel, último acesso e Gerenciar; conferir nomes longos e Nunca entrou.
-- [ ] Harmonizar resumo de pessoas, busca e legenda de permissões; verificar comportamento em celular.
+- [ ] Harmonizar resumo de pessoas, busca e legenda de permissões nas larguras de desktop.
 - [ ] Preservar confirmações, bloqueios e efeitos existentes das alterações de papel sobre sessões.
 
 ### Demais seções
@@ -153,7 +153,7 @@ Preservar as abas atuais e organizar cada cartão em assunto, finalidade breve e
 - [ ] Diferenciar visualmente título da seção, título de cartão, rótulo do ajuste e explicação.
 - [ ] Reduzir títulos repetidos quando o cartão e o campo comunicarem exatamente o mesmo assunto.
 - [ ] Encurtar descrições vagas ou repetitivas, preservando efeitos, limites e informações úteis.
-- [ ] Alinhar campos, interruptores, seletores e opções, com quebra adequada em telas estreitas.
+- [ ] Alinhar campos, interruptores, seletores e opções, acomodando as larguras de desktop e a fonte ampliada.
 - [ ] Usar agrupamentos por finalidade e separadores leves; evitar fragmentar cada ajuste em um cartão isolado.
 - [ ] Organizar Perfil rápido, tema, contraste e prévia para que a prévia complemente os ajustes sem comprimi-los.
 - [ ] Manter busca, destaque do resultado, contadores por aba e indicação de ajuste alterado.
@@ -170,9 +170,9 @@ A execução será uma etapa por vez. Para cada etapa, informar o que mudou, com
 
 ### Validação visual e funcional
 
-- [ ] Conferir 390, 768, 1280 e 1440px, nos temas claro e escuro.
+- [ ] Conferir 1280, 1440 e 1920px, nos temas claro e escuro.
 - [ ] Conferir fonte ampliada, densidade compacta/confortável, alto contraste e sidebar recolhida.
-- [ ] Não aceitar corte de nomes, controles sobrepostos ou dependência de rolagem horizontal para usar a tela no celular.
+- [ ] Não aceitar corte de nomes ou controles sobrepostos nas larguras de desktop; tabelas devem usar o espaço disponível sem comprometer a leitura.
 - [ ] Conferir teclado, foco visível, rótulos de controles e compreensão dos estados sem depender apenas de cores.
 - [ ] Conferir listas vazias, muitos registros, nomes/descrições longos e dados ausentes.
 - [ ] Verificar ações e restrições dos perfis relevantes: admin, operador e consulta.
@@ -182,7 +182,7 @@ A execução será uma etapa por vez. Para cada etapa, informar o que mudou, com
 
 Para alterações de interface, executar a partir de `web/`: `npm run check`, `npm test` e `git diff --check`. Acrescentar teste de comportamento apenas quando houver mudança com risco real; evitar testes que somente reproduzem CSS ou markup.
 
-Como esta entrega contém apenas planejamento, validar o Markdown, seus caminhos e o diff. Não registrar os testes da aplicação como executados nesta fase.
+Em entregas que alterem apenas planejamento, validar o Markdown, seus caminhos e o diff. Para etapas implementadas, registrar as verificações realmente executadas.
 
 ### Mapa técnico
 
@@ -199,8 +199,20 @@ Como esta entrega contém apenas planejamento, validar o Markdown, seus caminhos
 
 1. Referência e padrão compartilhado.
 2. Sistemas: fundo neutro, faixa de situação e alinhamentos.
-3. Campanhas: cabeçalho, lista, progresso, ações e responsividade.
+3. Campanhas: cabeçalho, lista, progresso, ações e distribuição do espaço em desktop.
 4. Administração: Papel e organização das seções.
 5. Configurações: hierarquia, explicações e organização dos controles.
 
 Começar pela etapa 1 permite confirmar a direção no navegador antes de espalhá-la pelas quatro telas. O resultado esperado é um painel mais coeso, com cor reservada ao que ajuda a decidir e informações organizadas pela tarefa de cada tela.
+
+## 10. Registro da execução — etapa 1 (09/10/2026)
+
+**Referência e decisões:** Sobre e ajuda já separa assuntos com títulos destacados, descrições curtas e respiro. Configurações já usa a escala `--txt-xl` → `--txt-lg` → `--txt-md` → `--txt-sm`; ela foi preservada. Administração compartilha os cabeçalhos e linhas de ajuste. Sistemas e Campanhas mantêm componentes próprios: seu polimento específico segue nas etapas 2 e 3. O CSS já continha alterações anteriores dessas telas; a etapa 1 não as substitui nem declara essas etapas concluídas.
+
+**Base implementada em `client/css/components.css`:** textos auxiliares com margem e entrelinha consistentes; títulos e ações podem quebrar sem sobreposição; linhas de ajuste reservam espaço para explicações no desktop; grupos de opções acomodam fonte ampliada; contadores não quebram seus números; o indicador de preferência alterada fica dentro da linha, sem margem negativa. Não houve mudança global em cartões, inputs ou tabelas, nem alteração de regras, banco ou APIs.
+
+**Verificação:** navegador Edge headless com servidor local e banco descartável; inspeção das quatro telas e da referência, com nomes e descrição longos; comparação das abas de Configurações e das sete seções da Administração nos dois temas, fonte padrão/ampliada, densidade padrão/compacta/confortável, alto contraste e sidebar recolhida. Mudança de densidade e abertura da restauração por seção verificadas; foco por teclado visível. `npm run check` passou; `npm test` passou com 639 testes de servidor e 542 de cliente; `git diff --check` passou. Capturas e medições ficam em `%TEMP%/polimento-visual-tools/evidencias/`.
+
+**Ressalvas:** com nome de conta longo e fonte ampliada em 1280px, o cabeçalho geral pode exceder a largura. A comparação com o CSS anterior reproduziu o mesmo problema; esse componente fica fora da base desta etapa. A verificação visual usou conta administradora; não houve inspeção visual de todas as ações com operador e consulta, nem operações sensíveis em dados reais. Essas limitações impedem afirmar que toda a interface está livre de problemas.
+
+**Sequência na entrega da etapa 1:** etapas 2 a 5 permanecem pendentes.

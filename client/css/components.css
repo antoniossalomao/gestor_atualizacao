@@ -2838,6 +2838,7 @@ table.data-table {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--sp-4);
   padding: var(--sp-4) 0;
   border-bottom: 1px solid var(--cor-borda);
@@ -2850,6 +2851,7 @@ table.data-table {
    rótulo -- três miniaturas não são três palavras. */
 .cfg-group--largo {
   flex-direction: column;
+  flex-wrap: nowrap;
   align-items: stretch;
   gap: var(--sp-3);
 }
@@ -2857,13 +2859,31 @@ table.data-table {
 .cfg-group__labels {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-1);
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 761px) {
+  .cfg-group__labels {
+    flex: 1 1 16rem;
+  }
+  .cfg-group--largo > .cfg-group__labels {
+    flex: initial;
+  }
+}
+.cfg-group > .segmented {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.cfg-group__labels .badge {
+  flex-shrink: 0;
+  overflow-wrap: normal;
 }
 
 .cfg-group__title-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--sp-2);
 }
 
@@ -2905,14 +2925,15 @@ table.data-table {
    por SecaoAjustes depois de o controle já existir), e não um dentro do
    outro -- um seletor de descendente aqui não casaria com nada. */
 .cfg-group.cfg-linha.is-alterado {
-  margin-left: -10px;
-  padding-left: 10px;
-  border-left: 2px solid var(--cor-accent);
+  padding-left: var(--sp-3);
+  box-shadow: inset 2px 0 0 var(--cor-accent);
 }
 
 .cfg-group__help {
-  color: var(--cor-texto-fraco);
+  margin: 0;
+  color: var(--cor-texto-sub);
   font-size: var(--txt-sm);
+  line-height: 1.5;
 }
 
 /* Nove telas não cabem num trilho de opções -- ver `selecao` em
@@ -7352,7 +7373,7 @@ h1, h2, h3, strong {
    lista que ele encabeça. */
 .secao-head {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--sp-4);
   flex-wrap: wrap;
@@ -7360,7 +7381,9 @@ h1, h2, h3, strong {
   border-bottom: 1px solid var(--cor-borda);
 }
 .secao-head__titulos {
+  flex: 1 1 20rem;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .secao-head__titulos h2 {
   margin: 0;
@@ -7368,12 +7391,16 @@ h1, h2, h3, strong {
   letter-spacing: -0.02em;
 }
 .secao-head__titulos p {
-  margin: var(--sp-1) 0 0;
+  margin: var(--sp-2) 0 0;
   color: var(--cor-texto-sub);
   font-size: var(--txt-base);
+  line-height: 1.5;
 }
 .secao-head__acoes {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: 100%;
   gap: var(--sp-2);
 }
 .secao-head__acoes .btn svg,
@@ -7403,12 +7430,15 @@ h1, h2, h3, strong {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--sp-4);
   padding: var(--sp-4) 0 var(--sp-3);
   border-bottom: 1px solid var(--cor-borda);
 }
 .secao-card__titulos {
+  flex: 1 1 12rem;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .secao-card__titulos h3 {
   margin: 0;
@@ -7416,13 +7446,17 @@ h1, h2, h3, strong {
   letter-spacing: -0.015em;
 }
 .secao-card__titulos p {
-  margin: 2px 0 0;
+  margin: var(--sp-2) 0 0;
   color: var(--cor-texto-sub);
   font-size: var(--txt-sm);
+  line-height: 1.5;
 }
 .secao-card__acoes {
   display: flex;
-  flex: 0 0 auto;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: 100%;
   gap: var(--sp-2);
 }
 
@@ -8595,12 +8629,6 @@ h1, h2, h3, strong {
 }
 
 /* Polimento das Configurações (Etapa 5) */
-.cfg-group__help {
-  color: var(--cor-texto-sub);
-  font-size: var(--txt-sm);
-  margin-top: 4px;
-  line-height: 1.4;
-}
 .cfg-linha {
   padding: var(--sp-3) 0;
   border-bottom: 1px solid var(--cor-borda);
