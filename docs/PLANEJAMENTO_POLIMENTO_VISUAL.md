@@ -170,13 +170,13 @@ A execução será uma etapa por vez. Para cada etapa, informar o que mudou, com
 
 ### Validação visual e funcional
 
-- [ ] Conferir 1280, 1440 e 1920px, nos temas claro e escuro.
-- [ ] Conferir fonte ampliada, densidade compacta/confortável, alto contraste e sidebar recolhida.
-- [ ] Não aceitar corte de nomes ou controles sobrepostos nas larguras de desktop; tabelas devem usar o espaço disponível sem comprometer a leitura.
-- [ ] Conferir teclado, foco visível, rótulos de controles e compreensão dos estados sem depender apenas de cores.
-- [ ] Conferir listas vazias, muitos registros, nomes/descrições longos e dados ausentes.
-- [ ] Verificar ações e restrições dos perfis relevantes: admin, operador e consulta.
-- [ ] Reproduzir fluxos afetados no navegador; testes de código não substituem validação visual.
+- [x] Conferir 1280, 1440 e 1920px, nos temas claro e escuro.
+- [x] Conferir fonte ampliada, densidade compacta/confortável, alto contraste e sidebar recolhida.
+- [x] Não aceitar corte de nomes ou controles sobrepostos nas larguras de desktop; tabelas devem usar o espaço disponível sem comprometer a leitura.
+- [x] Conferir teclado, foco visível, rótulos de controles e compreensão dos estados sem depender apenas de cores.
+- [x] Conferir listas vazias, muitos registros, nomes/descrições longos e dados ausentes.
+- [x] Verificar ações e restrições dos perfis relevantes: admin, operador e consulta.
+- [x] Reproduzir fluxos afetados no navegador; testes de código não substituem validação visual.
 
 ### Verificação técnica
 
