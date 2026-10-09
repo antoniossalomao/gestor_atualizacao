@@ -1,6 +1,6 @@
 # Planejamento de polimento visual do painel
 
-Data: 08/10/2026. Atualizado em 09/10/2026. Status: etapas 1 e 2 implementadas, com validação e ressalvas registradas abaixo.
+Data: 08/10/2026. Atualizado em 09/10/2026. Status: etapas 1, 2 e 3 implementadas, com validação e ressalvas registradas abaixo.
 
 Escopo: Sistemas, Campanhas, Administração e Configurações, exclusivamente em desktop. Referência visual: Configurações → Sobre e ajuda.
 
@@ -97,20 +97,20 @@ Prioridade: média-alta. Dependência: etapa 1; executar após Sistemas para man
 
 Preservar lista e detalhe, tornando o cabeçalho, o placar, os filtros e as ações compatíveis com o restante do painel. A sequência de leitura do detalhe será: campanha selecionada → sistema, meta, público e prazo → progresso → clientes e ações.
 
-- [ ] Harmonizar o cabeçalho da tela e o botão Nova campanha com o padrão compartilhado.
-- [ ] Deixar Ativas/Encerradas e seleção da campanha claramente identificáveis, com destaque contido.
-- [ ] Ajustar títulos, porcentagens e metadados dos cartões da lista lateral.
-- [ ] Separar título, descrição, sistema, meta, cidade/público e prazo no detalhe.
-- [ ] Equalizar os indicadores de progresso: rótulos consistentes, números alinhados e barra legível.
-- [ ] Dar prioridade à ação mais útil no contexto; agrupar ações secundárias para evitar uma faixa de botões competindo com o título.
-- [ ] Revisar filtros de clientes, busca e contagem quando faltar espaço.
-- [ ] Alinhar células de cliente, última atualização, situação e ações; acomodar detalhes de agendamento.
-- [ ] Padronizar formulários de criação/edição, escolha de público e agendamento em lote.
-- [ ] Conferir mensagens de campanha encerrada, vazio, nenhum resultado e carregamento.
-- [ ] Verificar altura mínima e rolagens internas; ajustar apenas se a inspeção confirmar corte ou rolagem desnecessária.
-- [ ] Conferir lista e detalhe nas larguras de desktop, preservando a seleção ao navegar.
+- [x] Harmonizar o cabeçalho da tela e o botão Nova campanha com o padrão compartilhado.
+- [x] Deixar Ativas/Encerradas e seleção da campanha claramente identificáveis, com destaque contido.
+- [x] Ajustar títulos, porcentagens e metadados dos cartões da lista lateral.
+- [x] Separar título, descrição, sistema, meta, cidade/público e prazo no detalhe.
+- [x] Equalizar os indicadores de progresso: rótulos consistentes, números alinhados e barra legível.
+- [x] Dar prioridade à ação mais útil no contexto; agrupar ações secundárias para evitar uma faixa de botões competindo com o título.
+- [x] Revisar filtros de clientes, busca e contagem quando faltar espaço.
+- [x] Alinhar células de cliente, última atualização, situação e ações; acomodar detalhes de agendamento.
+- [x] Padronizar formulários de criação/edição, escolha de público e agendamento em lote.
+- [x] Conferir mensagens de campanha encerrada, vazio, nenhum resultado e carregamento.
+- [x] Verificar altura mínima e rolagens internas; ajustar apenas se a inspeção confirmar corte ou rolagem desnecessária.
+- [x] Conferir lista e detalhe nas larguras de desktop, preservando a seleção ao navegar.
 
-Aceite: a campanha tem leitura clara e ações previsíveis; o placar não domina a tela; nomes e descrições longos não prejudicam os controles; criação, edição, filtros, agendamento, exportação e encerramento conservam seu comportamento.
+Aceite: a campanha tem leitura clara e ações previsíveis; o placar não domina a tela; nomes e descrições longos não prejudicam os controles; criação, edição, filtros, agendamento e encerramento conservam seu comportamento.
 
 ## 6. Etapa 4 — Administração: padronizar Papel e os blocos
 
@@ -229,4 +229,18 @@ O painel de versões oficiais recebeu superfície neutra, hierarquia de título/
 
 **Verificação técnica:** `npm run check` passou. `npm test` validou os 639 testes do servidor; detectou o utilitário órfão no cliente, removido nesta etapa. A suíte completa do cliente foi repetida após a correção e passou com 536 testes. `git diff --check` passou. Evidências em `%TEMP%/polimento-visual-tools/evidencias/etapa2/`.
 
-**Limites:** nenhum banco real foi alterado; não houve publicação. As regras de versão/situação e APIs foram preservadas. A ressalva anterior sobre o cabeçalho geral com nome longo em 1280px permanece fora deste ajuste. A etapa 3 é a próxima; etapas 3 a 5 seguem pendentes.
+**Limites:** nenhum banco real foi alterado; não houve publicação. As regras de versão/situação e APIs foram preservadas. A ressalva anterior sobre o cabeçalho geral com nome longo em 1280px permanece fora deste ajuste. Na entrega da etapa 2, etapas 3 a 5 permaneciam pendentes. A etapa 3 foi executada depois, conforme o registro abaixo.
+
+## 12. Registro da execução — etapa 3 (09/10/2026)
+
+**Implementação:** Campanhas recebeu o cabeçalho compartilhado, com explicação breve e Nova campanha. Ativas/Encerradas e a campanha selecionada têm destaque contido; cartões laterais acomodam títulos longos. O detalhe separa título, descrição, sistema, versão-alvo, público e prazo. O placar usa números alinhados e rótulos consistentes, preservando os segmentos de progresso e a orientação sobre baixa automática.
+
+Agendar pendentes é a ação principal quando aplicável; campanhas encerradas apresentam Reabrir campanha. Ações secundárias ficam em Mais ações, com abertura por teclado e as permissões existentes. A tabela reserva espaço proporcional para cliente, última atualização, situação e ações; nomes e metadados quebram sem sobreposição. Data e responsável do agendamento ficam abaixo da situação. Formulários e escolha de público receberam espaçamento consistente.
+
+A inspeção confirmou o corte do cabeçalho do detalhe após rolagem e a competição entre rolagens internas. A altura fixa da seção e a rolagem do detalhe foram retiradas: o conteúdo acompanha a página, enquanto lista lateral e tabela preservam suas rolagens e preferências existentes. Não foram criadas adaptações para celular.
+
+**Validação visual e funcional:** Edge headless com servidor local e banco descartável, 24 clientes e campanhas com nomes, cidades e descrições longos. Passaram 18 combinações: 1280/1440/1920px, claro/escuro e apresentação padrão, compacta com fonte ampliada/sidebar recolhida e confortável com fonte ampliada/alto contraste. Capturas inspecionadas e medições sem excesso de largura no conteúdo da tela. Foram reproduzidos criação por cidade, edição com público escolhido, inclusão/retirada de clientes, filtros, busca, nenhum resultado, ordenação, agendamento em lote, encerramento, placar congelado após nova atualização, reabertura, seleção ao retornar à tela, carregamento e lista vazia. Mais ações foi aberto por teclado; admin, operador e consulta conservam as ações permitidas.
+
+**Verificação técnica:** `npm run check` passou. `npm test` passou com 639 testes de servidor e 536 de cliente; a suíte do cliente foi repetida após os últimos ajustes e passou. `git diff --check` passou. Evidências em `%TEMP%/polimento-visual-tools/evidencias/etapa3/`.
+
+**Limites e sequência:** a exportação de Campanhas já não existe na interface atual; não foi reintroduzida nem declarada validada. Nenhum banco real, API ou regra de negócio foi alterado; não houve publicação. A ressalva anterior sobre o cabeçalho geral com nome longo em 1280px permanece fora deste ajuste. Etapas 4 e 5 seguem pendentes.
