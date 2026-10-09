@@ -1,6 +1,6 @@
 # Planejamento de polimento visual do painel
 
-Data: 08/10/2026. Atualizado em 09/10/2026. Status: etapa 1 implementada, com validação e ressalvas registradas abaixo.
+Data: 08/10/2026. Atualizado em 09/10/2026. Status: etapas 1 e 2 implementadas, com validação e ressalvas registradas abaixo.
 
 Escopo: Sistemas, Campanhas, Administração e Configurações, exclusivamente em desktop. Referência visual: Configurações → Sobre e ajuda.
 
@@ -77,15 +77,15 @@ Substituir o fundo inteiro colorido por uma faixa lateral de aproximadamente 3px
 
 A cor atual é de situação, não uma cor exclusiva de cadastro do cliente. Manter esse significado: boa para Em dia, atenção para Aguardando atualização, alta para Desatualizado/Nunca atualizado, e neutra para ausência de referência. Confirmar a correspondência com os estados reais e com a legenda de ajuda; não criar nova classificação.
 
-- [ ] Retirar o preenchimento por severidade sem perder zebra, hover ou foco.
-- [ ] Aplicar indicador lateral por situação sem alterar a altura ou largura útil das linhas.
-- [ ] Manter o texto da situação; a faixa não será a única forma de identificar o estado.
-- [ ] Conferir legibilidade das cores nos dois temas e em alto contraste.
-- [ ] Alinhar nome do cliente, última atualização, situação e cidade; manter a referência oficial fora das linhas, como já ocorre.
-- [ ] Tratar nomes e cidades longos, datas ausentes e notas pela data do B_Vendas. Preservar versões recebidas onde já são apresentadas, sem acrescentar essa coluna à consulta de Sistemas.
-- [ ] Organizar filtros, busca, contagem e referência oficial com menos competição visual.
-- [ ] Polir o painel de versões oficiais: campos, datas, autoria, ações e mensagens de retorno.
-- [ ] Conferir linhas da tabela, clique na ficha, filtros e ordenação em desktop.
+- [x] Retirar o preenchimento por severidade sem perder zebra, hover ou foco.
+- [x] Aplicar indicador lateral por situação sem alterar a altura ou largura útil das linhas.
+- [x] Manter o texto da situação; a faixa não será a única forma de identificar o estado.
+- [x] Conferir legibilidade das cores nos dois temas e em alto contraste.
+- [x] Alinhar nome do cliente, última atualização, situação e cidade; manter a referência oficial fora das linhas, como já ocorre.
+- [x] Tratar nomes e cidades longos, datas ausentes e notas pela data do B_Vendas. Preservar versões recebidas onde já são apresentadas, sem acrescentar essa coluna à consulta de Sistemas.
+- [x] Organizar filtros, busca, contagem e referência oficial com menos competição visual.
+- [x] Polir o painel de versões oficiais: campos, datas, autoria, ações e mensagens de retorno.
+- [x] Conferir linhas da tabela, clique na ficha, filtros e ordenação em desktop.
 
 Aceite: cada cliente aparece sobre fundo neutro, com identificação discreta da situação; informações e ações não se sobrepõem; a navegação para Consulta e as regras de versão permanecem iguais.
 
@@ -215,4 +215,18 @@ Começar pela etapa 1 permite confirmar a direção no navegador antes de espalh
 
 **Ressalvas:** com nome de conta longo e fonte ampliada em 1280px, o cabeçalho geral pode exceder a largura. A comparação com o CSS anterior reproduziu o mesmo problema; esse componente fica fora da base desta etapa. A verificação visual usou conta administradora; não houve inspeção visual de todas as ações com operador e consulta, nem operações sensíveis em dados reais. Essas limitações impedem afirmar que toda a interface está livre de problemas.
 
-**Sequência na entrega da etapa 1:** etapas 2 a 5 permanecem pendentes.
+**Sequência na entrega da etapa 1:** etapas 2 a 5 permaneciam pendentes. A etapa 2 foi executada depois, conforme o registro abaixo.
+
+## 11. Registro da execução — etapa 2 (09/10/2026)
+
+**Implementação:** a tabela de Sistemas usa fundo neutro e faixa interna de 3px. Classes específicas aplicam os tokens do tema: verde para Em dia, amarelo para Aguardando atualização, vermelho para Desatualizado/Nunca atualizado e neutro para os demais estados. O texto da situação foi preservado. As cores acompanham a troca de tema sem recalcular a tabela em JavaScript. O preenchimento antigo já havia sido parcialmente retirado; a etapa corrigiu a aplicação da faixa e a ausência da cor de atenção.
+
+Nomes e cidades podem quebrar dentro das células, com mais espaço para o cliente e sem acrescentar a versão recebida à consulta. Datas usam números alinhados e a nota pela data do B_Vendas continua visível. Referência oficial e contagem ficam em uma linha própria, abaixo dos campos e ações. Os controles têm a mesma referência de altura.
+
+O painel de versões oficiais recebeu superfície neutra, hierarquia de título/valor/autoria, alinhamento de campos e ações, explicação visível para datas inválidas e mensagem de salvamento/remoção anunciada ao leitor de tela. Cancelamento, validação, permissões e edição concorrente conservam os fluxos existentes. O utilitário de mistura de cores, seus testes exclusivos e o leitor/cache de tokens sem consumidores foram removidos; as cores agora vêm diretamente do CSS.
+
+**Validação visual e funcional:** Edge headless, servidor local e banco descartável com 28 clientes, nomes/cidade longos e estados diferentes. Foram conferidas 18 combinações de 1280/1440/1920px, temas claro/escuro e apresentação padrão, compacta com fonte ampliada/sidebar recolhida e confortável com fonte ampliada/alto contraste. Capturas inspecionadas e medições sem excesso de largura na tabela. Também conferidos zebra desligada, hover com faixa preservada, vazio, busca por cidade, filtro de situação/data, ordenação, teclado e abertura da ficha, nota do B_Vendas no NFCe e ausência de referência. Na edição: data inválida, cancelar, salvar, conflito concorrente, remoção da referência e histórico inalterado. Operador conserva edição e consulta vê apenas leitura.
+
+**Verificação técnica:** `npm run check` passou. `npm test` validou os 639 testes do servidor; detectou o utilitário órfão no cliente, removido nesta etapa. A suíte completa do cliente foi repetida após a correção e passou com 536 testes. `git diff --check` passou. Evidências em `%TEMP%/polimento-visual-tools/evidencias/etapa2/`.
+
+**Limites:** nenhum banco real foi alterado; não houve publicação. As regras de versão/situação e APIs foram preservadas. A ressalva anterior sobre o cabeçalho geral com nome longo em 1280px permanece fora deste ajuste. A etapa 3 é a próxima; etapas 3 a 5 seguem pendentes.

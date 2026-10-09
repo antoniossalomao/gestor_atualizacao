@@ -1,7 +1,5 @@
 import { View } from "../app/View.js";
 import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
-import { misturarHex } from "../utils/cor.js";
-import { tokenHex } from "../app/tema.js";
 import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { formatarDataHora, dataBRValida, mascaraDataBR } from "../utils/data.js";
 import { ErroApi } from "../api/ApiPainel.js";
@@ -38,7 +36,7 @@ export class SistemasView extends View {
 
   _montarDom() {
     this.container.innerHTML = `
-      <div class="card">
+      <div class="card sistemas-consulta">
         <div class="toolbar sistemas-toolbar">
           <div class="field">
             <label class="field__label" for="sis-filtro">Sistema</label>
@@ -58,7 +56,6 @@ export class SistemasView extends View {
             <button type="button" class="btn btn--small btn--ghost" data-action="limpar-filtros" hidden>Limpar filtros</button>
           </div>
           <div class="toolbar-spacer"></div>
-          <span class="result-count" data-role="count" aria-live="polite"></span>
           <button type="button" class="btn btn--ghost btn--small" data-action="filtros" aria-expanded="false" aria-controls="sis-filtros">Filtros</button>
           <button type="button" class="btn btn--ghost btn--small" data-action="oficiais" aria-expanded="false" aria-controls="sis-oficiais">Versões oficiais</button>
         </div>
@@ -73,30 +70,35 @@ export class SistemasView extends View {
           </div>
           <button type="button" class="btn btn--small btn--ghost" data-action="limpar-data">Limpar data</button>
         </div>
-        <p class="sistemas-referencia" data-role="referencia"></p>
+        <div class="sistemas-resumo">
+          <p class="sistemas-referencia" data-role="referencia"></p>
+          <span class="result-count" data-role="count" aria-live="polite"></span>
+        </div>
         <section id="sis-oficiais" class="sistemas-oficiais" aria-label="Versões oficiais" hidden>
           <div class="sistemas-oficiais__cabecalho">
-            <div><h2>Versões oficiais</h2><p>Novas atualizações recebem a referência vigente. As versões recebidas nas atualizações anteriores permanecem. Deixe o campo vazio para limpar a referência.</p></div>
+            <div><h2>Versões oficiais</h2><p id="sis-oficiais-ajuda">Novas atualizações recebem a referência vigente; as versões recebidas anteriormente permanecem. Use dd/mm/aaaa ou deixe o campo vazio para limpar a referência.</p></div>
             <button type="button" class="btn" data-action="fechar-oficiais">Fechar</button>
           </div>
+          <p class="sistemas-oficiais__retorno" data-role="oficiais-retorno" role="status" aria-live="polite"></p>
           <div data-role="oficiais-lista"></div>
         </section>
-        <div data-role="table"></div>
+        <div class="sistemas-tabela" data-role="table"></div>
       </div>`;
 
     this.table = new TabelaOrdenavel(this.container.querySelector('[data-role="table"]'), {
       ocuparAltura: true,
       columns: [
-        { key: "cliente", label: "Cliente" },
+        { key: "cliente", label: "Cliente", largura: "36%" },
         {
           key: "ultima",
           label: "Última atualização",
           type: "date",
+          largura: "20%",
           // NFCe e Consignado M2 são julgados pela data do B_Vendas (A13):
           // sem a nota, a data parecia de uma atualização que não existe.
           render: (row) => {
             const celula = document.createElement("span");
-            celula.textContent = row.ultima;
+            celula.textContent = row.ultima || "Não registrada";
             if (row.pelaDataDe) {
               const nota = document.createElement("small");
               nota.className = "pela-data";
@@ -106,13 +108,12 @@ export class SistemasView extends View {
             return celula;
           },
         },
-        { key: "situacao", label: "Situação" },
-        { key: "cidade", label: "Cidade" },
+        { key: "situacao", label: "Situação", largura: "24%" },
+        { key: "cidade", label: "Cidade", largura: "20%" },
       ],
       rowKey: (row) => row.cliente,
       caption: "Clientes por sistema",
-      rowStyle: (row) => ({ "--indicador-situacao": situacaoCor(row.situacao) }),
-      rowClass: (row) => row.situacao !== "Sem informação" ? "row--com-situacao" : "",
+      rowClass: (row) => `row--com-situacao ${situacaoClasse(row.situacao)}`,
       onSelect: (row) => this.navigate("consulta", { cliente: row.cliente }),
       emptyNode: () => estadoVazio({
         titulo: "Nenhum cliente para os filtros",
@@ -228,11 +229,12 @@ export class SistemasView extends View {
         <div><strong>${escaparHtml(s.nome)}</strong><span data-role="valor">${escaparHtml(s.data || "Sem referência")}</span>
           <small>${s.alteradaEm ? `Alterada por ${escaparHtml(s.autor || "não informado")} em ${escaparHtml(formatarDataHora(s.alteradaEm))}` : "Autor e data não registrados"}</small></div>
         <div class="sistemas-oficiais__acoes">
-          <input class="input" data-role="edicao" aria-label="Versão oficial de ${escaparHtml(s.nome)}" placeholder="dd/mm/aaaa" inputmode="numeric" hidden />
+          <input class="input" data-role="edicao" aria-label="Versão oficial de ${escaparHtml(s.nome)}" aria-describedby="sis-oficiais-ajuda sis-oficial-erro-${i}" placeholder="dd/mm/aaaa" inputmode="numeric" hidden />
           <button type="button" class="btn" data-action="editar" ${this.user?.role === "consulta" ? "hidden" : ""}>Editar</button>
           <button type="button" class="btn btn--accent" data-action="salvar" hidden>Salvar</button>
           <button type="button" class="btn" data-action="cancelar" hidden>Cancelar</button>
         </div>
+        <p class="sistemas-oficiais__erro" id="sis-oficial-erro-${i}" hidden>Informe uma data válida no formato dd/mm/aaaa.</p>
       </div>`).join("");
     if (this.versoes.length === 0) lista.textContent = "Nenhum sistema atualizável cadastrado.";
   }
@@ -255,15 +257,23 @@ export class SistemasView extends View {
     const data = mascaraDataBR(campo.value.trim());
     if (data && !dataBRValida(data)) {
       campo.setAttribute("aria-invalid", "true");
+      linha.querySelector(".sistemas-oficiais__erro").hidden = false;
       campo.focus();
       return;
     }
+    campo.setAttribute("aria-invalid", "false");
+    linha.querySelector(".sistemas-oficiais__erro").hidden = true;
+    const retorno = this.container.querySelector('[data-role="oficiais-retorno"]');
+    retorno.textContent = `Salvando referência de ${sistema.nome}…`;
     botao.disabled = true;
     try {
       await this.api.put(`/sistemas/${encodeURIComponent(sistema.nome)}/versao`, { data, versaoEsperada: sistema.data || "" });
       this.cache?.invalidar();
       await this.refresh();
+      retorno.textContent = data ? `Referência de ${sistema.nome} salva: ${data}.` : `Referência de ${sistema.nome} removida.`;
+      this.container.querySelector(`[data-index="${linha.dataset.index}"] [data-action="editar"]`)?.focus();
     } catch (err) {
+      retorno.textContent = "";
       if (err.status === 409) {
         this.cache?.invalidar();
         try { await this.refresh(); } catch { /* a mensagem de conflito continua sendo a informação principal */ }
@@ -339,11 +349,11 @@ export class SistemasView extends View {
   }
 }
 
-function situacaoCor(situacao) {
-  if (situacao === "Nunca atualizado") return tokenHex("--severidade-alta");
-  if (situacao === "Desatualizado") return tokenHex("--severidade-alta");
-  if (situacao === "Em dia") return tokenHex("--severidade-boa");
-  return tokenHex("--cor-borda-campo");
+function situacaoClasse(situacao) {
+  if (situacao === "Nunca atualizado" || situacao === "Desatualizado") return "sistemas-situacao--alta";
+  if (situacao === "Em dia") return "sistemas-situacao--boa";
+  if (situacao === "Aguardando atualização") return "sistemas-situacao--atencao";
+  return "sistemas-situacao--neutra";
 }
 
 function mensagemDeErro(err) {
