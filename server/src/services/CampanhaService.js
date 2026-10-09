@@ -41,10 +41,11 @@ class CampanhaService {
    * @param {import('./HistoricoService').HistoricoService} historico
    * @param {import('./AgendamentoService').AgendamentoService} agendamentos
    */
-  constructor(db, historico, agendamentos) {
+  constructor(db, historico, agendamentos, eventos = null) {
     this.db = db;
     this.historico = historico;
     this.agendamentos = agendamentos;
+    this.eventos = eventos;
   }
 
   /** Campanhas com o placar de cada uma (sem a lista de clientes). */
@@ -68,6 +69,7 @@ class CampanhaService {
     const dados = this._validar(input, { nova: true });
     const id = this.db.campanhas.insert({ ...dados, criadaPor: usuario?.nome || "" });
     this.historico.registrar(usuario, "criar", "campanha", `Campanha "${dados.titulo}" (${dados.sistemaNome} ${dados.versaoAlvo})`);
+    this.eventos?.emitir("campanhas:alterado", { id, acao: "criar" });
     return this.detalhe(id);
   }
 
@@ -119,6 +121,7 @@ class CampanhaService {
     );
     this.db.campanhas.update(atual.id, dados);
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${dados.titulo}"`);
+    this.eventos?.emitir("campanhas:alterado", { id: atual.id, acao: "atualizar" });
     return this.detalhe(atual.id);
   }
 
@@ -139,6 +142,7 @@ class CampanhaService {
     const novos = ids.filter((cid) => !jaEstavam.has(cid));
     this.db.campanhas.adicionarClientes(campanha.id, novos);
     if (novos.length > 0) this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${campanha.titulo}": ${novos.length} cliente(s) acrescentado(s)`);
+    this.eventos?.emitir("campanhas:alterado", { id: campanha.id, acao: "adicionar-clientes" });
     return this.detalhe(campanha.id);
   }
 
@@ -158,6 +162,7 @@ class CampanhaService {
     this.db.campanhas.removerCliente(campanha.id, cid);
     const nome = this.db.clientes.obterPorId(cid)?.nome || `#${cid}`;
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${campanha.titulo}": cliente "${nome}" retirado`);
+    this.eventos?.emitir("campanhas:alterado", { id: campanha.id, acao: "remover-cliente" });
     return this.detalhe(campanha.id);
   }
 
@@ -198,6 +203,8 @@ class CampanhaService {
       obs: campanha.prazo ? `Prazo da campanha: ${campanha.prazo}` : "",
     }));
     this.agendamentos.createMany(tarefas, usuario, `Campanha "${campanha.titulo}": ${tarefas.length} tarefa(s) de atualização agendada(s)`);
+    this.eventos?.emitir("campanhas:alterado", { id, acao: "agendar" });
+    this.eventos?.emitir("agendamentos:alterado", { acao: "agendar-campanha" });
     return { criadas: tarefas.length, clientes: pendentes.map((c) => c.nome) };
   }
 
@@ -208,6 +215,7 @@ class CampanhaService {
       throw new ErroDeValidacao("Esta campanha já está encerrada.");
     }
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${titulo}" encerrada com ${atendidos} de ${totalClientes} cliente(s) atualizado(s)`);
+    this.eventos?.emitir("campanhas:alterado", { id, acao: "encerrar" });
     return this.detalhe(id);
   }
 
@@ -215,6 +223,7 @@ class CampanhaService {
     const campanha = this._achar(id);
     if (this.db.campanhas.reabrir(campanha.id) === 0) throw new ErroDeValidacao("Esta campanha não está encerrada.");
     this.historico.registrar(usuario, "atualizar", "campanha", `Campanha "${campanha.titulo}" reaberta`);
+    this.eventos?.emitir("campanhas:alterado", { id: campanha.id, acao: "reabrir" });
     return this.detalhe(campanha.id);
   }
 
@@ -223,6 +232,7 @@ class CampanhaService {
     const campanha = this._achar(id);
     this.db.campanhas.delete(campanha.id);
     this.historico.registrar(usuario, "excluir", "campanha", `Campanha "${campanha.titulo}"`);
+    this.eventos?.emitir("campanhas:alterado", { id: campanha.id, acao: "excluir" });
   }
 
   _achar(id) {

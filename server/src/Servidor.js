@@ -31,6 +31,8 @@ const { PreferenciasController } = require("./controllers/PreferenciasController
 const { ConfiguracaoSistemaController } = require("./controllers/ConfiguracaoSistemaController");
 const { CampanhaService } = require("./services/CampanhaService");
 const { CampanhasController } = require("./controllers/CampanhasController");
+const { EventosService } = require("./services/EventosService");
+const { EventosController } = require("./controllers/EventosController");
 const { SaudeService } = require("./services/SaudeService");
 const { SaudeController } = require("./controllers/SaudeController");
 const { LimitadorDeLogin } = require("./middlewares/LimitadorDeLogin");
@@ -76,6 +78,7 @@ class Servidor {
   }
 
   _montarServicos() {
+    const eventos = new EventosService();
     // "historico" é passado para os demais serviços registrarem quem fez
     // o quê -- ver services/HistoricoService.js.
     const historico = new HistoricoService(this.db);
@@ -84,19 +87,23 @@ class Servidor {
     // Uma vez só, na primeira subida depois de as regras irem para o banco --
     // ver ConfiguracaoSistemaService.importarValoresIniciais.
     configuracaoSistema.importarValoresIniciais(this.config.ambiente || {});
+    configuracaoSistema.aoMudar((mudou) => {
+      eventos.emitir("regras:alterado", { mudou });
+    });
     const notifications = new NotificacaoService({ webhookUrl: () => configuracaoSistema.valor("discordWebhookUrl") });
-    const versoes = new VersaoService(this.db, historico);
+    const versoes = new VersaoService(this.db, historico, eventos);
     const backups = new BackupService(this.db, historico);
-    const agendamentos = new AgendamentoService(this.db, historico, configuracaoSistema);
+    const agendamentos = new AgendamentoService(this.db, historico, configuracaoSistema, eventos);
     this.services = {
+      eventos,
       historico,
       notifications,
       auth: new AuthService(this.db, historico),
       preferencias: new PreferenciaService(this.db),
-      clientes: new ClienteService(this.db, historico),
-      atualizacoes: new AtualizacaoService(this.db, historico, notifications, configuracaoSistema),
+      clientes: new ClienteService(this.db, historico, eventos),
+      atualizacoes: new AtualizacaoService(this.db, historico, notifications, configuracaoSistema, eventos),
       agendamentos,
-      campanhas: new CampanhaService(this.db, historico, agendamentos),
+      campanhas: new CampanhaService(this.db, historico, agendamentos, eventos),
       backups,
       versoes,
       configuracaoSistema,
@@ -105,7 +112,7 @@ class Servidor {
       // abaixo, que ligam e desligam o timer junto com o servidor HTTP.
       // Recebe "configuracaoSistema" para não rodar nenhuma checagem
       // (nem gerar alarme falso) enquanto o Atualizador estiver desativado.
-      alertaAgentes: new AlertaAgenteService(this.db, versoes, notifications, configuracaoSistema),
+      alertaAgentes: new AlertaAgenteService(this.db, versoes, notifications, configuracaoSistema, eventos),
       saude: new SaudeService({ db: this.db, backups, versoes }),
     };
   }
@@ -113,6 +120,7 @@ class Servidor {
   _montarControladores() {
     const s = this.services;
     this.controllers = {
+      eventos: new EventosController(s.eventos),
       auth: new AuthController(s.auth, s.configuracaoSistema),
       clientes: new ClientesController(s.clientes),
       sistemas: new SistemasController(s.clientes),
@@ -295,6 +303,7 @@ class Servidor {
   }
 
   start() {
+    this.services.eventos.iniciar();
     // O intervalo é regra da equipe (minutos, com piso de 1 garantido em
     // config/regrasEquipe.js), lido de novo a cada reprogramação: mudar o
     // intervalo ou o webhook na Administração reinicia o timer na hora, e
@@ -318,6 +327,7 @@ class Servidor {
       });
       const falhou = (err) => {
         this.services.alertaAgentes.stop();
+        this.services.eventos.parar();
         reject(err);
       };
       // Express 5 informa falhas pelo callback e pelo evento error.
@@ -328,6 +338,7 @@ class Servidor {
 
   stop() {
     this.services.alertaAgentes.stop();
+    this.services.eventos.parar();
     // O store de sessoes tem um arquivo SQLite proprio, separado do banco
     // principal -- ele nao fecha junto com `db.close()` do chamador, entao
     // precisa ser fechado aqui, senao o handle sobrevive ao "stop".

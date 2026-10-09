@@ -16,10 +16,11 @@ class AgendamentoService {
    * @param {{valor(nome: string): any}} [regras] ConfiguracaoSistemaService; sem ele
    *   (testes), vale o padrão de config/regrasEquipe.js.
    */
-  constructor(db, historico, regras) {
+  constructor(db, historico, regras, eventos = null) {
     this.db = db;
     this.historico = historico;
     this.regras = regras || { valor: (nome) => REGRAS[nome].padrao };
+    this.eventos = eventos;
   }
 
   /**
@@ -63,6 +64,7 @@ class AgendamentoService {
       throw new ErroNaoEncontrado("Esta tarefa não está arquivada.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${tarefa.tarefa}" desarquivada e reaberta`);
+    this.eventos?.emitir("agendamentos:alterado", { id, acao: "reabrir" });
     return this.db.agendamentos.find(id);
   }
 
@@ -84,6 +86,7 @@ class AgendamentoService {
       throw new ErroNaoEncontrado("Esta tarefa já está arquivada.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${tarefa.tarefa}" arquivada`);
+    this.eventos?.emitir("agendamentos:alterado", { id, acao: "arquivar" });
   }
 
   /** Tarefas pendentes vencidas/vencendo hoje, para o banner de lembrete. */
@@ -95,6 +98,7 @@ class AgendamentoService {
     const dados = this._validar(input);
     this.db.agendamentos.insert(dados);
     this.historico.registrar(usuario, "criar", "agendamento", `Tarefa "${dados.tarefa}"`);
+    this.eventos?.emitir("agendamentos:alterado", { acao: "criar" });
     return dados;
   }
 
@@ -113,6 +117,7 @@ class AgendamentoService {
       for (const dados of lista) this.db.agendamentos.insert(dados);
     });
     this.historico.registrar(usuario, "criar", "agendamento", resumo);
+    this.eventos?.emitir("agendamentos:alterado", { acao: "criar-em-lote", total: lista.length });
     return lista;
   }
 
@@ -139,6 +144,7 @@ class AgendamentoService {
       throw new ErroNaoEncontrado("Esta tarefa não existe mais. Ela pode ter sido excluída por outra pessoa.");
     }
     this.historico.registrar(usuario, "atualizar", "agendamento", `Tarefa "${dados.tarefa}"`, { antes: atual, depois: dados });
+    this.eventos?.emitir("agendamentos:alterado", { id, acao: "atualizar" });
     // Devolve a linha RELIDA, com a `revisao` nova. Devolver só `dados` (sem
     // revisão) fazia o quadro guardar a revisão antiga depois de arrastar um
     // cartão: a mudança seguinte no mesmo cartão -- voltar de "Em Andamento"
@@ -153,6 +159,7 @@ class AgendamentoService {
       throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
     }
     this.historico.registrar(usuario, "excluir", "agendamento", `Tarefa #${id}`, { antes: atual, depois: null });
+    this.eventos?.emitir("agendamentos:alterado", { id, acao: "excluir" });
   }
 
   /** Atalho: marca a tarefa com o ultimo status da lista ("Concluído"). */
@@ -161,6 +168,7 @@ class AgendamentoService {
       throw new ErroNaoEncontrado("Esta tarefa não existe mais.");
     }
     this.historico.registrar(usuario, "marcar_concluida", "agendamento", `Tarefa #${id} concluída`);
+    this.eventos?.emitir("agendamentos:alterado", { id, acao: "concluir" });
   }
 
   _validar(input) {

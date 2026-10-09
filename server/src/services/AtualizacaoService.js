@@ -31,11 +31,12 @@ class AtualizacaoService {
    *   para os testes que não mexem em regra: sem ele, vale o padrão de
    *   config/regrasEquipe.js.
    */
-  constructor(db, historico, notifications, regras) {
+  constructor(db, historico, notifications, regras, eventos = null) {
     this.db = db;
     this.historico = historico;
     this.notifications = notifications;
     this.regras = regras || { valor: (nome) => REGRAS[nome].padrao };
+    this.eventos = eventos;
   }
 
   list(search = "", responsavel = "Todos", paginacao = {}) {
@@ -55,6 +56,7 @@ class AtualizacaoService {
     // Sem "await" de proposito: uma notificacao (ou uma falha nela) nao
     // pode atrasar nem derrubar a resposta HTTP deste cadastro.
     this.notifications?.avisarAtualizacao(dados);
+    this.eventos?.emitir("atualizacoes:alterado", { acao: "criar", cliente: dados.cliente });
     return dados;
   }
 
@@ -88,6 +90,7 @@ class AtualizacaoService {
     }
     this.historico.registrar(usuario, "atualizar", "atualizacao", `Atualização #${id} de "${dados.cliente}"`, { antes, depois: dados });
     this._marcarSuporteBredasSeNecessario(dados, usuario);
+    this.eventos?.emitir("atualizacoes:alterado", { id, acao: "atualizar", cliente: dados.cliente });
     return dados;
   }
 
@@ -121,6 +124,7 @@ class AtualizacaoService {
       throw new ErroNaoEncontrado("Esta atualização não existe mais.");
     }
     this.historico.registrar(usuario, "excluir", "atualizacao", `Atualização #${id}`, { antes: existente, depois: null });
+    this.eventos?.emitir("atualizacoes:alterado", { id, acao: "excluir" });
   }
 
   /**

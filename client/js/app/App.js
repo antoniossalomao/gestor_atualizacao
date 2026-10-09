@@ -118,6 +118,8 @@ export class App {
     this._jaMostradas = new Set();
     /** @type {Map<string, number>} onde cada aba estava rolada quando foi deixada. */
     this._rolagemPorAba = new Map();
+    /** @type {EventSource|null} */
+    this._eventSource = null;
 
     // Um 401 em QUALQUER chamada -- não só no carregamento de aba -- leva de
     // volta ao login. Antes, a sessão expirar durante um "Adicionar" só
@@ -223,6 +225,7 @@ export class App {
       : this.tabsNoMenu[0].key;
     this.router.iniciar(inicial);
     this._carregarNotificacoes();
+    this._iniciarEventosEmTempoReal();
   }
 
   /**
@@ -302,6 +305,81 @@ export class App {
   }
 
   /**
+   * Conecta ao stream de Server-Sent Events (/api/eventos).
+   *
+   * Atualiza automaticamente o sino de notificações, invalida o cache SWR
+   * e recarrega a view ativa em tempo real quando ocorrem mutações no banco
+   * (novos agendamentos, clientes, versões publicadas, campanhas ou retornos de agentes).
+   */
+  _iniciarEventosEmTempoReal() {
+    this._fecharEventosEmTempoReal();
+    if (typeof window === "undefined" || typeof window.EventSource === "undefined") return;
+
+    let debounceTimer = null;
+    const agendarAtualizacao = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        this.cache?.invalidar();
+        this._carregarNotificacoes();
+        if (this.activeTab && this.views.has(this.activeTab)) {
+          const { instance } = this.views.get(this.activeTab);
+          if (instance && typeof instance.refresh === "function") {
+            instance.refresh().catch(() => {});
+          }
+        }
+      }, 350);
+    };
+
+    const es = new EventSource("/api/eventos");
+    this._eventSource = es;
+
+    const eventos = [
+      "clientes:alterado",
+      "atualizacoes:alterado",
+      "agendamentos:alterado",
+      "campanhas:alterado",
+      "versoes:alterado",
+      "agente:status",
+    ];
+
+    for (const nome of eventos) {
+      es.addEventListener(nome, () => agendarAtualizacao());
+    }
+
+    es.addEventListener("agente:log", (e) => {
+      try {
+        const dados = JSON.parse(e.data);
+        if (dados && (dados.status === "ERRO" || dados.status === "FALHA")) {
+          notificacoes.sincronizar([dados]);
+        }
+      } catch {}
+      agendarAtualizacao();
+    });
+
+    es.addEventListener("regras:alterado", () => {
+      this.api
+        .get("/auth/status")
+        .then((s) => {
+          if (s?.regras) Object.assign(this.regras, s.regras);
+        })
+        .catch(() => {});
+      agendarAtualizacao();
+    });
+
+    es.onerror = () => {
+      // EventSource reconecta automaticamente no navegador
+    };
+  }
+
+  _fecharEventosEmTempoReal() {
+    if (this._eventSource) {
+      this._eventSource.close();
+      this._eventSource = null;
+    }
+  }
+
+  /**
    * O título da aba do navegador: `(2) Clientes · Gestor de Atualizações`.
    *
    * O Gestor passa boa parte do dia numa aba de fundo, atrás do ERP e do
@@ -348,6 +426,7 @@ export class App {
 
   /** Descarta views e listeners globais antes de trocar de tela. */
   _desmontar() {
+    this._fecharEventosEmTempoReal();
     for (const { instance } of this.views.values()) instance.destroy?.();
     this.views.clear();
     for (const desligar of this._cleanups) desligar();

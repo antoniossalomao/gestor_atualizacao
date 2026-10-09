@@ -36,9 +36,10 @@ const HORAS_ATE_PENDENTE_DEMORADO = 24;
  * para limpar rascunhos errados e versões velhas que já não interessam.
  */
 class VersaoService {
-  constructor(db, historico) {
+  constructor(db, historico, eventos = null) {
     this.db = db;
     this.historico = historico;
+    this.eventos = eventos;
   }
 
   /**
@@ -115,6 +116,7 @@ class VersaoService {
       "agente",
       `Agente ${agente.empresa || agente.cnpj} (${agente.cnpj}) excluído com ${retornosExcluidos} retorno(s)`
     );
+    this.eventos?.emitir("agente:status", { cnpj: agente.cnpj, removido: true });
     return { ok: true, retornosExcluidos };
   }
 
@@ -136,6 +138,7 @@ class VersaoService {
       "agente",
       `Agente ${agente.empresa || agente.cnpj} (${agente.cnpj}) pausado${motivo ? `: ${motivo}` : ""}`
     );
+    this.eventos?.emitir("agente:status", { cnpj: agente.cnpj, pausado: true });
     return { ok: true };
   }
 
@@ -144,6 +147,7 @@ class VersaoService {
     const agente = this._encontrarAgente(cnpj);
     this.db.versoes.retomarAgente(agente.cnpj);
     this.historico.registrar(usuario, "retomar", "agente", `Agente ${agente.empresa || agente.cnpj} (${agente.cnpj}) retomado`);
+    this.eventos?.emitir("agente:status", { cnpj: agente.cnpj, pausado: false });
     return { ok: true };
   }
 
@@ -261,6 +265,7 @@ class VersaoService {
         criadoPor: usuario?.id || null,
       });
       this.historico.registrar(usuario, "criar", "versao", `Versão ${item.versao} de ${item.sistema} criada`);
+      this.eventos?.emitir("versoes:alterado", { id: item.id, sistema: item.sistema, status: item.status });
       return this._itemPublico(item);
     } catch (err) {
       // Limpeza de arquivo órfão quando qualquer falha ocorre antes da persistência
@@ -282,6 +287,7 @@ class VersaoService {
     if (atual.status === "publicada") throw new ErroDeValidacao("Uma versão publicada não pode ser alterada.");
     const item = this.db.versoes.update(id, this._validar({ ...atual, ...input }));
     this.historico.registrar(usuario, "atualizar", "versao", `Versão ${item.versao} de ${item.sistema} atualizada`, { antes: this._itemPublico(atual), depois: this._itemPublico(item) });
+    this.eventos?.emitir("versoes:alterado", { id: item.id, sistema: item.sistema, status: item.status });
     return this._itemPublico(item);
   }
 
@@ -315,6 +321,7 @@ class VersaoService {
     if (atual.alcance === "piloto") {
       const item = this.db.versoes.publicarPiloto(id, new Date().toISOString());
       this.historico.registrar(usuario, "publicar", "versao", `Versão piloto ${item.versao} de ${item.sistema} publicada para ${JSON.parse(item.codigosClientesJson || "[]").length} clientes`);
+      this.eventos?.emitir("versoes:alterado", { id: item.id, sistema: item.sistema, status: item.status });
       return { versao: this._itemPublico(item), substituidas: [] };
     }
 
@@ -335,6 +342,7 @@ class VersaoService {
         `Versão ${antiga.versao} de ${antiga.sistema} substituída pela ${item.versao}`
       );
     }
+    this.eventos?.emitir("versoes:alterado", { id: item.id, sistema: item.sistema, status: item.status });
     return { versao: this._itemPublico(item), substituidas: anteriores.map((v) => this._itemPublico(v)) };
   }
 
@@ -345,6 +353,7 @@ class VersaoService {
     const anteriores = this.db.versoes.publicadasDoSistemaExceto(atual.sistema, id);
     const item = this.db.versoes.promoverPiloto(id, new Date().toISOString(), anteriores.map((v) => v.id));
     this.historico.registrar(usuario, "publicar", "versao", `Versão piloto ${item.versao} de ${item.sistema} promovida para produção geral`);
+    this.eventos?.emitir("versoes:alterado", { id: item.id, sistema: item.sistema, status: item.status });
     return { versao: this._itemPublico(item), substituidas: anteriores.map((v) => this._itemPublico(v)) };
   }
 
@@ -356,6 +365,7 @@ class VersaoService {
     if (!anterior) throw new ErroDeValidacao("Não há versão anterior disponível para rollback.");
     const restaurada = this.db.versoes.rollback(id, anterior.id, new Date().toISOString());
     this.historico.registrar(usuario, "atualizar", "versao", `Rollback de ${atual.sistema}: ${atual.versao} para ${anterior.versao}`);
+    this.eventos?.emitir("versoes:alterado", { id: restaurada.id, sistema: atual.sistema, status: restaurada.status });
     return { versao: this._itemPublico(restaurada), substituida: this._itemPublico(atual) };
   }
 
@@ -388,6 +398,7 @@ class VersaoService {
       `Versão ${atual.versao} de ${atual.sistema} excluída${eraPublicada ? " (estava publicada -- sistema fica sem versão-alvo)" : ""}`,
       { antes: this._itemPublico(atual), depois: null }
     );
+    this.eventos?.emitir("versoes:alterado", { id, sistema: atual.sistema, status: "excluida" });
     return { ok: true, eraPublicada };
   }
 
@@ -434,7 +445,7 @@ class VersaoService {
     const cnpj = String(input.cnpj || "").trim();
     const status = String(input.status || "").trim().toUpperCase();
     if (!cnpj || !status) throw new ErroDeValidacao("CNPJ e status são obrigatórios.");
-    this.db.versoes.adicionarRegistro({
+    const id = this.db.versoes.adicionarRegistro({
       cnpj,
       hwid: String(input.hwid || "").trim(),
       maquina: String(input.maquina || input.machine || "").trim(),
@@ -446,6 +457,13 @@ class VersaoService {
       status,
       detalhes: String(input.detalhes || input.details || "").trim(),
       criadoEm: new Date().toISOString(),
+    });
+    this.eventos?.emitir("agente:log", {
+      id,
+      cnpj,
+      status,
+      sistema: String(input.sistema || input.system || "").trim(),
+      detalhes: String(input.detalhes || input.details || "").trim(),
     });
     return { ok: true };
   }
