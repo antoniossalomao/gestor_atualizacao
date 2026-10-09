@@ -71,34 +71,44 @@ export function listaCampanhas(campanhas, selecionadaId, { encerradas, podeCriar
 export function cabecalhoCampanha(c, usuario) {
   const podeEditar = usuario?.role !== "consulta";
   const encerrada = Boolean(c.encerradaEm);
+  const podeAgendar = podeEditar && !encerrada && c.pendentes > 0;
   return html`
     <div class="campanha__cabecalho">
       <div class="campanha__identidade">
-        <h2 class="campanha__titulo">${c.titulo} ${marcaPrazo(seloPrazo(c))}</h2>
-        <p class="campanha__meta">
-          <strong>${c.sistema}</strong> na versão <strong>${c.versaoAlvo}</strong> ou mais nova
-          · <strong>${descricaoPublico(c)}</strong>
-        </p>
+        <h2 class="campanha__titulo">${c.titulo}</h2>
         ${c.descricao ? html`<p class="campanha__descricao">${c.descricao}</p>` : ""}
+        <dl class="campanha__dados">
+          <div><dt>Sistema</dt><dd>${c.sistema}</dd></div>
+          <div><dt>Versão-alvo</dt><dd>${c.versaoAlvo} ou mais nova</dd></div>
+          <div><dt>Público</dt><dd>${descricaoPublico(c)}</dd></div>
+          <div><dt>Prazo</dt><dd>${c.prazo || "Sem prazo"}${c.atrasada && !encerrada ? html` <span class="campanha__selo is-alerta">Vencido</span>` : ""}</dd></div>
+        </dl>
       </div>
       <div class="campanha__acoes">
-        ${podeEditar && !encerrada && c.pendentes > 0 ? html`<button type="button" class="btn btn--small btn--accent" data-action="agendar-pendentes">${iconeHtml("calendario")} Agendar pendentes (${c.pendentes})</button>` : ""}
+        ${podeAgendar ? html`<button type="button" class="btn btn--small btn--accent" data-action="agendar-pendentes">${iconeHtml("calendario")} Agendar pendentes (${c.pendentes})</button>` : ""}
+        ${podeEditar && encerrada ? html`<button type="button" class="btn btn--small btn--accent" data-action="reabrir">Reabrir campanha</button>` : ""}
+        ${podeEditar && !encerrada && !podeAgendar ? html`<button type="button" class="btn btn--small" data-action="editar">${iconeHtml("editar")} Editar campanha</button>` : ""}
+        ${podeEditar ? html`<details class="campanha__mais">
+          <summary class="btn btn--small">Mais ações</summary>
+          <div class="campanha__acoes-secundarias">
         ${podeEditar && c.pendentes + c.agendados > 0 ? html`<button type="button" class="btn btn--small" data-action="nova-quem-falta">${iconeHtml("campanhas")} Campanha com quem falta</button>` : ""}
         ${podeEditar && !encerrada && c.publico === "escolhidos" ? html`<button type="button" class="btn btn--small" data-action="adicionar">${iconeHtml("plus")} Adicionar clientes</button>` : ""}
-        ${podeEditar && !encerrada ? html`<button type="button" class="btn btn--small" data-action="editar">${iconeHtml("editar")} Editar</button>` : ""}
-        ${podeEditar ? html`<button type="button" class="btn btn--small" data-action="${encerrada ? "reabrir" : "encerrar"}">${encerrada ? "Reabrir" : "Encerrar"}</button>` : ""}
+        ${podeAgendar ? html`<button type="button" class="btn btn--small" data-action="editar">${iconeHtml("editar")} Editar</button>` : ""}
+        ${!encerrada ? html`<button type="button" class="btn btn--small" data-action="encerrar">Encerrar</button>` : ""}
         ${usuario?.role === "admin" ? html`<button type="button" class="btn btn--small btn--danger" data-action="excluir">${iconeHtml("alerta")} Excluir</button>` : ""}
+          </div>
+        </details>` : ""}
       </div>
     </div>
-    <div class="campanha__progresso">
-      <div class="campanha__numeros">
-        <div class="campanha__pct">${c.percentual == null ? "—" : `${c.percentual}%`} concluído</div>
-        <div class="campanha__numero is-boa"><strong>${c.atendidos}</strong> atualizados</div>
-        ${encerrada ? "" : html`<div class="campanha__numero is-media"><strong>${c.agendados}</strong> já agendados</div>`}
-        <div class="campanha__numero is-alta"><strong>${c.pendentes}</strong> pendentes</div>
+    <div class="campanha__painel">
+      <div class="campanha__placar">
+        <div class="campanha__numero campanha__numero--pct"><strong>${c.percentual == null ? "—" : `${c.percentual}%`}</strong><span>Concluído</span></div>
+        <div class="campanha__numero is-boa"><strong>${c.atendidos}</strong><span>Atualizados</span></div>
+        ${encerrada ? "" : html`<div class="campanha__numero is-media"><strong>${c.agendados}</strong><span>Já agendados</span></div>`}
+        <div class="campanha__numero is-alta"><strong>${c.pendentes}</strong><span>Pendentes</span></div>
       </div>
       ${barraProgresso(c)}
-      <p class="campanha__nota" style="margin-top: var(--sp-2); font-size: var(--txt-sm); color: var(--cor-texto-sub);">${encerrada
+      <p class="campanha__nota">${encerrada
       ? `Encerrada em ${new Date(c.encerradaEm).toLocaleDateString("pt-BR")}${c.encerradaPor ? ` por ${c.encerradaPor}` : ""}: o placar acima é o do encerramento.`
       : "A baixa é automática: registre a atualização em Atualizações e o cliente sai dos pendentes. Uma versão oficial nova em Sistemas não muda a meta."}</p>
     </div>`;
@@ -131,9 +141,9 @@ export function celulaUltimaCampanha(row) {
 export function celulaSituacaoCampanha(row) {
   const s = SITUACAO_CAMPANHA[row.situacao] || { rotulo: row.situacao, severidade: "media" };
   const detalhe = row.situacao === "agendado" && row.agendamento
-    ? ` — ${row.agendamento.data || "sem data"}${row.agendamento.responsavel ? `, ${row.agendamento.responsavel}` : ""}`
+    ? `${row.agendamento.data || "sem data"}${row.agendamento.responsavel ? ` · ${row.agendamento.responsavel}` : ""}`
     : "";
-  return html`<span class="campanha__situacao is-${s.severidade}"><span class="situacao__marca" aria-hidden="true"></span>${s.rotulo}${detalhe}</span>`;
+  return html`<span class="campanha__situacao is-${s.severidade}"><span class="situacao__marca" aria-hidden="true"></span>${s.rotulo}</span>${detalhe ? html`<small class="campanha__agendamento">${detalhe}</small>` : ""}`;
 }
 
 /**

@@ -26,6 +26,7 @@ import {
   contagemClientes,
 } from "../templates/campanhas.js";
 import { AcessosModal } from "./AcessosModal.js";
+import { cabecalhoSecao } from "../templates/secao.js";
 
 /**
  * Aba Campanhas (E11): metas temporárias de versão -- "todo cliente de B_NFe
@@ -57,11 +58,15 @@ export class CampanhasView extends View {
     this.container.innerHTML = String(html`
       <div class="card campanhas">
         <div class="campanhas__topo">
+          ${cabecalhoSecao({
+            titulo: "Metas de atualização",
+            descricao: "Acompanhe o público, o prazo e quem ainda precisa receber a versão-alvo.",
+            acoes: podeCriar ? html`<button type="button" class="btn btn--accent" data-action="nova">${iconeHtml("plus")} Nova campanha</button>` : null,
+          })}
           <div class="campanhas__alternar" role="group" aria-label="Campanhas exibidas">
             <button type="button" class="filtro-rapido" data-lista="ativas">Ativas</button>
             <button type="button" class="filtro-rapido" data-lista="encerradas">Encerradas</button>
           </div>
-          ${podeCriar ? html`<button type="button" class="btn btn--accent btn--small" data-action="nova">${iconeHtml("plus")} Nova campanha</button>` : ""}
         </div>
         <div class="campanhas__grade">
           <nav class="campanhas__lista" data-role="lista" aria-label="Campanhas"></nav>
@@ -87,13 +92,13 @@ export class CampanhasView extends View {
     this.table = new TabelaOrdenavel(this.tableEl, {
       // Ao lado da lista de campanhas não cabem sete colunas: código e
       // cidade vão embaixo do nome, a versão recebida embaixo da data (a
-      // busca continua com tudo). Só as colunas curtas têm
-      // largura fixa; o nome fica com o resto.
+      // busca continua com tudo). Larguras proporcionais reservam espaço
+      // para o nome; as ações podem quebrar dentro da própria célula.
       columns: [
-        { key: "nome", label: "Cliente", title: (row) => row.nome, render: (row) => no(celulaClienteCampanha(row)) },
-        { key: "ultima", label: "Última atualização", type: "date", largura: "150px", render: (row) => no(celulaUltimaCampanha(row)) },
-        { key: "situacao", label: "Situação", largura: "170px", render: (row) => no(celulaSituacaoCampanha(row)) },
-        { key: "acoes", label: "Ações", largura: "152px", render: (row) => no(acoesClienteCampanha(row, { role: this.user?.role, encerrada: Boolean(this.detalhe?.encerradaEm), podeRetirar: this.detalhe?.publico === "escolhidos" && this.detalhe.clientes.length > 1 })) },
+        { key: "nome", label: "Cliente", largura: "32%", title: (row) => row.nome, render: (row) => no(celulaClienteCampanha(row)) },
+        { key: "ultima", label: "Última atualização", type: "date", largura: "23%", render: (row) => no(celulaUltimaCampanha(row)) },
+        { key: "situacao", label: "Situação", largura: "27%", render: (row) => no(celulaSituacaoCampanha(row)) },
+        { key: "acoes", label: "Ações", largura: "18%", render: (row) => no(acoesClienteCampanha(row, { role: this.user?.role, encerrada: Boolean(this.detalhe?.encerradaEm), podeRetirar: this.detalhe?.publico === "escolhidos" && this.detalhe.clientes.length > 1 })) },
       ],
       rowKey: (row) => row.id,
       caption: "Clientes da campanha",

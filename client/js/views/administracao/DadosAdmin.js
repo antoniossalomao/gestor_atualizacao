@@ -59,7 +59,7 @@ export class DadosAdmin extends View {
         <section class="card secao-card">
           ${tituloCartao({
             titulo: "Conferência de cadastros",
-            descricao: "O que fica fora da conta de situação sem ninguém perceber.",
+            descricao: "Clientes sem sistemas e sistemas sem referência oficial: confira o que fica fora da avaliação de versões.",
           })}
           <div class="cfg-linhas" data-role="conferencia">
             <p class="text-muted admin-conferencia__carregando">Conferindo…</p>

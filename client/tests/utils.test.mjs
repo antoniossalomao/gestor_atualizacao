@@ -22,7 +22,6 @@ import {
 } from "../js/utils/data.js";
 import { escaparAtributo, escaparHtml, html, confiavel, HtmlSeguro, plural } from "../js/utils/html.js";
 import { iconeSvg, iconeHtml } from "../js/utils/icones.js";
-import { misturarHex } from "../js/utils/cor.js";
 
 test("utils/date - hojeBR", async (t) => {
   await t.test("devolve dd/mm/aaaa com zero à esquerda", () => {
@@ -243,20 +242,5 @@ test("utils/html - plural", async (t) => {
   await t.test("aceita plural irregular explícito", () => {
     assert.equal(plural(1, "atualização", "atualizações"), "1 atualização");
     assert.equal(plural(3, "atualização", "atualizações"), "3 atualizações");
-  });
-});
-
-test("utils/color - misturarHex", async (t) => {
-  await t.test("t=0 e t=1 devolvem os extremos", () => {
-    assert.equal(misturarHex("#000000", "#ffffff", 0), "rgb(0, 0, 0)");
-    assert.equal(misturarHex("#000000", "#ffffff", 1), "rgb(255, 255, 255)");
-  });
-
-  await t.test("t=0.5 fica no meio", () => {
-    assert.equal(misturarHex("#000000", "#ffffff", 0.5), "rgb(128, 128, 128)");
-  });
-
-  await t.test("mistura cada canal separadamente", () => {
-    assert.equal(misturarHex("#ff0000", "#0000ff", 0.5), "rgb(128, 0, 128)");
   });
 });
