@@ -20,11 +20,12 @@ class AlertaAgenteService {
    * @param {import('./NotificacaoService').NotificacaoService} notifications
    * @param {import('./ConfiguracaoSistemaService').ConfiguracaoSistemaService} configuracaoSistema
    */
-  constructor(db, versaoService, notifications, configuracaoSistema) {
+  constructor(db, versaoService, notifications, configuracaoSistema, eventos = null) {
     this.db = db;
     this.versaoService = versaoService;
     this.notifications = notifications;
     this.configuracaoSistema = configuracaoSistema;
+    this.eventos = eventos;
     this.timer = null;
   }
 
@@ -51,6 +52,7 @@ class AlertaAgenteService {
               detalhe: agente.ultimoDetalhe,
             });
             this.db.versoes.marcarSituacaoAlertada(agente.cnpj, atual);
+            this.eventos?.emitir("agente:status", { cnpj: agente.cnpj, situacao: atual });
           }
           // atual === estadoAnterior: mesmo problema de antes, nao repete aviso.
         } else if (estadoAnterior) {
@@ -59,6 +61,7 @@ class AlertaAgenteService {
           // suficiente pra avisar que o agente voltou a se comunicar).
           await this.notifications.avisarSituacaoDoAgente({ empresa: agente.empresa, situacao: atual });
           this.db.versoes.limparSituacaoAlertada(agente.cnpj);
+          this.eventos?.emitir("agente:status", { cnpj: agente.cnpj, situacao: atual, normalizado: true });
         }
       }
     } catch (err) {

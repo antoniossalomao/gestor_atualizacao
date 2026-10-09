@@ -24,6 +24,10 @@ class ClientesController {
     res.json(this.clienteService.opcoesPorCodigo());
   };
 
+  proximoCodigo = (_req, res) => {
+    res.json({ codigo: this.clienteService.proximoCodigo() });
+  };
+
   grupos = (req, res) => {
     res.json(this.clienteService.grupos());
   };

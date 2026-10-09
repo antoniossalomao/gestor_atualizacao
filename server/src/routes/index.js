@@ -117,6 +117,7 @@ class ApiRouter {
       historico,
       usuarios,
       versoes,
+      eventos,
       preferencias,
       configuracaoSistema,
       saude,
@@ -124,6 +125,9 @@ class ApiRouter {
     } = this.controllers;
     const api = express.Router();
     api.use(exigirLogin);
+
+    // Streaming em tempo real (Server-Sent Events) para sessões ativas
+    api.get("/eventos", eventos.stream);
 
     // Saúde operacional e diagnóstico do sistema (exclusivo Administrador)
     api.get("/saude", exigirPapel("admin"), saude.get);
@@ -146,6 +150,7 @@ class ApiRouter {
     api.get("/clientes/names", clientes.names);
     api.get("/clientes/sem-sistema", exigirPapel("admin"), clientes.semSistema);
     api.get("/clientes/opcoes-por-codigo", clientes.opcoesPorCodigo);
+    api.get("/clientes/proximo-codigo", clientes.proximoCodigo);
     api.get("/clientes/grupos", clientes.grupos);
     api.get("/clientes/cidades", clientes.cidades);
     api.get("/clientes/by-nome/:nome", clientes.obterPorNome);

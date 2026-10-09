@@ -340,3 +340,41 @@ test("ClienteService - clientes sem nenhum sistema (Administração › Dados)",
     env.cleanup();
   }
 });
+
+test("ClienteService - geração e unicidade de código do cliente", () => {
+  const env = ambiente();
+  try {
+    // 1. Banco sem clientes com código gera C000001
+    assert.equal(env.service.proximoCodigo(), "C000001");
+
+    // 2. Cliente criado com autoCodigo gera C000001
+    const c1 = env.service.create({ nome: "Cliente 1", autoCodigo: true }, USUARIO);
+    assert.equal(c1.codigo, "C000001");
+
+    // 3. Próximo agora é C000002
+    assert.equal(env.service.proximoCodigo(), "C000002");
+
+    // 4. Cadastra cliente com código C000374 manual
+    env.service.create({ nome: "Cliente 374", codigo: "C000374" }, USUARIO);
+    // Próximo deve ser C000375
+    assert.equal(env.service.proximoCodigo(), "C000375");
+
+    // 5. Tentativa de cadastrar código duplicado (mesmo case-insensitive) é recusada
+    assert.throws(
+      () => env.service.create({ nome: "Cliente Duplicado", codigo: "c000374" }, USUARIO),
+      /Já existe um cliente com o código/
+    );
+
+    // 6. Atualizar para código já existente de outro cliente é recusado
+    assert.throws(
+      () => env.service.update(c1.id, { nome: c1.nome, codigo: "C000374", revisao: c1.revisao }, USUARIO),
+      /Já existe um cliente com o código/
+    );
+
+    // 7. Atualizar mantendo o próprio código é aceito
+    const atualizado = env.service.update(c1.id, { nome: "Cliente 1 Renomeado", codigo: "C000001", revisao: c1.revisao }, USUARIO);
+    assert.equal(atualizado.codigo, "C000001");
+  } finally {
+    env.cleanup();
+  }
+});

@@ -60,6 +60,48 @@ class ClienteRepository extends BaseRepository {
       .map((row) => row.codigo);
   }
 
+  /**
+   * Calcula o próximo código sequencial no padrão C + 6 dígitos (ex: C000123).
+   * Varre os códigos existentes com formato numérico ou C + dígitos e incrementa o maior.
+   */
+  proximoCodigo() {
+    const rows = this._preparado(
+      "SELECT codigo FROM clientes WHERE codigo IS NOT NULL AND trim(codigo) != ''"
+    ).all();
+    let maiorNumero = 0;
+    for (const { codigo } of rows) {
+      const match = String(codigo || "").trim().match(/^[Cc]?(\d+)$/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (!isNaN(num) && num > maiorNumero) {
+          maiorNumero = num;
+        }
+      }
+    }
+    const proximo = maiorNumero + 1;
+    return `C${String(proximo).padStart(6, "0")}`;
+  }
+
+  /**
+   * Verifica se já existe um cliente cadastrado com este código.
+   * @param {string} codigo
+   * @param {number|null} [excludeId]
+   */
+  codigoExiste(codigo, excludeId = null) {
+    const limpo = String(codigo || "").trim();
+    if (!limpo) return false;
+    if (excludeId != null) {
+      const row = this._preparado(
+        "SELECT COUNT(*) AS total FROM clientes WHERE lower(trim(codigo)) = lower(?) AND id != ?"
+      ).get(limpo, excludeId);
+      return row.total > 0;
+    }
+    const row = this._preparado(
+      "SELECT COUNT(*) AS total FROM clientes WHERE lower(trim(codigo)) = lower(?)"
+    ).get(limpo);
+    return row.total > 0;
+  }
+
   /** Nomes de grupo/rede já usados, para sugestão de autocompletar (mesmo padrão de "names"). */
   grupos() {
     return this

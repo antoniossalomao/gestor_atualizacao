@@ -12,9 +12,10 @@ class ClienteService {
    * @param {import("../database/BancoDeDados").BancoDeDados} db
    * @param {import('./HistoricoService').HistoricoService} historico
    */
-  constructor(db, historico) {
+  constructor(db, historico, eventos = null) {
     this.db = db;
     this.historico = historico;
+    this.eventos = eventos;
   }
 
   /** @param {{page?: number, pageSize?: number}} paginacao */
@@ -40,6 +41,10 @@ class ClienteService {
     return this.db.clientes.opcoesPorCodigo();
   }
 
+  proximoCodigo() {
+    return this.db.clientes.proximoCodigo();
+  }
+
   /** Grupos/redes já cadastrados, para autocompletar do campo "Grupo/rede". */
   grupos() {
     return this.db.clientes.grupos();
@@ -62,19 +67,26 @@ class ClienteService {
   }
 
   /**
-   * @param {{codigo?: string, nome: string, cidade?: string, sistemas?: string[]}} input
+   * @param {{codigo?: string, autoCodigo?: boolean, nome: string, cidade?: string, sistemas?: string[]}} input
    * @param {{id:number, nome:string}|null} usuario quem está fazendo a ação (para o histórico)
    */
   create(input, usuario) {
-    const { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validar(input);
+    let { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validar(input);
     // Bloqueia nome duplicado ANTES de inserir: dois clientes com o mesmo
     // nome seriam indistinguiveis nas telas que listam por nome, e o vinculo
     // de uma atualização digitada pelo nome escolheria um deles as cegas.
     if (this.db.clientes.nomeExiste(nome)) {
       throw new ErroDeValidacao(`Já existe um cliente chamado '${nome}'.`);
     }
+    if (!codigo && input.autoCodigo) {
+      codigo = this.db.clientes.proximoCodigo();
+    }
+    if (codigo && this.db.clientes.codigoExiste(codigo)) {
+      throw new ErroDeValidacao(`Já existe um cliente com o código '${codigo}'.`);
+    }
     const id = this.db.clientes.insert(codigo, nome, cidade, this._idsDosSistemas(sistemas), grupo, regimeTributario);
-    this.historico.registrar(usuario, "criar", "cliente", `Cliente "${nome}"`);
+    this.historico.registrar(usuario, "criar", "cliente", `Cliente "${nome}"${codigo ? ` (código ${codigo})` : ""}`);
+    this.eventos?.emitir("clientes:alterado", { id, acao: "criar", nome });
     return paraClienteDto(this.db.clientes.obterPorId(id), this.db.atualizacoes.maquinasDoCliente(id));
   }
 
@@ -84,6 +96,9 @@ class ClienteService {
     const { nome, codigo, cidade, sistemas, grupo, regimeTributario } = this._validar(input);
     if (this.db.clientes.nomeExiste(nome, id)) {
       throw new ErroDeValidacao(`Já existe um cliente chamado '${nome}'.`);
+    }
+    if (codigo && this.db.clientes.codigoExiste(codigo, id)) {
+      throw new ErroDeValidacao(`Já existe um cliente com o código '${codigo}'.`);
     }
     // O nome copiado nas atualizações/agendamentos ligados acompanha o
     // rename dentro de ClienteRepository.update.
@@ -97,6 +112,7 @@ class ClienteService {
       existente.nome !== nome ? `Cliente "${existente.nome}" renomeado para "${nome}"` : `Cliente "${nome}"`;
     const depois = this.db.clientes.obterPorId(id);
     this.historico.registrar(usuario, "atualizar", "cliente", descricao, { antes: paraClienteDto(existente), depois: paraClienteDto(depois) });
+    this.eventos?.emitir("clientes:alterado", { id, acao: "atualizar", nome });
     return paraClienteDto(this.db.clientes.obterPorId(id), this.db.atualizacoes.maquinasDoCliente(id));
   }
 
@@ -110,6 +126,7 @@ class ClienteService {
     if (!existente) throw new ErroNaoEncontrado("Cliente não encontrado.");
     this.db.clientes.delete(id);
     this.historico.registrar(usuario, "excluir", "cliente", `Cliente "${existente.nome}"`, { antes: paraClienteDto(existente), depois: null });
+    this.eventos?.emitir("clientes:alterado", { id, acao: "excluir" });
   }
 
   /**
@@ -130,6 +147,7 @@ class ClienteService {
     const excluidos = this.db.clientes.excluirVarios(registros.map((r) => r.id));
     const nomes = registros.slice(0, 3).map((r) => r.nome).join(", ") + (registros.length > 3 ? ` e mais ${registros.length - 3}` : "");
     this.historico.registrar(usuario, "excluir", "cliente", `${excluidos} clientes excluídos de uma vez (${nomes})`);
+    this.eventos?.emitir("clientes:alterado", { acao: "excluir-lote", total: excluidos });
     return { excluidos };
   }
 
@@ -150,6 +168,7 @@ class ClienteService {
     if (afetados > 0) {
       const nomes = registros.slice(0, 3).map((r) => r.nome).join(", ") + (registros.length > 3 ? ` e mais ${registros.length - 3}` : "");
       this.historico.registrar(usuario, "atualizar", "cliente", `Sistema "${limpo}" adicionado a ${afetados} cliente(s) de uma vez (${nomes})`);
+      this.eventos?.emitir("clientes:alterado", { acao: "sistema-lote", afetados });
     }
     return { afetados, total: registros.length };
   }

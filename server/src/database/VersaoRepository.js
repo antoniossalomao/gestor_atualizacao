@@ -290,12 +290,13 @@ class VersaoRepository extends BaseRepository {
   }
 
   adicionarRegistro(data) {
-    this
+    const info = this
       ._preparado(
         `INSERT INTO atualizador_logs (cnpj, hwid, maquina, sistema, versao, versao_anterior, duracao_ms, fase, status, detalhes, criado_em)
          VALUES (@cnpj, @hwid, @maquina, @sistema, @versao, @versaoAnterior, @duracaoMs, @fase, @status, @detalhes, @criadoEm)`
       )
       .run(data);
+    return info.lastInsertRowid;
   }
 
   /**

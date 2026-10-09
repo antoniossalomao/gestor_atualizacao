@@ -51,6 +51,7 @@ export class ClientesView extends View {
   aplicarParams({ novo } = {}) {
     if (!novo || this.user?.role === "consulta") return;
     this.limparFormulario();
+    this._preencherProximoCodigo();
     this.drawer?.abrir({ foco: this.fields.nome });
   }
 
@@ -59,7 +60,13 @@ export class ClientesView extends View {
       <form class="card" id="clientes-form" data-role="form-card" hidden novalidate>
         <div class="form-grid form-grid--3">
           <div class="field field--full"><label class="field__label" for="cli-nome">Cliente</label><input type="text" class="input" id="cli-nome" data-field="nome" required /></div>
-          <div class="field"><label class="field__label" for="cli-codigo">Código</label><input type="text" class="input" id="cli-codigo" data-field="codigo" /></div>
+          <div class="field">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;">
+              <label class="field__label" for="cli-codigo">Código</label>
+              <button type="button" class="btn-link" data-action="gerar-codigo" style="font-size:var(--txt-xs);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;color:var(--cor-destaque);" title="Sugerir próximo código sequencial">Sugerir código</button>
+            </div>
+            <input type="text" class="input" id="cli-codigo" data-field="codigo" placeholder="ex.: C000123" />
+          </div>
           <div class="field"><label class="field__label" for="cli-cidade">Cidade</label><input type="text" class="input" id="cli-cidade" data-field="cidade" /></div>
           <div class="field"><label class="field__label" for="cli-regime">Regime tributário</label><input type="text" class="input" id="cli-regime" data-field="regimeTributario" maxlength="100" placeholder="Opcional" /></div>
           <div class="field">
@@ -276,19 +283,44 @@ export class ClientesView extends View {
       if (hint) hint.hidden = true;
     }
 
+    this.container.querySelector('[data-action="gerar-codigo"]')?.addEventListener("click", () => {
+      this._preencherProximoCodigo(true);
+    });
+
     this.botaoLimparFiltros.hidden = !this.busca;
     this.limparFormulario();
+  }
+
+  /**
+   * Sugere e preenche o próximo código sequencial de cliente no padrão C+6 dígitos.
+   * @param {boolean} [forcar]
+   */
+  async _preencherProximoCodigo(forcar = false) {
+    if (!forcar && (this.selectedId != null || (this.fields?.codigo && this.fields.codigo.value.trim()))) return;
+    try {
+      const res = await this.api.get("/clientes/proximo-codigo");
+      if (res?.codigo && (forcar || !this.fields.codigo.value.trim())) {
+        this.fields.codigo.value = res.codigo;
+      }
+    } catch {
+      /* em caso de falha de rede/offline, mantém sem preenchimento */
+    }
   }
 
   /** @param {boolean} [forcarAberto] */
   alternarFormulario(forcarAberto) {
     if (forcarAberto === true) {
+      if (this.selectedId == null) this._preencherProximoCodigo();
       this.drawer.abrir({ foco: this.fields.nome });
     } else if (forcarAberto === false) {
       this.drawer.fechar();
     } else {
-      if (this.drawer.aberta) this.drawer.fechar();
-      else this.drawer.abrir({ foco: this.fields.nome });
+      if (this.drawer.aberta) {
+        this.drawer.fechar();
+      } else {
+        if (this.selectedId == null) this._preencherProximoCodigo();
+        this.drawer.abrir({ foco: this.fields.nome });
+      }
     }
   }
 
