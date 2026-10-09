@@ -2634,7 +2634,7 @@ table.data-table {
 }
 .cfg-corpo--com-previa {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
   gap: var(--sp-4);
   align-items: start;
 }
@@ -2689,11 +2689,16 @@ table.data-table {
 /* -- Regras da equipe: o número grande, o que ele faz embaixo -- */
 .cfg-regras {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--sp-3);
   margin: var(--sp-4) 0 var(--sp-4);
   padding: 0;
   list-style: none;
+}
+@media (min-width: 1440px) {
+  .cfg-regras {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 .cfg-regra {
   display: flex;
@@ -2744,8 +2749,9 @@ table.data-table {
 }
 .cfg-escopo__lado {
   padding: var(--sp-4);
+  border: 1px solid var(--cor-borda);
   border-radius: var(--raio);
-  background: var(--cor-fundo-alt);
+  background: var(--cor-superficie);
 }
 .cfg-escopo__cabeca {
   display: flex;
@@ -2834,7 +2840,7 @@ table.data-table {
    diferentes, e uma grade deixaria buracos ao lado dos curtos. */
 .cfg-cartoes--colunas {
   display: block;
-  columns: 2 520px;
+  columns: 2 460px;
   column-gap: var(--sp-4);
 }
 .cfg-cartoes--colunas > .cfg-cartao {
@@ -2856,7 +2862,7 @@ table.data-table {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: var(--sp-4);
+  gap: var(--sp-3) var(--sp-4);
   padding: var(--sp-4) 0;
   border-bottom: 1px solid var(--cor-borda);
 }
@@ -2882,7 +2888,7 @@ table.data-table {
 }
 @media (min-width: 761px) {
   .cfg-group__labels {
-    flex: 1 1 16rem;
+    flex: 1 1 14rem;
   }
   .cfg-group--largo > .cfg-group__labels {
     flex: initial;
@@ -3077,8 +3083,13 @@ table.data-table {
  */
 .cfg-perfis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: var(--sp-3);
+}
+@media (min-width: 1200px) {
+  .cfg-perfis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .cfg-perfil {
@@ -3538,6 +3549,10 @@ table.data-table {
   align-items: end;
   gap: var(--sp-4);
   padding: var(--sp-4) 0 var(--sp-2);
+}
+.cfg-senha__botao {
+  height: 38px;
+  white-space: nowrap;
 }
 /* O aviso ("as duas senhas não são iguais") ocupa a linha só quando existe. */
 .cfg-senha__estado {

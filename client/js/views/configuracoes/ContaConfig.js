@@ -56,7 +56,7 @@ export class ContaConfig {
   _desenhar() {
     this.container.innerHTML = html`
       ${cabecalhoSecao({
-        titulo: "Conta",
+        titulo: "Minha conta",
         descricao: "Quem você é no Gestor, a sua senha e em que aparelhos a sua conta está aberta.",
       })}
       <div class="cfg-cartoes">

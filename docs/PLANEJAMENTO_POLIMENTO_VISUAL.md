@@ -1,6 +1,6 @@
 # Planejamento de polimento visual do painel
 
-Data: 08/10/2026. Atualizado em 09/10/2026. Status: etapas 1 a 4 implementadas, com validação e ressalvas registradas abaixo.
+Data: 08/10/2026. Atualizado em 09/10/2026. Status: etapas 1 a 5 implementadas, com validação e ressalvas registradas abaixo.
 
 Escopo: Sistemas, Campanhas, Administração e Configurações, exclusivamente em desktop. Referência visual: Configurações → Sobre e ajuda.
 
@@ -149,18 +149,18 @@ Prioridade: alta. Dependência: etapa 1; aproveitar os ajustes compartilhados j�
 
 Preservar as abas atuais e organizar cada cartão em assunto, finalidade breve e ajustes. Reduzir a competição entre o título do cartão, os nomes dos campos e os controles. Manter próximo ao controle o texto necessário para escolher bem.
 
-- [ ] Revisar todas as abas atuais: Minha conta, Trabalho diário, Notificações, Interface e acessibilidade, Regras da equipe e Sobre e ajuda.
-- [ ] Diferenciar visualmente título da seção, título de cartão, rótulo do ajuste e explicação.
-- [ ] Reduzir títulos repetidos quando o cartão e o campo comunicarem exatamente o mesmo assunto.
-- [ ] Encurtar descrições vagas ou repetitivas, preservando efeitos, limites e informações úteis.
-- [ ] Alinhar campos, interruptores, seletores e opções, acomodando as larguras de desktop e a fonte ampliada.
-- [ ] Usar agrupamentos por finalidade e separadores leves; evitar fragmentar cada ajuste em um cartão isolado.
-- [ ] Organizar Perfil rápido, tema, contraste e prévia para que a prévia complemente os ajustes sem comprimi-los.
-- [ ] Manter busca, destaque do resultado, contadores por aba e indicação de ajuste alterado.
-- [ ] Preservar restauração por seção, exportação/importação de preferências e aplicação imediata dos ajustes pessoais.
-- [ ] Deixar explícito quando algo vale só para a pessoa e quando é uma regra da equipe.
-- [ ] Polir conta, senha e sessões sem perder orientação ou ações existentes.
-- [ ] Preservar a estrutura de Sobre e ajuda, adaptando apenas o necessário para consistência.
+- [x] Revisar todas as abas atuais: Minha conta, Trabalho diário, Notificações, Interface e acessibilidade, Regras da equipe e Sobre e ajuda.
+- [x] Diferenciar visualmente título da seção, título de cartão, rótulo do ajuste e explicação.
+- [x] Reduzir títulos repetidos quando o cartão e o campo comunicarem exatamente o mesmo assunto.
+- [x] Encurtar descrições vagas ou repetitivas, preservando efeitos, limites e informações úteis.
+- [x] Alinhar campos, interruptores, seletores e opções, acomodando as larguras de desktop e a fonte ampliada.
+- [x] Usar agrupamentos por finalidade e separadores leves; evitar fragmentar cada ajuste em um cartão isolado.
+- [x] Organizar Perfil rápido, tema, contraste e prévia para que a prévia complemente os ajustes sem comprimi-los.
+- [x] Manter busca, destaque do resultado, contadores por aba e indicação de ajuste alterado.
+- [x] Preservar restauração por seção, exportação/importação de preferências e aplicação imediata dos ajustes pessoais.
+- [x] Deixar explícito quando algo vale só para a pessoa e quando é uma regra da equipe.
+- [x] Polir conta, senha e sessões sem perder orientação ou ações existentes.
+- [x] Preservar a estrutura de Sobre e ajuda, adaptando apenas o necessário para consistência.
 
 Aceite: é possível identificar o assunto de um cartão antes de ler seus campos; o texto explica a consequência do ajuste; controles não comprimem descrições; busca e preferências continuam funcionando.
 
@@ -259,4 +259,30 @@ Backups conserva política, cópias e confirmação de restauração, acomodando
 
 **Verificação técnica:** `npm run check`, `npm test` (639 testes de servidor e 536 de cliente) e `git diff --check` passaram.
 
-**Limites e sequência:** nenhuma alteração em banco real, API, regras de negócio ou publicação. A importação completa e a restauração efetiva não foram repetidas no navegador nesta etapa; foram conferidas suas entradas e cancelamento, além dos testes existentes. A ressalva anterior sobre o cabeçalho geral com nome longo em 1280px permanece fora deste ajuste. A etapa 5 segue pendente.
+**Limites e sequência:** nenhuma alteração em banco real, API, regras de negócio ou publicação. A importação completa e a restauração efetiva não foram repetidas no navegador nesta etapa; foram conferidas suas entradas e cancelamento, além dos testes existentes. A ressalva anterior sobre o cabeçalho geral com nome longo em 1280px permanece fora deste ajuste. A etapa 5 foi executada depois, conforme o registro abaixo.
+
+## 14. Registro da execução — etapa 5 (09/10/2026)
+
+**Hierarquia e organização dos controles:**
+- **Minha conta:** cabeçalho da seção alinhado para "Minha conta" (em harmonia com a aba e os índices de navegação). Botão "Alterar senha" alinhado em altura (38px, `cfg-senha__botao`) com os inputs de senha. Espaçamento e tipografia de sessões ativas e identificação polidos sem alterar ações.
+- **Notificações:** reorganização de 6 cartões fragmentados para 4 cartões coesos por finalidade: "Avisos na tela" (agrupando notificações do sistema e controle de sino/pendências na aba), "Sons e períodos de silêncio" (reunindo feedback sonoro e horários silenciosos), "Sincronização em segundo plano" e "Testar notificações". Títulos e descrições foram encurtados, eliminando redundâncias entre cartão e campo.
+- **Interface e acessibilidade:** a distribuição de colunas do layout com prévia (`.cfg-corpo--com-previa`) foi calibrada para reservar `minmax(320px, 380px)` para o painel de prévia, assegurando que os rótulos de tema, densidade e contraste tenham largura suficiente no desktop sem quebras forçadas. O seletor de "Perfil rápido" (`.cfg-perfis`) foi estruturado em 4 colunas homogêneas no desktop, evitando cartão órfão. As seções de "Texto e tabelas" (tamanho de fonte, fonte monoespaçada e zebra) e "Orientação e foco" (indicadores e foco realçado) receberam textos explicativos precisos e alinhamento lateral dos controles segmentados.
+- **Regras da equipe:** cabeçalho de escopo com superfície e contraste destacados para explicitar a distinção entre regra global e preferências individuais. A grade de cartões de regras (`.cfg-regras`) foi equilibrada em 2×2 colunas no desktop (e 4 colunas em telas muito largas), acomodando unidades de tempo e descrições sem truncamento.
+- **Trabalho diário:** descrições de tela inicial e densidade de listagem sintetizadas para evidenciar seu impacto prático.
+- **Sobre e ajuda:** estrutura e conteúdo inteiramente preservados como referência estável do sistema.
+
+**Validação visual e funcional:**
+- **Inspeção no Edge headless:** servidor local e banco descartável com dados realistas. Avaliadas 108 combinações de desktop (1280px, 1440px e 1920px × temas claro/escuro × densidades padrão/compacta/confortável e fontes ampliadas) em todas as 6 abas de Configurações.
+- **Métricas:** zero problemas de sobreposição ou truncamento nos componentes internos das abas (`issues: []`); `panelOverflow: false` estrito em todas as telas. Capturas de tela (baseline e após polimento) arquivadas em `%TEMP%/polimento-visual-tools/evidencias/etapa5/`.
+- **Fluxos funcionais testados:** busca em tempo real com realce de termos e transição automática de aba; alteração de preferências pessoais com indicação visual de `is-alterado` e badge numérico na aba; ativação de perfis rápidos; edição de nome de exibição e controle de sessões ativas; restauração por seção; navegação por teclado e atalhos; salvamento e permissões de regras da equipe preservadas.
+
+**Verificação técnica:**
+- `npm run check` passou (`check:client` e `check:server`).
+- `npm test` passou (639 testes de servidor e 536 de cliente).
+- `git diff --check` sem inconsistências de espaçamento ou quebra de linha.
+
+**Limites e encerramento:**
+- Nenhuma alteração em rotas de API, esquemas SQLite, dados de produção ou regras de negócio.
+- Nenhuma nova biblioteca, dependência externa ou build foi inserida.
+- A ressalva externa identificada nas etapas anteriores referente ao cabeçalho geral da aplicação com nome de usuário excepcionalmente longo em 1280px permanece fora do escopo desta tela (`#painel-configuracoes` sem overflow).
+- Com a conclusão e validação da etapa 5, todas as 5 etapas do planejamento de polimento visual do desktop estão concluídas.
