@@ -8642,3 +8642,103 @@ h1, h2, h3, strong {
   background: var(--cor-superficie);
   box-shadow: var(--sombra-card);
 }
+/* Etapa 4: Administração em desktop. Ajustes locais preservam Configurações
+   e os controles do Atualizador automático. */
+@media (min-width: 901px) {
+  #painel-administracao .tela-abas__lista {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  #painel-administracao .admin-pessoas__barra > [data-role="resumo"] { flex: 1 1 20rem; }
+  #painel-administracao .admin-pessoas__busca { max-width: 100%; }
+  .admin-tabela--pessoas { table-layout: fixed; }
+  .admin-tabela--pessoas th:nth-child(1) { width: 38%; }
+  .admin-tabela--pessoas th:nth-child(2) { width: 22%; text-align: center; }
+  .admin-tabela--pessoas th:nth-child(3) { width: 24%; }
+  .admin-tabela--pessoas th:nth-child(4) { width: 16%; }
+  .admin-tabela--pessoas td { white-space: normal; overflow-wrap: anywhere; }
+  .admin-tabela--pessoas td:nth-child(2) { text-align: center; }
+  .admin-tabela--pessoas .admin-pessoa__texto { flex: 1; line-height: 1.5; }
+  .admin-tabela--pessoas .admin-papel {
+    width: 100%;
+    min-width: 0;
+    height: calc(1.5em + var(--sp-4));
+    padding: var(--sp-2);
+    font-family: inherit;
+    font-weight: var(--peso-medio);
+    font-size: var(--txt-sm);
+    line-height: 1.5;
+    text-align: center;
+    text-align-last: center;
+    border-radius: var(--raio-pequeno);
+  }
+  .admin-tabela--pessoas .admin-papel--leitura {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--cor-borda-campo);
+    background: var(--cor-superficie-alta);
+    user-select: text;
+  }
+  .admin-papel__ajuda {
+    display: block;
+    margin-top: var(--sp-1);
+    color: var(--cor-texto-sub);
+    font-size: var(--txt-xs);
+    line-height: 1.5;
+  }
+  .admin-papeis dd { margin-top: var(--sp-1); line-height: 1.5; }
+  #painel-administracao .admin-form__rodape {
+    flex-wrap: wrap;
+    margin: var(--sp-2) 0 0;
+    padding-inline: 0;
+    border-radius: 0;
+  }
+  #painel-administracao .admin-form__barra .admin-form__rodape {
+    margin: 0;
+    padding-inline: var(--sp-5);
+  }
+  #painel-administracao .admin-form__estado { line-height: 1.5; }
+  #admin-painel-operacao .input-unidade { min-width: 8rem; justify-content: flex-end; }
+  #admin-painel-operacao .input-unidade .input { font-variant-numeric: tabular-nums; }
+  #painel-administracao .admin-sistemas__barra { flex-wrap: wrap; }
+  #painel-administracao .admin-sistema { gap: var(--sp-4); }
+  #painel-administracao .admin-sistemas__rodape.is-sujo {
+    background: var(--cor-superficie);
+  }
+  #admin-painel-dados .cfg-group__title { font-weight: var(--peso-medio); }
+  #admin-painel-integracoes .secao-card:first-child .admin-nota { line-height: 1.5; }
+  #admin-painel-backups .admin-tabela td { white-space: normal; overflow-wrap: anywhere; }
+  #admin-painel-backups .admin-tabela__acoes { width: auto; }
+  #admin-painel-backups .admin-tabela__acoes .btn { margin-block: var(--sp-1); }
+  #admin-painel-auditoria .toolbar { align-items: flex-end; }
+  #admin-painel-auditoria .toolbar .field:has(input[type="search"]) { flex: 1 1 16rem; }
+  #admin-painel-auditoria .result-count { padding-bottom: 0; }
+  #admin-painel-auditoria .data-table td { white-space: normal; overflow-wrap: anywhere; }
+  #admin-painel-auditoria th:nth-child(1) { width: 14%; }
+  #admin-painel-auditoria th:nth-child(2) { width: 18%; }
+  #admin-painel-auditoria th:nth-child(3),
+  #admin-painel-auditoria th:nth-child(4) { width: 12%; }
+  #admin-painel-auditoria th:nth-child(5) { width: 44%; }
+  #painel-administracao .admin-diagnostico { background: var(--cor-superficie); }
+  #painel-administracao .admin-diagnostico:not(.is-alerta):not(.is-perigo) { border-left-color: var(--cor-borda-forte); }
+  #painel-administracao .admin-diagnostico:not(.is-alerta):not(.is-perigo) .admin-diagnostico__icone {
+    background: var(--cor-superficie-alta);
+    color: var(--cor-texto-sub);
+  }
+  #painel-administracao .admin-diagnostico__cabeca { flex-wrap: wrap; }
+  #painel-administracao .admin-saude__bloco:nth-child(-n+3) { background: var(--cor-superficie); }
+  #painel-administracao .admin-saude__bloco:nth-child(-n+3) h3 { font-size: var(--txt-md); font-weight: var(--peso-forte); }
+  #painel-administracao .admin-saude__bloco:nth-child(-n+3) dl { gap: var(--sp-2); line-height: 1.5; }
+  #painel-administracao .admin-saude__bloco:nth-child(-n+3) dl > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+  .admin-tabela--pessoas select.admin-papel { appearance: auto; background-image: none; }
+  #admin-painel-integracoes .secao-card:first-child .cfg-group__title,
+  #admin-painel-integracoes label[for="regra-public-url"] { font-weight: var(--peso-medio); }
+  .admin-auditoria-detalhe .audit-diff__row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; }
+  .admin-auditoria-detalhe .audit-diff__row > strong { grid-column: 1 / -1; }
+  .admin-auditoria-detalhe .audit-diff__row > * { min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+}
+@media (min-width: 901px) and (max-width: 1439px) {
+  #painel-administracao .admin-grade { grid-template-columns: minmax(0, 1fr); }
+  #painel-administracao .admin-papeis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-5); }
+}

@@ -56,7 +56,7 @@ export class UsuariosAdmin extends View {
             </label>
           </div>
         <div class="card secao-card">
-          <table class="data-table admin-tabela">
+          <table class="data-table admin-tabela admin-tabela--pessoas">
             <thead><tr><th scope="col">Pessoa</th><th scope="col">Papel</th><th scope="col">Último acesso</th><th scope="col"><span class="sr-only">Ações</span></th></tr></thead>
             <tbody data-role="lista"></tbody>
           </table>

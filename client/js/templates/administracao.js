@@ -91,7 +91,8 @@ export function linhaUsuario(u, { ehVoce }) {
     </td>
     <td data-label="Papel">${
       ehVoce
-        ? html`<span class="admin-papel admin-papel--leitura">${rotuloPapel(papel)}</span>`
+        ? html`<span class="admin-papel admin-papel--leitura" aria-describedby="papel-proprio-${u.id}">${rotuloPapel(papel)}</span>
+            <small class="admin-papel__ajuda" id="papel-proprio-${u.id}">Seu papel não pode ser alterado aqui.</small>`
         : html`<select class="input admin-papel" data-action="papel" data-id="${u.id}" aria-label="Papel de ${u.nome}">
             ${PAPEIS.map((p) => html`<option value="${p.valor}" ${p.valor === papel && confiavel("selected")}>${rotuloPapel(p.valor)}</option>`)}
           </select>`

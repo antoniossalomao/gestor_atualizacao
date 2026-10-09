@@ -225,6 +225,7 @@ export class HistoricoView extends View {
     const chaves = [...new Set([...Object.keys(antes), ...Object.keys(depois)])].filter((chave) => !["id", "criadoEm", "atualizadoEm", "revisao"].includes(chave));
     const linhas = chaves.filter((chave) => JSON.stringify(antes[chave] ?? null) !== JSON.stringify(depois[chave] ?? null));
     const { box, close } = Modal.abrirCaixa({ largura: 680 });
+    if (this.container.closest("#painel-administracao")) box.classList.add("admin-auditoria-detalhe");
     box.innerHTML = `<h3 class="modal-box__title">Antes × Depois</h3><p class="modal-box__message">${escaparHtml(row.descricao)}</p>
       <div class="audit-diff">${linhas.length ? linhas.map((chave) => `<div class="audit-diff__row"><strong>${escaparHtml(rotuloCampo(chave))}</strong><del>${escaparHtml(valorDiff(antes[chave]))}</del><span aria-hidden="true">→</span><ins>${escaparHtml(valorDiff(depois[chave]))}</ins></div>`).join("") : "<p>Nenhum campo comparável foi alterado.</p>"}</div>
       <div class="modal-box__actions"><button type="button" class="btn btn--accent" data-action="fechar">Fechar</button></div>`;

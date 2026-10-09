@@ -1,6 +1,6 @@
 # Planejamento de polimento visual do painel
 
-Data: 08/10/2026. Atualizado em 09/10/2026. Status: etapas 1, 2 e 3 implementadas, com validação e ressalvas registradas abaixo.
+Data: 08/10/2026. Atualizado em 09/10/2026. Status: etapas 1 a 4 implementadas, com validação e ressalvas registradas abaixo.
 
 Escopo: Sistemas, Campanhas, Administração e Configurações, exclusivamente em desktop. Referência visual: Configurações → Sobre e ajuda.
 
@@ -120,24 +120,24 @@ Prioridade: alta para Papel; média para os demais ajustes. Dependência: etapa 
 
 Manter o papel editável na própria linha para as demais contas. A própria conta continua em leitura: usar uma apresentação com altura, tipografia e alinhamento compatíveis, sem fingir que o valor pode ser alterado.
 
-- [ ] Uniformizar o campo Papel: altura, tamanho de texto, largura adequada e alinhamento vertical.
-- [ ] Preservar os rótulos centralizados de Administrador, Operador e Consulta.
-- [ ] Evitar que o selo da própria conta e os seletores pareçam elementos de telas diferentes.
-- [ ] Explicar discretamente a restrição da própria conta, com informação acessível além de tooltip.
-- [ ] Preservar indicação de salvamento e restauração do valor anterior em cancelamento ou falha.
-- [ ] Alinhar pessoa, usuário, papel, último acesso e Gerenciar; conferir nomes longos e Nunca entrou.
-- [ ] Harmonizar resumo de pessoas, busca e legenda de permissões nas larguras de desktop.
-- [ ] Preservar confirmações, bloqueios e efeitos existentes das alterações de papel sobre sessões.
+- [x] Uniformizar o campo Papel: altura, tamanho de texto, largura adequada e alinhamento vertical.
+- [x] Preservar os rótulos centralizados de Administrador, Operador e Consulta.
+- [x] Evitar que o selo da própria conta e os seletores pareçam elementos de telas diferentes.
+- [x] Explicar discretamente a restrição da própria conta, com informação acessível além de tooltip.
+- [x] Preservar indicação de salvamento e restauração do valor anterior em cancelamento ou falha.
+- [x] Alinhar pessoa, usuário, papel, último acesso e Gerenciar; conferir nomes longos e Nunca entrou.
+- [x] Harmonizar resumo de pessoas, busca e legenda de permissões nas larguras de desktop.
+- [x] Preservar confirmações, bloqueios e efeitos existentes das alterações de papel sobre sessões.
 
 ### Demais seções
 
-- [ ] Operação: alinhar regras numéricas, unidades, classificações de sistemas e rodapé de salvar/desfazer.
-- [ ] Dados: organizar importação, exportação e download com títulos e descrições de peso adequado.
-- [ ] Integrações: harmonizar os blocos gerais de comunicação/endereço, preservando os controles do Atualizador fora do escopo.
-- [ ] Backups e recuperação: distinguir política, lista de cópias e restauração, mantendo avisos e confirmações existentes.
-- [ ] Auditoria: alinhar filtros, registros e detalhes sem reduzir a legibilidade dos valores anteriores/novos.
-- [ ] Diagnóstico: organizar resumo, indicadores e detalhes; reservar destaque forte para problemas reais.
-- [ ] Conferir abas, contadores e faixa de pendências sem acrescentar avisos redundantes.
+- [x] Operação: alinhar regras numéricas, unidades, classificações de sistemas e rodapé de salvar/desfazer.
+- [x] Dados: organizar importação, exportação e download com títulos e descrições de peso adequado.
+- [x] Integrações: harmonizar os blocos gerais de comunicação/endereço, preservando os controles do Atualizador fora do escopo.
+- [x] Backups e recuperação: distinguir política, lista de cópias e restauração, mantendo avisos e confirmações existentes.
+- [x] Auditoria: alinhar filtros, registros e detalhes sem reduzir a legibilidade dos valores anteriores/novos.
+- [x] Diagnóstico: organizar resumo, indicadores e detalhes; reservar destaque forte para problemas reais.
+- [x] Conferir abas, contadores e faixa de pendências sem acrescentar avisos redundantes.
 
 Aceite: a coluna Papel tem apresentação consistente e edição compreensível; a Administração mantém suas sete seções; salvar/desfazer e operações sensíveis continuam claros e funcionais.
 
@@ -243,4 +243,20 @@ A inspeção confirmou o corte do cabeçalho do detalhe após rolagem e a compet
 
 **Verificação técnica:** `npm run check` passou. `npm test` passou com 639 testes de servidor e 536 de cliente; a suíte do cliente foi repetida após os últimos ajustes e passou. `git diff --check` passou. Evidências em `%TEMP%/polimento-visual-tools/evidencias/etapa3/`.
 
-**Limites e sequência:** a exportação de Campanhas já não existe na interface atual; não foi reintroduzida nem declarada validada. Nenhum banco real, API ou regra de negócio foi alterado; não houve publicação. A ressalva anterior sobre o cabeçalho geral com nome longo em 1280px permanece fora deste ajuste. Etapas 4 e 5 seguem pendentes.
+**Limites e sequência:** a exportação de Campanhas já não existe na interface atual; não foi reintroduzida nem declarada validada. Nenhum banco real, API ou regra de negócio foi alterado; não houve publicação. A ressalva anterior sobre o cabeçalho geral com nome longo em 1280px permanece fora deste ajuste. Na entrega da etapa 3, etapas 4 e 5 permaneciam pendentes. A etapa 4 foi executada depois, conforme o registro abaixo.
+
+## 13. Registro da execução — etapa 4 (09/10/2026)
+
+**Pessoas e permissões:** Papel mantém edição na linha, com altura, peso, fonte e alinhamento central iguais aos da própria conta em leitura. O seletor tem seta nativa e a restrição da própria conta aparece por escrito, associada ao valor por `aria-describedby`. A tabela usa larguras proporcionais; nomes e usuários longos quebram dentro das células. Em desktop abaixo de 1440px, a legenda fica abaixo da tabela, em três colunas, liberando espaço para as pessoas. Resumo e busca preservam seus comportamentos. Confirmação de rebaixamento, bloqueio durante salvamento, restauração em cancelamento/falha e revogação de sessões foram mantidos.
+
+**Demais seções:** abas podem ocupar mais de uma linha, evitando esconder Diagnóstico em 1280px. Operação alinha números/unidades e permite quebra nas barras de filtros e salvar/desfazer; os rodapés ficam dentro dos cartões sem compensações por margens negativas. A barra de classificação alterada tem fundo opaco para continuar legível ao rolar. Dados usa rótulos discretos e uma descrição concreta da conferência de cadastros. Integrações recebeu apenas ajustes locais nos textos de comunicação/endereço e na barra de salvar; controles e organização do Atualizador permanecem preservados.
+
+Backups conserva política, cópias e confirmação de restauração, acomodando texto e ações da tabela. Auditoria reserva mais espaço para a descrição, alinha filtros e permite quebra dos registros. Na comparação Antes × Depois, o nome do campo fica acima dos dois valores, que acomodam conteúdo longo. Esse ajuste do modal é aplicado somente dentro da Administração. Diagnóstico usa superfícies neutras e dados alinhados nos blocos gerais; destaque forte do resumo fica reservado aos estados de atenção/perigo, mantendo situações escritas, avisos e atalhos existentes. O bloco de agentes e pacotes foi preservado.
+
+**Validação visual:** Edge headless, servidor local e banco descartável, com 13 pessoas, nome longo, contas sem acesso e registros de auditoria. As sete seções passaram em 18 combinações de 1280/1440/1920px, claro/escuro, apresentação padrão, compacta com fonte ampliada/sidebar recolhida e confortável com fonte ampliada/alto contraste: 126 comparações. Medições sem excesso de largura nos elementos conferidos e igualdade de altura, fonte e peso em Papel; capturas inspecionadas. Evidências em `%TEMP%/polimento-visual-tools/evidencias/etapa4/`.
+
+**Validação funcional:** busca de pessoas e vazio; cancelamento e falha simulada ao mudar papel, valor anterior restaurado e campo desbloqueado; alteração efetiva com sessão anterior revogada. Salvar/desfazer regras numéricas e classificação de sistemas, filtrar sistemas, desfazer endereço nas integrações, exportar .xlsx e abrir/fechar orientação de importação. Também foram conferidos criação de cópia, abertura da restauração com botão bloqueado e cancelamento, busca/vazio/limpeza de filtros da auditoria, comparação de valores, atualização do diagnóstico, foco do seletor e navegação entre abas por teclado. Operador e consulta não veem Administração e recebem recusa na API de pessoas.
+
+**Verificação técnica:** `npm run check`, `npm test` (639 testes de servidor e 536 de cliente) e `git diff --check` passaram.
+
+**Limites e sequência:** nenhuma alteração em banco real, API, regras de negócio ou publicação. A importação completa e a restauração efetiva não foram repetidas no navegador nesta etapa; foram conferidas suas entradas e cancelamento, além dos testes existentes. A ressalva anterior sobre o cabeçalho geral com nome longo em 1280px permanece fora deste ajuste. A etapa 5 segue pendente.
