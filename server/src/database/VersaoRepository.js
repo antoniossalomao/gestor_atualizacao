@@ -268,6 +268,9 @@ class VersaoRepository extends BaseRepository {
       this.conn
         .prepare(`DELETE FROM agente_alertas WHERE ${expressao}`)
         .run(parametro);
+      this.conn
+        .prepare(`DELETE FROM agente_pausas WHERE ${expressao}`)
+        .run(parametro);
       return logs.changes;
     });
     return remover();
