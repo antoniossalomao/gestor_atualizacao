@@ -237,7 +237,7 @@ class AgendamentoRepository extends BaseRepository {
 
   /** Quantas tarefas estao arquivadas -- o contador ao lado do filtro. */
   contarArquivadas() {
-    return this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table} WHERE arquivado_em IS NOT NULL`).get().total;
+    return this._preparado(`SELECT COUNT(*) AS total FROM ${this.table} WHERE arquivado_em IS NOT NULL`).get().total;
   }
 
   /**
