@@ -24,11 +24,11 @@ class VersaoRepository extends BaseRepository {
   }
 
   list() {
-    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} ORDER BY id DESC`).all();
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} ORDER BY id DESC`).all();
   }
 
   find(id) {
-    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE id = ?`).get(id);
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE id = ?`).get(id);
   }
 
   /**
@@ -47,7 +47,7 @@ class VersaoRepository extends BaseRepository {
 
   /** Uma linha por sistema com versao no ar agora -- alimenta o painel. */
   publicadasPorSistema() {
-    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'publicada' ORDER BY sistema COLLATE NOCASE`).all();
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'publicada' ORDER BY sistema COLLATE NOCASE`).all();
   }
 
   /** Versoes publicadas do mesmo sistema, exceto a que acabou de subir. */
@@ -104,12 +104,12 @@ class VersaoRepository extends BaseRepository {
   }
 
   publicarPiloto(id, publicadoEm) {
-    this.conn.prepare(`UPDATE ${this.table} SET status = 'piloto', publicado_em = @publicadoEm WHERE id = @id`).run({ id, publicadoEm });
+    this._preparado(`UPDATE ${this.table} SET status = 'piloto', publicado_em = @publicadoEm WHERE id = @id`).run({ id, publicadoEm });
     return this.find(id);
   }
 
   pilotosDoSistema(sistema) {
-    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'piloto' AND sistema = ? ORDER BY id DESC`).all(sistema);
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'piloto' AND sistema = ? ORDER BY id DESC`).all(sistema);
   }
 
   adocaoPiloto(sistema, versao, codigosClientes) {
@@ -131,20 +131,20 @@ class VersaoRepository extends BaseRepository {
   }
 
   anteriorSubstituida(atualId, sistema) {
-    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE sistema = ? AND status = 'substituida' AND substituido_por = ? ORDER BY substituido_em DESC LIMIT 1`).get(sistema, atualId);
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE sistema = ? AND status = 'substituida' AND substituido_por = ? ORDER BY substituido_em DESC LIMIT 1`).get(sistema, atualId);
   }
 
   rollback(atualId, anteriorId, quando) {
     const tx = this.conn.transaction(() => {
-      this.conn.prepare(`UPDATE ${this.table} SET status = 'substituida', substituido_em = @quando, substituido_por = NULL WHERE id = @atualId`).run({ atualId, quando });
-      this.conn.prepare(`UPDATE ${this.table} SET status = 'publicada', publicado_em = @quando, substituido_em = NULL, substituido_por = NULL WHERE id = @anteriorId`).run({ anteriorId, quando });
+      this._preparado(`UPDATE ${this.table} SET status = 'substituida', substituido_em = @quando, substituido_por = NULL WHERE id = @atualId`).run({ atualId, quando });
+      this._preparado(`UPDATE ${this.table} SET status = 'publicada', publicado_em = @quando, substituido_em = NULL, substituido_por = NULL WHERE id = @anteriorId`).run({ anteriorId, quando });
     });
     tx();
     return this.find(anteriorId);
   }
 
   remove(id) {
-    this.conn.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id);
+    this._preparado(`DELETE FROM ${this.table} WHERE id = ?`).run(id);
   }
 
   /**

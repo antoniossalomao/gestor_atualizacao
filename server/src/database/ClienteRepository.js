@@ -158,7 +158,7 @@ class ClienteRepository extends BaseRepository {
   }
 
   obterPorNome(nome) {
-    return this.conn.prepare(`SELECT ${LEITURA} FROM clientes_v WHERE nome = ?`).get(nome) || null;
+    return this._preparado(`SELECT ${LEITURA} FROM clientes_v WHERE nome = ?`).get(nome) || null;
   }
 
   /** O cliente de um nome digitado, sem diferenciar caixa nem espaço nas pontas: { id, nome } ou null. */
@@ -175,7 +175,7 @@ class ClienteRepository extends BaseRepository {
   }
 
   obterPorId(id) {
-    return this.conn.prepare(`SELECT ${LEITURA} FROM clientes_v WHERE id = ?`).get(id) || null;
+    return this._preparado(`SELECT ${LEITURA} FROM clientes_v WHERE id = ?`).get(id) || null;
   }
 
   /** Os registros completos de uma lista de ids -- usado pelas ações em lote (excluir, adicionar sistema). */

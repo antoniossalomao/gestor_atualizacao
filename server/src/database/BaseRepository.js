@@ -61,7 +61,7 @@ class BaseRepository {
    * entre a tela ser carregada e o botao ser clicado.
    */
   delete(id) {
-    return this.conn.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id).changes;
+    return this._preparado(`DELETE FROM ${this.table} WHERE id = ?`).run(id).changes;
   }
 
   /**
@@ -86,7 +86,7 @@ class BaseRepository {
 
   /** Quantos registros existem na tabela. */
   count() {
-    const row = this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table}`).get();
+    const row = this._preparado(`SELECT COUNT(*) AS total FROM ${this.table}`).get();
     return row.total;
   }
 }

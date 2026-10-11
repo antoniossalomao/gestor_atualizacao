@@ -38,7 +38,7 @@ class CampanhaRepository extends BaseRepository {
   }
 
   find(id) {
-    return this.conn.prepare(`SELECT ${CAMPOS} FROM campanhas c JOIN sistemas s ON s.id = c.sistema_id WHERE c.id = ?`).get(id);
+    return this._preparado(`SELECT ${CAMPOS} FROM campanhas c JOIN sistemas s ON s.id = c.sistema_id WHERE c.id = ?`).get(id);
   }
 
   insert({ titulo, descricao, sistemaId, versaoAlvo, prazo, cidade, criadaPor, publico = "todos", clienteIds = [] }) {
