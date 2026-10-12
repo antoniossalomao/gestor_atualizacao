@@ -314,8 +314,10 @@ como um servidor web acessível por várias pessoas ao mesmo tempo, cada uma com
 - **Notificação no Discord** (opcional, webhook em Administração → Notificações): avisa um canal a cada atualização
   cadastrada e quando um agente do Atualizador automático fica offline/com erro.
 
-**Funcionalidades adicionadas em set/2026:**
+**Funcionalidades adicionadas em set/2026 e out/2026:**
 
+- **Geração automática de código do cliente** — A API de clientes aceita a flag `autoCodigo`. Quando acionada durante a criação, o backend (`ClienteService.proximoCodigo`) deduz o próximo código válido (no formato C + 6 dígitos, ex: `C000123`) lendo o maior código existente no banco, preenchendo automaticamente o cadastro.
+- **Sincronização em tempo real (SSE)** — O `EventosController` gerencia conexões persistentes via Server-Sent Events (SSE). O servidor emite eventos (`clientes:alterado`, etc) para que todos os navegadores conectados se atualizem instantaneamente, sem precisar de pooling do frontend.
 - **Alerta proativo de agente offline/com erro** (`AlertaAgenteService`) — confere sozinho, a cada
   N minutos (regra da equipe, padrão 15, em Administração → Integrações), a situação de cada agente do Atualizador
   automático e avisa o Discord só na *transição* para "offline" (24h+ sem contato) ou "erro" — não
@@ -1474,6 +1476,8 @@ escopada ao código puro dos dois lados:
 |---|---|---|
 | `client/tsconfig.json` | `js/domain/`, `js/utils/`, `js/templates/` | não tocam no DOM ([ADR 4.5](#45-adr-0005--clientjs-dividido-por-responsabilidade)) |
 | `server/tsconfig.json` | `src/shared/`, `controllers/paginacao.js`, `database/ordenacao.js`, `services/validacao.js` | não falam com o Node nem com o banco |
+
+A mesma disciplina foi replicada no backend via `server/tsconfig.json`, escopando a checagem aos módulos de utilidade "pura" sem acoplar a aplicação ao ecossistema do Node.js (sem pacote `@types/node`).
 
 Nos dois casos a `lib` do TypeScript não tem `dom` nem `node`: no servidor é só `es2022`; no cliente,
 `es2022` mais `webworker` (timers, `URL`, `Blob`, `fetch`, sem a árvore de elementos). É essa ausência

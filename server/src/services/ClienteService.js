@@ -67,7 +67,7 @@ class ClienteService {
   }
 
   /**
-   * @param {{codigo?: string, autoCodigo?: boolean, nome: string, cidade?: string, sistemas?: string[]}} input
+   * @param {{codigo?: string, autoCodigo?: boolean, nome: string, cidade?: string, sistemas?: string[], grupo?: string, regimeTributario?: string}} input Os dados do novo cliente. Se `autoCodigo` for true e `codigo` não for fornecido, um código (ex: "C000123") será gerado automaticamente.
    * @param {{id:number, nome:string}|null} usuario quem está fazendo a ação (para o histórico)
    */
   create(input, usuario) {
