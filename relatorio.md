@@ -1,67 +1,159 @@
 # Relatório de Diagnóstico e Correção de Falhas
 
-## Diagnóstico: Registros Órfãos na Tabela `agente_pausas`
+## Diagnóstico: Regressão de Performance (Prepared Statements)
 
 ### Análise do Problema
-Durante a análise dos registros e do código recente, foi identificado um bug silencioso no módulo responsável pela gestão dos agentes do Atualizador.
+Durante a análise dos últimos commits e dos repositórios de banco de dados, foi identificada uma regressão de performance introduzida silenciosamente.
 
-No arquivo `server/src/database/VersaoRepository.js`, o método `removerAgente(cnpj)` é encarregado de excluir todo o histórico que materializa um agente no painel, bem como o seu estado de alerta. Atualmente, este método exclui corretamente os dados das seguintes tabelas:
-- `atualizador_logs`
-- `agente_alertas`
+O commit `5e85b35` (`refactor: use cached prepared statements in repositories for performance`) introduziu uma otimização importante: a utilização do método `this._preparado(...)` para fazer cache de declarações SQL estáticas nos repositórios, retendo `this.conn.prepare(...)` apenas para queries dinâmicas, conforme as decisões arquiteturais do projeto.
 
-No entanto, o banco de dados também possui a tabela `agente_pausas`, que armazena a configuração de pausa remota para os agentes. Quando um agente é excluído através do método `removerAgente`, os registros correspondentes na tabela `agente_pausas` **não são excluídos**.
+No entanto, o commit subsequente `d6d7993` (`Merge pull request #26 from antoniossalomao/feat/codigo-cliente-e-tempo-real`) desfez inadvertidamente essas alterações em múltiplos repositórios, revertendo as chamadas de `this._preparado` de volta para `this.conn.prepare`. Isso causou uma degradação de performance por forçar a recompilação contínua dos mesmos comandos SQL em chamadas frequentes.
 
 ### Impacto
-- **Lixo no Banco de Dados**: Registros órfãos permanecem na tabela `agente_pausas`, ocupando espaço desnecessário e poluindo a base de dados com CNPJs que não são mais gerenciados.
-- **Comportamento Inesperado Futuro**: Se o mesmo cliente (mesmo CNPJ) voltar a se comunicar com o servidor e for recriado, ele herdará o estado de "pausado" silenciosamente, sem que os administradores percebam. Isso impediria o agente de receber novas atualizações logo após a sua "nova" primeira comunicação.
+- **Perda de Performance:** Consultas repetitivas, especialmente listagens e checagens rápidas, perderam o benefício do statement caching.
+- **Inconsistência de Código:** O código passou a violar as diretrizes de performance arquiteturais do sistema documentadas na memória do projeto, misturando estratégias otimizadas e subotimizadas de forma aleatória nas classes que herdam de `BaseRepository`.
 
 ---
 
 ## Sugestão de Código Pronta para Correção
 
-A correção consiste em incluir um comando de exclusão (`DELETE`) focado na tabela `agente_pausas` dentro da transação principal do método `removerAgente`.
+A correção consiste em restaurar as alterações do commit `5e85b35`, substituindo `this.conn.prepare` por `this._preparado` em todos os repositórios afetados, mas deixando as queries dinâmicas intactas. Como os arquivos já foram restaurados na base de código através de `git checkout`, o código sugerido abaixo ilustra as alterações aplicadas.
 
-### Arquivo: `server/src/database/VersaoRepository.js`
+Os arquivos corrigidos são:
+- `server/src/database/AgendamentoRepository.js`
+- `server/src/database/AtualizacaoRepository.js`
+- `server/src/database/BaseRepository.js`
+- `server/src/database/CampanhaRepository.js`
+- `server/src/database/ClienteRepository.js`
+- `server/src/database/VersaoRepository.js`
 
-**Trecho atual:**
-```javascript
-    const remover = this.conn.transaction(() => {
-      const logs = this.conn
-        .prepare(`DELETE FROM atualizador_logs WHERE ${expressao}`)
-        .run(parametro);
-      this.conn
-        .prepare(`DELETE FROM agente_alertas WHERE ${expressao}`)
-        .run(parametro);
-      return logs.changes;
-    });
-```
+### Exemplo de Correção (`server/src/database/VersaoRepository.js`)
 
-**Código Corrigido:**
+**Trecho Anterior (Regressão):**
 ```javascript
 <<<<<<< SEARCH
-    const remover = this.conn.transaction(() => {
-      const logs = this.conn
-        .prepare(`DELETE FROM atualizador_logs WHERE ${expressao}`)
-        .run(parametro);
-      this.conn
-        .prepare(`DELETE FROM agente_alertas WHERE ${expressao}`)
-        .run(parametro);
-      return logs.changes;
-    });
+  list() {
+    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} ORDER BY id DESC`).all();
+  }
+
+  find(id) {
+    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE id = ?`).get(id);
+  }
 =======
-    const remover = this.conn.transaction(() => {
-      const logs = this.conn
-        .prepare(`DELETE FROM atualizador_logs WHERE ${expressao}`)
-        .run(parametro);
-      this.conn
-        .prepare(`DELETE FROM agente_alertas WHERE ${expressao}`)
-        .run(parametro);
-      this.conn
-        .prepare(`DELETE FROM agente_pausas WHERE ${expressao}`)
-        .run(parametro);
-      return logs.changes;
-    });
+  list() {
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} ORDER BY id DESC`).all();
+  }
+
+  find(id) {
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE id = ?`).get(id);
+  }
 >>>>>>> REPLACE
 ```
 
-Essa simples adição garante que a integridade dos dados e o comportamento correto do fluxo do agente (ativo/pausado) sejam mantidos.
+Essas alterações pontuais corrigem a regressão sem afetar a estabilidade do sistema e asseguram os benefícios de cache das queries SQLite novamente.
+
+## Diagnóstico 2: Regressão de Performance (Prepared Statements)
+
+### Análise do Problema
+Durante a análise dos últimos commits e dos repositórios de banco de dados, foi identificada uma regressão de performance introduzida silenciosamente.
+
+O commit `5e85b35` (`refactor: use cached prepared statements in repositories for performance`) introduziu uma otimização importante: a utilização do método `this._preparado(...)` para fazer cache de declarações SQL estáticas nos repositórios, retendo `this.conn.prepare(...)` apenas para queries dinâmicas, conforme as decisões arquiteturais do projeto.
+
+No entanto, o commit subsequente `d6d7993` (`Merge pull request #26 from antoniossalomao/feat/codigo-cliente-e-tempo-real`) desfez inadvertidamente essas alterações em múltiplos repositórios, revertendo as chamadas de `this._preparado` de volta para `this.conn.prepare`. Isso causou uma degradação de performance por forçar a recompilação contínua dos mesmos comandos SQL estáticos.
+
+### Impacto
+- **Perda de Performance:** Consultas repetitivas, especialmente listagens e checagens rápidas, perderam o benefício do statement caching.
+
+---
+
+## Sugestão de Código Pronta para Correção
+
+A correção consiste em restaurar as alterações do commit `5e85b35`, substituindo `this.conn.prepare` por `this._preparado` nos repositórios afetados, mas **deixando as queries dinâmicas** (como strings template com marcadores dinâmicos, ex: `IN (${marcadores})`) usando `this.conn.prepare`.
+
+### Arquivo: `server/src/database/VersaoRepository.js`
+
+**Trechos a corrigir (substituir this.conn.prepare por this._preparado):**
+```javascript
+<<<<<<< SEARCH
+  list() {
+    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} ORDER BY id DESC`).all();
+  }
+
+  find(id) {
+    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE id = ?`).get(id);
+  }
+=======
+  list() {
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} ORDER BY id DESC`).all();
+  }
+
+  find(id) {
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE id = ?`).get(id);
+  }
+>>>>>>> REPLACE
+```
+
+```javascript
+<<<<<<< SEARCH
+  publicadasPorSistema() {
+    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'publicada' ORDER BY sistema COLLATE NOCASE`).all();
+  }
+=======
+  publicadasPorSistema() {
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'publicada' ORDER BY sistema COLLATE NOCASE`).all();
+  }
+>>>>>>> REPLACE
+```
+
+```javascript
+<<<<<<< SEARCH
+  publicarPiloto(id, publicadoEm) {
+    this.conn.prepare(`UPDATE ${this.table} SET status = 'piloto', publicado_em = @publicadoEm WHERE id = @id`).run({ id, publicadoEm });
+    return this.find(id);
+  }
+
+  pilotosDoSistema(sistema) {
+    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'piloto' AND sistema = ? ORDER BY id DESC`).all(sistema);
+  }
+=======
+  publicarPiloto(id, publicadoEm) {
+    this._preparado(`UPDATE ${this.table} SET status = 'piloto', publicado_em = @publicadoEm WHERE id = @id`).run({ id, publicadoEm });
+    return this.find(id);
+  }
+
+  pilotosDoSistema(sistema) {
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'piloto' AND sistema = ? ORDER BY id DESC`).all(sistema);
+  }
+>>>>>>> REPLACE
+```
+
+### Arquivo: `server/src/database/BaseRepository.js`
+
+**Trechos a corrigir (apenas métodos delete(id) e count()):**
+```javascript
+<<<<<<< SEARCH
+  delete(id) {
+    return this.conn.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id).changes;
+  }
+=======
+  delete(id) {
+    return this._preparado(`DELETE FROM ${this.table} WHERE id = ?`).run(id).changes;
+  }
+>>>>>>> REPLACE
+```
+
+```javascript
+<<<<<<< SEARCH
+  count() {
+    const row = this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table}`).get();
+    return row.total;
+  }
+=======
+  count() {
+    const row = this._preparado(`SELECT COUNT(*) AS total FROM ${this.table}`).get();
+    return row.total;
+  }
+>>>>>>> REPLACE
+```
+
+*Nota: O método `deleteLote(ids)` no BaseRepository.js deve manter `this.conn.prepare` porque a query possui um `IN (${marcadores})` gerado dinamicamente.*
