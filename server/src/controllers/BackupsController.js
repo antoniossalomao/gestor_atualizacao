@@ -5,10 +5,18 @@ class BackupsController {
     this.backupService = backupService;
   }
 
+  /**
+   * Lista os backups disponíveis no diretório de backups.
+   * Rota: GET /api/backups
+   */
   list = (req, res) => {
     res.json(this.backupService.list());
   };
 
+  /**
+   * Faz o download de um arquivo de backup específico protegido contra travessia de caminho.
+   * Rota: GET /api/backups/download/:arquivo
+   */
   download = (req, res, next) => {
     try {
       const arquivo = req.params.arquivo;
@@ -19,6 +27,10 @@ class BackupsController {
     }
   };
 
+  /**
+   * Cria e faz o download de um snapshot (cópia temporária íntegra) do banco de dados atual.
+   * Rota: GET /api/backups/download-current
+   */
   downloadCurrent = async (_req, res, next) => {
     let copia;
     try {
@@ -34,6 +46,10 @@ class BackupsController {
     }
   };
 
+  /**
+   * Solicita a criação de um novo backup manualmente.
+   * Rota: POST /api/backups
+   */
   criar = (req, res, next) => {
     try {
       res.status(201).json(this.backupService.criar(req.session.user));
@@ -42,6 +58,11 @@ class BackupsController {
     }
   };
 
+  /**
+   * Restaura o banco de dados a partir de um backup, criando uma cópia de segurança antes
+   * e invalidando sessões ativas. Exige confirmação por texto ("RESTAURAR").
+   * Rota: POST /api/backups/restore/:arquivo
+   */
   restore = (req, res, next) => {
     try {
       this.backupService.restore(req.params.arquivo, req.session.user, req.body || {});
