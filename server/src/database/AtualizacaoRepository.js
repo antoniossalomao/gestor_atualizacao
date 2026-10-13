@@ -132,7 +132,7 @@ class AtualizacaoRepository extends BaseRepository {
   }
 
   find(id) {
-    return this.conn.prepare(`SELECT ${LEITURA}, versoes_por_sistema FROM atualizacoes_v WHERE id = ?`).get(id);
+    return this._preparado(`SELECT ${LEITURA}, versoes_por_sistema FROM atualizacoes_v WHERE id = ?`).get(id);
   }
 
   /** Versão recebida em cada sistema de uma atualização: [{ id, versao }] na ordem gravada. */

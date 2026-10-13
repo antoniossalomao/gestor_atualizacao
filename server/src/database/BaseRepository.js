@@ -61,7 +61,7 @@ class BaseRepository {
    * entre a tela ser carregada e o botao ser clicado.
    */
   delete(id) {
-    return this.conn.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id).changes;
+    return this._preparado(`DELETE FROM ${this.table} WHERE id = ?`).run(id).changes;
   }
 
   /**
@@ -80,13 +80,13 @@ class BaseRepository {
     const limpos = [...new Set((ids || []).map(Number).filter(Number.isInteger))];
     if (limpos.length === 0) return 0;
     const marcadores = limpos.map(() => "?").join(", ");
-    const stmt = this.conn.prepare(`DELETE FROM ${this.table} WHERE id IN (${marcadores})`);
+    const stmt = this._preparado(`DELETE FROM ${this.table} WHERE id IN (${marcadores})`);
     return this.conn.transaction(() => stmt.run(...limpos).changes)();
   }
 
   /** Quantos registros existem na tabela. */
   count() {
-    const row = this.conn.prepare(`SELECT COUNT(*) AS total FROM ${this.table}`).get();
+    const row = this._preparado(`SELECT COUNT(*) AS total FROM ${this.table}`).get();
     return row.total;
   }
 }

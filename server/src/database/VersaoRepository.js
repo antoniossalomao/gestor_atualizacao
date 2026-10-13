@@ -24,11 +24,11 @@ class VersaoRepository extends BaseRepository {
   }
 
   list() {
-    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} ORDER BY id DESC`).all();
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} ORDER BY id DESC`).all();
   }
 
   find(id) {
-    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE id = ?`).get(id);
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE id = ?`).get(id);
   }
 
   /**
@@ -47,7 +47,7 @@ class VersaoRepository extends BaseRepository {
 
   /** Uma linha por sistema com versao no ar agora -- alimenta o painel. */
   publicadasPorSistema() {
-    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'publicada' ORDER BY sistema COLLATE NOCASE`).all();
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'publicada' ORDER BY sistema COLLATE NOCASE`).all();
   }
 
   /** Versoes publicadas do mesmo sistema, exceto a que acabou de subir. */
@@ -91,7 +91,7 @@ class VersaoRepository extends BaseRepository {
         .run({ id, publicadoEm });
 
       if (anterioresIds.length > 0) {
-        const stmt = this.conn.prepare(
+        const stmt = this._preparado(
           `UPDATE ${this.table} SET status = 'substituida', substituido_em = @quando, substituido_por = @porId WHERE id = @id`
         );
         for (const antId of anterioresIds) {
@@ -104,19 +104,19 @@ class VersaoRepository extends BaseRepository {
   }
 
   publicarPiloto(id, publicadoEm) {
-    this.conn.prepare(`UPDATE ${this.table} SET status = 'piloto', publicado_em = @publicadoEm WHERE id = @id`).run({ id, publicadoEm });
+    this._preparado(`UPDATE ${this.table} SET status = 'piloto', publicado_em = @publicadoEm WHERE id = @id`).run({ id, publicadoEm });
     return this.find(id);
   }
 
   pilotosDoSistema(sistema) {
-    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'piloto' AND sistema = ? ORDER BY id DESC`).all(sistema);
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE status = 'piloto' AND sistema = ? ORDER BY id DESC`).all(sistema);
   }
 
   adocaoPiloto(sistema, versao, codigosClientes) {
     if (!Array.isArray(codigosClientes) || codigosClientes.length === 0) return { rodando: 0, semErros: 0 };
     const marcadores = codigosClientes.map(() => "?").join(", ");
     const normalizado = "UPPER(REPLACE(REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '/', ''), '-', ''), ' ', ''))";
-    const linhas = this.conn.prepare(
+    const linhas = this._preparado(
       `SELECT ${normalizado} AS cnpj,
               MAX(CASE WHEN UPPER(status) IN ('ERRO', 'FALHA') THEN 1 ELSE 0 END) AS teveErro
        FROM atualizador_logs
@@ -131,20 +131,20 @@ class VersaoRepository extends BaseRepository {
   }
 
   anteriorSubstituida(atualId, sistema) {
-    return this.conn.prepare(`SELECT ${CAMPOS} FROM ${this.table} WHERE sistema = ? AND status = 'substituida' AND substituido_por = ? ORDER BY substituido_em DESC LIMIT 1`).get(sistema, atualId);
+    return this._preparado(`SELECT ${CAMPOS} FROM ${this.table} WHERE sistema = ? AND status = 'substituida' AND substituido_por = ? ORDER BY substituido_em DESC LIMIT 1`).get(sistema, atualId);
   }
 
   rollback(atualId, anteriorId, quando) {
     const tx = this.conn.transaction(() => {
-      this.conn.prepare(`UPDATE ${this.table} SET status = 'substituida', substituido_em = @quando, substituido_por = NULL WHERE id = @atualId`).run({ atualId, quando });
-      this.conn.prepare(`UPDATE ${this.table} SET status = 'publicada', publicado_em = @quando, substituido_em = NULL, substituido_por = NULL WHERE id = @anteriorId`).run({ anteriorId, quando });
+      this._preparado(`UPDATE ${this.table} SET status = 'substituida', substituido_em = @quando, substituido_por = NULL WHERE id = @atualId`).run({ atualId, quando });
+      this._preparado(`UPDATE ${this.table} SET status = 'publicada', publicado_em = @quando, substituido_em = NULL, substituido_por = NULL WHERE id = @anteriorId`).run({ anteriorId, quando });
     });
     tx();
     return this.find(anteriorId);
   }
 
   remove(id) {
-    this.conn.prepare(`DELETE FROM ${this.table} WHERE id = ?`).run(id);
+    this._preparado(`DELETE FROM ${this.table} WHERE id = ?`).run(id);
   }
 
   /**
