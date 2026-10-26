@@ -465,6 +465,7 @@ class AtualizacaoService {
     const prazoVersaoDias = this.regras.valor("prazoVersaoDias");
     const porResponsavel = this.db.atualizacoes.contagemPorResponsavel();
     const atualizadosMesPorSistema = this._atualizadosMesPorSistema(mesStr, mesAnteriorStr, diaComparavel);
+    const atividadeClientes = this._atividadeDosClientes(hoje);
     // Tendencia mensal (grafico do Resumo) e tempo medio de resolucao das
     // tarefas de Agendamentos vivem em tabelas diferentes desta classe,
     // mas moram aqui porque o Resumo ja busca tudo numa chamada so -- mesmo
@@ -492,6 +493,7 @@ class AtualizacaoService {
       // oficial"), pelo mesmo motivo do desatualizadoDias acima.
       prazoVersaoDias,
       situacaoClientes,
+      atividadeClientes,
       porResponsavel,
       atualizadosMesPorSistema,
       atualizacoesPorMes,
@@ -606,6 +608,36 @@ class AtualizacaoService {
       .map((r) => ({ label: r.label, total: r.total, anterior: anterior.get(r.label) || 0 }))
       .filter((r) => r.total > 0 || r.anterior > 0)
       .sort((a, b) => b.total - a.total || b.anterior - a.anterior || a.label.localeCompare(b.label, "pt-BR"));
+  }
+
+  /**
+   * Recência de atualização de cada cliente (independente de versões):
+   *  - ate30: atualizado nos últimos 30 dias (recente)
+   *  - ate60: atualizado entre 31 e 60 dias (atenção moderada)
+   *  - mais60: sem atualização há mais de 60 dias
+   *  - nunca: nunca recebeu nenhuma atualização registrada
+   */
+  _atividadeDosClientes(hoje = new Date()) {
+    const ultimas = this.db.atualizacoes.ultimaDataPorCliente();
+    const grupos = { ate30: [], ate60: [], mais60: [], nunca: [] };
+    for (const { id, nome, cidade } of this.db.clientes.todasBasicas()) {
+      const dataStr = ultimas.get(id);
+      let dias = NUNCA;
+      if (dataStr) {
+        const d = lerData(dataStr);
+        dias = d ? Math.floor((hoje - d) / MS_POR_DIA) : NUNCA;
+      }
+      const item = { nome, cidade: cidade || "—", ultima: dataStr || "Nunca", dias: dias === NUNCA ? null : dias };
+      if (dias <= 30) grupos.ate30.push(item);
+      else if (dias <= 60) grupos.ate60.push(item);
+      else if (dias === NUNCA) grupos.nunca.push(item);
+      else grupos.mais60.push(item);
+    }
+    grupos.ate30.sort((a, b) => a.dias - b.dias);
+    grupos.ate60.sort((a, b) => a.dias - b.dias);
+    grupos.mais60.sort((a, b) => b.dias - a.dias);
+    grupos.nunca.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    return grupos;
   }
 
   /**

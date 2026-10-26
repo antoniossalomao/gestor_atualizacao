@@ -117,3 +117,58 @@ export function corpoSituacao(totais, maisAtrasados, prazoDias = null) {
         </div>`
       : ""}`;
 }
+
+/**
+ * Corpo do card de Recência de Atualizações (Opção 1: baseado em tempo decorrido
+ * desde a última atualização, sem depender de versões oficiais cadastradas).
+ * @param {ReturnType<typeof import("../domain/situacao.js").totaisAtividade>} totais
+ * @param {Array<any>} maisAntigos clientes sem atualização recente mais críticos
+ */
+export function corpoAtividade(totais, maisAntigos = []) {
+  if (totais.total === 0) {
+    return html`
+      <p class="situacao__vazio">
+        Nenhum cliente cadastrado. Cadastre clientes e registre atualizações para acompanhar a recência do parque.
+      </p>`;
+  }
+  const descricaoBarra = totais.grupos.map((g) => `${g.rotulo}: ${g.total} (${g.pct}%)`).join(", ");
+  const recentes = totais.grupos.find((g) => g.chave === "ate30");
+  const top = maisAntigos.slice(0, 4);
+
+  return html`
+    <div class="situacao__destaque">
+      <strong class="situacao__hero">${recentes?.pct ?? 0}%</strong>
+      <span class="situacao__hero-texto">
+        <span>atualizados recentemente</span>
+        <small>${recentes?.total ?? 0} de ${plural(totais.total, "cliente")} nos últimos 30 dias</small>
+      </span>
+    </div>
+    <div class="situacao__barra" role="img" aria-label="${descricaoBarra}">
+      ${totais.grupos.filter((g) => g.total > 0).map((g) => html`<span class="situacao__parte is-${g.severidade}" style="flex-grow: ${g.total}" title="${g.rotulo}: ${g.total} (${g.pct}%)"></span>`)}
+    </div>
+    <div class="situacao__totais">
+      ${totais.grupos.map(
+        (g) => html`
+          <button type="button" class="situacao__total" data-grupo-atividade="${g.chave}" title="${g.descricao} Clique para ver a lista.">
+            <span class="situacao__marca is-${g.severidade}" aria-hidden="true"></span>
+            <span class="situacao__rotulo">${g.rotulo}</span>
+            <strong class="situacao__valor">${g.total}</strong>
+            <span class="situacao__pct">${g.pct}%</span>
+          </button>`
+      )}
+    </div>
+    ${top.length
+      ? html`
+        <div class="situacao__sistemas">
+          <h3 class="situacao__subtitulo">Clientes sem atualização há mais tempo</h3>
+          <ul>
+            ${top.map((c) => html`
+              <li><button type="button" class="situacao__sistema" data-cliente-critico="${c.nome}" title="Última atualização: ${c.ultima}. Clique para abrir o histórico.">
+                <span class="situacao__sistema-nome">${c.nome}</span>
+                <span class="situacao__sistema-conta">${c.cidade}</span>
+                <span class="situacao__sistema-pct text-muted">${c.dias ? `${c.dias} dias` : "Nunca"}</span>
+              </button></li>`)}
+          </ul>
+        </div>`
+      : ""}`;
+}
