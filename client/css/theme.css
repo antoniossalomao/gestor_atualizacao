@@ -19,25 +19,34 @@
      ========================================================================== */
 
   /* -- fundo e superfícies (do mais escuro para o mais claro) --
-     Paleta chumbo/grafite executiva: elegante, neutra e sem saturação artificial de IA. */
-  --cor-fundo: #0e1117;
-  --cor-fundo-alt: #13171f;
-  --cor-superficie: #181c24;
-  --cor-superficie-alta: #202631;
-  --cor-superficie-hover: #272e3b;
-  --cor-borda: #262c38;
-  --cor-borda-forte: #384152;
-  --cor-borda-campo: #4a5568;
+     Preto absoluto (absolute-black): o fundo é #000 e as superfícies são
+     camadas quase pretas que só se distinguem por um brilho sutil. Bordas
+     sólidas viram um fio de luz de 6-14% de branco; quem separa os planos é o
+     vidro fosco (backdrop-filter), não uma linha. */
+  --cor-fundo: #000000;
+  --cor-fundo-alt: #050507;
+  --cor-superficie: #0a0a0d;
+  --cor-superficie-alta: #111115;
+  --cor-superficie-hover: #1a1a20;
+  --cor-borda: rgba(255, 255, 255, 0.07);
+  --cor-borda-forte: rgba(255, 255, 255, 0.13);
+  /* Contorno de CAMPOS de formulário continua perceptível (WCAG 1.4.11). */
+  --cor-borda-campo: rgba(255, 255, 255, 0.28);
 
   /* -- texto -- */
-  --cor-texto: #f0f3f8;
-  --cor-texto-sub: #9aa5b8;
-  --cor-texto-fraco: #6f7b8f;
+  --cor-texto: #f4f5f8;
+  --cor-texto-sub: #a1a6b3;
+  --cor-texto-fraco: #7a808e;
 
-  /* -- destaque e estados -- */
-  --cor-accent: var(--realce-escuro, #3b82f6);
-  --cor-accent-forte: var(--realce-escuro-forte, #60a5fa);
-  --cor-accent-fraco: rgba(59, 130, 246, 0.12);
+  /* -- destaque e estados --
+     Acentos em tons pastéis (azul, roxo, magenta): guiam o olhar em botões
+     primários e estados ativos sem poluir. O texto sobre eles é escuro. */
+  --cor-accent: var(--realce-escuro, #8ab4ff);
+  --cor-accent-forte: var(--realce-escuro-forte, #b0ccff);
+  --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 14%, transparent);
+  --cor-pastel-azul: #8ab4ff;
+  --cor-pastel-roxo: #b79cff;
+  --cor-pastel-magenta: #f0a3e0;
   --cor-verde: #34d399;
   --cor-verde-fraco: rgba(52, 211, 153, 0.12);
   --cor-vermelho: #f87171;
@@ -45,8 +54,14 @@
   --cor-vermelho-fraco: rgba(248, 113, 113, 0.12);
   --cor-amarelo: #fbbf24;
   --cor-amarelo-fraco: rgba(251, 191, 36, 0.12);
-  --cor-sobre-accent: #ffffff;
+  --cor-sobre-accent: #08080c;
   --cor-sobre-perigo: #ffffff;
+
+  /* Vidro fosco: preenchimento translúcido + desfoque + brilho de topo. */
+  --vidro-fundo: rgba(255, 255, 255, 0.045);
+  --vidro-fundo-forte: rgba(18, 18, 24, 0.72);
+  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, 0.09);
+  --vidro-desfoque: blur(22px) saturate(140%);
 
   /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
   --status-ok-bg: rgba(52, 211, 153, 0.10);
@@ -61,33 +76,34 @@
   --status-erro-solido: #f87171;
   --status-erro-texto: #fca5a5;
 
-  --status-info-bg: rgba(59, 130, 246, 0.10);
-  --status-info-borda: rgba(59, 130, 246, 0.25);
-  --status-info-solido: #3b82f6;
-  --status-info-texto: #bfdbfe;
+  --status-info-bg: rgba(138, 180, 255, 0.10);
+  --status-info-borda: rgba(138, 180, 255, 0.25);
+  --status-info-solido: #8ab4ff;
+  --status-info-texto: #cfe0ff;
 
 
   /* Fundos usados pelas tabelas com linha tingida por severidade (Resumo,
      Sistemas). */
-  --zebra-a: #13161d;
-  --zebra-b: #181c24;
+  --zebra-a: #000000;
+  --zebra-b: #0a0a0d;
   --severidade-alta: #ef6f6f;
   --severidade-boa: #6fcf97;
 
   /* Superfícies limpas e elegantes */
-  --card-gradiente: var(--cor-superficie);
-  --card-borda-hover: #3d495d;
-  --veu-tabela: rgba(14, 17, 23, 0.45);
-  --veu-linha: rgba(24, 28, 36, 0.55);
-  --veu-overlay: rgba(8, 10, 14, 0.65);
-  --sidebar-fundo: #12151c;
+  --card-gradiente: var(--vidro-fundo);
+  --card-borda-hover: rgba(255, 255, 255, 0.18);
+  --veu-tabela: rgba(0, 0, 0, 0.45);
+  --veu-linha: rgba(255, 255, 255, 0.025);
+  --veu-overlay: rgba(0, 0, 0, 0.72);
+  --sidebar-fundo: rgba(8, 8, 11, 0.7);
   --halo-topo: transparent;
 
   /* ==========================================================================
      TIPOGRAFIA
      ========================================================================== */
   --fonte: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --fonte-display: "Sora", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Inter também nos títulos: uma família só, hierarquia pelo peso e tamanho. */
+  --fonte-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --fonte-mono: ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, monospace;
 
   /* Escala tipográfica.
@@ -217,9 +233,16 @@
    enfeite aqui, é a cor dos links e dos rótulos de botão.
    ========================================================================== */
 
+:root[data-realce="magenta"] {
+  --realce-escuro: #f0a3e0;
+  --realce-escuro-forte: #f7c6ee;
+  --realce-claro: #a21caf;
+  --realce-claro-forte: #86198f;
+}
+
 :root[data-realce="violeta"] {
-  --realce-escuro: #a78bfa;
-  --realce-escuro-forte: #c4b5fd;
+  --realce-escuro: #b79cff;
+  --realce-escuro-forte: #d0bfff;
   --realce-claro: #6d28d9;
   --realce-claro-forte: #5b21b6;
 }
@@ -362,6 +385,9 @@
   --veu-linha: rgba(245, 247, 252, 0.9);
   --veu-overlay: rgba(16, 25, 42, 0.35);
   --sidebar-fundo: rgba(255, 255, 255, 0.96);
+  --vidro-fundo: rgba(255, 255, 255, 0.7);
+  --vidro-fundo-forte: rgba(255, 255, 255, 0.82);
+  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, 0.95);
   --halo-topo: transparent;
 
   --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 8px 20px -16px rgba(16, 25, 42, 0.2);
@@ -430,6 +456,9 @@
     --veu-linha: rgba(245, 247, 252, 0.9);
     --veu-overlay: rgba(16, 25, 42, 0.35);
     --sidebar-fundo: rgba(255, 255, 255, 0.96);
+  --vidro-fundo: rgba(255, 255, 255, 0.7);
+  --vidro-fundo-forte: rgba(255, 255, 255, 0.82);
+  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, 0.95);
     --halo-topo: transparent;
 
     --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 8px 20px -16px rgba(16, 25, 42, 0.2);

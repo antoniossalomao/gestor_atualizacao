@@ -95,3 +95,46 @@ jobs:
       - name: Auditoria de dependências de produção
         working-directory: server
         run: npm audit --omit=dev --audit-level=high
+
+      # As ferramentas da raiz (só devDependencies) não vão para produção,
+      # mas uma falha CRÍTICA nelas ainda compromete a máquina do CI.
+      - name: Auditoria das ferramentas de verificação
+        run: npm audit --audit-level=critical
+
+  # Barra PRs que ADICIONAM uma dependência com vulnerabilidade conhecida
+  # (alta ou crítica) ou com licença problemática, antes de chegar na main.
+  # Precisa do grafo de dependências do GitHub (ativo por padrão em repositórios
+  # públicos; em privados exige o GitHub Advanced Security).
+  revisao-de-dependencias:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Baixar o código do repositório
+        uses: actions/checkout@v4
+
+      - name: Revisão de dependências do PR
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  # Constrói a imagem Docker e varre o sistema e as bibliotecas dela com o
+  # Trivy. HIGH/CRITICAL com correção disponível reprova o CI: o deploy (que
+  # depende do CI verde) não acontece com vulnerabilidade conhecida.
+  varredura-da-imagem:
+    runs-on: ubuntu-24.04
+    needs: [testes, auditoria]
+    steps:
+      - name: Baixar o código do repositório
+        uses: actions/checkout@v4
+
+      - name: Construir a imagem
+        run: docker build -t gestor-de-atualizacoes:ci .
+
+      - name: Varredura de vulnerabilidades (Trivy)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: gestor-de-atualizacoes:ci
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          vuln-type: os,library

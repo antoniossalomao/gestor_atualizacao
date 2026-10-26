@@ -77,7 +77,11 @@ class AtualizacaoService {
       // um sistema acrescentado na edição fica sem versão -- só uma
       // atualização nova grava de fato a versão do dia.
       const anteriores = new Map(this.db.atualizacoes.sistemasDe(id).map((s) => [s.id, s.versao]));
-      sistemas = lista.map((s) => ({ ...s, versao: anteriores.get(s.id) ?? null }));
+      // Só quando o campo Versão foi MUDADO na edição (diferente do que estava
+      // gravado) é que vale o que foi digitado; senão, mantém as anteriores.
+      const mudouVersao = String(dados.versao || "").trim() !== String(antes.versao || "").trim();
+      const manuais = mudouVersao ? this._versoesManuais(dados.versao, lista) : null;
+      sistemas = lista.map((s) => ({ ...s, versao: manuais?.has(s.id) ? manuais.get(s.id) : anteriores.get(s.id) ?? null }));
       this._resumirVersoes(dados, sistemas);
     } else {
       sistemas = this._versoesLegadas(dados, lista);
@@ -244,7 +248,10 @@ class AtualizacaoService {
     }
     const oficiais = new Map(this.db.sistemas.todos().map((s) => [s.id, contaParaVersao(s) ? s.ultima_versao : ""]));
     const dataAtualizacao = lerData(dados.data);
+    // Versão digitada à mão: vale no lugar da oficial (ver _versoesManuais).
+    const manuais = this._versoesManuais(dados.versao, lista);
     const sistemas = lista.map((s) => {
+      if (manuais?.has(s.id)) return { ...s, versao: manuais.get(s.id) };
       const oficial = oficiais.get(s.id);
       // Não atribuir uma versão publicada depois da dados da atualização.
       const disponivel = oficial && dataAtualizacao && lerData(oficial) <= dataAtualizacao;
@@ -252,6 +259,37 @@ class AtualizacaoService {
     });
     this._resumirVersoes(dados, sistemas);
     return sistemas;
+  }
+
+  /**
+   * Versão informada à mão no campo "Versão" da atualização, que tem
+   * prioridade sobre a oficial automática. Dois formatos:
+   *  - texto simples ("10.2.1"): vale para todos os sistemas da atualização;
+   *  - "B_Vendas: 10.2; B_NFe: 5.1": uma versão por sistema (é o mesmo formato
+   *    do resumo que a tela mostra, então editar o resumo funciona).
+   * Campo vazio = automático (devolve null).
+   * @returns {Map<number, string|null>|null} id do sistema -> versão
+   */
+  _versoesManuais(texto, lista) {
+    const valor = String(texto || "").trim();
+    if (!valor) return null;
+    const limpar = (v) => {
+      const t = String(v).trim();
+      if (t.length > 100) throw new ErroDeValidacao("A versão pode ter no máximo 100 caracteres.");
+      return !t || /^n[ãa]o informada$/i.test(t) ? null : t;
+    };
+    const partes = valor.split(";").map((p) => p.trim()).filter(Boolean);
+    const porSistema = new Map();
+    const formatoPorSistema = partes.length > 0 && partes.every((parte) => {
+      const m = /^([^:]+):\s*(.*)$/.exec(parte);
+      const sistema = m && lista.find((s) => s.nome.toLowerCase() === m[1].trim().toLowerCase());
+      if (!sistema) return false;
+      porSistema.set(sistema.id, limpar(m[2]));
+      return true;
+    });
+    if (formatoPorSistema) return porSistema;
+    const unica = limpar(valor);
+    return new Map(lista.map((s) => [s.id, unica]));
   }
 
   /**

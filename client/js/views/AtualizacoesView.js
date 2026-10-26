@@ -731,11 +731,13 @@ export class AtualizacoesView extends View {
   _pintarModo() {
     const modo = this.form.querySelector('[data-role="modo"]');
     const isEdit = this.selectedId != null;
-    this.fields.versao.readOnly = !isEdit || this.selectedRow?.versoes_sistemas != null;
-    this.fields.versao.placeholder = "Preenchida com as versões oficiais ao salvar";
+    // Campo editável: em branco = versão oficial automática; preenchido =
+    // versão escolhida à mão (vale no lugar da oficial).
+    this.fields.versao.readOnly = false;
+    this.fields.versao.placeholder = "Automática (oficial do sistema) — digite para trocar";
     this.form.querySelector("#atu-versao-hint").textContent = isEdit
-      ? "As versões recebidas são preservadas. Registre uma nova atualização para manter o histórico."
-      : "Cada sistema informado recebe sua versão oficial cadastrada em Sistemas. Sem referência, a versão fica não informada.";
+      ? "Altere para corrigir a versão registrada. Vários sistemas: \"B_Vendas: 1.2; B_NFe: 3.4\"."
+      : "Deixe em branco para usar a versão oficial de cada sistema (cadastrada em Sistemas) ou digite a versão desejada.";
     if (modo) modo.textContent = isEdit ? `Registro #${this.selectedId}` : "";
     if (this.addBtn) this.addBtn.hidden = isEdit;
     if (this.updateBtn) {

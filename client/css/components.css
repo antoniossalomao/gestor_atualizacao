@@ -8757,3 +8757,127 @@ h1, h2, h3, strong {
   #painel-administracao .admin-grade { grid-template-columns: minmax(0, 1fr); }
   #painel-administracao .admin-papeis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-5); }
 }
+
+/* ==========================================================================
+   ABSOLUTE BLACK + VIDRO FOSCO
+   Camada final de acabamento visual (vem por último de propósito). As
+   bordas sólidas de janelas, modais, gaveta, cartões e menus viram vidro
+   fosco: preenchimento translúcido, `backdrop-filter` e um brilho de topo de
+   1px (box-shadow inset) no lugar do contorno. Tudo lê tokens do theme.css,
+   então o tema claro e "Superfícies: sólidas" continuam funcionando.
+   Os acentos pastéis (azul, roxo, magenta) só aparecem no que guia o olhar:
+   botão primário e estado ativo.
+   ========================================================================== */
+
+/* Cartões: vidro SEM desfoque. `backdrop-filter` cria um novo bloco de
+   contenção e é caro com dezenas de cartões na tela; só as superfícies
+   flutuantes (abaixo) o usam. */
+.card {
+  border: 0;
+  background: var(--vidro-fundo);
+  box-shadow: var(--vidro-brilho), var(--sombra-card);
+}
+
+.menu-acoes__lista,
+.cmdk,
+.modal-box,
+.drawer-panel {
+  border: 0;
+  background: var(--vidro-fundo);
+  -webkit-backdrop-filter: var(--vidro-desfoque);
+  backdrop-filter: var(--vidro-desfoque);
+  box-shadow: var(--vidro-brilho), var(--sombra-card);
+}
+
+/* Janelas flutuantes: mais opacas que o cartão, para o texto não brigar com o
+   que passa por trás. */
+.modal-box,
+.drawer-panel,
+.cmdk,
+.menu-acoes__lista {
+  background: var(--vidro-fundo-forte);
+  box-shadow: var(--vidro-brilho), var(--sombra-flutuante);
+}
+
+.drawer-header {
+  border-bottom: 0;
+  background: transparent;
+  box-shadow: 0 1px 0 var(--cor-borda);
+}
+
+.app-sidebar {
+  border-right: 0;
+  -webkit-backdrop-filter: var(--vidro-desfoque);
+  backdrop-filter: var(--vidro-desfoque);
+  box-shadow: 1px 0 0 var(--cor-borda);
+}
+.app-sidebar__footer {
+  border-top: 0;
+  box-shadow: 0 -1px 0 var(--cor-borda);
+}
+
+.app-header {
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--cor-fundo) 70%, transparent);
+  -webkit-backdrop-filter: var(--vidro-desfoque);
+  backdrop-filter: var(--vidro-desfoque);
+  box-shadow: 0 1px 0 var(--cor-borda);
+}
+
+/* Fundo escurecido atrás de modal e gaveta. */
+.modal-overlay,
+.drawer-backdrop {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+/* Estado ativo da navegação: pílula de vidro com um traço pastel, sem borda. */
+.tab-button.is-active {
+  background: var(--cor-accent-fraco);
+  box-shadow: var(--vidro-brilho);
+}
+
+/* Botão primário: gradiente pastel azul -> roxo -> magenta (só no tema escuro
+   e quando o realce é o padrão; os demais realces usam a própria cor). */
+:root:not([data-tema="claro"]):not([data-realce]) .btn--accent {
+  background: linear-gradient(135deg, var(--cor-pastel-azul), var(--cor-pastel-roxo) 55%, var(--cor-pastel-magenta));
+  border-color: transparent;
+  box-shadow: 0 6px 18px -8px var(--cor-pastel-roxo);
+}
+:root:not([data-tema="claro"]):not([data-realce]) .btn--accent:hover:not(:disabled) {
+  filter: brightness(1.08);
+  border-color: transparent;
+}
+
+/* Tipografia: hierarquia só por peso e tamanho, sem ruído. */
+h1, h2, h3, .drawer-header h2, .modal-box__title {
+  font-family: var(--fonte-display);
+  letter-spacing: -0.01em;
+}
+
+/* Quem escolheu "Superfícies: sólidas" (ou contraste alto) abre mão do vidro. */
+:root[data-transparencia="reduzida"] .card,
+:root[data-transparencia="reduzida"] .menu-acoes__lista,
+:root[data-transparencia="reduzida"] .cmdk,
+:root[data-transparencia="reduzida"] .modal-box,
+:root[data-transparencia="reduzida"] .drawer-panel,
+:root[data-transparencia="reduzida"] .app-sidebar,
+:root[data-transparencia="reduzida"] .app-header,
+:root[data-transparencia="reduzida"] .modal-overlay,
+:root[data-transparencia="reduzida"] .drawer-backdrop {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background-color: var(--cor-superficie);
+}
+:root[data-transparencia="reduzida"] .app-sidebar { background-color: var(--cor-fundo-alt); }
+:root[data-transparencia="reduzida"] .app-header { background-color: var(--cor-fundo); }
+:root[data-transparencia="reduzida"] .modal-overlay,
+:root[data-transparencia="reduzida"] .drawer-backdrop { background-color: var(--veu-overlay); }
+
+:root[data-contraste="alto"] .card,
+:root[data-contraste="alto"] .modal-box,
+:root[data-contraste="alto"] .drawer-panel,
+:root[data-contraste="alto"] .cmdk,
+:root[data-contraste="alto"] .menu-acoes__lista {
+  box-shadow: 0 0 0 1px var(--cor-borda-forte);
+}

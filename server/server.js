@@ -17,6 +17,7 @@ const path = require("path");
 const { Servidor } = require("./src/Servidor");
 const { problemaNoSegredoDeSessao } = require("./src/config/segredoSessao");
 const { lerTransporte } = require("./src/config/transporte");
+const { registrarErrosDeProcesso } = require("./src/middlewares/tratadorDeErros");
 
 // Recusa subir sem um SESSION_SECRET de verdade -- ver o porquê em
 // src/config/segredoSessao.js. Antes de abrir o banco, de propósito: não
@@ -92,18 +93,11 @@ for (const sinal of ["SIGINT", "SIGTERM"]) {
   });
 }
 
-// Lida com erros não tratados para evitar que o processo morra em silêncio ou deixe o banco em estado inconsistente
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
-});
-
-process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
-  server
-    .stop()
-    .catch(() => {})
-    .finally(() => {
-      server.db.close();
-      process.exit(1);
-    });
+// Erros que escapam de tudo: unhandledRejection (só registra) e
+// uncaughtException (encerra com ordem) -- ver middlewares/tratadorDeErros.js.
+registrarErrosDeProcesso({
+  aoEncerrar: async () => {
+    await server.stop().catch(() => {});
+    server.db.close();
+  },
 });

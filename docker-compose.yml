@@ -47,6 +47,20 @@ services:
       PORT: 3000
       SESSION_SECURE: "true"
       TRUST_PROXY: "true"
+      # Teto do heap do V8 em 256 MB (abaixo do limite de 512 MB do container,
+      # que também comporta código, buffers e o SQLite nativo). Com o teto, o
+      # coletor de lixo trabalha mais cedo em vez de deixar o heap crescer
+      # até o container ser morto pelo OOM Killer do kernel.
+      NODE_OPTIONS: "--max-old-space-size=256"
+
+    # Teto rígido de consumo: isola o painel do resto do servidor. Vale no
+    # "docker compose up" (Compose v2 aplica deploy.resources.limits fora do
+    # Swarm).
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
 
     volumes:
       # Dados reais, o que não pode se perder ao trocar a imagem: gestao.db,
@@ -75,8 +89,9 @@ services:
       # Definido no Dockerfile (bate em /api/auth/status). Repetido aqui só
       # para o "docker compose ps" mostrar o estado como "healthy". Roda
       # dentro do container, por HTTP direto no Node: é o único pedido que o
-      # servidor aceita sem HTTPS (ver middlewares/exigirHttps.js).
-      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/auth/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      # servidor aceita sem HTTPS (ver middlewares/exigirHttps.js). Forma
+      # CMD (sem shell): a imagem distroless não tem /bin/sh.
+      test: ["CMD", "/nodejs/bin/node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/auth/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       start_period: 20s

@@ -57,8 +57,9 @@ export const RITMOS = [
  * visual, não a cor aplicada.
  */
 export const REALCES = [
-  { valor: "azul", rotulo: "Azul", hex: "#4a9eff" },
-  { valor: "violeta", rotulo: "Violeta", hex: "#a78bfa" },
+  { valor: "azul", rotulo: "Azul", hex: "#8ab4ff" },
+  { valor: "violeta", rotulo: "Violeta", hex: "#b79cff" },
+  { valor: "magenta", rotulo: "Magenta", hex: "#f0a3e0" },
   { valor: "turquesa", rotulo: "Turquesa", hex: "#2dd4bf" },
   { valor: "verde", rotulo: "Verde", hex: "#4ade80" },
   { valor: "ambar", rotulo: "Âmbar", hex: "#fbbf24" },

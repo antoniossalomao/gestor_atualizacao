@@ -1,6 +1,7 @@
 const path = require("path");
 
 const express = require("express");
+const compression = require("compression");
 const session = require("express-session");
 const helmet = require("helmet");
 
@@ -146,8 +147,28 @@ class Servidor {
   _configurarExpress() {
     this._confiarNoProxy();
     this._aplicarCabecalhosDeSeguranca();
+    this._comprimirRespostas();
     this._abrirSessao();
     this._servirApiEArquivos();
+  }
+
+  /**
+   * Compressão Brotli/Gzip (o `compression` negocia pelo Accept-Encoding do
+   * navegador e prefere Brotli, qualidade 4) para JS, CSS, HTML e JSON da API. Montada
+   * ANTES da API e dos arquivos estáticos, para valer para todos. Não
+   * comprime o que já é comprimido (png, xlsx, zip) -- o filtro padrão olha o
+   * Content-Type -- e nem o stream de eventos (SSE), que precisa sair na hora.
+   */
+  _comprimirRespostas() {
+    this.app.use(
+      compression({
+        threshold: 1024,
+        filter: (req, res) => {
+          if (String(res.getHeader("Content-Type") || "").startsWith("text/event-stream")) return false;
+          return compression.filter(req, res);
+        },
+      })
+    );
   }
 
   _confiarNoProxy() {
@@ -242,7 +263,11 @@ class Servidor {
           maxAge: UM_DIA_MS * 7,
           httpOnly: true,
           secure: this.config.sessionSecure,
-          sameSite: "lax",
+          // Strict: o cookie de sessão nunca acompanha pedido iniciado por
+          // outro site (nem em navegação por link). O painel é de uso
+          // interno, então abrir o endereço digitado/favorito continua
+          // funcionando normalmente.
+          sameSite: "strict",
         },
       })
     );

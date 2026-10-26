@@ -29,7 +29,13 @@ class ArmazemDeSessaoSqlite extends session.Store {
   constructor({ filePath }) {
     super();
     this.conn = new Sqlite3(filePath);
+    // WAL: leitores e um escritor trabalham ao mesmo tempo, sem travar a fila
+    // de sessões. busy_timeout: em vez de falhar na hora com SQLITE_BUSY,
+    // espera até 5 s pela trava; synchronous=NORMAL é o par recomendado do WAL
+    // (continua íntegro, só deixa de fazer fsync a cada commit).
     this.conn.pragma("journal_mode = WAL");
+    this.conn.pragma("busy_timeout = 5000");
+    this.conn.pragma("synchronous = NORMAL");
     this.conn.exec(`
       CREATE TABLE IF NOT EXISTS sessoes (
         sid TEXT PRIMARY KEY,
