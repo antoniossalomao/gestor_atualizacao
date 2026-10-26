@@ -12,6 +12,7 @@ import { iconeHtml } from "../utils/icones.js";
 import { comBotaoOcupado } from "../components/botaoOcupado.js";
 import { EscolhaDeClientes } from "../components/EscolhaDeClientes.js";
 import { filtrarClientesCampanha, modeloComQuemFalta } from "../domain/campanhas.js";
+import { ocuparAlturaDisponivel } from "../components/alturaDisponivel.js";
 import {
   listaCampanhas,
   cabecalhoCampanha,
@@ -88,6 +89,9 @@ export class CampanhasView extends View {
     this.toolbarClientes = this.container.querySelector('[data-role="toolbar-clientes"]');
     this.filtrosEl = this.container.querySelector('[data-role="filtros"]');
     this.tableEl = this.container.querySelector('[data-role="table"]');
+
+    const cartao = this.container.querySelector(".campanhas");
+    if (cartao) ocuparAlturaDisponivel(cartao, { minimo: 540 });
 
     this.table = new TabelaOrdenavel(this.tableEl, {
       // Ao lado da lista de campanhas não cabem sete colunas: código e

@@ -8155,11 +8155,44 @@ h1, h2, h3, strong {
   border-radius: var(--raio);
   background: var(--cor-superficie);
 }
-/* No desktop o detalhe cresce com o conteúdo, evitando rolagem dentro de
-   outra rolagem. Apenas a lista lateral limita sua altura à janela. */
+/* No desktop o card de campanhas ocupa toda a altura útil disponível da tela,
+   alinhando o final da grade com a margem inferior da viewport, exatamente como
+   nas outras telas (Atualizações, Agendamentos e Clientes). */
 @media (min-width: 901px) {
-  .campanhas { min-height: 540px; }
-  .campanhas__lista { max-height: calc(100dvh - 220px); }
+  .campanhas {
+    height: var(--altura-disponivel, calc(100dvh - 136px));
+    min-height: 540px;
+  }
+  .campanhas__grade {
+    overflow: hidden;
+  }
+  .campanhas__lista {
+    overflow-y: auto;
+    max-height: none;
+  }
+  .campanhas__detalhe {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .campanhas__tabela {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .campanhas__tabela .table-wrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .campanhas__tabela .table-scroll {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+  }
 }
 
 .campanhas__topo {
@@ -8229,7 +8262,7 @@ h1, h2, h3, strong {
 /* Sem isto a coluna 1fr cresce até caber a tabela inteira e o cartão vaza
    pela direita no celular: item de grade tem `min-width: auto` por padrão. */
 .campanhas__lista,
-.campanhas__detalhe { min-width: 0; min-height: 0; overflow: auto; }
+.campanhas__detalhe { min-width: 0; min-height: 0; }
 .campanhas__lista {
   display: flex;
   flex-direction: column;
@@ -8238,7 +8271,7 @@ h1, h2, h3, strong {
   border-right: 1px solid var(--cor-borda);
   background: color-mix(in srgb, var(--cor-superficie) 50%, transparent);
 }
-.campanhas__detalhe { padding: var(--sp-5); overflow: visible; }
+.campanhas__detalhe { padding: var(--sp-5); }
 .campanhas__detalhe .empty-state { max-width: 460px; margin: 0 auto; text-align: center; }
 
 .campanha-cartao {
@@ -8462,10 +8495,12 @@ h1, h2, h3, strong {
 .campanha__cliente small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
 
 @media (max-width: 900px) {
+  .campanhas { height: auto; min-height: auto; }
   .campanhas__grade { grid-template-columns: 1fr; }
   .campanhas__lista { border-right: 0; border-bottom: 1px solid var(--cor-borda); overflow: visible; }
   .campanhas__detalhe { overflow: visible; padding: var(--sp-4); }
   .campanhas.is-vazia .campanhas__detalhe { min-height: 360px; }
+  .campanhas__tabela .table-scroll { max-height: none; overflow: visible; }
 }
 /* No celular a tabela vira blocos (nome em cima, data e situação embaixo,
    ações à direita) em vez de rolar para o lado. As células já dizem o que
