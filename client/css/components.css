@@ -8814,22 +8814,14 @@ h1, h2, h3, strong {
   backdrop-filter: blur(10px);
 }
 
-/* Estado ativo da navegação: pílula de vidro com um traço pastel, sem borda. */
+/* Estado ativo da navegação: pílula com indicador na cor de destaque. */
 .tab-button.is-active {
-  background: var(--cor-accent-fraco);
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto);
   box-shadow: var(--vidro-brilho);
 }
-
-/* Botão primário: gradiente pastel azul -> roxo -> magenta (só no tema escuro
-   e quando o realce é o padrão; os demais realces usam a própria cor). */
-:root:not([data-tema="claro"]):not([data-realce]) .btn--accent {
-  background: linear-gradient(135deg, var(--cor-pastel-azul), var(--cor-pastel-roxo) 55%, var(--cor-pastel-magenta));
-  border-color: transparent;
-  box-shadow: 0 6px 18px -8px var(--cor-pastel-roxo);
-}
-:root:not([data-tema="claro"]):not([data-realce]) .btn--accent:hover:not(:disabled) {
-  filter: brightness(1.08);
-  border-color: transparent;
+.tab-button.is-active svg {
+  color: var(--cor-accent);
 }
 
 /* Tipografia: hierarquia só por peso e tamanho, sem ruído. */

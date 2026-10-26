@@ -37,14 +37,10 @@
   --cor-texto-sub: #9ca6ba;
   --cor-texto-fraco: #727e94;
 
-  /* -- destaque e estados --
-     Acentos em tons pastéis balanceados (azul, roxo, magenta) */
-  --cor-accent: var(--realce-escuro, #8ab4ff);
-  --cor-accent-forte: var(--realce-escuro-forte, #adc8ff);
-  --cor-accent-fraco: rgba(138, 180, 255, 0.12);
-  --cor-pastel-azul: #8ab4ff;
-  --cor-pastel-roxo: #b79cff;
-  --cor-pastel-magenta: #f0a3e0;
+  /* -- destaque e estados -- */
+  --cor-accent: var(--realce-escuro, #3b82f6);
+  --cor-accent-forte: var(--realce-escuro-forte, #60a5fa);
+  --cor-accent-fraco: rgba(59, 130, 246, 0.12);
   --cor-verde: #34d399;
   --cor-verde-fraco: rgba(52, 211, 153, 0.12);
   --cor-vermelho: #f87171;
@@ -52,7 +48,7 @@
   --cor-vermelho-fraco: rgba(248, 113, 113, 0.12);
   --cor-amarelo: #fbbf24;
   --cor-amarelo-fraco: rgba(251, 191, 36, 0.12);
-  --cor-sobre-accent: #0b101b;
+  --cor-sobre-accent: #ffffff;
   --cor-sobre-perigo: #ffffff;
 
   /* Vidro fosco e profundidade refinada */
@@ -74,10 +70,10 @@
   --status-erro-solido: #f87171;
   --status-erro-texto: #fca5a5;
 
-  --status-info-bg: rgba(138, 180, 255, 0.10);
-  --status-info-borda: rgba(138, 180, 255, 0.25);
-  --status-info-solido: #8ab4ff;
-  --status-info-texto: #cfe0ff;
+  --status-info-bg: rgba(59, 130, 246, 0.10);
+  --status-info-borda: rgba(59, 130, 246, 0.25);
+  --status-info-solido: #3b82f6;
+  --status-info-texto: #bfdbfe;
 
 
   /* Fundos usados pelas tabelas com linha tingida por severidade (Resumo,
@@ -231,16 +227,9 @@
    enfeite aqui, é a cor dos links e dos rótulos de botão.
    ========================================================================== */
 
-:root[data-realce="magenta"] {
-  --realce-escuro: #f0a3e0;
-  --realce-escuro-forte: #f7c6ee;
-  --realce-claro: #a21caf;
-  --realce-claro-forte: #86198f;
-}
-
 :root[data-realce="violeta"] {
-  --realce-escuro: #b79cff;
-  --realce-escuro-forte: #d0bfff;
+  --realce-escuro: #a78bfa;
+  --realce-escuro-forte: #c4b5fd;
   --realce-claro: #6d28d9;
   --realce-claro-forte: #5b21b6;
 }

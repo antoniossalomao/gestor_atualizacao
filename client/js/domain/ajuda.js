@@ -55,8 +55,8 @@ export const NOVIDADES = [
   },
   {
     data: "26/10/2026",
-    titulo: "Novo visual refinado e acentos pastéis",
-    texto: "Design escuro premium em grafite/ardósia com efeitos sutis de vidro fosco, tipografia Inter limpa e acentos pastéis em azul, roxo e magenta para botões e estados ativos.",
+    titulo: "Visual aprimorado com acabamento fosco",
+    texto: "Design escuro em grafite/ardósia com efeitos sutis de vidro fosco, mantendo a clássica cor de destaque nos botões primários e tipografia Inter limpa.",
   },
   {
     data: "26/10/2026",
