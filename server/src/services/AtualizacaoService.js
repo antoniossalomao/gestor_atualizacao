@@ -281,10 +281,12 @@ class AtualizacaoService {
     const partes = valor.split(";").map((p) => p.trim()).filter(Boolean);
     const porSistema = new Map();
     const formatoPorSistema = partes.length > 0 && partes.every((parte) => {
-      const m = /^([^:]+):\s*(.*)$/.exec(parte);
-      const sistema = m && lista.find((s) => s.nome.toLowerCase() === m[1].trim().toLowerCase());
+      const idx = parte.indexOf(":");
+      if (idx <= 0) return false;
+      const nomeInformado = parte.slice(0, idx).trim().toLowerCase();
+      const sistema = lista.find((s) => s.nome.toLowerCase() === nomeInformado);
       if (!sistema) return false;
-      porSistema.set(sistema.id, limpar(m[2]));
+      porSistema.set(sistema.id, limpar(parte.slice(idx + 1)));
       return true;
     });
     if (formatoPorSistema) return porSistema;

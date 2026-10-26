@@ -131,7 +131,7 @@ jobs:
         run: docker build -t gestor-de-atualizacoes:ci .
 
       - name: Varredura de vulnerabilidades (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
         with:
           image-ref: gestor-de-atualizacoes:ci
           severity: HIGH,CRITICAL
