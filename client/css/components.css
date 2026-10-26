@@ -8217,8 +8217,8 @@ h1, h2, h3, strong {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
-  align-items: start;
+  grid-template-columns: 260px minmax(0, 1fr);
+  align-items: stretch;
 }
 /* Nenhuma campanha: some a coluna da lista, e o vazio ocupa o cartão
    inteiro, centralizado -- antes eram dois avisos (um espremido no canto). */
@@ -8244,32 +8244,31 @@ h1, h2, h3, strong {
 .campanha-cartao {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  padding: var(--sp-3) var(--sp-4);
+  padding: 10px 12px;
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-pequeno);
-  background: var(--cor-superficie-alta);
+  background: var(--cor-superficie);
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color var(--transicao), background var(--transicao), box-shadow var(--transicao);
+  transition: border-color var(--transicao), background var(--transicao);
 }
 .campanha-cartao:hover {
   border-color: var(--cor-borda-forte);
-  background: var(--cor-superficie-hover);
+  background: var(--cor-superficie-alta);
 }
 .campanha-cartao.is-selecionada {
   border-color: var(--cor-accent);
-  background: color-mix(in srgb, var(--cor-accent) 8%, var(--cor-superficie-alta));
-  box-shadow: 0 0 0 1px var(--cor-accent), 0 2px 8px rgba(0, 0, 0, 0.16);
+  background: color-mix(in srgb, var(--cor-accent) 6%, var(--cor-superficie));
 }
 .campanha-cartao__topo { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); }
-.campanha-cartao__titulo { min-width: 0; overflow-wrap: anywhere; line-height: 1.4; font-weight: var(--peso-forte); }
-.campanha-cartao__pct { flex-shrink: 0; font-family: var(--fonte-display); font-weight: var(--peso-extra); font-variant-numeric: tabular-nums; }
-.campanha-cartao__meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); color: var(--cor-texto-sub); font-size: var(--txt-sm); line-height: 1.4; overflow-wrap: anywhere; }
-.campanha-cartao .campanha__barra { margin: 0; height: 6px; border-radius: var(--raio-pilula); }
+.campanha-cartao__titulo { min-width: 0; overflow-wrap: anywhere; line-height: 1.3; font-weight: var(--peso-forte); font-size: var(--txt-sm); }
+.campanha-cartao__pct { flex-shrink: 0; font-family: var(--fonte-display); font-size: var(--txt-sm); font-weight: var(--peso-extra); color: var(--cor-accent); font-variant-numeric: tabular-nums; }
+.campanha-cartao__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--cor-texto-sub); font-size: var(--txt-xs); line-height: 1.4; overflow-wrap: anywhere; }
+.campanha-cartao .campanha__barra { margin: 2px 0 0; height: 4px; border-radius: var(--raio-pilula); }
 
 .campanha__cabecalho {
   display: flex;
@@ -8277,7 +8276,7 @@ h1, h2, h3, strong {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--sp-3);
-  margin-bottom: var(--sp-4);
+  margin-bottom: var(--sp-3);
 }
 .campanha__identidade { min-width: 0; flex: 1 1 100%; }
 .campanha__titulo {
@@ -8291,19 +8290,20 @@ h1, h2, h3, strong {
   overflow-wrap: anywhere;
 }
 .campanha__meta, .campanha__descricao { margin: 0; color: var(--cor-texto-fraco); }
-.campanha__descricao { margin-top: var(--sp-2); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; color: var(--cor-texto-sub); }
+.campanha__descricao { margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; color: var(--cor-texto-sub); font-size: var(--txt-sm); }
 .campanha__dados {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--sp-2) var(--sp-4);
-  margin: var(--sp-3) 0 0;
-  padding: var(--sp-3) var(--sp-4);
+  margin: var(--sp-2) 0 0;
+  padding: 8px 12px;
   background: var(--cor-superficie-alta);
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-pequeno);
 }
-.campanha__dados > div { min-width: 0; }
-.campanha__dados dt { color: var(--cor-texto-sub); font-size: var(--txt-xs); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+.campanha__dados > div { display: inline-flex; align-items: baseline; gap: 6px; }
+.campanha__dados dt { color: var(--cor-texto-sub); font-size: var(--txt-xs); font-weight: var(--peso-medio); text-transform: uppercase; letter-spacing: 0.04em; }
 .campanha__dados dd { margin: 0; font-size: var(--txt-sm); font-weight: var(--peso-forte); color: var(--cor-texto); overflow-wrap: anywhere; }
 .campanha__acoes-secundarias { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding-top: var(--sp-3); }
 .campanha__mais[open] { flex-basis: 100%; }
@@ -8313,50 +8313,64 @@ h1, h2, h3, strong {
 .campanha__mais[open] summary::after { content: " ▴"; }
 .campanha__acoes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
 
-/* Placar: quatro números em mini-cards modernos, com a barra por baixo. */
+/* Placar elegante e compacto com bordas finas (estilo Resumo) */
 .campanha__painel {
-  margin-bottom: var(--sp-4);
-  padding: var(--sp-4);
-  border: 1px solid var(--cor-borda);
-  border-radius: var(--raio);
-  background: var(--cor-superficie);
-  box-shadow: var(--sombra-card);
-}
-.campanha__placar { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--sp-3); margin-bottom: var(--sp-3); }
-.campanha__numero {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: var(--sp-3) var(--sp-4);
-  background: var(--cor-superficie-alta);
+  margin-bottom: var(--sp-3);
+  padding: 12px 16px;
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-pequeno);
-  transition: border-color var(--transicao);
+  background: var(--cor-superficie-alta);
 }
-.campanha__numero span {
-  color: var(--cor-texto-sub);
-  font-size: var(--txt-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: var(--peso-medio);
-}
-.campanha__numero strong {
+.campanha__placar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-bottom: 8px;
+}
+.campanha__numero {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--txt-sm);
+  color: var(--cor-texto-sub);
+}
+.campanha__numero strong {
   color: var(--cor-texto);
   font-family: var(--fonte-display);
-  font-size: 22px;
-  font-weight: var(--peso-extra);
+  font-size: var(--txt-base);
+  font-weight: var(--peso-forte);
   font-variant-numeric: tabular-nums;
-  line-height: 1.1;
 }
-.campanha__numero--pct strong { color: var(--cor-accent); }
+.campanha__numero--pct strong {
+  font-size: 20px;
+  font-weight: var(--peso-extra);
+  color: var(--cor-accent);
+}
 .campanha__numero.is-boa strong { color: var(--severidade-boa); }
 .campanha__numero.is-media strong { color: var(--severidade-media); }
 .campanha__numero.is-alta strong { color: var(--severidade-alta); }
-.campanha__barra { height: 8px; border-radius: var(--raio-pilula); overflow: hidden; margin: 0; }
-.campanha__nota { margin: var(--sp-3) 0 0; color: var(--cor-texto-sub); font-size: var(--txt-sm); line-height: 1.5; overflow-wrap: anywhere; }
+.campanha__barra { height: 6px; border-radius: var(--raio-pilula); overflow: hidden; margin: 0 0 8px; }
+.campanha__nota { margin: 0; color: var(--cor-texto-sub); font-size: var(--txt-xs); line-height: 1.4; overflow-wrap: anywhere; }
+
+/* Grid de clientes: idêntico em dimensões, bordas finas e espaçamento à aba Atualizações */
+.campanhas__tabela {
+  width: 100%;
+}
+.campanhas__tabela .data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.campanhas__tabela .data-table td {
+  padding: var(--linha-pad-y) var(--linha-pad-x);
+  border-bottom: 1px solid var(--cor-borda);
+  font-size: var(--txt-base);
+  vertical-align: middle;
+}
+.campanhas__tabela .data-table th {
+  padding: var(--cabecalho-pad-y) var(--linha-pad-x);
+  border-bottom: 1px solid var(--cor-borda);
+}
 .campanha__situacao { display: inline-flex; align-items: center; gap: 6px; white-space: normal; }
 .campanha__agendamento { display: block; margin-top: var(--sp-1); color: var(--cor-texto-sub); font-size: var(--txt-sm); line-height: 1.5; overflow-wrap: anywhere; }
 .campanha__numero .situacao__marca,
