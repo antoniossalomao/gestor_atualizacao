@@ -611,7 +611,7 @@ class AtualizacaoService {
   }
 
   /**
-   * Recência de atualização de cada cliente (independente de versões):
+   * Frequência / atividade de atualização de cada cliente (independente de versões):
    *  - ate30: atualizado nos últimos 30 dias (recente)
    *  - ate60: atualizado entre 31 e 60 dias (atenção moderada)
    *  - mais60: sem atualização há mais de 60 dias

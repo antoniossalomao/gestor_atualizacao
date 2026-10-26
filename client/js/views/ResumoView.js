@@ -57,7 +57,7 @@ export class ResumoView extends View {
       -->
       <div class="card-row card-row--aside">
         <div class="card">
-          <h2 class="card__title">Recência das Atualizações</h2>
+          <h2 class="card__title">Frequência de Atualização</h2>
           <div data-role="situacao"></div>
         </div>
         <div class="card">
@@ -220,7 +220,7 @@ export class ResumoView extends View {
     const clientes = this.resumo?.atividadeClientes?.[chave] || [];
     this._abrirGaveta({
       titulo: `${grupo?.rotulo || "Clientes"} — ${plural(clientes.length, "cliente")}`,
-      ajuda: grupo?.descricao || "Recência desde a última atualização registrada.",
+      ajuda: grupo?.descricao || "Tempo desde a última atualização registrada.",
       colunas: [
         { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
         { key: "cidade", label: "Cidade" },

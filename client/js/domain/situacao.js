@@ -47,7 +47,7 @@ export function totaisSituacao(situacao) {
 }
 
 /**
- * Grupos de recência de atualização (independente de versões):
+ * Grupos de frequência de atualização (independente de versões):
  * mede há quanto tempo o cliente recebeu qualquer atualização registrada.
  */
 export const GRUPOS_ATIVIDADE = [
@@ -58,7 +58,7 @@ export const GRUPOS_ATIVIDADE = [
 ];
 
 /**
- * Totais do card de recência de atualização.
+ * Totais do card de frequência de atualização.
  * @param {Record<string, any[]>} atividade
  */
 export function totaisAtividade(atividade) {

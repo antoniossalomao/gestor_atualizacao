@@ -119,7 +119,7 @@ export function corpoSituacao(totais, maisAtrasados, prazoDias = null) {
 }
 
 /**
- * Corpo do card de Recência de Atualizações (Opção 1: baseado em tempo decorrido
+ * Corpo do card de Frequência de Atualizações (baseado em tempo decorrido
  * desde a última atualização, sem depender de versões oficiais cadastradas).
  * @param {ReturnType<typeof import("../domain/situacao.js").totaisAtividade>} totais
  * @param {Array<any>} maisAntigos clientes sem atualização recente mais críticos
@@ -128,7 +128,7 @@ export function corpoAtividade(totais, maisAntigos = []) {
   if (totais.total === 0) {
     return html`
       <p class="situacao__vazio">
-        Nenhum cliente cadastrado. Cadastre clientes e registre atualizações para acompanhar a recência do parque.
+        Nenhum cliente cadastrado. Cadastre clientes e registre atualizações para acompanhar o ritmo de atualizações do parque.
       </p>`;
   }
   const descricaoBarra = totais.grupos.map((g) => `${g.rotulo}: ${g.total} (${g.pct}%)`).join(", ");
@@ -139,7 +139,7 @@ export function corpoAtividade(totais, maisAntigos = []) {
     <div class="situacao__destaque">
       <strong class="situacao__hero">${recentes?.pct ?? 0}%</strong>
       <span class="situacao__hero-texto">
-        <span>atualizados recentemente</span>
+        <span>Atualizados recentemente</span>
         <small>${recentes?.total ?? 0} de ${plural(totais.total, "cliente")} nos últimos 30 dias</small>
       </span>
     </div>
