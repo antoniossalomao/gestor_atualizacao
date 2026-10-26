@@ -8769,59 +8769,42 @@ h1, h2, h3, strong {
    botão primário e estado ativo.
    ========================================================================== */
 
-/* Cartões: vidro SEM desfoque. `backdrop-filter` cria um novo bloco de
-   contenção e é caro com dezenas de cartões na tela; só as superfícies
-   flutuantes (abaixo) o usam. */
+/* Cartões: fundo suave em harmonia com as superfícies */
 .card {
-  border: 0;
-  background: var(--vidro-fundo);
-  box-shadow: var(--vidro-brilho), var(--sombra-card);
+  background: var(--cor-superficie);
+  box-shadow: var(--sombra-card);
 }
 
 .menu-acoes__lista,
 .cmdk,
 .modal-box,
 .drawer-panel {
-  border: 0;
-  background: var(--vidro-fundo);
+  border: 1px solid var(--cor-borda-forte);
+  background: var(--vidro-fundo-forte);
   -webkit-backdrop-filter: var(--vidro-desfoque);
   backdrop-filter: var(--vidro-desfoque);
-  box-shadow: var(--vidro-brilho), var(--sombra-card);
-}
-
-/* Janelas flutuantes: mais opacas que o cartão, para o texto não brigar com o
-   que passa por trás. */
-.modal-box,
-.drawer-panel,
-.cmdk,
-.menu-acoes__lista {
-  background: var(--vidro-fundo-forte);
   box-shadow: var(--vidro-brilho), var(--sombra-flutuante);
 }
 
 .drawer-header {
-  border-bottom: 0;
+  border-bottom: 1px solid var(--cor-borda);
   background: transparent;
-  box-shadow: 0 1px 0 var(--cor-borda);
 }
 
 .app-sidebar {
-  border-right: 0;
+  border-right: 1px solid var(--cor-borda);
   -webkit-backdrop-filter: var(--vidro-desfoque);
   backdrop-filter: var(--vidro-desfoque);
-  box-shadow: 1px 0 0 var(--cor-borda);
 }
 .app-sidebar__footer {
-  border-top: 0;
-  box-shadow: 0 -1px 0 var(--cor-borda);
+  border-top: 1px solid var(--cor-borda);
 }
 
 .app-header {
-  border-bottom: 0;
-  background: color-mix(in srgb, var(--cor-fundo) 70%, transparent);
+  border-bottom: 1px solid var(--cor-borda);
+  background: color-mix(in srgb, var(--cor-fundo) 80%, transparent);
   -webkit-backdrop-filter: var(--vidro-desfoque);
   backdrop-filter: var(--vidro-desfoque);
-  box-shadow: 0 1px 0 var(--cor-borda);
 }
 
 /* Fundo escurecido atrás de modal e gaveta. */

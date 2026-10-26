@@ -19,31 +19,29 @@
      ========================================================================== */
 
   /* -- fundo e superfícies (do mais escuro para o mais claro) --
-     Preto absoluto (absolute-black): o fundo é #000 e as superfícies são
-     camadas quase pretas que só se distinguem por um brilho sutil. Bordas
-     sólidas viram um fio de luz de 6-14% de branco; quem separa os planos é o
-     vidro fosco (backdrop-filter), não uma linha. */
-  --cor-fundo: #000000;
-  --cor-fundo-alt: #050507;
-  --cor-superficie: #0a0a0d;
-  --cor-superficie-alta: #111115;
-  --cor-superficie-hover: #1a1a20;
-  --cor-borda: rgba(255, 255, 255, 0.07);
-  --cor-borda-forte: rgba(255, 255, 255, 0.13);
-  /* Contorno de CAMPOS de formulário continua perceptível (WCAG 1.4.11). */
-  --cor-borda-campo: rgba(255, 255, 255, 0.28);
+     Paleta escuro balanceada (grafite/ardósia premium): fundo confortável para
+     longas jornadas de trabalho, sem o contraste agressivo do preto puro (#000),
+     mantendo ótima legibilidade e hierarquia visual refinada. */
+  --cor-fundo: #0f1218;
+  --cor-fundo-alt: #141820;
+  --cor-superficie: #191e28;
+  --cor-superficie-alta: #212734;
+  --cor-superficie-hover: #293140;
+  --cor-borda: rgba(255, 255, 255, 0.08);
+  --cor-borda-forte: rgba(255, 255, 255, 0.15);
+  /* Contorno de CAMPOS de formulário nítido e acessível */
+  --cor-borda-campo: #3e485a;
 
   /* -- texto -- */
-  --cor-texto: #f4f5f8;
-  --cor-texto-sub: #a1a6b3;
-  --cor-texto-fraco: #7a808e;
+  --cor-texto: #f3f5f9;
+  --cor-texto-sub: #9ca6ba;
+  --cor-texto-fraco: #727e94;
 
   /* -- destaque e estados --
-     Acentos em tons pastéis (azul, roxo, magenta): guiam o olhar em botões
-     primários e estados ativos sem poluir. O texto sobre eles é escuro. */
+     Acentos em tons pastéis balanceados (azul, roxo, magenta) */
   --cor-accent: var(--realce-escuro, #8ab4ff);
-  --cor-accent-forte: var(--realce-escuro-forte, #b0ccff);
-  --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 14%, transparent);
+  --cor-accent-forte: var(--realce-escuro-forte, #adc8ff);
+  --cor-accent-fraco: rgba(138, 180, 255, 0.12);
   --cor-pastel-azul: #8ab4ff;
   --cor-pastel-roxo: #b79cff;
   --cor-pastel-magenta: #f0a3e0;
@@ -54,14 +52,14 @@
   --cor-vermelho-fraco: rgba(248, 113, 113, 0.12);
   --cor-amarelo: #fbbf24;
   --cor-amarelo-fraco: rgba(251, 191, 36, 0.12);
-  --cor-sobre-accent: #08080c;
+  --cor-sobre-accent: #0b101b;
   --cor-sobre-perigo: #ffffff;
 
-  /* Vidro fosco: preenchimento translúcido + desfoque + brilho de topo. */
-  --vidro-fundo: rgba(255, 255, 255, 0.045);
-  --vidro-fundo-forte: rgba(18, 18, 24, 0.72);
-  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, 0.09);
-  --vidro-desfoque: blur(22px) saturate(140%);
+  /* Vidro fosco e profundidade refinada */
+  --vidro-fundo: rgba(25, 30, 40, 0.85);
+  --vidro-fundo-forte: rgba(20, 24, 32, 0.90);
+  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --vidro-desfoque: blur(16px) saturate(130%);
 
   /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
   --status-ok-bg: rgba(52, 211, 153, 0.10);
@@ -84,18 +82,18 @@
 
   /* Fundos usados pelas tabelas com linha tingida por severidade (Resumo,
      Sistemas). */
-  --zebra-a: #000000;
-  --zebra-b: #0a0a0d;
+  --zebra-a: #12151c;
+  --zebra-b: #171c25;
   --severidade-alta: #ef6f6f;
   --severidade-boa: #6fcf97;
 
   /* Superfícies limpas e elegantes */
-  --card-gradiente: var(--vidro-fundo);
-  --card-borda-hover: rgba(255, 255, 255, 0.18);
-  --veu-tabela: rgba(0, 0, 0, 0.45);
-  --veu-linha: rgba(255, 255, 255, 0.025);
-  --veu-overlay: rgba(0, 0, 0, 0.72);
-  --sidebar-fundo: rgba(8, 8, 11, 0.7);
+  --card-gradiente: var(--cor-superficie);
+  --card-borda-hover: #3d495d;
+  --veu-tabela: rgba(15, 18, 24, 0.55);
+  --veu-linha: rgba(33, 39, 52, 0.60);
+  --veu-overlay: rgba(8, 10, 14, 0.70);
+  --sidebar-fundo: rgba(15, 18, 24, 0.88);
   --halo-topo: transparent;
 
   /* ==========================================================================
