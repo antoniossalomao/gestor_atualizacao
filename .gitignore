@@ -27,6 +27,23 @@ npm-debug.log*
 # segurança de quem está mexendo, redundantes com o próprio commit.
 _backup/
 
+# Build artifacts
+client/css/app.min.css
+
+# Arquivos de IDE e editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.bak
+*.tmp
+*.orig
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+
 # Diretório local do Claude Code (worktrees, configurações da máquina). Hoje
 # está vazio, mas num repositório público vale ignorar antes: o que cai ali
 # são caminhos e preferências desta máquina, não código do projeto.
