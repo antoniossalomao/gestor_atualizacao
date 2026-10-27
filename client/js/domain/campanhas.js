@@ -7,6 +7,8 @@
  * lugar para a regra divergir.
  */
 
+import { normalizarBusca } from "../utils/busca.js";
+
 /** Filtros rápidos da tabela, na ordem em que aparecem. */
 export const FILTROS_CAMPANHA = [
   { chave: "pendente", rotulo: "Pendentes" },
@@ -150,5 +152,5 @@ export function seloPrazo(c) {
 }
 
 function normalizar(v) {
-  return String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  return normalizarBusca(v).trim();
 }
