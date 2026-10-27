@@ -53,8 +53,9 @@ hoje. Tarefas concluídas podem ser arquivadas manualmente ou saem da lista
 principal automaticamente após o prazo configurado nas regras da equipe
 (continuam disponíveis no filtro "Arquivadas").
 
-**Resumo** — quantas atualizações no mês, por responsável e por sistema (as
-barras vêm em ordem, com a comparação com o mesmo período do mês anterior;
+**Resumo** — quantas atualizações no mês, gráfico de barras horizontal por responsável
+(evidenciando a distribuição e volume de produtividade, com clique para filtrar) e
+por sistema (as barras vêm em ordem, com a comparação com o mesmo período do mês anterior;
 clicar numa barra abre Atualizações já filtrada), tendência dos últimos 12
 meses (com zero nos meses vazios e comparação parcial justa), card de situação
 das versões dos clientes (Em dia, Aguardando atualização, Desatualizados, com o
@@ -76,7 +77,10 @@ não retroajam sobre atualizações antigas (ADR-0008).
 grupo/rede, data da última atualização, componentes fixos (sem
 falso status de atraso), acessos remotos com cópia direta por máquina, telemetria
 de agentes isolada e linha do tempo das últimas atualizações com opção de copiar
-relatório em texto limpo.
+relatório em texto limpo. Quando nenhum cliente está selecionado, a tela oferece um
+hub de contexto completo: indicadores de cadastros, atalhos de ações rápidas ("Novo
+Cliente", "Nova Atualização", "Novo Agendamento") e lista de clientes consultados
+recentemente para retorno ágil com um clique.
 
 **Campanhas** — metas temporárias de versão: "todo cliente de B_NFe na
 25/09/2026 até o dia 30". Mostra o progresso (atualizados, já agendados,

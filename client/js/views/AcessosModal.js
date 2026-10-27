@@ -77,11 +77,23 @@ export class AcessosModal {
       this._enviar();
     });
 
+    // Event delegation para ações nos itens da lista de acessos
+    this.list.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-row-action]");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const acesso = this.acessos?.find((a) => String(a.id) === id);
+      if (!acesso) return;
+      if (btn.dataset.rowAction === "editar") this._editar(acesso);
+      else if (btn.dataset.rowAction === "remover") this._remover(acesso, btn);
+    });
+
     await this._recarregar();
   }
 
   async _recarregar() {
     const acessos = await this.api.get(`/clientes/${this.cliente.id}/acessos`);
+    this.acessos = acessos || [];
     const list = this.box.querySelector('[data-role="list"]');
     list.replaceChildren();
 
@@ -124,12 +136,14 @@ export class AcessosModal {
       editar.type = "button";
       editar.className = "btn btn--small btn--ghost";
       editar.textContent = "Editar";
-      editar.addEventListener("click", () => this._editar(a));
+      editar.dataset.rowAction = "editar";
+      editar.dataset.id = String(a.id);
       const remover = document.createElement("button");
       remover.type = "button";
       remover.className = "btn btn--small btn--danger";
       remover.textContent = "Remover";
-      remover.addEventListener("click", () => this._remover(a, remover));
+      remover.dataset.rowAction = "remover";
+      remover.dataset.id = String(a.id);
       acoes.append(editar, remover);
       row.appendChild(acoes);
 

@@ -347,6 +347,13 @@ export class SistemasView extends View {
     else this._filtrarLinhas();
     this.buscaInput.focus();
   }
+
+  destroy() {
+    this.versoes = [];
+    this.rows = [];
+    this.table?.destroy?.();
+    super.destroy();
+  }
 }
 
 function situacaoClasse(situacao) {

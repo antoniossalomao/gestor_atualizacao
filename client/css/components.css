@@ -4755,6 +4755,127 @@ button.consulta-matches__item {
   min-width: 0;
 }
 
+.consulta-empty-hub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  padding: var(--sp-4) var(--sp-2);
+}
+.consulta-empty-hub__header {
+  text-align: center;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.consulta-empty-hub__icon svg {
+  width: 48px;
+  height: 48px;
+  color: var(--cor-accent);
+  opacity: 0.85;
+  margin-bottom: var(--sp-2);
+}
+.consulta-empty-hub__title {
+  margin: 0 0 var(--sp-2);
+  font: var(--peso-forte) var(--txt-xl) / 1.3 var(--fonte-display);
+}
+.consulta-empty-hub__desc {
+  margin: 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  line-height: 1.5;
+}
+.consulta-empty-hub__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--sp-4);
+  margin-top: var(--sp-2);
+}
+.consulta-empty-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  padding: var(--sp-4);
+}
+.consulta-empty-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.consulta-empty-card__head h4 {
+  margin: 0;
+  font-size: var(--txt-base);
+  font-weight: var(--peso-forte);
+}
+.consulta-empty-card__icon svg {
+  width: 20px;
+  height: 20px;
+  color: var(--cor-accent);
+}
+.consulta-empty-card__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.consulta-empty-card__stat-num {
+  font-family: var(--fonte-display);
+  font-size: 2rem;
+  font-weight: var(--peso-extra);
+  color: var(--cor-texto);
+  line-height: 1;
+}
+.consulta-empty-card__stat-label {
+  font-size: var(--txt-xs);
+  color: var(--cor-texto-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.consulta-empty-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.consulta-empty-hub__recentes {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--cor-borda);
+}
+.consulta-empty-hub__subtitle {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--txt-sm);
+  font-weight: var(--peso-forte);
+  color: var(--cor-texto-sub);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.consulta-recentes-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.consulta-recente-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--raio-pilula);
+  font-size: var(--txt-sm);
+  border: 1px solid var(--cor-borda);
+  background: var(--cor-superficie);
+  cursor: pointer;
+  transition: all var(--transicao);
+}
+.consulta-recente-chip:hover {
+  border-color: var(--cor-accent);
+  color: var(--cor-accent);
+  background: var(--cor-accent-fraco);
+}
+.consulta-recente-chip svg {
+  width: 14px;
+  height: 14px;
+}
+
 .consulta-detail__name {
   font: var(--peso-forte) var(--txt-xl) / 1.2 var(--fonte-display);
   letter-spacing: -0.03em;
@@ -8154,45 +8275,13 @@ h1, h2, h3, strong {
   overflow: hidden;
   border-radius: var(--raio);
   background: var(--cor-superficie);
+  height: max-content;
 }
-/* No desktop o card de campanhas ocupa toda a altura útil disponível da tela,
-   alinhando o final da grade com a margem inferior da viewport, exatamente como
-   nas outras telas (Atualizações, Agendamentos e Clientes). */
+/* No desktop o detalhe cresce com o conteúdo, evitando rolagem dentro de
+   outra rolagem. Apenas a lista lateral limita sua altura à janela. */
 @media (min-width: 901px) {
-  .campanhas {
-    height: var(--altura-disponivel, calc(100dvh - 136px));
-    min-height: 540px;
-  }
-  .campanhas__grade {
-    overflow: hidden;
-  }
-  .campanhas__lista {
-    overflow-y: auto;
-    max-height: none;
-  }
-  .campanhas__detalhe {
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-  }
-  .campanhas__tabela {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .campanhas__tabela .table-wrap {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .campanhas__tabela .table-scroll {
-    flex: 1;
-    min-height: 0;
-    max-height: none;
-    overflow-y: auto;
-  }
+  .campanhas { height: max-content; }
+  .campanhas__lista { max-height: calc(100dvh - 220px); }
 }
 
 .campanhas__topo {
@@ -8249,6 +8338,7 @@ h1, h2, h3, strong {
 .campanhas__grade {
   flex: 1;
   min-height: 0;
+  height: max-content;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   align-items: stretch;
@@ -8271,7 +8361,7 @@ h1, h2, h3, strong {
   border-right: 1px solid var(--cor-borda);
   background: color-mix(in srgb, var(--cor-superficie) 50%, transparent);
 }
-.campanhas__detalhe { padding: var(--sp-5); }
+.campanhas__detalhe { padding: var(--sp-5); overflow: visible; height: max-content; }
 .campanhas__detalhe .empty-state { max-width: 460px; margin: 0 auto; text-align: center; }
 
 .campanha-cartao {
@@ -8420,7 +8510,6 @@ h1, h2, h3, strong {
 }
 .campanha__selo.is-alerta { border-color: var(--severidade-alta); color: var(--severidade-alta); }
 .campanha__selo.is-encerrada { background: var(--cor-superficie-alta); }
-
 /* Filtros e busca alinhados com o padrão do sistema */
 .campanhas__toolbar {
   display: flex;
@@ -8452,6 +8541,13 @@ h1, h2, h3, strong {
   display: inline-flex;
   align-items: center;
   padding-bottom: 0;
+}
+.campanhas__tabela { height: max-content; }
+.campanhas__tabela .table-wrap,
+.campanhas__tabela .table-scroll {
+  height: max-content;
+  max-height: max-content;
+}
 }
 .campanhas__tabela .data-table td { white-space: normal; overflow-wrap: anywhere; vertical-align: middle; }
 .campanhas__tabela .data-table__sort-label { white-space: normal; }

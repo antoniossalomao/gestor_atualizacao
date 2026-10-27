@@ -231,6 +231,11 @@ export class HistoricoView extends View {
       <div class="modal-box__actions"><button type="button" class="btn btn--accent" data-action="fechar">Fechar</button></div>`;
     box.querySelector('[data-action="fechar"]').addEventListener("click", close);
   }
+
+  destroy() {
+    this.table?.destroy?.();
+    super.destroy();
+  }
 }
 
 function rotuloCampo(chave) { return chave.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase()); }

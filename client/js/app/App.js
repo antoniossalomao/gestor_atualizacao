@@ -689,6 +689,8 @@ export class App {
   }
 
   _abrirAcoesRapidas() {
+    // Evita empilhar instâncias múltiplas se uma modal ou paleta já estiver no DOM
+    if (document.querySelector(".modal-overlay, .cmdk-overlay, .quick-action-list")) return;
     const { box, close } = Modal.abrirCaixa({ largura: 460 });
     const permitida = ["operador", "admin"].includes(this.user?.role);
     const itens = [
@@ -710,8 +712,15 @@ export class App {
   }
 
   _ligarAtalhoAcaoRapida() {
+    let ultimoDisparo = 0;
+    const DEBOUNCE_MS = 300;
     const handler = (e) => {
       if (!e.altKey || e.ctrlKey || e.metaKey || e.key.toLowerCase() !== "n") return;
+      // Previne empilhar múltiplas instâncias da modal com disparos rápidos do atalho
+      const agora = Date.now();
+      if (agora - ultimoDisparo < DEBOUNCE_MS) return;
+      if (document.querySelector(".modal-overlay, .cmdk-overlay, .quick-action-list")) return;
+      ultimoDisparo = agora;
       e.preventDefault();
       this._abrirAcoesRapidas();
     };

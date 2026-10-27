@@ -253,6 +253,21 @@ test("Resumo - parado há muito tempo pode estar em dia", () => {
   }
 });
 
+test("Resumo - cliente sem nenhuma atualização não estoura dias com MAX_SAFE_INTEGER", () => {
+  const env = ambiente();
+  try {
+    env.cliente("Cliente Nunca Atualizado", ["B_Vendas"]);
+    const resumo = env.servico.resumo();
+    const item = resumo.semAtualizacao.find((c) => c.nome === "Cliente Nunca Atualizado");
+    assert.ok(item, "cliente sem atualização aparece na lista");
+    assert.equal(item.ultima, "Nunca");
+    assert.equal(item.dias, null);
+    assert.notEqual(item.dias, Number.MAX_SAFE_INTEGER);
+  } finally {
+    env.cleanup();
+  }
+});
+
 test("Dependentes do B_Vendas usam a data do B_Vendas (A13)", async (t) => {
   const env = ambiente();
   // Bem depois do prazo de 60 dias (A07): aqui a pergunta é de onde vem a data.

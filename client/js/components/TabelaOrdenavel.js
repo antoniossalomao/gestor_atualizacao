@@ -116,7 +116,10 @@ export class TabelaOrdenavel {
     container.replaceChildren(this.wrap);
     // Só a tabela principal de uma tela: numa tabela dentro de modal ou num
     // cartão do Resumo, "o que sobra até o fim da janela" não quer dizer nada.
-    if (options.ocuparAltura && this.scrollBox.className) ocuparAlturaDisponivel(this.scrollBox);
+    this._encerrarAltura = null;
+    if (options.ocuparAltura && this.scrollBox.className) {
+      this._encerrarAltura = ocuparAlturaDisponivel(this.scrollBox);
+    }
 
     if (this.selectable) {
       this.tbody.addEventListener("keydown", (e) => this._teclado(e));
@@ -541,6 +544,15 @@ export class TabelaOrdenavel {
       });
       this.tbody.appendChild(tr);
     }
+  }
+
+  destroy() {
+    if (this._encerrarAltura) {
+      this._encerrarAltura();
+      this._encerrarAltura = null;
+    }
+    this.rows = [];
+    this.wrap?.remove?.();
   }
 }
 

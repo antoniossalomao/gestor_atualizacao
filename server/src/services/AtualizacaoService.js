@@ -651,17 +651,29 @@ class AtualizacaoService {
     const resultado = [];
     for (const { id, nome, cidade } of this.db.clientes.todasBasicas()) {
       const dataStr = ultimas.get(id);
-      let dias = NUNCA;
+      let dias = null;
       if (dataStr) {
         const d = lerData(dataStr);
-        // Formato invalido (erro de digitacao antigo) tratado como "nunca".
-        dias = d ? Math.floor((hoje - d) / MS_POR_DIA) : NUNCA;
+        // Formato invalido ou data nula tratado como "nunca"
+        if (d && !isNaN(d.getTime())) {
+          dias = Math.floor((hoje - d) / MS_POR_DIA);
+        }
       }
-      if (dias > limiteDias) {
-        resultado.push({ nome, cidade: cidade || "—", ultima: dataStr || "Nunca", dias });
+      if (dias === null || dias > limiteDias) {
+        resultado.push({
+          nome,
+          cidade: cidade || "—",
+          ultima: dataStr || "Nunca",
+          dias: dias !== null ? dias : null,
+        });
       }
     }
-    resultado.sort((a, b) => b.dias - a.dias);
+    resultado.sort((a, b) => {
+      if (a.dias === null && b.dias === null) return a.nome.localeCompare(b.nome, "pt-BR");
+      if (a.dias === null) return -1;
+      if (b.dias === null) return 1;
+      return b.dias - a.dias;
+    });
     return resultado;
   }
 

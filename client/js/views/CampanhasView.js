@@ -494,6 +494,13 @@ export class CampanhasView extends View {
   _salvar() {
     prefs.set("campanhas:filtros", { encerradas: this.mostrarEncerradas, filtro: this.filtro, selecionadaId: this.selecionadaId });
   }
+
+  destroy() {
+    this.table?.destroy?.();
+    this.campanhas = [];
+    this.detalhe = null;
+    super.destroy();
+  }
 }
 
 /** HtmlSeguro -> nó, para as colunas da TabelaOrdenavel (que pedem Node). */

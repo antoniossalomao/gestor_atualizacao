@@ -3010,6 +3010,18 @@ Colunas e contratos devem seguir a normalização atual. Este mapa aponta invest
 
 ### 17. Decisões para revisão nas etapas correspondentes
 
+#### Decididas (Auditoria e Polimento de Sistema — 27/10/2026)
+
+| Ponto de Auditoria | Resolução Aplicada |
+|---|---|
+| Abertura múltipla de modais (Alt + N) | Validação no DOM (`.modal-overlay, .cmdk-overlay, .quick-action-list`) e debounce de 300ms no listener de teclado do `App.js`. |
+| "Dias sem Atualização" estourando (`MAX_SAFE_INTEGER`) | Cláusula de guarda em `AtualizacaoService._clientesSemAtualizacao` para dados nulos/inválidos, retornando `dias: null` e exibindo `"Nunca"` na interface do Resumo. |
+| Atualizações por Responsável em formato tabular | Substituído por `GraficoDeBarras` horizontal proporcional, com contagem clara, tooltip analítico e clique para filtrar a lista de atualizações. |
+| Espaço ocioso na Grid de Campanhas | Ajuste no CSS (`.campanhas`, `.campanhas__grade`, `.campanhas__tabela`, `.table-wrap`) com `height: max-content`, restringindo o fundo escuro à área útil com registros. |
+| Empty State pobre na tela "Consultar Cliente" | Substituição por Hub de Boas-Vindas contendo contagem macro de cadastros, atalhos de ações rápidas ("Novo Cliente", "Nova Atualização", "Novo Agendamento") e lista interativa de clientes acessados recentemente. |
+| Prevenção de Memory Leaks & Event Delegation | Implementação de `destroy()` em `ConsultaView`, `CampanhasView`, `SistemasView`, `VersoesView`, `HistoricoView` e `TabelaOrdenavel` (com cleanup de ResizeObserver). Event delegation nas ações de linha e sugestões em vez de listeners por elemento. |
+| Higienização de Repositório | Remoção de scripts temporários de patch (`patch_server.sh`) e alinhamento síncrono da documentação. |
+
 #### Decididas (24/09/2026)
 
 | Decisão | Resultado |

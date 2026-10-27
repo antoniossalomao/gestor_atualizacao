@@ -207,6 +207,20 @@ export class VersoesView extends View {
       this.filtroStatus = event.target.value;
       this._desenharHistorico();
     });
+
+    // Event delegation para ações das linhas da tabela de versões
+    this.container.querySelector('[data-role="history"]')?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-row-action]");
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      const item = this.versions.find((v) => v.id === id);
+      if (!item) return;
+      const acao = btn.dataset.rowAction;
+      if (acao === "promover") this._promover(item, btn);
+      else if (acao === "publicar") this._publicar(item, btn);
+      else if (acao === "rollback") this._rollback(item, btn);
+      else if (acao === "remover") this._remove(item, btn);
+    });
   }
 
   async refresh(showToast = false) {
@@ -404,7 +418,8 @@ export class VersoesView extends View {
         promote.className = "btn btn--small btn--accent";
         promote.textContent = "Promover para geral";
         promote.disabled = !isAdmin;
-        promote.addEventListener("click", () => this._promover(item, promote));
+        promote.dataset.rowAction = "promover";
+        promote.dataset.id = String(item.id);
         actions.appendChild(promote);
       } else if (item.status !== "publicada") {
         if (isAdmin) {
@@ -412,7 +427,8 @@ export class VersoesView extends View {
           publish.type = "button";
           publish.className = "btn btn--small btn--accent";
           publish.textContent = "Publicar";
-          publish.addEventListener("click", () => this._publicar(item, publish));
+          publish.dataset.rowAction = "publicar";
+          publish.dataset.id = String(item.id);
           actions.appendChild(publish);
         } else {
           const rascunho = document.createElement("span");
@@ -430,7 +446,8 @@ export class VersoesView extends View {
           rollback.type = "button";
           rollback.className = "btn btn--small btn--danger";
           rollback.textContent = "Rollback";
-          rollback.addEventListener("click", () => this._rollback(item, rollback));
+          rollback.dataset.rowAction = "rollback";
+          rollback.dataset.id = String(item.id);
           actions.appendChild(rollback);
         }
       }
@@ -440,7 +457,8 @@ export class VersoesView extends View {
         remove.type = "button";
         remove.className = "btn btn--small btn--danger";
         remove.textContent = "Excluir";
-        remove.addEventListener("click", () => this._remove(item, remove));
+        remove.dataset.rowAction = "remover";
+        remove.dataset.id = String(item.id);
         actions.appendChild(remove);
       }
       body.appendChild(row);
@@ -711,6 +729,13 @@ export class VersoesView extends View {
   _invalidarVersoes() {
     this.cache?.invalidar("versoes:");
     this.cache?.invalidar("distribuicao:");
+  }
+
+  destroy() {
+    this.systems = [];
+    this.versions = [];
+    this.clients = [];
+    super.destroy();
   }
 }
 

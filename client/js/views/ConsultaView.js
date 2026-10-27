@@ -55,6 +55,10 @@ export class ConsultaView extends View {
     // Delegado no container em vez de um listener por botão: a lista é
     // redesenhada inteira a cada busca (ver _filtroCasa).
     this.matchesBox.addEventListener("keydown", (e) => this._navegarNaLista(e));
+    this.matchesBox.addEventListener("click", (e) => {
+      const item = e.target.closest(".consulta-matches__item");
+      if (item && item.textContent) this._selecionarCliente(item.textContent.trim());
+    });
 
     this._desenharDetalheVazio();
   }
@@ -116,7 +120,6 @@ export class ConsultaView extends View {
       item.setAttribute("role", "option");
       item.setAttribute("aria-selected", String(nome === this.activeName));
       item.textContent = nome;
-      item.addEventListener("click", () => this._selecionarCliente(nome));
       this.matchesBox.appendChild(item);
     }
   }
@@ -150,8 +153,27 @@ export class ConsultaView extends View {
     itens[Math.max(0, proximo)].focus();
   }
 
+  _guardarRecente(nome) {
+    try {
+      const recentes = JSON.parse(localStorage.getItem("consulta:recentes") || "[]");
+      const novaLista = [nome, ...recentes.filter((n) => n !== nome)].slice(0, 8);
+      localStorage.setItem("consulta:recentes", JSON.stringify(novaLista));
+    } catch {
+      // continua sem quebrar caso localStorage não esteja acessível
+    }
+  }
+
+  _obterRecentes() {
+    try {
+      return JSON.parse(localStorage.getItem("consulta:recentes") || "[]");
+    } catch {
+      return [];
+    }
+  }
+
   async _selecionarCliente(nome) {
     this.activeName = nome;
+    this._guardarRecente(nome);
     this._filtroCasa();
 
     try {
@@ -174,13 +196,94 @@ export class ConsultaView extends View {
   }
 
   _desenharDetalheVazio() {
-    this.detailBox.replaceChildren(
-      estadoVazio({
-        titulo: "Selecione um cliente",
-        descricao: "Busque à esquerda, ou use Ctrl+K e digite o nome de qualquer lugar do sistema.",
-        icone: "consulta",
-      })
-    );
+    const recentes = this._obterRecentes().filter((n) => this.allNames.includes(n));
+    const totalClientes = this.allNames.length;
+    const podeEditar = ["operador", "admin"].includes(this.user?.role);
+
+    const div = document.createElement("div");
+    div.className = "consulta-empty-hub";
+    div.innerHTML = html`
+      <div class="consulta-empty-hub__header">
+        <div class="consulta-empty-hub__icon">${iconeHtml("consulta")}</div>
+        <h3 class="consulta-empty-hub__title">Consultar Cliente</h3>
+        <p class="consulta-empty-hub__desc">Selecione um cliente na lista à esquerda ou use <kbd>Ctrl + K</kbd> para buscar rapidamente.</p>
+      </div>
+
+      <div class="consulta-empty-hub__grid">
+        <div class="card consulta-empty-card">
+          <div class="consulta-empty-card__head">
+            <span class="consulta-empty-card__icon">${iconeHtml("clientes")}</span>
+            <h4>Indicadores Rápidos</h4>
+          </div>
+          <div class="consulta-empty-card__stat">
+            <span class="consulta-empty-card__stat-num">${totalClientes}</span>
+            <span class="consulta-empty-card__stat-label">Clientes cadastrados</span>
+          </div>
+          <p class="text-muted" style="font-size: var(--txt-xs); margin-top: var(--sp-2);">
+            Cadastros ativos com controle de versões e histórico de atualizações vinculado.
+          </p>
+        </div>
+
+        <div class="card consulta-empty-card">
+          <div class="consulta-empty-card__head">
+            <span class="consulta-empty-card__icon">${iconeHtml("atualizacoes")}</span>
+            <h4>Ações Rápidas</h4>
+          </div>
+          <div class="consulta-empty-card__actions">
+            ${podeEditar
+              ? html`
+                <button type="button" class="btn btn--small" data-hub-action="novo-cliente">${iconeHtml("plus")} Novo Cliente</button>
+                <button type="button" class="btn btn--small btn--accent" data-hub-action="nova-atualizacao">${iconeHtml("plus")} Nova Atualização</button>
+                <button type="button" class="btn btn--small" data-hub-action="novo-agendamento">${iconeHtml("plus")} Novo Agendamento</button>
+              `
+              : html`
+                <button type="button" class="btn btn--small" data-hub-action="ir-clientes">Ver Todos os Clientes</button>
+                <button type="button" class="btn btn--small" data-hub-action="ir-atualizacoes">Ver Histórico</button>
+              `}
+          </div>
+        </div>
+      </div>
+
+      ${recentes.length > 0
+        ? html`
+          <div class="consulta-empty-hub__recentes">
+            <h4 class="consulta-empty-hub__subtitle">Clientes Acessados Recentemente</h4>
+            <div class="consulta-recentes-chips">
+              ${recentes.map(
+                (nome) => html`
+                  <button type="button" class="consulta-recente-chip" data-cliente="${nome}">
+                    ${iconeHtml("clientes")}
+                    <span>${nome}</span>
+                  </button>
+                `
+              )}
+            </div>
+          </div>
+        `
+        : ""}
+    `.toString();
+
+    div.addEventListener("click", (e) => {
+      const chip = e.target.closest("[data-cliente]");
+      if (chip) {
+        const nome = chip.dataset.cliente;
+        this.searchInput.value = nome;
+        this._filtroCasa();
+        this._selecionarCliente(nome);
+        return;
+      }
+      const acaoBtn = e.target.closest("[data-hub-action]");
+      if (acaoBtn) {
+        const acao = acaoBtn.dataset.hubAction;
+        if (acao === "novo-cliente") this.navigate("clientes", { novo: true });
+        else if (acao === "nova-atualizacao") this.navigate("atualizacoes", { novo: true });
+        else if (acao === "novo-agendamento") this.navigate("agendamentos", { novo: true });
+        else if (acao === "ir-clientes") this.navigate("clientes");
+        else if (acao === "ir-atualizacoes") this.navigate("atualizacoes");
+      }
+    });
+
+    this.detailBox.replaceChildren(div);
   }
 
   _desenharDetalhe(cliente, historico, painelVersoes, acessos = [], situacaoSistemas = []) {
@@ -444,6 +547,12 @@ export class ConsultaView extends View {
       `;
       container.appendChild(telemetriaSecao);
     }
+  }
+
+  destroy() {
+    this.allNames = [];
+    this.currentMatches = [];
+    super.destroy();
   }
 }
 

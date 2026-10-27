@@ -130,14 +130,9 @@ export class ResumoView extends View {
       else this.navigate("sistemas", { sistema: alvo.dataset.valor });
     });
 
-    this.respTable = new TabelaOrdenavel(this.container.querySelector('[data-role="responsaveis"]'), {
-      columns: [
-        { key: "label", label: "Responsável" },
-        { key: "total", label: "Qtde", type: "numeric" },
-      ],
-      rowKey: (row) => row.label,
-      emptyMessage: "Nenhuma atualização registrada ainda.",
-      selectable: false,
+    this.respChart = new GraficoDeBarras(this.container.querySelector('[data-role="responsaveis"]'), {
+      vazio: "Nenhuma atualização registrada ainda.",
+      aoClicar: (barra) => this.navigate("atualizacoes", { responsavel: barra.label }),
     });
 
     this.sistemaChart = new GraficoDeBarras(this.container.querySelector('[data-role="sistemas"]'), {
@@ -194,7 +189,13 @@ export class ResumoView extends View {
       this.situacaoEl.innerHTML = corpoSituacao(totaisSituacao(resumo.situacaoClientes), resumo.situacaoClientes?.sistemasMaisAtrasados || [], resumo.prazoVersaoDias ?? null);
     }
 
-    this.respTable.definirLinhas(resumo.porResponsavel);
+    this.respChart.render(
+      (resumo.porResponsavel || []).map((r) => ({
+        label: r.label,
+        total: r.total,
+        dica: `${r.label}: ${plural(r.total, "atualização")}`,
+      }))
+    );
     const barras = barrasPorSistema(resumo.atualizadosMesPorSistema);
     this.sistemaChart.render(
       // Zerado este mês, com atualização só no mês anterior: não vale uma
@@ -260,9 +261,18 @@ export class ResumoView extends View {
         { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
         { key: "cidade", label: "Cidade" },
         { key: "ultima", label: "Última atualização", type: "date" },
-        // Para quem nunca foi atendido, o servidor manda um número enorme
-        // como sentinela: ordena esses primeiro, mas não é para ser lido.
-        { key: "dias", label: "Dias", type: "numeric", render: (row) => document.createTextNode(row.ultima === "Nunca" ? "—" : String(row.dias)) },
+        // Clientes sem registro anterior ou com data inválida mostram "Nunca"
+        {
+          key: "dias",
+          label: "Dias",
+          type: "numeric",
+          render: (row) =>
+            document.createTextNode(
+              row.dias == null || row.dias >= Number.MAX_SAFE_INTEGER || !row.ultima || row.ultima === "Nunca"
+                ? "Nunca"
+                : `${row.dias} dias`
+            ),
+        },
       ],
       linhas: clientes,
       chave: (row) => row.nome,
