@@ -73,14 +73,7 @@ gerenciador de versões oficiais registra a data de referência com autoria (que
 alterou por último) e detecção de edição concorrente, garantindo que referências
 não retroajam sobre atualizações antigas (ADR-0008).
 
-**Consulta** — a ficha completa de um cliente: cabeçalho com código, cidade e
-grupo/rede, data da última atualização, componentes fixos (sem
-falso status de atraso), acessos remotos com cópia direta por máquina, telemetria
-de agentes isolada e linha do tempo das últimas atualizações com opção de copiar
-relatório em texto limpo. Quando nenhum cliente está selecionado, a tela oferece um
-hub de contexto completo: indicadores de cadastros, atalhos de ações rápidas ("Novo
-Cliente", "Nova Atualização", "Novo Agendamento") e lista de clientes consultados
-recentemente para retorno ágil com um clique.
+**Ficha do Cliente (360°)** — acessível diretamente pela lista de Clientes em modal flutuante (e pela paleta de comandos): a ficha completa de um cliente reunindo dados cadastrais, matriz de versões por sistema, componentes fixos (sem falso status de atraso), acessos remotos com cópia direta por máquina, telemetria de agentes isolada e linha do tempo das últimas atualizações com opção de copiar relatório em texto limpo.
 
 **Campanhas** — metas temporárias de versão: "todo cliente de B_NFe na
 25/09/2026 até o dia 30". Mostra o progresso (atualizados, já agendados,
@@ -226,8 +219,10 @@ npm install        # traz só a ferramenta de verificação de tipos
 npm run install:all # dependências do servidor
 npm start          # produção
 npm run dev        # desenvolvimento, com reinício automático
-npm test           # servidor + front-end
+npm test           # testes do servidor + front-end
 npm run check      # verificação de tipos (não compila nada -- ver ADR-0006)
+npm run build      # verificação de integridade e tipos
+npm run lint       # checagem estática de tipos e contratos
 ```
 
 O front-end **não tem dependência nenhuma** (ver
