@@ -9,6 +9,7 @@ import { relatorioDeAtualizacao, haQuantoTempo } from "../domain/relatorio.js";
 import { tempoRelativo, formatarDataHora } from "../utils/data.js";
 import { montarMatrizVersoes } from "../domain/matrizVersoes.js";
 import { cartaoAcesso, CABECALHO_MATRIZ, linhaMatrizVersoes } from "../templates/consulta.js";
+import { ocuparAlturaDisponivel } from "../components/alturaDisponivel.js";
 
 const MAX_SUGESTOES = 50;
 
@@ -60,6 +61,9 @@ export class ConsultaView extends View {
       if (item && item.textContent) this._selecionarCliente(item.textContent.trim());
     });
 
+    const layout = this.container.querySelector(".consulta-layout");
+    if (layout) this._cleanupAltura = ocuparAlturaDisponivel(layout, { minimo: 540 });
+
     this._desenharDetalheVazio();
   }
 
@@ -76,6 +80,9 @@ export class ConsultaView extends View {
       (nomes) => {
         this.allNames = nomes;
         this._filtroCasa();
+        if (!this.activeName) {
+          this._desenharDetalheVazio();
+        }
       }
     );
 
@@ -198,69 +205,72 @@ export class ConsultaView extends View {
   _desenharDetalheVazio() {
     const recentes = this._obterRecentes().filter((n) => this.allNames.includes(n));
     const totalClientes = this.allNames.length;
-    const podeEditar = ["operador", "admin"].includes(this.user?.role);
 
     const div = document.createElement("div");
     div.className = "consulta-empty-hub";
     div.innerHTML = html`
-      <div class="consulta-empty-hub__header">
-        <div class="consulta-empty-hub__icon">${iconeHtml("consulta")}</div>
-        <h3 class="consulta-empty-hub__title">Consultar Cliente</h3>
-        <p class="consulta-empty-hub__desc">Selecione um cliente na lista à esquerda ou use <kbd>Ctrl + K</kbd> para buscar rapidamente.</p>
+      <div class="consulta-empty-hub__top">
+        <div class="consulta-empty-hub__header">
+          <div class="consulta-empty-hub__icon">${iconeHtml("consulta")}</div>
+          <h3 class="consulta-empty-hub__title">Consultar Cliente</h3>
+          <p class="consulta-empty-hub__desc">Selecione um cliente na lista à esquerda ou use <kbd>Ctrl + K</kbd> para buscar rapidamente.</p>
+        </div>
       </div>
 
-      <div class="consulta-empty-hub__grid">
-        <div class="card consulta-empty-card">
-          <div class="consulta-empty-card__head">
-            <span class="consulta-empty-card__icon">${iconeHtml("clientes")}</span>
-            <h4>Indicadores Rápidos</h4>
+      <div class="consulta-empty-hub__bottom">
+        <div class="consulta-empty-hub__grid">
+          <div class="card consulta-empty-card">
+            <div class="consulta-empty-card__head">
+              <span class="consulta-empty-card__icon">${iconeHtml("clientes")}</span>
+              <h4>Base de Clientes</h4>
+            </div>
+            <div class="consulta-empty-card__stat">
+              <span class="consulta-empty-card__stat-num">${totalClientes > 0 ? totalClientes : "—"}</span>
+              <span class="consulta-empty-card__stat-label">Clientes cadastrados</span>
+            </div>
+            <p class="text-muted" style="font-size: var(--txt-xs); margin-top: auto; margin-bottom: 0;">
+              Cadastros ativos com controle de versões e histórico de atualizações vinculado.
+            </p>
           </div>
-          <div class="consulta-empty-card__stat">
-            <span class="consulta-empty-card__stat-num">${totalClientes}</span>
-            <span class="consulta-empty-card__stat-label">Clientes cadastrados</span>
-          </div>
-          <p class="text-muted" style="font-size: var(--txt-xs); margin-top: var(--sp-2);">
-            Cadastros ativos com controle de versões e histórico de atualizações vinculado.
-          </p>
-        </div>
 
-        <div class="card consulta-empty-card">
-          <div class="consulta-empty-card__head">
-            <span class="consulta-empty-card__icon">${iconeHtml("atualizacoes")}</span>
-            <h4>Ações Rápidas</h4>
-          </div>
-          <div class="consulta-empty-card__actions">
-            ${podeEditar
+          <div class="card consulta-empty-card">
+            <div class="consulta-empty-card__head">
+              <span class="consulta-empty-card__icon">${iconeHtml("relogio")}</span>
+              <h4>Clientes Recentes</h4>
+            </div>
+            ${recentes.length > 0
               ? html`
-                <button type="button" class="btn btn--small" data-hub-action="novo-cliente">${iconeHtml("plus")} Novo Cliente</button>
-                <button type="button" class="btn btn--small btn--accent" data-hub-action="nova-atualizacao">${iconeHtml("plus")} Nova Atualização</button>
-                <button type="button" class="btn btn--small" data-hub-action="novo-agendamento">${iconeHtml("plus")} Novo Agendamento</button>
+                <div class="consulta-recentes-chips">
+                  ${recentes.map(
+                    (nome) => html`
+                      <button type="button" class="consulta-recente-chip" data-cliente="${nome}">
+                        ${iconeHtml("clientes")}
+                        <span>${nome}</span>
+                      </button>
+                    `
+                  )}
+                </div>
               `
               : html`
-                <button type="button" class="btn btn--small" data-hub-action="ir-clientes">Ver Todos os Clientes</button>
-                <button type="button" class="btn btn--small" data-hub-action="ir-atualizacoes">Ver Histórico</button>
+                <p class="text-muted" style="font-size: var(--txt-xs); margin-top: auto; margin-bottom: 0;">
+                  Os últimos clientes consultados aparecerão aqui para acesso rápido em um clique.
+                </p>
               `}
+          </div>
+
+          <div class="card consulta-empty-card">
+            <div class="consulta-empty-card__head">
+              <span class="consulta-empty-card__icon">${iconeHtml("teclado")}</span>
+              <h4>Atalhos de Consulta</h4>
+            </div>
+            <ul class="consulta-empty-card__shortcuts">
+              <li><kbd>Ctrl + K</kbd> <span>Buscar cliente de qualquer tela</span></li>
+              <li><kbd>↑</kbd> <kbd>↓</kbd> <span>Navegar pela lista de resultados</span></li>
+              <li><kbd>Enter</kbd> <span>Abrir detalhes do cliente selecionado</span></li>
+            </ul>
           </div>
         </div>
       </div>
-
-      ${recentes.length > 0
-        ? html`
-          <div class="consulta-empty-hub__recentes">
-            <h4 class="consulta-empty-hub__subtitle">Clientes Acessados Recentemente</h4>
-            <div class="consulta-recentes-chips">
-              ${recentes.map(
-                (nome) => html`
-                  <button type="button" class="consulta-recente-chip" data-cliente="${nome}">
-                    ${iconeHtml("clientes")}
-                    <span>${nome}</span>
-                  </button>
-                `
-              )}
-            </div>
-          </div>
-        `
-        : ""}
     `.toString();
 
     div.addEventListener("click", (e) => {
@@ -270,16 +280,6 @@ export class ConsultaView extends View {
         this.searchInput.value = nome;
         this._filtroCasa();
         this._selecionarCliente(nome);
-        return;
-      }
-      const acaoBtn = e.target.closest("[data-hub-action]");
-      if (acaoBtn) {
-        const acao = acaoBtn.dataset.hubAction;
-        if (acao === "novo-cliente") this.navigate("clientes", { novo: true });
-        else if (acao === "nova-atualizacao") this.navigate("atualizacoes", { novo: true });
-        else if (acao === "novo-agendamento") this.navigate("agendamentos", { novo: true });
-        else if (acao === "ir-clientes") this.navigate("clientes");
-        else if (acao === "ir-atualizacoes") this.navigate("atualizacoes");
       }
     });
 
@@ -550,6 +550,10 @@ export class ConsultaView extends View {
   }
 
   destroy() {
+    if (typeof this._cleanupAltura === "function") {
+      this._cleanupAltura();
+      this._cleanupAltura = null;
+    }
     this.allNames = [];
     this.currentMatches = [];
     super.destroy();

@@ -4703,6 +4703,30 @@ body:has(.conexao-aviso) .dados-aviso {
   align-items: flex-start;
 }
 
+@media (min-width: 901px) {
+  .consulta-layout {
+    height: var(--altura-disponivel, calc(100dvh - 136px));
+    min-height: 540px;
+    align-items: stretch;
+  }
+  .consulta-search {
+    height: 100%;
+    min-height: 0;
+  }
+  .consulta-matches {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+  }
+  .consulta-detail {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+}
+
 .consulta-search {
   display: flex;
   flex-direction: column;
@@ -4756,10 +4780,20 @@ button.consulta-matches__item {
 }
 
 .consulta-empty-hub {
+  height: 100%;
+  min-height: 480px;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-5);
+  justify-content: space-between;
+  box-sizing: border-box;
   padding: var(--sp-4) var(--sp-2);
+}
+.consulta-empty-hub__top {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6) var(--sp-4);
 }
 .consulta-empty-hub__header {
   text-align: center;
@@ -4783,11 +4817,15 @@ button.consulta-matches__item {
   font-size: var(--txt-sm);
   line-height: 1.5;
 }
+.consulta-empty-hub__bottom {
+  flex: 0 0 auto;
+  margin-top: auto;
+  width: 100%;
+}
 .consulta-empty-hub__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--sp-4);
-  margin-top: var(--sp-2);
 }
 .consulta-empty-card {
   display: flex;
@@ -4797,6 +4835,7 @@ button.consulta-matches__item {
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio);
   padding: var(--sp-4);
+  min-height: 140px;
 }
 .consulta-empty-card__head {
   display: flex;
@@ -4831,23 +4870,31 @@ button.consulta-matches__item {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-.consulta-empty-card__actions {
+.consulta-empty-card__shortcuts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
-}
-.consulta-empty-hub__recentes {
-  margin-top: var(--sp-3);
-  padding-top: var(--sp-4);
-  border-top: 1px solid var(--cor-borda);
-}
-.consulta-empty-hub__subtitle {
-  margin: 0 0 var(--sp-3);
-  font-size: var(--txt-sm);
-  font-weight: var(--peso-forte);
+  gap: 8px;
+  font-size: var(--txt-xs);
   color: var(--cor-texto-sub);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+}
+.consulta-empty-card__shortcuts li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.consulta-empty-card__shortcuts kbd {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: var(--peso-medio);
+  padding: 2px 6px;
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  border: 1px solid var(--cor-borda);
+  color: var(--cor-texto);
+  white-space: nowrap;
 }
 .consulta-recentes-chips {
   display: flex;
@@ -4863,6 +4910,7 @@ button.consulta-matches__item {
   font-size: var(--txt-sm);
   border: 1px solid var(--cor-borda);
   background: var(--cor-superficie);
+  color: var(--cor-texto);
   cursor: pointer;
   transition: all var(--transicao);
 }
@@ -8275,13 +8323,27 @@ h1, h2, h3, strong {
   overflow: hidden;
   border-radius: var(--raio);
   background: var(--cor-superficie);
-  height: max-content;
 }
-/* No desktop o detalhe cresce com o conteúdo, evitando rolagem dentro de
-   outra rolagem. Apenas a lista lateral limita sua altura à janela. */
+/* No desktop o card de campanhas ocupa toda a altura útil disponível da tela,
+   alinhando o final da grade com a margem inferior da viewport, exatamente como
+   nas outras telas (Atualizações, Agendamentos e Clientes). */
 @media (min-width: 901px) {
-  .campanhas { height: max-content; }
-  .campanhas__lista { max-height: calc(100dvh - 220px); }
+  .campanhas {
+    height: var(--altura-disponivel, calc(100dvh - 136px));
+    min-height: 540px;
+  }
+  .campanhas__grade {
+    overflow: hidden;
+  }
+  .campanhas__lista {
+    overflow-y: auto;
+    max-height: none;
+  }
+  .campanhas__detalhe {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
 }
 
 .campanhas__topo {
@@ -8338,7 +8400,6 @@ h1, h2, h3, strong {
 .campanhas__grade {
   flex: 1;
   min-height: 0;
-  height: max-content;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   align-items: stretch;
@@ -8361,7 +8422,7 @@ h1, h2, h3, strong {
   border-right: 1px solid var(--cor-borda);
   background: color-mix(in srgb, var(--cor-superficie) 50%, transparent);
 }
-.campanhas__detalhe { padding: var(--sp-5); overflow: visible; height: max-content; }
+.campanhas__detalhe { padding: var(--sp-5); overflow-y: auto; }
 .campanhas__detalhe .empty-state { max-width: 460px; margin: 0 auto; text-align: center; }
 
 .campanha-cartao {
@@ -8542,12 +8603,15 @@ h1, h2, h3, strong {
   align-items: center;
   padding-bottom: 0;
 }
-.campanhas__tabela { height: max-content; }
+.campanhas__tabela {
+  width: 100%;
+  flex: 0 0 auto;
+  height: max-content;
+}
 .campanhas__tabela .table-wrap,
 .campanhas__tabela .table-scroll {
   height: max-content;
   max-height: max-content;
-}
 }
 .campanhas__tabela .data-table td { white-space: normal; overflow-wrap: anywhere; vertical-align: middle; }
 .campanhas__tabela .data-table__sort-label { white-space: normal; }
