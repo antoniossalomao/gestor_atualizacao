@@ -36,12 +36,11 @@ test("RBAC - Middleware exigirPapel", async (t) => {
   await t.test("rejeita requisições sem autenticação com 401", () => {
     const mw = exigirPapel("admin");
     let status = null;
-    let json = null;
     const req = { session: null };
     const res = {
       status: (code) => {
         status = code;
-        return { json: (data) => (json = data) };
+        return { json: () => {} };
       },
     };
     let nextChamado = false;
@@ -56,12 +55,11 @@ test("RBAC - Middleware exigirPapel", async (t) => {
   await t.test("rejeita papel 'consulta' em rota de operador/admin com 403", () => {
     const mw = exigirPapel("operador", "admin");
     let status = null;
-    let json = null;
     const req = { session: { user: { id: 1, usuario: "visitante", role: "consulta" } } };
     const res = {
       status: (code) => {
         status = code;
-        return { json: (data) => (json = data) };
+        return { json: () => {} };
       },
     };
     let nextChamado = false;

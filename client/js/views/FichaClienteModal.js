@@ -2,13 +2,13 @@ import { ErroApi } from "../api/ApiPainel.js";
 import { Modal } from "../components/Modal.js";
 import { avisoRapido } from "../components/AvisosRapidos.js";
 import { estadoVazio } from "../components/estadoVazio.js";
-import { iconeHtml, iconeSvg } from "../utils/icones.js";
+import { iconeHtml } from "../utils/icones.js";
 import { copiarParaAreaDeTransferencia } from "../components/areaDeTransferencia.js";
 import { relatorioDeAtualizacao, haQuantoTempo } from "../domain/relatorio.js";
 import { tempoRelativo, formatarDataHora } from "../utils/data.js";
 import { montarMatrizVersoes } from "../domain/matrizVersoes.js";
 import { cartaoAcesso, CABECALHO_MATRIZ, linhaMatrizVersoes } from "../templates/consulta.js";
-import { html, escaparHtml } from "../utils/html.js";
+import { html } from "../utils/html.js";
 
 /**
  * Ficha 360° do Cliente em janela modal flutuante.
@@ -113,7 +113,7 @@ export class FichaClienteModal {
   }
 
   _renderizarConteudo() {
-    const { cliente, historico, painelVersoes, acessos, situacaoSistemas } = this;
+    const { cliente, historico, acessos } = this;
     const podeEditar = ["operador", "admin"].includes(this.opcoes.role);
 
     // 1. Atualizar cabeçalho
