@@ -120,3 +120,4 @@ Nenhuma mudança externamente observável de comportamento foi introduzida. Rota
    - O projeto já possui checagem de tipos estrita em `client` e `server` via `npm run check`. Recomenda-se adicionar uma configuração leve de ESLint (ou Biome) rodando no script `npm run lint`.
 2. **Integração no CI:**
    - Incluir a execução de `npm run check` e `npm run test` no workflow do GitHub Actions em todas as pull requests.
+

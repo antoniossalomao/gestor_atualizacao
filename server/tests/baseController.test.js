@@ -99,3 +99,4 @@ test("BaseController - handleSync", async (t) => {
     assert.equal(errorCaught?.message, "Erro assíncrono");
   });
 });
+
