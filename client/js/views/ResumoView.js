@@ -6,8 +6,8 @@ import { GraficoDeLinhas } from "../components/graficos/GraficoDeLinhas.js";
 import { html, plural } from "../utils/html.js";
 import { hojeBR } from "../utils/data.js";
 import { formatarMes, primeiroDiaDoMes, tendenciaMensal, barrasPorSistema, variacaoMesAnterior } from "../domain/resumo.js";
-import { GRUPOS_SITUACAO, totaisSituacao, descreverSistemasQueExplicam } from "../domain/situacao.js";
-import { blocoDeNumero, deltaTendencia, corpoSituacao } from "../templates/resumo.js";
+import { GRUPOS_SITUACAO, GRUPOS_ATIVIDADE, totaisSituacao, totaisAtividade, descreverSistemasQueExplicam } from "../domain/situacao.js";
+import { blocoDeNumero, deltaTendencia, corpoSituacao, corpoAtividade } from "../templates/resumo.js";
 
 /**
  * Aba Resumo: indicadores gerais. Os cálculos moram no backend
@@ -57,7 +57,7 @@ export class ResumoView extends View {
       -->
       <div class="card-row card-row--aside">
         <div class="card">
-          <h2 class="card__title">Atualização dos Clientes</h2>
+          <h2 class="card__title">Frequência de Atualização</h2>
           <div data-role="situacao"></div>
         </div>
         <div class="card">
@@ -104,6 +104,10 @@ export class ResumoView extends View {
 
     this.situacaoEl = this.container.querySelector('[data-role="situacao"]');
     this.situacaoEl.addEventListener("click", (e) => {
+      const grupoAtividade = e.target.closest("[data-grupo-atividade]");
+      if (grupoAtividade) return this._listarGrupoAtividade(grupoAtividade.dataset.grupoAtividade);
+      const critico = e.target.closest("[data-cliente-critico]");
+      if (critico) return this.navigate("consulta", { cliente: critico.dataset.clienteCritico });
       const grupo = e.target.closest("[data-grupo]");
       if (grupo) return this._listarGrupo(grupo.dataset.grupo);
       const sistema = e.target.closest("[data-sistema]");
@@ -184,7 +188,11 @@ export class ResumoView extends View {
     semAtualizacaoTile.classList.toggle("is-alert", resumo.semAtualizacao.length > 0);
 
     this.resumo = resumo;
-    this.situacaoEl.innerHTML = corpoSituacao(totaisSituacao(resumo.situacaoClientes), resumo.situacaoClientes.sistemasMaisAtrasados, resumo.prazoVersaoDias ?? null);
+    if (resumo.atividadeClientes) {
+      this.situacaoEl.innerHTML = corpoAtividade(totaisAtividade(resumo.atividadeClientes), resumo.semAtualizacao || []);
+    } else {
+      this.situacaoEl.innerHTML = corpoSituacao(totaisSituacao(resumo.situacaoClientes), resumo.situacaoClientes?.sistemasMaisAtrasados || [], resumo.prazoVersaoDias ?? null);
+    }
 
     this.respTable.definirLinhas(resumo.porResponsavel);
     const barras = barrasPorSistema(resumo.atualizadosMesPorSistema);
@@ -204,6 +212,25 @@ export class ResumoView extends View {
     this.tendenciaChart.render(
       (resumo.atualizacoesPorMes || []).map((item) => ({ label: formatarMes(item.mes), total: item.total, parcial: item.mes === (resumo.atualizacoesPorMes || []).at(-1)?.mes }))
     );
+  }
+
+  /** @param {string} chave ate30 | ate60 | mais60 | nunca */
+  _listarGrupoAtividade(chave) {
+    const grupo = GRUPOS_ATIVIDADE.find((g) => g.chave === chave);
+    const clientes = this.resumo?.atividadeClientes?.[chave] || [];
+    this._abrirGaveta({
+      titulo: `${grupo?.rotulo || "Clientes"} — ${plural(clientes.length, "cliente")}`,
+      ajuda: grupo?.descricao || "Tempo desde a última atualização registrada.",
+      colunas: [
+        { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
+        { key: "cidade", label: "Cidade" },
+        { key: "ultima", label: "Última atualização", type: "date" },
+        { key: "dias", label: "Dias sem atualizar", type: "numeric", render: (row) => document.createTextNode(row.dias != null ? `${row.dias} dias` : "—") },
+      ],
+      linhas: clientes,
+      chave: (row) => row.nome,
+      vazio: "Nenhum cliente nesta faixa.",
+    });
   }
 
   /** @param {string} chave em_dia | aguardando | desatualizado */

@@ -19,20 +19,23 @@
      ========================================================================== */
 
   /* -- fundo e superfícies (do mais escuro para o mais claro) --
-     Paleta chumbo/grafite executiva: elegante, neutra e sem saturação artificial de IA. */
-  --cor-fundo: #0e1117;
-  --cor-fundo-alt: #13171f;
-  --cor-superficie: #181c24;
-  --cor-superficie-alta: #202631;
-  --cor-superficie-hover: #272e3b;
-  --cor-borda: #262c38;
-  --cor-borda-forte: #384152;
-  --cor-borda-campo: #4a5568;
+     Paleta escuro balanceada (grafite/ardósia premium): fundo confortável para
+     longas jornadas de trabalho, sem o contraste agressivo do preto puro (#000),
+     mantendo ótima legibilidade e hierarquia visual refinada. */
+  --cor-fundo: #0f1218;
+  --cor-fundo-alt: #141820;
+  --cor-superficie: #191e28;
+  --cor-superficie-alta: #212734;
+  --cor-superficie-hover: #293140;
+  --cor-borda: rgba(255, 255, 255, 0.08);
+  --cor-borda-forte: rgba(255, 255, 255, 0.15);
+  /* Contorno de CAMPOS de formulário nítido e acessível */
+  --cor-borda-campo: #3e485a;
 
   /* -- texto -- */
-  --cor-texto: #f0f3f8;
-  --cor-texto-sub: #9aa5b8;
-  --cor-texto-fraco: #6f7b8f;
+  --cor-texto: #f3f5f9;
+  --cor-texto-sub: #9ca6ba;
+  --cor-texto-fraco: #727e94;
 
   /* -- destaque e estados -- */
   --cor-accent: var(--realce-escuro, #3b82f6);
@@ -47,6 +50,12 @@
   --cor-amarelo-fraco: rgba(251, 191, 36, 0.12);
   --cor-sobre-accent: #ffffff;
   --cor-sobre-perigo: #ffffff;
+
+  /* Vidro fosco e profundidade refinada */
+  --vidro-fundo: rgba(25, 30, 40, 0.85);
+  --vidro-fundo-forte: rgba(20, 24, 32, 0.90);
+  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --vidro-desfoque: blur(16px) saturate(130%);
 
   /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
   --status-ok-bg: rgba(52, 211, 153, 0.10);
@@ -69,25 +78,26 @@
 
   /* Fundos usados pelas tabelas com linha tingida por severidade (Resumo,
      Sistemas). */
-  --zebra-a: #13161d;
-  --zebra-b: #181c24;
+  --zebra-a: #12151c;
+  --zebra-b: #171c25;
   --severidade-alta: #ef6f6f;
   --severidade-boa: #6fcf97;
 
   /* Superfícies limpas e elegantes */
   --card-gradiente: var(--cor-superficie);
   --card-borda-hover: #3d495d;
-  --veu-tabela: rgba(14, 17, 23, 0.45);
-  --veu-linha: rgba(24, 28, 36, 0.55);
-  --veu-overlay: rgba(8, 10, 14, 0.65);
-  --sidebar-fundo: #12151c;
+  --veu-tabela: rgba(15, 18, 24, 0.55);
+  --veu-linha: rgba(33, 39, 52, 0.60);
+  --veu-overlay: rgba(8, 10, 14, 0.70);
+  --sidebar-fundo: rgba(15, 18, 24, 0.88);
   --halo-topo: transparent;
 
   /* ==========================================================================
      TIPOGRAFIA
      ========================================================================== */
   --fonte: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --fonte-display: "Sora", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Inter também nos títulos: uma família só, hierarquia pelo peso e tamanho. */
+  --fonte-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --fonte-mono: ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, monospace;
 
   /* Escala tipográfica.
@@ -362,6 +372,9 @@
   --veu-linha: rgba(245, 247, 252, 0.9);
   --veu-overlay: rgba(16, 25, 42, 0.35);
   --sidebar-fundo: rgba(255, 255, 255, 0.96);
+  --vidro-fundo: rgba(255, 255, 255, 0.7);
+  --vidro-fundo-forte: rgba(255, 255, 255, 0.82);
+  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, 0.95);
   --halo-topo: transparent;
 
   --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 8px 20px -16px rgba(16, 25, 42, 0.2);
@@ -430,6 +443,9 @@
     --veu-linha: rgba(245, 247, 252, 0.9);
     --veu-overlay: rgba(16, 25, 42, 0.35);
     --sidebar-fundo: rgba(255, 255, 255, 0.96);
+  --vidro-fundo: rgba(255, 255, 255, 0.7);
+  --vidro-fundo-forte: rgba(255, 255, 255, 0.82);
+  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, 0.95);
     --halo-topo: transparent;
 
     --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 8px 20px -16px rgba(16, 25, 42, 0.2);

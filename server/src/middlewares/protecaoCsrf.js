@@ -69,6 +69,13 @@ function protecaoCsrf(req, res, next) {
 
   if (METODOS_SEGUROS.has(req.method) || SEM_SESSAO_ANTES.has(`${req.method} ${req.path}`)) return next();
 
+  // Defesa extra, em profundidade: o navegador declara de onde veio o pedido.
+  // "cross-site" numa escrita autenticada nunca é do painel -- recusa já,
+  // mesmo antes de olhar o token. Pedidos sem o cabeçalho (curl, testes,
+  // navegadores antigos) seguem para a conferência do token.
+  if (req.get("Sec-Fetch-Site") === "cross-site") {
+    return res.status(403).json({ error: MENSAGEM, codigo: "csrf" });
+  }
   const enviado = req.get(CABECALHO);
   if (enviado && tokensIguais(enviado, token)) return next();
   // `codigo` é o que o ApiPainel usa para distinguir esta recusa de um 403

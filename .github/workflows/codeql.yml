@@ -20,6 +20,49 @@ on:
     - cron: '20 9 * * 3'
 
 jobs:
+  # Bloqueia, no PR, dependências com vulnerabilidade conhecida (alta ou
+  # crítica) antes de chegarem à main -- complementa a análise de código abaixo.
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+  # Auditoria de produção a cada push e toda quarta (cron abaixo): uma
+  # vulnerabilidade nova aparece sem ninguém tocar no código.
+  npm-audit:
+    name: npm audit (produção)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install production dependencies
+        working-directory: server
+        run: npm ci --omit=dev
+
+      - name: Audit (falha em severidade alta ou crítica)
+        working-directory: server
+        run: npm audit --omit=dev --audit-level=high
+
   analyze:
     name: Analyze (${{ matrix.language }})
     # Runner size impacts CodeQL analysis time. To learn more, please see:
@@ -76,7 +119,9 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
 
         # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
-        # queries: security-extended,security-and-quality
+        # Consultas estendidas de segurança (além das padrão): cobrem mais
+        # padrões de injeção, XSS e uso inseguro de criptografia.
+        queries: security-extended
 
     # If the analyze step fails for one of the languages you are analyzing with
     # "We were unable to automatically build your code", modify the matrix above

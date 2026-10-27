@@ -77,7 +77,11 @@ class AtualizacaoService {
       // um sistema acrescentado na edição fica sem versão -- só uma
       // atualização nova grava de fato a versão do dia.
       const anteriores = new Map(this.db.atualizacoes.sistemasDe(id).map((s) => [s.id, s.versao]));
-      sistemas = lista.map((s) => ({ ...s, versao: anteriores.get(s.id) ?? null }));
+      // Só quando o campo Versão foi MUDADO na edição (diferente do que estava
+      // gravado) é que vale o que foi digitado; senão, mantém as anteriores.
+      const mudouVersao = String(dados.versao || "").trim() !== String(antes.versao || "").trim();
+      const manuais = mudouVersao ? this._versoesManuais(dados.versao, lista) : null;
+      sistemas = lista.map((s) => ({ ...s, versao: manuais?.has(s.id) ? manuais.get(s.id) : anteriores.get(s.id) ?? null }));
       this._resumirVersoes(dados, sistemas);
     } else {
       sistemas = this._versoesLegadas(dados, lista);
@@ -244,7 +248,10 @@ class AtualizacaoService {
     }
     const oficiais = new Map(this.db.sistemas.todos().map((s) => [s.id, contaParaVersao(s) ? s.ultima_versao : ""]));
     const dataAtualizacao = lerData(dados.data);
+    // Versão digitada à mão: vale no lugar da oficial (ver _versoesManuais).
+    const manuais = this._versoesManuais(dados.versao, lista);
     const sistemas = lista.map((s) => {
+      if (manuais?.has(s.id)) return { ...s, versao: manuais.get(s.id) };
       const oficial = oficiais.get(s.id);
       // Não atribuir uma versão publicada depois da dados da atualização.
       const disponivel = oficial && dataAtualizacao && lerData(oficial) <= dataAtualizacao;
@@ -252,6 +259,39 @@ class AtualizacaoService {
     });
     this._resumirVersoes(dados, sistemas);
     return sistemas;
+  }
+
+  /**
+   * Versão informada à mão no campo "Versão" da atualização, que tem
+   * prioridade sobre a oficial automática. Dois formatos:
+   *  - texto simples ("10.2.1"): vale para todos os sistemas da atualização;
+   *  - "B_Vendas: 10.2; B_NFe: 5.1": uma versão por sistema (é o mesmo formato
+   *    do resumo que a tela mostra, então editar o resumo funciona).
+   * Campo vazio = automático (devolve null).
+   * @returns {Map<number, string|null>|null} id do sistema -> versão
+   */
+  _versoesManuais(texto, lista) {
+    const valor = String(texto || "").trim();
+    if (!valor) return null;
+    const limpar = (v) => {
+      const t = String(v).trim();
+      if (t.length > 100) throw new ErroDeValidacao("A versão pode ter no máximo 100 caracteres.");
+      return !t || /^n[ãa]o informada$/i.test(t) ? null : t;
+    };
+    const partes = valor.split(";").map((p) => p.trim()).filter(Boolean);
+    const porSistema = new Map();
+    const formatoPorSistema = partes.length > 0 && partes.every((parte) => {
+      const idx = parte.indexOf(":");
+      if (idx <= 0) return false;
+      const nomeInformado = parte.slice(0, idx).trim().toLowerCase();
+      const sistema = lista.find((s) => s.nome.toLowerCase() === nomeInformado);
+      if (!sistema) return false;
+      porSistema.set(sistema.id, limpar(parte.slice(idx + 1)));
+      return true;
+    });
+    if (formatoPorSistema) return porSistema;
+    const unica = limpar(valor);
+    return new Map(lista.map((s) => [s.id, unica]));
   }
 
   /**
@@ -427,6 +467,7 @@ class AtualizacaoService {
     const prazoVersaoDias = this.regras.valor("prazoVersaoDias");
     const porResponsavel = this.db.atualizacoes.contagemPorResponsavel();
     const atualizadosMesPorSistema = this._atualizadosMesPorSistema(mesStr, mesAnteriorStr, diaComparavel);
+    const atividadeClientes = this._atividadeDosClientes(hoje);
     // Tendencia mensal (grafico do Resumo) e tempo medio de resolucao das
     // tarefas de Agendamentos vivem em tabelas diferentes desta classe,
     // mas moram aqui porque o Resumo ja busca tudo numa chamada so -- mesmo
@@ -454,6 +495,7 @@ class AtualizacaoService {
       // oficial"), pelo mesmo motivo do desatualizadoDias acima.
       prazoVersaoDias,
       situacaoClientes,
+      atividadeClientes,
       porResponsavel,
       atualizadosMesPorSistema,
       atualizacoesPorMes,
@@ -568,6 +610,36 @@ class AtualizacaoService {
       .map((r) => ({ label: r.label, total: r.total, anterior: anterior.get(r.label) || 0 }))
       .filter((r) => r.total > 0 || r.anterior > 0)
       .sort((a, b) => b.total - a.total || b.anterior - a.anterior || a.label.localeCompare(b.label, "pt-BR"));
+  }
+
+  /**
+   * Frequência / atividade de atualização de cada cliente (independente de versões):
+   *  - ate30: atualizado nos últimos 30 dias (recente)
+   *  - ate60: atualizado entre 31 e 60 dias (atenção moderada)
+   *  - mais60: sem atualização há mais de 60 dias
+   *  - nunca: nunca recebeu nenhuma atualização registrada
+   */
+  _atividadeDosClientes(hoje = new Date()) {
+    const ultimas = this.db.atualizacoes.ultimaDataPorCliente();
+    const grupos = { ate30: [], ate60: [], mais60: [], nunca: [] };
+    for (const { id, nome, cidade } of this.db.clientes.todasBasicas()) {
+      const dataStr = ultimas.get(id);
+      let dias = NUNCA;
+      if (dataStr) {
+        const d = lerData(dataStr);
+        dias = d ? Math.floor((hoje - d) / MS_POR_DIA) : NUNCA;
+      }
+      const item = { nome, cidade: cidade || "—", ultima: dataStr || "Nunca", dias: dias === NUNCA ? null : dias };
+      if (dias <= 30) grupos.ate30.push(item);
+      else if (dias <= 60) grupos.ate60.push(item);
+      else if (dias === NUNCA) grupos.nunca.push(item);
+      else grupos.mais60.push(item);
+    }
+    grupos.ate30.sort((a, b) => a.dias - b.dias);
+    grupos.ate60.sort((a, b) => a.dias - b.dias);
+    grupos.mais60.sort((a, b) => b.dias - a.dias);
+    grupos.nunca.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    return grupos;
   }
 
   /**

@@ -49,6 +49,21 @@ export const COMO_USAR_TELAS = {
  */
 export const NOVIDADES = [
   {
+    data: "26/10/2026",
+    titulo: "Edição manual da versão na grid de atualizações",
+    texto: "A versão instalada agora pode ser informada ou editada diretamente no formulário, com opção de definir versões específicas por sistema ou manter o preenchimento automático oficial.",
+  },
+  {
+    data: "26/10/2026",
+    titulo: "Visual aprimorado com acabamento fosco",
+    texto: "Design escuro em grafite/ardósia com efeitos sutis de vidro fosco, mantendo a clássica cor de destaque nos botões primários e tipografia Inter limpa.",
+  },
+  {
+    data: "26/10/2026",
+    titulo: "Container distroless e limites de consumo",
+    texto: "Execução otimizada em container distroless sem privilégios de root (USER 1000), compressão Brotli/Gzip em tempo real e limites estritos de 512 MB de RAM e 0.5 CPU no Compose.",
+  },
+  {
     data: "30/09/2026",
     titulo: "Situação com prazo depois da versão oficial",
     texto: "Uma versão oficial nova não deixa mais todos os clientes desatualizados no dia seguinte: há um prazo (Administração) em que eles ficam \"Aguardando atualização\". Nunca atualizado conta como desatualizado.",
@@ -62,21 +77,6 @@ export const NOVIDADES = [
     data: "30/09/2026",
     titulo: "Gráfico de atualizações por sistema",
     texto: "Barras em ordem, com a comparação com o mês anterior. Clicar numa barra abre Atualizações filtrada pelo sistema e pelo mês.",
-  },
-  {
-    data: "30/09/2026",
-    titulo: "Tabelas na altura da tela",
-    texto: "Em Clientes, Atualizações, Sistemas e Agendamentos a tabela ocupa o espaço que sobra na tela, sem a página e a tabela rolarem ao mesmo tempo.",
-  },
-  {
-    data: "30/09/2026",
-    titulo: "Nova Campanha na Ação rápida",
-    texto: "Alt + N oferece Nova Campanha, que abre direto o formulário.",
-  },
-  {
-    data: "30/09/2026",
-    titulo: "Regime tributário na ficha",
-    texto: "A ficha do cliente mostra o regime tributário junto de cidade e grupo.",
   },
 ];
 

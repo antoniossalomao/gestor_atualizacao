@@ -33,4 +33,36 @@ function tratadorDeErros(err, req, res, _next) {
   });
 }
 
-module.exports = { tratadorDeErros };
+/**
+ * Intercepta explicitamente `unhandledRejection` e `uncaughtException` do
+ * Node, para que uma promessa órfã não degrade nem derrube o processo em
+ * silêncio e para que um erro síncrono fatal encerre de forma organizada
+ * (fecha HTTP e SQLite antes de sair).
+ *
+ *  - unhandledRejection: só registra no log e segue -- o servidor continua
+ *    atendendo. Sem este handler, o Node 15+ encerraria o processo.
+ *  - uncaughtException: o estado do processo é incerto; registra, encerra com
+ *    ordem (`aoEncerrar`) e sai com código 1 (o Docker reinicia o container).
+ *    Há um teto de 5 s para não ficar pendurado se o encerramento travar.
+ *
+ * @param {{aoEncerrar?: () => Promise<void>|void, log?: Pick<Console, "error">, sair?: (codigo: number) => void, alvo?: NodeJS.Process}} [opcoes]
+ */
+function registrarErrosDeProcesso({ aoEncerrar, log = console, sair = (c) => process.exit(c), alvo = process } = {}) {
+  let encerrando = false;
+  alvo.on("unhandledRejection", (motivo) => {
+    log.error("[unhandledRejection] Promessa rejeitada sem tratamento:", motivo);
+  });
+  alvo.on("uncaughtException", (erro) => {
+    log.error("[uncaughtException] Exceção não capturada:", erro);
+    if (encerrando) return;
+    encerrando = true;
+    const teto = setTimeout(() => sair(1), 5000);
+    teto.unref?.();
+    Promise.resolve()
+      .then(() => aoEncerrar?.())
+      .catch(() => {})
+      .finally(() => sair(1));
+  });
+}
+
+module.exports = { tratadorDeErros, registrarErrosDeProcesso };

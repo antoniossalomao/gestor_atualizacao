@@ -47,6 +47,31 @@ export function totaisSituacao(situacao) {
 }
 
 /**
+ * Grupos de frequência de atualização (independente de versões):
+ * mede há quanto tempo o cliente recebeu qualquer atualização registrada.
+ */
+export const GRUPOS_ATIVIDADE = [
+  { chave: "ate30", rotulo: "Últimos 30 dias", severidade: "boa", descricao: "Clientes atualizados recentemente (até 30 dias)." },
+  { chave: "ate60", rotulo: "31 a 60 dias", severidade: "neutra", descricao: "Clientes com atualização entre 31 e 60 dias." },
+  { chave: "mais60", rotulo: "Mais de 60 dias", severidade: "alta", descricao: "Clientes sem atualização há mais de 60 dias." },
+  { chave: "nunca", rotulo: "Nunca atualizados", severidade: "fora", descricao: "Clientes cadastrados sem nenhuma atualização registrada no histórico." },
+];
+
+/**
+ * Totais do card de frequência de atualização.
+ * @param {Record<string, any[]>} atividade
+ */
+export function totaisAtividade(atividade) {
+  const contar = (chave) => (atividade?.[chave] || []).length;
+  const grupos = GRUPOS_ATIVIDADE.map((g) => ({ ...g, total: contar(g.chave) }));
+  const total = grupos.reduce((soma, g) => soma + g.total, 0);
+  return {
+    grupos: grupos.map((g) => ({ ...g, pct: percentual(g.total, total) })),
+    total,
+  };
+}
+
+/**
  * Texto da coluna "Sistemas" das listas do Resumo. QUAIS sistemas explicam o
  * grupo é regra do servidor (`explicam`, em services/situacaoVersao.js);
  * aqui só se escreve, e quem nunca foi atualizado diz isso.
