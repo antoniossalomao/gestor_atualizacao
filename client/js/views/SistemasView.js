@@ -114,7 +114,7 @@ export class SistemasView extends View {
       rowKey: (row) => row.cliente,
       caption: "Clientes por sistema",
       rowClass: (row) => `row--com-situacao ${situacaoClasse(row.situacao)}`,
-      onSelect: (row) => this.navigate("consulta", { cliente: row.cliente }),
+      onSelect: (row) => this.navigate("clientes", { cliente: row.cliente }),
       emptyNode: () => estadoVazio({
         titulo: "Nenhum cliente para os filtros",
         descricao: "Ajuste a situação, a busca ou a data. Se o sistema não tiver clientes, vincule-os na tela Clientes.",

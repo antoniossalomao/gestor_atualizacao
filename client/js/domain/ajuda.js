@@ -25,9 +25,7 @@ export const COMO_USAR_TELAS = {
   agendamentos:
     "Tarefas da equipe em colunas por status (A Fazer, Em Andamento, Sem resposta, Concluído). Arraste o cartão para mudar o status. Tarefas concluídas há mais tempo que o prazo da equipe saem da vista e ficam no filtro \"Arquivadas\".",
   clientes:
-    "Cadastro de clientes e dos sistemas que cada um usa. Clique numa linha para editar. Com várias linhas marcadas (Shift + clique), dá para adicionar um sistema a todas de uma vez.",
-  consulta:
-    "Ficha de um cliente: dados de cadastro, a situação de cada sistema e as últimas atualizações. Abre também ao clicar num cliente em outras telas.",
+    "Cadastro e ficha 360° dos clientes e seus sistemas. Clique numa linha ou no ícone de olho para abrir a ficha completa (situação das versões, acessos AnyDesk e histórico de chamados). Com várias linhas marcadas (Shift + clique), dá para adicionar um sistema a todas de uma vez.",
   distribuicao:
     "Agentes do Atualizador instalados nos clientes: último contato, versão em cada máquina e incidentes relatados.",
   versoes:

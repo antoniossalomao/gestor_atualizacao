@@ -2481,6 +2481,93 @@ table.data-table {
   margin-top: var(--sp-5);
 }
 
+/* Ficha 360° do Cliente em Modal */
+.modal-box.modal-ficha-cliente {
+  width: min(960px, calc(100vw - 32px));
+  max-height: min(860px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-5) var(--sp-6);
+  box-sizing: border-box;
+}
+
+.modal-ficha-cliente__topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.modal-ficha-cliente__identidade {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.modal-ficha-cliente__nome {
+  margin: 0;
+  font-family: var(--fonte-display);
+  font-size: var(--txt-xl);
+  font-weight: var(--peso-forte);
+  color: var(--cor-texto);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.modal-ficha-cliente__subtitulo {
+  margin: var(--sp-1) 0 0;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-sm);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.modal-ficha-cliente__acoes-topo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+
+.modal-ficha-cliente__tabs {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  margin: var(--sp-3) 0 var(--sp-4);
+  padding-bottom: var(--sp-1);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.modal-ficha-cliente__tabs .btn {
+  white-space: nowrap;
+  border-color: transparent;
+  padding: 6px 14px;
+}
+
+.modal-ficha-cliente__tabs .btn.is-active {
+  color: var(--cor-accent);
+  border-color: var(--cor-accent);
+  background: var(--cor-superficie-alta);
+  font-weight: var(--peso-forte);
+}
+
+.modal-ficha-cliente__corpo {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 280px;
+  max-height: calc(100vh - 280px);
+  padding-right: 4px;
+}
+
+.modal-ficha-cliente__rodape {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--sp-3);
+  margin-top: var(--sp-3);
+  border-top: 1px solid var(--cor-borda);
+}
+
 /*
  * Relatório da aba Atualizações -- o texto pronto para colar num chamado.
  *

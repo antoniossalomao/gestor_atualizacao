@@ -14,6 +14,7 @@ import { aparencia } from "../app/aparencia.js";
 import { CampoComSugestoes } from "../components/CampoComSugestoes.js";
 import { AcessosModal } from "./AcessosModal.js";
 import { Gaveta } from "../components/Gaveta.js";
+import { FichaClienteModal } from "./FichaClienteModal.js";
 
 /**
  * Aba Clientes: cadastro, edição e listagem dos clientes e seus sistemas.
@@ -48,11 +49,24 @@ export class ClientesView extends View {
     this.table?.definirOrdem(this.sortBy, this.sortDir === "desc");
   }
 
-  aplicarParams({ novo } = {}) {
-    if (!novo || this.user?.role === "consulta") return;
-    this.limparFormulario();
-    this._preencherProximoCodigo();
-    this.drawer?.abrir({ foco: this.fields.nome });
+  aplicarParams({ novo, cliente } = {}) {
+    if (novo && this.user?.role !== "consulta") {
+      this.limparFormulario();
+      this._preencherProximoCodigo();
+      this.drawer?.abrir({ foco: this.fields.nome });
+      return;
+    }
+    if (cliente) {
+      this.busca = cliente;
+      if (this.searchInput) {
+        this.searchInput.value = cliente;
+        if (this.botaoLimparFiltros) this.botaoLimparFiltros.hidden = false;
+      }
+      this.page = 1;
+      this._salvarFiltros();
+      this._recarregarLista();
+      this.abrirFicha({ nome: cliente });
+    }
   }
 
   _montarDom() {
@@ -184,7 +198,7 @@ export class ClientesView extends View {
         { key: "maquinas", label: "Máquinas", type: "numeric", largura: "92px" },
         { key: "acoes", label: "Ações", largura: "140px", render: (row) => acoesCliente(row, this.user?.role) },
       ],
-      onSelect: (row) => this._carregarNoFormulario(row),
+      onSelect: (row) => this.abrirFicha(row),
       // Seleção múltipla: marcar um sistema em vários clientes de uma vez
       // (ex.: "esses 8 agora têm NFCe") ou excluir vários era um ciclo de
       // "abrir, editar, salvar" por cliente -- mesma ideia já usada em
@@ -335,10 +349,31 @@ export class ClientesView extends View {
       this._carregarNoFormulario(row);
       this.alternarFormulario(true);
     }
-    if (botao.dataset.rowAction === "ficha") this.navigate("consulta", { cliente: row.nome });
+    if (botao.dataset.rowAction === "ficha") {
+      this.abrirFicha(row);
+    }
     if (botao.dataset.rowAction === "gerenciar-acesso") {
       this.abrirAcessos(row.id, row.nome);
     }
+  }
+
+  /**
+   * Abre a Ficha 360° do cliente em modal flutuante.
+   * @param {{ id?: number, nome: string }} clienteRef
+   */
+  async abrirFicha(clienteRef) {
+    if (!clienteRef) return;
+    const modal = new FichaClienteModal(this.api, clienteRef, {
+      role: this.user?.role,
+      onEditar: (cli) => {
+        this._carregarNoFormulario(cli);
+        this.alternarFormulario(true);
+      },
+      onAcessos: (id, nome) => {
+        this.abrirAcessos(id, nome);
+      },
+    });
+    await modal.open();
   }
 
   _alternarNovoSistema() {

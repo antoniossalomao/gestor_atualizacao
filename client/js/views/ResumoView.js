@@ -107,7 +107,7 @@ export class ResumoView extends View {
       const grupoAtividade = e.target.closest("[data-grupo-atividade]");
       if (grupoAtividade) return this._listarGrupoAtividade(grupoAtividade.dataset.grupoAtividade);
       const critico = e.target.closest("[data-cliente-critico]");
-      if (critico) return this.navigate("consulta", { cliente: critico.dataset.clienteCritico });
+      if (critico) return this.navigate("clientes", { cliente: critico.dataset.clienteCritico });
       const grupo = e.target.closest("[data-grupo]");
       if (grupo) return this._listarGrupo(grupo.dataset.grupo);
       const sistema = e.target.closest("[data-sistema]");
@@ -126,7 +126,7 @@ export class ResumoView extends View {
       const alvo = e.target.closest("[data-ir]");
       if (!alvo) return;
       this.gaveta.fechar({ forcar: true });
-      if (alvo.dataset.ir === "cliente") this.navigate("consulta", { cliente: alvo.dataset.valor });
+      if (alvo.dataset.ir === "cliente") this.navigate("clientes", { cliente: alvo.dataset.valor });
       else this.navigate("sistemas", { sistema: alvo.dataset.valor });
     });
 

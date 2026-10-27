@@ -15,7 +15,6 @@ import { ResumoView } from "../views/ResumoView.js";
 import { AtualizacoesView } from "../views/AtualizacoesView.js";
 import { AgendamentosView } from "../views/AgendamentosView.js";
 import { ClientesView } from "../views/ClientesView.js";
-import { ConsultaView } from "../views/ConsultaView.js";
 import { SistemasView } from "../views/SistemasView.js";
 import { CampanhasView } from "../views/CampanhasView.js";
 import { AdministracaoView } from "../views/AdministracaoView.js";
@@ -60,9 +59,7 @@ const TABS = [
   { key: "agendamentos", label: "Agendamentos", icon: "agendamentos", View: AgendamentosView, grupo: "Operação",
     descricao: "Agenda interna de tarefas da equipe." },
   { key: "clientes", label: "Clientes", icon: "clientes", View: ClientesView, grupo: "Operação",
-    descricao: "Cadastro de clientes e dos sistemas que cada um usa." },
-  { key: "consulta", label: "Consultar Cliente", icon: "consulta", View: ConsultaView, grupo: "Operação",
-    descricao: "Ficha completa de um cliente específico." },
+    descricao: "Cadastro de clientes, sistemas contratados e ficha 360°." },
   { key: "distribuicao", label: "Distribuição", icon: "distribuicao", View: DistribuicaoView, grupo: "Distribuição",
     descricao: "Acompanhe os agentes e os relatórios das atualizações.", requerAtualizador: true },
   { key: "versoes", label: "Versões", icon: "versoes", View: VersoesView, grupo: "Distribuição",
@@ -1006,7 +1003,7 @@ export class App {
             subtitulo: "Abrir a ficha e comparação de versões do cliente",
             grupo: "Clientes",
             icone: "clientes",
-            executar: () => this.trocarAba("consulta", { cliente: nome }),
+            executar: () => this.trocarAba("clientes", { cliente: nome }),
           });
         }
       }
@@ -1101,6 +1098,7 @@ export class App {
    * @param {object} [params] repassado à view (ex.: qual cliente abrir)
    */
   trocarAba(key, params) {
+    if (key === "consulta") key = "clientes";
     this._paramsPendentes = params || null;
     if (this.router?.atual() === key) {
       this._mostrarAba(key);

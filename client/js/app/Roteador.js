@@ -26,6 +26,7 @@ export class Roteador {
   atual() {
     try {
       const rota = decodeURIComponent(location.hash.replace(/^#\/?/, "")).trim();
+      if (rota === "consulta") return "clientes";
       return this.rotasValidas.has(rota) ? rota : null;
     } catch {
       // Um link com escape incompleto ("#/%") não pode impedir o app de abrir.

@@ -334,7 +334,7 @@ export class AtualizacoesView extends View {
       this._carregarNoFormulario(row);
       if (botao.dataset.rowAction === "editar") this.drawer.abrir({ foco: this.fields.cliente });
       if (botao.dataset.rowAction === "relatorio") this.abrirRelatorio();
-      if (botao.dataset.rowAction === "cliente") this.navigate("consulta", { cliente: row.cliente });
+      if (botao.dataset.rowAction === "cliente") this.navigate("clientes", { cliente: row.cliente });
     });
 
     // -- lote --
