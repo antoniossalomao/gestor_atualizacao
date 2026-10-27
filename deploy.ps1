@@ -1,4 +1,4 @@
-﻿# Atualiza o painel em produção: faz backup do banco e reconstrói o Docker.
+# Atualiza o painel em produção: faz backup do banco e reconstrói o Docker.
 # Uso (na pasta web):  .\deploy.ps1      ou dê dois cliques em deploy.bat
 #
 # Se o backup falhar, nada é reconstruído: a cópia preserva o estado do
@@ -55,7 +55,7 @@ db.backup(temporario).then(() => {
     Write-Host "Gerando cópia íntegra para $arquivo ..."
     try {
         $montagemBackup = "type=bind,source=$pastaBackup,target=/deploy-backup"
-        docker run --rm --network none --volumes-from $container --mount $montagemBackup --entrypoint node $imagem -e $codigoBackup $snapshot $destino
+        docker run --rm --network none --volumes-from $container --mount $montagemBackup --entrypoint /nodejs/bin/node $imagem -e $codigoBackup $snapshot $destino
         if ($LASTEXITCODE -ne 0) { throw 'Backup falhou. Nada foi reconstruído.' }
         if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $arquivo) -or (Get-Item -LiteralPath $arquivo).Length -eq 0) {
             throw 'Não foi possível salvar o backup local. Nada foi reconstruído.'
