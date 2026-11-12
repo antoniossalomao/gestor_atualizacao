@@ -36,6 +36,8 @@
       color var(--dur-media) var(--curva-padrao);
   }
 
+  html.has-drawer,
+  html.has-drawer body,
   body.has-modal {
     overflow: hidden;
   }

@@ -30,74 +30,72 @@ export class LoginView {
     const screen = document.createElement("div");
     screen.className = "auth-screen";
 
-    // Só aparece em telas largas (ver o media query em components.css) --
-    // reaproveita os mesmos três nomes de aba do resto do app (Clientes,
-    // Atualizações, Distribuição), então não é propaganda inventada, é o que
-    // o sistema de fato faz.
-    const brand = document.createElement("div");
-    brand.className = "auth-screen__brand";
-    brand.innerHTML = `
-      <div class="auth-screen__brand-mark" aria-hidden="true">${simboloMarca()}</div>
-      <strong class="auth-screen__brand-name">Gestor de Atualizações</strong>
-      <p class="auth-screen__brand-tagline">Bredas Sistemas · Atualizações dos clientes, num só lugar.</p>
-      <ul class="auth-screen__brand-list">
-        <li>${iconeSvg("clientes")} Cadastro de clientes e sistemas</li>
-        <li>${iconeSvg("atualizacoes")} Histórico de atualizações</li>
-        <li>${iconeSvg("distribuicao")} Distribuição automática de versões</li>
-      </ul>
-    `;
-    screen.appendChild(brand);
-
+    // Cartao dividido Dispatch DevCore: painel de identidade matte a esquerda
+    // e formulario limpo a direita; em telas estreitas (.auth-card <= 780px),
+    // o painel esquerdo cede lugar ao selo compacto acima do titulo.
     const card = document.createElement("div");
     card.className = "auth-card";
     card.innerHTML = `
-      <!-- O mesmo logo da barra lateral. Era um "GA" digitado à mão, então a
-           primeira tela do sistema (a única que quem chega de fora sempre vê)
-           era justamente a que não mostrava a marca que o resto do app usa. -->
-      <!-- No celular o painel de marca some, e esta linha é o que diz que
-           sistema é este; em tela larga ela some e o painel fala por ela. -->
-      <div class="auth-card__marca">
-        <span class="auth-card__logo" aria-hidden="true">${simboloMarca()}</span>
-        <span class="auth-card__marca-nome">Gestor de Atualizações</span>
-      </div>
-      <h2>${isSetup ? "Criar conta de administrador" : "Entrar"}</h2>
-      <p class="auth-card__subtitle">${
-        isSetup
-          ? "Esta é a primeira vez que o sistema é aberto. Crie a conta principal para começar a usar."
-          : "Use o seu usuário e a senha da equipe."
-      }</p>
-      <div class="auth-card__error" role="alert" id="login-erro"></div>
-      <form>
-        ${isSetup ? `<div class="field"><label class="field__label" for="login-nome">Seu nome</label><input class="input" type="text" id="login-nome" name="nome" required autocomplete="name" /></div>` : ""}
-        <div class="field">
-          <!-- for/id: sem eles, o leitor de tela anunciava só "caixa de texto"
-               nos três campos (achado pelo teste de navegador). -->
-          <label class="field__label" for="login-usuario">Usuário</label>
-          <input class="input" type="text" id="login-usuario" name="usuario" required autocomplete="username" />
-        </div>
-        <div class="field">
-          <label class="field__label" for="login-senha">Senha</label>
-          <!--
-            O olho de "mostrar senha" não é enfeite: a senha é digitada às
-            cegas, e quando ela é longa (ou o teclado é de notebook, com o
-            número em cima da letra) o erro mais comum não é esquecer a senha,
-            é digitá-la errado duas vezes seguidas sem nunca ver o que saiu.
-          -->
-          <div class="input-com-acao">
-            <input class="input" type="password" id="login-senha" name="senha" required
-                   autocomplete="${isSetup ? "new-password" : "current-password"}" />
-            <button type="button" class="input-acao" data-action="ver-senha"
-                    aria-label="Mostrar a senha" aria-pressed="false" title="Mostrar a senha">${iconeSvg("olho")}</button>
+      <div class="auth-screen__brand">
+        <div>
+          <div class="auth-screen__brand-mark">
+            <span class="auth-card__logo" aria-hidden="true">${simboloMarca()}</span>
+            <strong class="auth-screen__brand-name">Gestor de Atualizações</strong>
           </div>
-          <!--
-            Caps Lock ligado é a causa silenciosa de metade dos "minha senha
-            parou de funcionar": a senha some atrás das bolinhas, e a tecla que
-            a estragou fica acesa num canto do teclado que ninguém olha.
-          -->
-          <p class="field__aviso" data-role="capslock" hidden>Caps Lock está ligado.</p>
+          <p class="auth-screen__brand-tagline">Bredas Sistemas · Atualizações dos clientes, num só lugar.</p>
         </div>
-        <button type="submit" class="btn btn--accent">${isSetup ? "Criar conta e entrar" : "Entrar"}</button>
-      </form>
+        <ul class="auth-screen__brand-list">
+          <li>${iconeSvg("clientes")}<span>Cadastro de clientes e sistemas</span></li>
+          <li>${iconeSvg("atualizacoes")}<span>Histórico de atualizações</span></li>
+          <li>${iconeSvg("distribuicao")}<span>Distribuição automática de versões</span></li>
+        </ul>
+      </div>
+      <div class="auth-card__form">
+        <div class="auth-card__marca">
+          <span class="auth-card__logo" aria-hidden="true">${simboloMarca()}</span>
+          <span class="auth-card__marca-nome">Gestor de Atualizações</span>
+        </div>
+        <div>
+          <h1>${isSetup ? "Criar conta de administrador" : "Entrar"}</h1>
+          <p class="auth-card__subtitle">${
+            isSetup
+              ? "Esta é a primeira vez que o sistema é aberto. Crie a conta principal para começar a usar."
+              : "Use o seu usuário e a senha da equipe."
+          }</p>
+        </div>
+        <div class="auth-card__error" role="alert" id="login-erro" hidden></div>
+        <form>
+          ${isSetup ? `<div class="field"><label class="field__label" for="login-nome">Seu nome</label><input class="input" type="text" id="login-nome" name="nome" required autocomplete="name" /></div>` : ""}
+          <div class="field">
+            <!-- for/id: sem eles, o leitor de tela anunciava só "caixa de texto"
+                 nos três campos (achado pelo teste de navegador). -->
+            <label class="field__label" for="login-usuario">Usuário</label>
+            <input class="input" type="text" id="login-usuario" name="usuario" required autocomplete="username" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="login-senha">Senha</label>
+            <!--
+              O olho de "mostrar senha" não é enfeite: a senha é digitada às
+              cegas, e quando ela é longa (ou o teclado é de notebook, com o
+              número em cima da letra) o erro mais comum não é esquecer a senha,
+              é digitá-la errado duas vezes seguidas sem nunca ver o que saiu.
+            -->
+            <div class="input-com-acao">
+              <input class="input" type="password" id="login-senha" name="senha" required
+                     autocomplete="${isSetup ? "new-password" : "current-password"}" />
+              <button type="button" class="input-acao" data-action="ver-senha"
+                      aria-label="Mostrar a senha" aria-pressed="false" title="Mostrar a senha">${iconeSvg("olho")}</button>
+            </div>
+            <!--
+              Caps Lock ligado é a causa silenciosa de metade dos "minha senha
+              parou de funcionar": a senha some atrás das bolinhas, e a tecla que
+              a estragou fica acesa num canto do teclado que ninguém olha.
+            -->
+            <p class="field__aviso" data-role="capslock" hidden>Caps Lock está ligado.</p>
+          </div>
+          <button type="submit" class="btn btn--accent">${isSetup ? "Criar conta e entrar" : "Entrar"}</button>
+        </form>
+      </div>
     `;
     screen.appendChild(card);
     this.root.appendChild(screen);
@@ -188,6 +186,7 @@ export class LoginView {
    */
   _mostrarErro(message) {
     this.errorBox.textContent = message;
+    this.errorBox.hidden = false;
     this.errorBox.classList.add("is-visible");
     for (const campo of this._camposDeEntrada()) {
       campo.setAttribute("aria-invalid", "true");
@@ -197,6 +196,7 @@ export class LoginView {
   }
 
   _esconderErro() {
+    this.errorBox.hidden = true;
     this.errorBox.classList.remove("is-visible");
     for (const campo of this._camposDeEntrada()) {
       campo.removeAttribute("aria-invalid");
