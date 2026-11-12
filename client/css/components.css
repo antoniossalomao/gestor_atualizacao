@@ -1425,7 +1425,7 @@
   .bar-chart {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     padding: var(--sp-4) var(--sp-5);
   }
 
@@ -1438,10 +1438,17 @@
   }
 
   .bar-chart__row--acao {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
     cursor: pointer;
     border-radius: var(--raio-pequeno);
-    padding: 2px 4px;
-    margin: -2px -4px;
+    padding: 3px 6px;
+    margin: -3px -6px;
+    transition: background-color var(--transicao);
   }
 
   .bar-chart__row--acao:hover {
@@ -1456,31 +1463,52 @@
   }
 
   .bar-chart__track {
-    height: 6px;
-    border-radius: var(--raio-pilula);
+    position: relative;
+    height: 24px;
+    border-radius: var(--raio-pequeno);
+    border: 1px solid var(--cor-borda);
     background: var(--cor-fundo-alt);
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-inline: 8px;
   }
 
   .bar-chart__fill {
-    height: 100%;
-    border-radius: var(--raio-pilula);
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: var(--raio-pequeno);
     background: var(--cor-accent);
+    opacity: 0.34;
     transition: width var(--dur-lenta) var(--curva-padrao);
   }
 
   .bar-chart__value {
+    position: relative;
+    z-index: 1;
+    font-family: var(--fonte-mono);
     font-variant-numeric: tabular-nums;
+    font-size: var(--txt-xs);
     font-weight: var(--peso-forte);
     color: var(--cor-texto);
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
   }
 
   .bar-chart__variacao {
+    font-family: var(--fonte-mono);
     font-size: 11px;
     color: var(--cor-texto-fraco);
+    white-space: nowrap;
+  }
+
+  .bar-chart__variacao.is-subiu {
+    color: var(--status-ok-texto);
+  }
+
+  .bar-chart__variacao.is-caiu {
+    color: var(--status-erro-texto);
   }
 
   .bar-chart__vazio {
@@ -1501,17 +1529,103 @@
     display: block;
   }
 
+  .line-chart__grade {
+    stroke: var(--cor-borda);
+    stroke-width: 1;
+    stroke-dasharray: 2 3;
+  }
+
+  .line-chart__eixo {
+    fill: var(--cor-texto-fraco);
+    font-family: var(--fonte-mono);
+    font-size: 10px;
+  }
+
+  .line-chart__area-topo {
+    stop-color: var(--cor-accent);
+    stop-opacity: 0.24;
+  }
+
+  .line-chart__area-base {
+    stop-color: var(--cor-accent);
+    stop-opacity: 0;
+  }
+
+  .line-chart__linha {
+    fill: none;
+    stroke: var(--cor-accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .line-chart__crosshair {
+    stroke: var(--cor-borda-forte);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+    opacity: 0;
+    transition: opacity var(--transicao);
+  }
+
+  .line-chart__crosshair.is-visivel {
+    opacity: 1;
+  }
+
+  .line-chart__ponto {
+    fill: var(--cor-superficie);
+    stroke: var(--cor-accent);
+    stroke-width: 1.75;
+    cursor: pointer;
+  }
+
+  .line-chart__ponto--fim {
+    fill: var(--cor-accent);
+  }
+
+  .line-chart__ponto--destaque {
+    fill: var(--cor-accent);
+    stroke: var(--cor-superficie);
+    stroke-width: 2;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transicao);
+  }
+
+  .line-chart__ponto--destaque.is-visivel {
+    opacity: 1;
+  }
+
   .line-chart__tooltip {
     position: absolute;
     pointer-events: none;
+    opacity: 0;
+    transform: translate(-50%, -100%);
     padding: 6px 10px;
     border-radius: var(--raio-pequeno);
     border: 1px solid var(--cor-borda-forte);
-    background: var(--cor-superficie);
+    background: var(--cor-superficie-alta);
     color: var(--cor-texto);
     font-size: var(--txt-xs);
     box-shadow: var(--sombra-flutuante);
     white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: opacity var(--transicao);
+  }
+
+  .line-chart__tooltip.is-visivel {
+    opacity: 1;
+  }
+
+  .line-chart__tooltip strong {
+    font-family: var(--fonte-mono);
+    font-size: var(--txt-sm);
+    color: var(--cor-texto);
+  }
+
+  .line-chart__tooltip span {
+    color: var(--cor-texto-fraco);
   }
 
   /* -- componente TelaComAbas (suporta modo horizontal e rail vertical) -- */

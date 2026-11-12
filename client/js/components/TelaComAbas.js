@@ -21,10 +21,11 @@ export class TelaComAbas {
   /**
    * @param {HTMLElement} container
    * @param {{
-   *   abas: Array<{key: string, rotulo: string, icone: Parameters<typeof iconeHtml>[0]}>,
+   *   abas: Array<{key: string, rotulo: string, subtitulo?: string, icone: Parameters<typeof iconeHtml>[0]}>,
    *   rotulo: string,
    *   idBase: string,
    *   chavePrefs: string,
+   *   layout?: "horizontal"|"vertical",
    *   criar: (key: string, painel: HTMLElement) => {refresh?: () => any, destroy?: () => void},
    *   aoMostrar?: (key: string) => void,
    *   extra?: import("../utils/html.js").HtmlSeguro,
@@ -32,27 +33,34 @@ export class TelaComAbas {
    *   `extra` vai no fim da barra de abas, à direita (a busca das
    *   Configurações). `aoMostrar` avisa a troca de aba depois que ela aconteceu.
    */
-  constructor(container, { abas, rotulo, idBase, chavePrefs, criar, aoMostrar, extra }) {
+  constructor(container, { abas, rotulo, idBase, chavePrefs, layout = "horizontal", criar, aoMostrar, extra }) {
     this.container = container;
     this.abas = abas;
     this.idBase = idBase;
     this.chavePrefs = chavePrefs;
+    this.layout = layout;
     this.criar = criar;
     this.aoMostrar = aoMostrar || (() => {});
     /** @type {Map<string, {painel: HTMLElement, instancia: any}>} */
     this.secoes = new Map();
     const salva = prefs.get(chavePrefs, abas[0].key);
     this.aba = abas.some((a) => a.key === salva) ? salva : abas[0].key;
+    const vertical = layout === "vertical";
 
     container.innerHTML = html`
-      <div class="tela-abas">
+      <div class="tela-abas${vertical ? " tela-abas--vertical" : ""}">
         <div class="tela-abas__barra">
-          <nav class="tela-abas__lista" role="tablist" aria-label="${rotulo}">
+          <nav class="tela-abas__lista" role="tablist" aria-label="${rotulo}"${vertical ? html` aria-orientation="vertical"` : ""}>
             ${abas.map(
               (a) => html`
                 <button type="button" class="tela-abas__aba" role="tab" id="${idBase}-aba-${a.key}" data-aba="${a.key}"
                         aria-controls="${idBase}-painel-${a.key}" aria-selected="false" tabindex="-1">
-                  ${iconeHtml(a.icone)}<span>${a.rotulo}</span><span class="tela-abas__contador" data-role="contador" hidden></span>
+                  ${iconeHtml(a.icone)}
+                  <span class="tela-abas__texto">
+                    <span>${a.rotulo}</span>
+                    ${a.subtitulo && html`<span class="tela-abas__subtitulo">${a.subtitulo}</span>`}
+                  </span>
+                  <span class="tela-abas__contador" data-role="contador" hidden></span>
                 </button>`
             )}
           </nav>
@@ -70,7 +78,9 @@ export class TelaComAbas {
     });
     // Setas entre as abas, como no menu lateral (padrão ARIA de tablist).
     this.nav.addEventListener("keydown", (e) => {
-      const passo = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      const avancar = vertical ? e.key === "ArrowDown" || e.key === "ArrowRight" : e.key === "ArrowRight";
+      const recuar = vertical ? e.key === "ArrowUp" || e.key === "ArrowLeft" : e.key === "ArrowLeft";
+      const passo = avancar ? 1 : recuar ? -1 : 0;
       if (!passo) return;
       e.preventDefault();
       const i = this.abas.findIndex((a) => a.key === this.aba);
