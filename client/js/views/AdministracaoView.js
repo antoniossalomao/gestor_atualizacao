@@ -26,14 +26,15 @@ import { faixaPendencias } from "../templates/administracao.js";
  *  7. Diagnóstico: Saúde do servidor, processos e integridade do banco.
  */
 const ABAS = [
-  { key: "pessoas", rotulo: "Pessoas e permissões", icone: "users", Secao: UsuariosAdmin },
-  { key: "operacao", rotulo: "Operação", icone: "ajustes", Secao: OperacaoAdmin },
-  { key: "dados", rotulo: "Dados", icone: "download", Secao: DadosAdmin },
-  { key: "integracoes", rotulo: "Integrações", icone: "distribuicao", Secao: IntegracoesAdmin },
-  { key: "backups", rotulo: "Backups e recuperação", icone: "backups", Secao: BackupsAdmin },
+  { key: "pessoas", rotulo: "Pessoas e permissões", subtitulo: "Contas e papéis", icone: "users", Secao: UsuariosAdmin },
+  { key: "operacao", rotulo: "Operação", subtitulo: "Sistemas e rotinas", icone: "ajustes", Secao: OperacaoAdmin },
+  { key: "dados", rotulo: "Dados", subtitulo: "Importar e exportar", icone: "download", Secao: DadosAdmin },
+  { key: "integracoes", rotulo: "Integrações", subtitulo: "Agentes e API", icone: "distribuicao", Secao: IntegracoesAdmin },
+  { key: "backups", rotulo: "Backups e recuperação", subtitulo: "Cópias do banco", icone: "backups", Secao: BackupsAdmin },
   {
     key: "auditoria",
     rotulo: "Auditoria",
+    subtitulo: "Registro de ações",
     icone: "historico",
     Secao: HistoricoView,
     cabecalho: {
@@ -41,7 +42,7 @@ const ABAS = [
       descricao: "Histórico detalhado de quem criou, editou ou excluiu registros no sistema, e quando.",
     },
   },
-  { key: "diagnostico", rotulo: "Diagnóstico", icone: "saude", Secao: SaudeAdmin },
+  { key: "diagnostico", rotulo: "Diagnóstico", subtitulo: "Saúde e alertas", icone: "saude", Secao: SaudeAdmin },
 ];
 
 
@@ -59,6 +60,7 @@ export class AdministracaoView extends View {
       rotulo: "Seções da administração",
       idBase: "admin",
       chavePrefs: "administracao:aba",
+      layout: "vertical",
       criar: (key, painel) => {
         const def = ABAS.find((a) => a.key === key);
         let alvo = painel;

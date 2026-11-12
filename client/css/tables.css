@@ -137,6 +137,12 @@
     border-bottom: 1px solid var(--cor-borda);
   }
 
+  .data-table__sort-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* -- area de tabela e cabecalhos no padrao Dispatch -- */
   .table-wrap {
     width: 100%;

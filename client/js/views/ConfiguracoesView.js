@@ -86,6 +86,7 @@ export class ConfiguracoesView extends View {
       rotulo: "Seções das configurações",
       idBase: "cfg",
       chavePrefs: "configuracoes:aba",
+      layout: "vertical",
       extra: html`
         <label class="cfg-busca">
           <span class="cfg-busca__icone" aria-hidden="true">${iconeHtml("busca")}</span>

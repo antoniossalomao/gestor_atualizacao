@@ -212,11 +212,10 @@ export class FichaClienteModal {
 
     const statsGrid = document.createElement("div");
     statsGrid.className = "resumo-compacto-grid";
-    statsGrid.style.cssText = "display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:var(--sp-3); margin-bottom:var(--sp-4);";
     statsGrid.innerHTML = html`
-      <div class="card stat-card" style="padding:var(--sp-3); margin:0;">
-        <div class="stat-card__label" style="font-size:var(--txt-xs); color:var(--cor-texto-fraco); text-transform:uppercase; font-weight:var(--peso-forte);">Última atualização</div>
-        <div class="stat-card__value" style="font-size:var(--txt-base); font-weight:var(--peso-medio); margin-top:4px;">${ultimoTexto}</div>
+      <div class="card stat-card">
+        <div class="stat-card__label">Última atualização</div>
+        <div class="stat-card__value">${ultimoTexto}</div>
       </div>
     `.toString();
     container.appendChild(statsGrid);
