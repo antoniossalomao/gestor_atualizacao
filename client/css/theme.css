@@ -1,136 +1,127 @@
 /*
- * Tokens visuais do app: cores, tipografia, espaçamento, raio de borda,
- * sombra. Tudo definido como "variável CSS" (--nome-da-variável): qualquer
- * outro arquivo CSS usa `var(--cor-x)` em vez de repetir o valor da cor.
- *
- * ESTE É O ÚNICO ARQUIVO COM COR LITERAL. É essa disciplina que permitiu
- * acrescentar um tema claro sem tocar em nenhum componente: o bloco
- * `[data-tema="claro"]` lá embaixo redefine as MESMAS variáveis, e o app
- * inteiro muda junto.
- *
- * As fontes são carregadas pelo index.html (com preconnect), não por um
- * @import aqui: um @import só começa a baixar depois deste arquivo ser lido,
- * o que atrasa o primeiro texto na tela.
+ * Tokens visuais do painel no sistema Dispatch DevCore.
+ * Unica folha com cores literais: os demais CSS consomem apenas var(--*).
+ * Tema escuro carbonizado por padrao com realce configuravel (Ouro DevCore
+ * como padrao, mantendo todas as paletas em Configuracoes > Aparencia).
  */
 
 :root {
-  /* ==========================================================================
-     COR -- tema escuro (padrão)
-     ========================================================================== */
+  /* -- superficies escuras (carbon matte) -- */
+  --cor-fundo: #111315;
+  --cor-fundo-alt: #15181b;
+  --cor-superficie: #191c20;
+  --cor-superficie-alta: #202429;
+  --cor-superficie-hover: #24282d;
+  --cor-borda: #282c32;
+  --cor-borda-forte: #383e46;
+  --cor-borda-campo: #434a54;
 
-  /* -- fundo e superfícies (do mais escuro para o mais claro) --
-     Paleta escuro balanceada (grafite/ardósia premium): fundo confortável para
-     longas jornadas de trabalho, sem o contraste agressivo do preto puro (#000),
-     mantendo ótima legibilidade e hierarquia visual refinada. */
-  --cor-fundo: #0f1218;
-  --cor-fundo-alt: #141820;
-  --cor-superficie: #191e28;
-  --cor-superficie-alta: #212734;
-  --cor-superficie-hover: #293140;
-  --cor-borda: rgba(255, 255, 255, 0.08);
-  --cor-borda-forte: rgba(255, 255, 255, 0.15);
-  /* Contorno de CAMPOS de formulário nítido e acessível */
-  --cor-borda-campo: #3e485a;
+  /* -- barra lateral sempre escura (inclusive no tema claro) -- */
+  --sidebar-bg: #111315;
+  --sidebar-surface: #191c20;
+  --sidebar-elevated: #24282d;
+  --sidebar-borda: rgba(237, 236, 230, 0.08);
+  --sidebar-texto: #eceef0;
+  --sidebar-texto-sub: #a8afb8;
+  --sidebar-texto-fraco: #8a857a;
+  --sidebar-ouro: #cfad68;
+  --sidebar-creme: #edece6;
+  --sidebar-fundo: #111315;
 
-  /* -- texto -- */
-  --cor-texto: #f3f5f9;
-  --cor-texto-sub: #9ca6ba;
-  --cor-texto-fraco: #727e94;
+  /* -- tipografia -- */
+  --cor-texto: #eceef0;
+  --cor-texto-sub: #a8afb8;
+  --cor-texto-fraco: #939ba5;
 
-  /* -- destaque e estados -- */
-  --cor-accent: var(--realce-escuro, #3b82f6);
-  --cor-accent-forte: var(--realce-escuro-forte, #60a5fa);
-  --cor-accent-fraco: rgba(59, 130, 246, 0.12);
-  --cor-verde: #34d399;
-  --cor-verde-fraco: rgba(52, 211, 153, 0.12);
+  /* -- realce padrao: Ouro DevCore -- */
+  --realce-escuro: #cfad68;
+  --realce-escuro-forte: #e0c385;
+  --realce-claro: #826426;
+  --realce-claro-forte: #69501c;
+
+  --cor-accent: var(--realce-escuro, #cfad68);
+  --cor-accent-forte: var(--realce-escuro-forte, #e0c385);
+  --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 14%, transparent);
+  --cor-destaque: var(--cor-accent);
+  --cor-sobre-accent: #111315;
+
+  /* -- acao primaria invertida por padrao (carvao/creme) -- */
+  --btn-primario-bg: #eceef0;
+  --btn-primario-hover: #ffffff;
+  --btn-primario-fg: #111315;
+  --btn-primario-borda: #eceef0;
+
+  /* -- cores semanticas -- */
+  --cor-verde: #6fcf97;
+  --cor-verde-fraco: rgba(111, 207, 151, 0.12);
   --cor-vermelho: #f87171;
   --cor-vermelho-forte: #ef4444;
   --cor-vermelho-fraco: rgba(248, 113, 113, 0.12);
-  --cor-amarelo: #fbbf24;
-  --cor-amarelo-fraco: rgba(251, 191, 36, 0.12);
-  --cor-sobre-accent: #ffffff;
+  --cor-amarelo: #cfad68;
+  --cor-amarelo-fraco: rgba(207, 173, 104, 0.14);
+  --cor-perigo: var(--cor-vermelho);
   --cor-sobre-perigo: #ffffff;
 
-  /* Vidro fosco e profundidade refinada */
-  --vidro-fundo: rgba(25, 30, 40, 0.85);
-  --vidro-fundo-forte: rgba(20, 24, 32, 0.90);
-  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  --vidro-desfoque: blur(16px) saturate(130%);
+  /* -- tokens semanticos em 4 camadas -- */
+  --status-ok-bg: #1c2923;
+  --status-ok-borda: #344d40;
+  --status-ok-solido: #6fcf97;
+  --status-ok-texto: #a6c5b4;
 
-  /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
-  --status-ok-bg: rgba(52, 211, 153, 0.10);
-  --status-ok-borda: rgba(52, 211, 153, 0.25);
-  --status-ok-solido: #34d399;
-  --status-ok-texto: #a7f3d0;
+  --status-alerta-bg: #2c281f;
+  --status-alerta-borda: #554b36;
+  --status-alerta-solido: #cfad68;
+  --status-alerta-texto: #d1bc8c;
 
-  --status-alerta-bg: rgba(251, 191, 36, 0.10);
-  --status-alerta-solido: #fbbf24;
-
-  --status-erro-bg: rgba(248, 113, 113, 0.10);
-  --status-erro-solido: #f87171;
+  --status-erro-bg: #2c1517;
+  --status-erro-borda: #6a2428;
+  --status-erro-solido: #ef6f6f;
   --status-erro-texto: #fca5a5;
 
-  --status-info-bg: rgba(59, 130, 246, 0.10);
-  --status-info-borda: rgba(59, 130, 246, 0.25);
-  --status-info-solido: #3b82f6;
-  --status-info-texto: #bfdbfe;
+  --status-info-bg: #29271f;
+  --status-info-borda: #554b36;
+  --status-info-solido: #cfad68;
+  --status-info-texto: #cfc39c;
 
+  /* -- superficies de suporte e compatibilidade -- */
+  --vidro-fundo: var(--cor-superficie);
+  --vidro-fundo-forte: var(--cor-superficie);
+  --vidro-brilho: none;
+  --vidro-desfoque: none;
 
-  /* Fundos usados pelas tabelas com linha tingida por severidade (Resumo,
-     Sistemas). */
-  --zebra-a: #12151c;
-  --zebra-b: #171c25;
+  --zebra-a: #15181b;
+  --zebra-b: #1c2025;
   --severidade-alta: #ef6f6f;
   --severidade-boa: #6fcf97;
 
-  /* Superfícies limpas e elegantes */
   --card-gradiente: var(--cor-superficie);
-  --card-borda-hover: #3d495d;
-  --veu-tabela: rgba(15, 18, 24, 0.55);
-  --veu-linha: rgba(33, 39, 52, 0.60);
-  --veu-overlay: rgba(8, 10, 14, 0.70);
-  --sidebar-fundo: rgba(15, 18, 24, 0.88);
+  --card-borda-hover: #383e46;
+  --veu-tabela: var(--cor-superficie);
+  --veu-linha: rgba(36, 40, 45, 0.52);
+  --veu-overlay: rgba(8, 10, 12, 0.72);
   --halo-topo: transparent;
 
-  /* ==========================================================================
-     TIPOGRAFIA
-     ========================================================================== */
+  /* -- tipografia e escala -- */
   --fonte: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  /* Inter também nos títulos: uma família só, hierarquia pelo peso e tamanho. */
-  --fonte-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --fonte-mono: ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, monospace;
+  --fonte-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --fonte-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, "Cascadia Code", Consolas, monospace;
 
-  /* Escala tipográfica.
-     Antes existiam DEZESSETE tamanhos diferentes espalhados pelo CSS
-     (10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 19, 22, 24, 25, 26, 28,
-     30, 34px) -- a maioria escolhida no olho, um a um, o que faz a interface
-     parecer levemente desalinhada sem que se consiga apontar onde.
-     Sete degraus dão conta de tudo que o app precisa.
-
-     Os sete são multiplicados por `--escala`, que é a preferência
-     "Tamanho do texto" (Configurações > Aparência). Um multiplicador em vez
-     de três tabelas de tamanhos escritas à mão: a proporção entre os degraus
-     -- que é o que faz a escala parecer uma escala -- fica garantida por
-     construção, e acrescentar um degrau novo não obriga a acertar o valor
-     dele em três lugares. */
   --escala: 1;
-  --txt-2xs: calc(10px * var(--escala));   /* eyebrows, tags minúsculas */
-  --txt-xs: calc(11px * var(--escala));    /* rótulos de campo, legendas */
-  --txt-sm: calc(12px * var(--escala));    /* textos de apoio, paginação */
-  --txt-base: calc(13px * var(--escala));  /* corpo: células de tabela, botões */
-  --txt-md: calc(14px * var(--escala));    /* campos de formulário */
-  --txt-lg: calc(19px * var(--escala));    /* títulos de card com destaque */
-  --txt-xl: calc(24px * var(--escala));    /* títulos de seção (hero) */
-  --txt-2xl: calc(28px * var(--escala));   /* título da página */
-  --txt-numero: calc(30px * var(--escala));/* valores grandes dos indicadores */
+  --txt-2xs: calc(10px * var(--escala));
+  --txt-xs: calc(11px * var(--escala));
+  --txt-sm: calc(12px * var(--escala));
+  --txt-base: calc(13px * var(--escala));
+  --txt-md: calc(14px * var(--escala));
+  --txt-lg: calc(18px * var(--escala));
+  --txt-xl: calc(22px * var(--escala));
+  --txt-2xl: calc(24px * var(--escala));
+  --txt-numero: calc(28px * var(--escala));
 
   --peso-medio: 500;
   --peso-forte: 600;
   --peso-extra: 700;
 
-  /* ==========================================================================
-     ESPAÇAMENTO (escala 4px)
-     ========================================================================== */
+  /* -- ritmo de espacamento (grid 4px) -- */
   --sp-1: 4px;
   --sp-2: 8px;
   --sp-3: 12px;
@@ -138,94 +129,96 @@
   --sp-5: 20px;
   --sp-6: 24px;
   --sp-8: 32px;
+  --pad-tela: 32px;
 
-  /* Respiro horizontal da área de conteúdo -- um token só, para o cabeçalho e
-     o miolo nunca saírem de alinhamento como acontecia antes (o header usava
-     38px e o main 24px em regras escritas em momentos diferentes). */
-  --pad-tela: 24px;
+  /* -- dimensoes de casca e raios -- */
+  --largura-sidebar: 256px;
+  --largura-sidebar-recolhida: 64px;
+  --altura-cabecalho: 64px;
 
-  /* ==========================================================================
-     FORMA, ELEVAÇÃO E MOVIMENTO
-     ========================================================================== */
-  --raio: 10px;
-  --raio-pequeno: 7px;
-  --raio-grande: 14px;
+  --raio: 8px;
+  --raio-md: 8px;
+  --raio-pequeno: 6px;
+  --raio-grande: 12px;
   --raio-pilula: 999px;
 
-  --sombra-card: 0 1px 1px rgba(0, 0, 0, 0.25), 0 12px 30px -18px rgba(0, 0, 0, 0.7);
-  --sombra-flutuante: 0 12px 32px -8px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
-  --sombra-card-hover: 0 12px 28px -18px rgba(0, 0, 0, 0.9),
-    0 4px 16px -4px rgba(0, 0, 0, 0.45);
+  /* -- elevacao contida -- */
+  --sombra-card: none;
+  --sombra-card-hover: none;
+  --sombra-flutuante: 0 12px 32px -4px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.35);
 
-  /* Duas durações e duas curvas, em vez de "150ms ease" para tudo. O
-     `--saida` mais curto que a `--entrada` é o padrão do Material/iOS: sair
-     rápido não faz falta, entrar rápido demais parece um salto. */
-  --dur-rapida: 120ms;
+  /* -- movimento -- */
+  --dur-rapida: 140ms;
   --dur-media: 200ms;
-  --dur-lenta: 320ms;
-  --curva-padrao: cubic-bezier(0.2, 0, 0.2, 1);
+  --dur-lenta: 280ms;
+  --curva-padrao: cubic-bezier(0.22, 1, 0.36, 1);
   --curva-saida: cubic-bezier(0.4, 0, 1, 1);
   --transicao: var(--dur-rapida) var(--curva-padrao);
 
-  --largura-sidebar: 238px;
-  --largura-sidebar-recolhida: 64px;
+  /* -- ordem global de camadas (z-index centralizado) -- */
+  --camada-barra: 90;
+  --camada-menu: 200;
+  --camada-cabecalho: 1000;
+  --camada-faixa: 1050;
+  --camada-gaveta: 1200;
+  --camada-modal: 1300;
+  --camada-notificacao: 1400;
+  --camada-atalho: 2000;
 
-  /* Camadas da tela inteira, de baixo para cima. Um lugar só para a ordem:
-     com os números soltos em cada regra, o modal chegou a ficar em 1100,
-     ABAIXO da gaveta (1200) de onde ele nasce, e "Descartar alterações?"
-     abria escondido atrás do formulário. Quem precisa de uma camada nova
-     entra nesta escala, não num número novo. O z-index pequeno DENTRO de um
-     componente (1, 2, 20) é local e não entra aqui. */
-  --camada-barra: 90;          /* barra de ações em lote, grudada na tabela */
-  --camada-menu: 200;          /* menus suspensos da página */
-  --camada-cabecalho: 1000;    /* menu do app e dicas da barra lateral */
-  --camada-faixa: 1050;        /* faixa "sem conexão com o servidor" */
-  --camada-gaveta: 1200;       /* gaveta do formulário e paleta de comandos */
-  --camada-modal: 1300;        /* aviso, confirmação e painéis em modal */
-  --camada-notificacao: 1400;  /* toasts, acima até de um modal aberto */
-  --camada-atalho: 2000;       /* "pular para o conteúdo", quando focado */
-
-  /* ==========================================================================
-     DENSIDADE DAS TABELAS
-     Escolha do usuário no painel de Configurações (ver js/app/aparencia.js),
-     aplicada como `data-densidade` no <html> -- mesmo mecanismo do tema.
-     Só a altura da linha muda; o tamanho do texto fica igual nos três modos,
-     porque encolher a fonte para "caber mais" só troca um problema (rolar) por
-     outro pior (não ler). Estes são os valores do modo "padrão".
-     ========================================================================== */
-  --linha-pad-y: 9px;
-  --linha-pad-x: 8px;
+  /* -- densidade de tabela -- */
+  --linha-pad-y: 11px;
+  --linha-pad-x: 16px;
   --cabecalho-pad-y: 10px;
+  --altura-tabela: 60vh;
 }
 
 :root[data-densidade="compacta"] {
-  --linha-pad-y: 5px;
-  --linha-pad-x: 6px;
-  --cabecalho-pad-y: 7px;
+  --linha-pad-y: 6px;
+  --linha-pad-x: 12px;
+  --cabecalho-pad-y: 8px;
 }
 
 :root[data-densidade="confortavel"] {
-  --linha-pad-y: 14px;
-  --linha-pad-x: 10px;
+  --linha-pad-y: 15px;
+  --linha-pad-x: 16px;
   --cabecalho-pad-y: 12px;
 }
 
+:root[data-altura="media"] {
+  --altura-tabela: 45vh;
+}
+
+:root[data-altura="cheia"] {
+  --altura-tabela: 82vh;
+}
+
+:root[data-escala="pequeno"] {
+  --escala: 0.92;
+}
+
+:root[data-escala="grande"] {
+  --escala: 1.09;
+}
+
+:root[data-escala="maior"] {
+  --escala: 1.18;
+}
+
+:root[data-fonte="sistema"] {
+  --fonte: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --fonte-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+}
+
 /* ==========================================================================
-   COR DE DESTAQUE
-   Escolhida em Configurações > Aparência, aplicada como `data-realce` no
-   <html> -- mesmo mecanismo do tema e da densidade.
-
-   Cada variante declara QUATRO valores, não dois: o mesmo roxo que tem
-   contraste de sobra sobre o fundo quase-preto do tema escuro fica ilegível
-   sobre o branco do tema claro, e vice-versa. Guardando o par de cada tema
-   aqui, os blocos de tema lá em cima escolhem o lado certo com um
-   `var(--realce-escuro)` / `var(--realce-claro)` -- e nenhuma variante nova
-   precisa ser escrita três vezes (escuro, claro explícito e claro do sistema).
-
-   Os tons claros de cada par foram escurecidos até passarem de 4.5:1 sobre o
-   branco do card, que é o mínimo do WCAG AA para texto -- o accent não é só
-   enfeite aqui, é a cor dos links e dos rótulos de botão.
+   CORES DE REALCE ALTERNATIVAS (configuraveis em Aparencia)
    ========================================================================== */
+
+:root[data-realce="azul"] {
+  --realce-escuro: #4a9eff;
+  --realce-escuro-forte: #74b5ff;
+  --realce-claro: #1263d6;
+  --realce-claro-forte: #0d4ead;
+}
 
 :root[data-realce="violeta"] {
   --realce-escuro: #a78bfa;
@@ -269,487 +262,193 @@
   --realce-claro-forte: #334155;
 }
 
-/* ==========================================================================
-   TAMANHO DO TEXTO
-   Multiplica a escala tipográfica inteira (ver `--escala` lá em cima). Mexer
-   no `font-size` do <html> não serviria: os tamanhos deste app são px fixos,
-   e px não acompanha a raiz -- só o multiplicador alcança todos eles.
-   ========================================================================== */
-:root[data-escala="pequeno"] { --escala: 0.92; }
-:root[data-escala="grande"] { --escala: 1.09; }
-:root[data-escala="maior"] { --escala: 1.18; }
-
-/* ==========================================================================
-   FUNDO DA TELA
-   O padrão é a grade de 32px com o halo difuso no topo. "Liso" tira os dois.
-   Existe porque a grade é discreta num monitor bom e vira chuvisco num painel
-   TN barato ou num projetor -- e nesses casos ela não é sutileza, é ruído por
-   cima de tabela de dados o dia inteiro.
-   ========================================================================== */
-:root[data-fundo="liso"] body {
-  background-image: none;
+/* Quando o usuario escolhe uma paleta alternativa ao padrao "ouro", o botao
+   primario acompanha a cor escolhida para feedback imediato. */
+:root[data-realce] {
+  --btn-primario-bg: var(--cor-accent);
+  --btn-primario-hover: var(--cor-accent-forte);
+  --btn-primario-fg: var(--cor-sobre-accent);
+  --btn-primario-borda: var(--cor-accent);
 }
 
 /* ==========================================================================
-   POSIÇÃO DOS AVISOS
-   O canto de baixo à direita é o padrão. Em cima existe porque a paginação e
-   os botões de ação das tabelas moram justamente no rodapé da tela: um toast
-   de 4 segundos ali cobre o botão que a pessoa ia clicar em seguida.
+   TEMA CLARO (canvas neutro claro, sidebar escura ancorada)
    ========================================================================== */
-:root[data-avisos="topo"] #toast-stack {
-  top: var(--sp-5);
-  bottom: auto;
-  flex-direction: column-reverse;
-}
 
-/* Altura da caixa rolável de uma tabela (também escolhida em Configurações).
-   Em telas grandes, 60vh deixava metade do monitor vazio abaixo da tabela. */
-:root { --altura-tabela: 60vh; }
-:root[data-altura="media"] { --altura-tabela: 45vh; }
-:root[data-altura="cheia"] { --altura-tabela: 82vh; }
-
-/* ==========================================================================
-   TEMA CLARO
-   Só as variáveis mudam -- nenhum componente sabe que existe mais de um tema.
-   Dois seletores: `[data-tema="claro"]` (escolha explícita no botão) e a
-   media query (quando o modo está em "sistema", que é o padrão).
-   ========================================================================== */
 :root[data-tema="claro"] {
-  --cor-fundo: #f4f6fb;
-  --cor-fundo-alt: #eaeef6;
+  --cor-fundo: #f4f5f6;
+  --cor-fundo-alt: #eceef1;
   --cor-superficie: #ffffff;
-  --cor-superficie-alta: #f7f9fd;
-  --cor-superficie-hover: #e8edf7;
-  --cor-borda: #dbe2ee;
-  --cor-borda-forte: #bcc7da;
-  --cor-borda-campo: #8fa0bb;
+  --cor-superficie-alta: #f8f9fa;
+  --cor-superficie-hover: #eceef1;
+  --cor-borda: #e0e3e7;
+  --cor-borda-forte: #cdd2d9;
+  --cor-borda-campo: #aeb5bf;
 
-  --cor-texto: #10192a;
-  --cor-texto-sub: #47566f;
-  /* 4.62:1 sobre o branco do card -- o mesmo critério AA usado no tema escuro. */
-  --cor-texto-fraco: #63728c;
+  --cor-texto: #202328;
+  --cor-texto-sub: #474d55;
+  --cor-texto-fraco: #5c626a;
 
-  --cor-accent: var(--realce-claro, #1263d6);
-  --cor-accent-forte: var(--realce-claro-forte, #0d4ead);
-  --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 10%, transparent);
-  --cor-verde: #157f4a;
-  --cor-verde-fraco: rgba(21, 127, 74, 0.12);
-  --cor-vermelho: #c62f38;
-  --cor-vermelho-forte: #a51f28;
-  --cor-vermelho-fraco: rgba(198, 47, 56, 0.1);
-  --cor-amarelo: #9a6200;
-  --cor-amarelo-fraco: rgba(154, 98, 0, 0.12);
+  --cor-accent: var(--realce-claro, #826426);
+  --cor-accent-forte: var(--realce-claro-forte, #69501c);
+  --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 11%, transparent);
   --cor-sobre-accent: #ffffff;
+
+  --btn-primario-bg: #202328;
+  --btn-primario-hover: #111315;
+  --btn-primario-fg: #ffffff;
+  --btn-primario-borda: #202328;
+
+  --cor-verde: #16a34a;
+  --cor-verde-fraco: rgba(22, 163, 74, 0.12);
+  --cor-vermelho: #dc2626;
+  --cor-vermelho-forte: #b91c1c;
+  --cor-vermelho-fraco: rgba(220, 38, 38, 0.1);
+  --cor-amarelo: #a78339;
+  --cor-amarelo-fraco: rgba(167, 131, 57, 0.12);
   --cor-sobre-perigo: #ffffff;
 
-  /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
-  --status-ok-bg: #ecfdf5;
-  --status-ok-borda: #a7f3d0;
-  --status-ok-solido: #157f4a;
-  --status-ok-texto: #065f46;
+  --status-ok-bg: #f0fdf4;
+  --status-ok-borda: #bbf7d0;
+  --status-ok-solido: #16a34a;
+  --status-ok-texto: #166534;
 
   --status-alerta-bg: #fffbeb;
-  --status-alerta-solido: #9a6200;
+  --status-alerta-borda: #fde68a;
+  --status-alerta-solido: #a78339;
+  --status-alerta-texto: #92400e;
 
   --status-erro-bg: #fef2f2;
-  --status-erro-solido: #c62f38;
+  --status-erro-borda: #fecaca;
+  --status-erro-solido: #dc2626;
   --status-erro-texto: #991b1b;
 
-  --status-info-bg: #eff6ff;
-  --status-info-borda: #bfdbfe;
-  --status-info-solido: #1263d6;
-  --status-info-texto: #1e40af;
-
+  --status-info-bg: #f4f1e9;
+  --status-info-borda: #dcd3b8;
+  --status-info-solido: #826426;
+  --status-info-texto: #65501d;
 
   --zebra-a: #ffffff;
-  --zebra-b: #f5f7fc;
-  --severidade-alta: #e05252;
-  --severidade-boa: #2f9e63;
+  --zebra-b: #f8f9fa;
+  --severidade-alta: #dc2626;
+  --severidade-boa: #16a34a;
 
   --card-gradiente: var(--cor-superficie);
-  --card-borda-hover: #9db6dd;
-  --veu-tabela: rgba(255, 255, 255, 0.7);
-  --veu-linha: rgba(245, 247, 252, 0.9);
-  --veu-overlay: rgba(16, 25, 42, 0.35);
-  --sidebar-fundo: rgba(255, 255, 255, 0.96);
-  --vidro-fundo: rgba(255, 255, 255, 0.7);
-  --vidro-fundo-forte: rgba(255, 255, 255, 0.82);
-  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  --halo-topo: transparent;
+  --card-borda-hover: #cdd2d9;
+  --veu-tabela: var(--cor-superficie);
+  --veu-linha: rgba(236, 238, 241, 0.72);
+  --veu-overlay: rgba(17, 19, 21, 0.48);
 
-  --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 8px 20px -16px rgba(16, 25, 42, 0.2);
-  --sombra-flutuante: 0 12px 32px -8px rgba(16, 25, 42, 0.16), 0 4px 12px rgba(16, 25, 42, 0.08);
-  --sombra-card-hover: 0 10px 24px -16px rgba(16, 25, 42, 0.25), 0 2px 8px rgba(16, 25, 42, 0.08);
+  --sombra-card: none;
+  --sombra-card-hover: none;
+  --sombra-flutuante: 0 12px 28px -6px rgba(17, 19, 21, 0.16), 0 4px 12px rgba(17, 19, 21, 0.08);
+}
+
+:root[data-tema="claro"][data-realce] {
+  --btn-primario-bg: var(--cor-accent);
+  --btn-primario-hover: var(--cor-accent-forte);
+  --btn-primario-fg: var(--cor-sobre-accent);
+  --btn-primario-borda: var(--cor-accent);
 }
 
 @media (prefers-color-scheme: light) {
-  /* `:root:not([data-tema])` -- só vale quando o usuário NÃO escolheu nada,
-     ou seja, quando o modo é "sistema". Sem esse `:not`, quem escolheu o tema
-     escuro num computador configurado em claro seria sobrescrito aqui. */
   :root:not([data-tema]) {
-    --cor-fundo: #f4f6fb;
-    --cor-fundo-alt: #eaeef6;
+    --cor-fundo: #f4f5f6;
+    --cor-fundo-alt: #eceef1;
     --cor-superficie: #ffffff;
-    --cor-superficie-alta: #f7f9fd;
-    --cor-superficie-hover: #e8edf7;
-    --cor-borda: #dbe2ee;
-    --cor-borda-forte: #bcc7da;
-    --cor-borda-campo: #8fa0bb;
+    --cor-superficie-alta: #f8f9fa;
+    --cor-superficie-hover: #eceef1;
+    --cor-borda: #e0e3e7;
+    --cor-borda-forte: #cdd2d9;
+    --cor-borda-campo: #aeb5bf;
 
-    --cor-texto: #10192a;
-    --cor-texto-sub: #47566f;
-    --cor-texto-fraco: #63728c;
+    --cor-texto: #202328;
+    --cor-texto-sub: #474d55;
+    --cor-texto-fraco: #5c626a;
 
-    --cor-accent: var(--realce-claro, #1263d6);
-    --cor-accent-forte: var(--realce-claro-forte, #0d4ead);
-    --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 10%, transparent);
-    --cor-verde: #157f4a;
-    --cor-verde-fraco: rgba(21, 127, 74, 0.12);
-    --cor-vermelho: #c62f38;
-    --cor-vermelho-forte: #a51f28;
-    --cor-vermelho-fraco: rgba(198, 47, 56, 0.1);
-    --cor-amarelo: #9a6200;
-    --cor-amarelo-fraco: rgba(154, 98, 0, 0.12);
+    --cor-accent: var(--realce-claro, #826426);
+    --cor-accent-forte: var(--realce-claro-forte, #69501c);
+    --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 11%, transparent);
     --cor-sobre-accent: #ffffff;
+
+    --btn-primario-bg: #202328;
+    --btn-primario-hover: #111315;
+    --btn-primario-fg: #ffffff;
+    --btn-primario-borda: #202328;
+
+    --cor-verde: #16a34a;
+    --cor-verde-fraco: rgba(22, 163, 74, 0.12);
+    --cor-vermelho: #dc2626;
+    --cor-vermelho-forte: #b91c1c;
+    --cor-vermelho-fraco: rgba(220, 38, 38, 0.1);
+    --cor-amarelo: #a78339;
+    --cor-amarelo-fraco: rgba(167, 131, 57, 0.12);
     --cor-sobre-perigo: #ffffff;
 
-    /* -- tokens semânticos de 4 camadas (WCAG AA) -- */
-    --status-ok-bg: #ecfdf5;
-    --status-ok-borda: #a7f3d0;
-    --status-ok-solido: #157f4a;
-    --status-ok-texto: #065f46;
+    --status-ok-bg: #f0fdf4;
+    --status-ok-borda: #bbf7d0;
+    --status-ok-solido: #16a34a;
+    --status-ok-texto: #166534;
 
     --status-alerta-bg: #fffbeb;
-    --status-alerta-solido: #9a6200;
+    --status-alerta-borda: #fde68a;
+    --status-alerta-solido: #a78339;
+    --status-alerta-texto: #92400e;
 
     --status-erro-bg: #fef2f2;
-    --status-erro-solido: #c62f38;
+    --status-erro-borda: #fecaca;
+    --status-erro-solido: #dc2626;
     --status-erro-texto: #991b1b;
 
-    --status-info-bg: #eff6ff;
-    --status-info-borda: #bfdbfe;
-    --status-info-solido: #1263d6;
-    --status-info-texto: #1e40af;
-
+    --status-info-bg: #f4f1e9;
+    --status-info-borda: #dcd3b8;
+    --status-info-solido: #826426;
+    --status-info-texto: #65501d;
 
     --zebra-a: #ffffff;
-    --zebra-b: #f5f7fc;
-    --severidade-alta: #e05252;
-    --severidade-boa: #2f9e63;
+    --zebra-b: #f8f9fa;
+    --severidade-alta: #dc2626;
+    --severidade-boa: #16a34a;
 
     --card-gradiente: var(--cor-superficie);
-    --card-borda-hover: #9db6dd;
-    --veu-tabela: rgba(255, 255, 255, 0.7);
-    --veu-linha: rgba(245, 247, 252, 0.9);
-    --veu-overlay: rgba(16, 25, 42, 0.35);
-    --sidebar-fundo: rgba(255, 255, 255, 0.96);
-  --vidro-fundo: rgba(255, 255, 255, 0.7);
-  --vidro-fundo-forte: rgba(255, 255, 255, 0.82);
-  --vidro-brilho: inset 0 1px 0 rgba(255, 255, 255, 0.95);
-    --halo-topo: transparent;
+    --card-borda-hover: #cdd2d9;
+    --veu-tabela: var(--cor-superficie);
+    --veu-linha: rgba(236, 238, 241, 0.72);
+    --veu-overlay: rgba(17, 19, 21, 0.48);
 
-    --sombra-card: 0 1px 2px rgba(16, 25, 42, 0.05), 0 8px 20px -16px rgba(16, 25, 42, 0.2);
-    --sombra-flutuante: 0 12px 32px -8px rgba(16, 25, 42, 0.16), 0 4px 12px rgba(16, 25, 42, 0.08);
-    --sombra-card-hover: 0 10px 24px -16px rgba(16, 25, 42, 0.25), 0 2px 8px rgba(16, 25, 42, 0.08);
+    --sombra-card: none;
+    --sombra-card-hover: none;
+    --sombra-flutuante: 0 12px 28px -6px rgba(17, 19, 21, 0.16), 0 4px 12px rgba(17, 19, 21, 0.08);
+  }
+
+  :root:not([data-tema])[data-realce] {
+    --btn-primario-bg: var(--cor-accent);
+    --btn-primario-hover: var(--cor-accent-forte);
+    --btn-primario-fg: var(--cor-sobre-accent);
+    --btn-primario-borda: var(--cor-accent);
   }
 }
 
 /* ==========================================================================
-   CONTRASTE ALTO
-   Escolhido em Configurações > Acessibilidade. NÃO é um terceiro tema: é um
-   reforço que vale POR CIMA do tema atual, escuro ou claro -- e é por isso que
-   está escrito uma vez só, enquanto a cor de destaque precisou de um par de
-   valores por variante.
-
-   O que permite a economia é não haver nenhuma cor literal aqui: cada token é
-   derivado dos que o tema já definiu, misturando o texto com o fundo
-   (`color-mix`). No tema escuro o texto é claro sobre fundo escuro; no claro é
-   o contrário; e a MESMA conta empurra os dois na direção de mais contraste.
-
-   Precisa vir depois dos blocos de tema: `:root[data-tema="claro"]` e
-   `:root[data-contraste="alto"]` têm a mesma especificidade, e nesse empate
-   quem ganha é quem estiver escrito por último.
+   ACESSIBILIDADE E CONTRASTE (tokens derivados)
    ========================================================================== */
+
 :root[data-contraste="alto"] {
   --cor-texto-sub: color-mix(in srgb, var(--cor-texto) 88%, var(--cor-fundo));
-  --cor-texto-fraco: color-mix(in srgb, var(--cor-texto) 72%, var(--cor-fundo));
+  --cor-texto-fraco: color-mix(in srgb, var(--cor-texto) 74%, var(--cor-fundo));
   --cor-borda: color-mix(in srgb, var(--cor-texto) 42%, var(--cor-fundo));
   --cor-borda-forte: color-mix(in srgb, var(--cor-texto) 58%, var(--cor-fundo));
   --cor-borda-campo: color-mix(in srgb, var(--cor-texto) 74%, var(--cor-fundo));
   --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 26%, transparent);
-
-  /* A sombra difusa vira contorno. Num modo de alto contraste quem separa duas
-     superfícies é a borda; a sombra só embaça a divisa entre elas. */
   --sombra-card: 0 0 0 1px var(--cor-borda);
   --sombra-card-hover: 0 0 0 1px var(--cor-accent);
-
-  /* O halo do topo é decoração, e decoração translúcida é ruído de baixa
-     amplitude -- exatamente o que atrapalha quem ligou o modo. */
-  --halo-topo: transparent;
 }
 
-/* O anel de foco engrossa junto: é o único indicador de "onde estou" para quem
-   navega por teclado, e 2px numa tela de alto contraste somem no meio das
-   bordas fortes que o resto do modo acabou de criar. */
-:root[data-contraste="alto"] :focus-visible {
-  outline-width: 3px;
-}
-
-/* ==========================================================================
-   SUPERFÍCIES SÓLIDAS
-   Desliga o vidro fosco (`backdrop-filter`) da barra lateral, dos modais e da
-   paleta de comandos, e troca os véus translúcidos por cor cheia.
-
-   Não é só gosto: o desfoque é o efeito mais caro desta interface, e ele é
-   recalculado a cada quadro do que passa POR TRÁS dele -- ou seja, justamente
-   enquanto se rola uma tabela longa, que é o que este app faz o dia inteiro.
-   Em máquina de escritório sem placa de vídeo dedicada isso se sente.
-   ========================================================================== */
 :root[data-transparencia="reduzida"] {
-  --sidebar-fundo: var(--cor-fundo-alt);
   --veu-tabela: var(--cor-superficie);
-  --veu-overlay: color-mix(in srgb, var(--cor-fundo) 92%, transparent);
+  --veu-overlay: color-mix(in srgb, var(--cor-fundo) 94%, transparent);
 }
 
-:root[data-transparencia="reduzida"] .app-sidebar,
-:root[data-transparencia="reduzida"] .app-header,
-:root[data-transparencia="reduzida"] .modal-overlay,
-:root[data-transparencia="reduzida"] .cmdk-overlay {
-  backdrop-filter: none;
-}
-
-/* O cabeçalho grudado precisa de fundo CHEIO quando não há desfoque: um fundo
-   translúcido sem o desfoque por trás deixa a tabela passar legível por baixo
-   do título, que é pior que qualquer um dos dois efeitos sozinho. */
-:root[data-transparencia="reduzida"] .app-header {
-  background: var(--cor-fundo);
-}
-
-/* ==========================================================================
-   LINHAS ALTERNADAS (zebra)
-   A zebra ajuda a não pular de linha numa tabela larga, e atrapalha quando a
-   linha já é tingida por outro motivo (o vermelho de "parado há muito tempo",
-   em Resumo e Sistemas), porque as duas tintas se somam.
-
-   Apagar a zebra mexendo no TOKEN, e não escrevendo um seletor que desfaz o
-   `background` da linha ímpar, não é preciosismo: um seletor com `:root[...]`
-   na frente ganharia também das linhas de severidade e de atraso, que são
-   justamente as que precisam continuar pintadas.
-   ========================================================================== */
 :root[data-zebra="nao"] {
   --veu-linha: transparent;
-}
-
-/* ==========================================================================
-   FONTE DA INTERFACE
-   "Do sistema" troca a Inter (que vem do Google Fonts) pela Segoe UI do
-   Windows -- ver FONTES em js/app/aparencia.js para o porquê. O título
-   também troca: a Sora ao lado da Segoe UI parece erro de digitação, não
-   escolha de desenho.
-   ========================================================================== */
-:root[data-fonte="sistema"] {
-  --fonte: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-  --fonte-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-}
-
-/* ==========================================================================
-   LARGURA DO CONTEÚDO
-   "Tela inteira" tira o teto de 1600px do conteúdo. O `#app` no seletor é
-   para ganhar da regra do menu recolhido, que também mexe no teto e tem um
-   id na frente.
-   ========================================================================== */
-:root[data-largura="total"] #app .app-main {
-  max-width: none;
-}
-
-/* ==========================================================================
-   FOCO REFORÇADO
-   O anel de foco é o único "você está aqui" de quem navega pelo teclado, e o
-   de 2px some fácil numa tabela cheia de bordas. Mais grosso e mais afastado
-   do elemento, ele não se confunde com a borda do próprio controle.
-   ========================================================================== */
-:root[data-foco="reforcado"] :focus-visible {
-  outline: 3px solid var(--cor-accent);
-  outline-offset: 3px;
-}
-/* Os controles de opções desenham o foco no rótulo, não no <input> (que é
-   invisível) -- ver `.cfg-group__option` em components.css. */
-:root[data-foco="reforcado"] .cfg-group__option:has(input:focus-visible) span,
-:root[data-foco="reforcado"] .cfg-cor:has(input:focus-visible),
-:root[data-foco="reforcado"] .cfg-tema:has(input:focus-visible) .cfg-tema__preview {
-  outline-width: 3px;
-  outline-offset: 3px;
-}
-
-/* ==========================================================================
-   DICAS DE ATALHO
-   As etiquetas "Alt+1", "Ctrl K" e "Alt+N" espalhadas pela tela. Ensinam
-   muito na primeira semana e viram ruído para quem já sabe todas de cor.
-   Os atalhos continuam funcionando; só as etiquetas saem.
-   ========================================================================== */
-:root[data-dicas="nao"] .tab-button__atalho,
-:root[data-dicas="nao"] .app-header__search kbd,
-:root[data-dicas="nao"] .app-header__quick kbd,
-:root[data-dicas="nao"] .app-menu__atalho {
-  display: none;
-}
-
-/* ==========================================================================
-   BASE
-   ========================================================================== */
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  height: 100%;
-}
-
-/*
- * Reserva o espaço da barra de rolagem SEMPRE, inclusive nas telas que não
- * rolam. Sem isto, ir de uma aba longa (que tem barra) para uma curta (que
- * não tem) devolve ~10px de largura útil e a página inteira salta de lado --
- * o mesmo salto que acontecia ao abrir um modal, que trava a rolagem do
- * corpo. É um daqueles defeitos que ninguém consegue nomear, só sente.
- *
- * Precisa ficar no ELEMENTO RAIZ: `scrollbar-gutter` só alcança o viewport a
- * partir daqui. Estava no `body.has-modal`, onde não propagava -- ou seja, a
- * proteção contra o pulo do modal existia no código mas não na tela.
- */
-html {
-  scrollbar-gutter: stable;
-}
-
-body {
-  margin: 0;
-  background-color: var(--cor-fundo);
-  background-image: none;
-  color: var(--cor-texto);
-  font-family: var(--fonte);
-  font-size: var(--txt-md);
-  line-height: 1.45;
-  -webkit-font-smoothing: antialiased;
-  transition: background-color var(--dur-media) var(--curva-padrao), color var(--dur-media) var(--curva-padrao);
-}
-
-/* Trava a rolagem do corpo enquanto um modal está aberto (ver Modal.js).
-   O espaço da barra que some já está reservado pelo `scrollbar-gutter` lá em
-   cima, no elemento raiz, então a página não pula ao abrir o modal. */
-body.has-modal {
-  overflow: hidden;
-}
-
-/* Números com largura fixa: sem isto, um contador indo de 199 para 200 muda a
-   largura do texto e os elementos ao lado tremem a cada atualização. */
-.stat-tile__value,
-.metric-card strong,
-.version-stat strong,
-.pagination,
-.result-count,
-.data-table td {
-  font-variant-numeric: tabular-nums;
-}
-
-::selection {
-  background: var(--cor-accent-fraco);
-  color: var(--cor-texto);
-}
-
-/* Barra de rolagem discreta (WebKit/Blink) -- Firefox usa o fallback acima. */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--cor-borda-forte) transparent;
-}
-*::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-*::-webkit-scrollbar-thumb {
-  background: var(--cor-borda-forte);
-  border-radius: 8px;
-  border: 2px solid transparent;
-  background-clip: content-box;
-}
-*::-webkit-scrollbar-thumb:hover {
-  background: var(--cor-texto-fraco);
-  background-clip: content-box;
-}
-
-a {
-  color: var(--cor-accent);
-}
-
-:focus-visible {
-  outline: 2px solid var(--cor-accent);
-  outline-offset: 2px;
-  border-radius: 3px;
-}
-
-/* Visível só para leitores de tela: legenda de tabela, texto de contexto. */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* Primeiro item alcançável por Tab: pula o menu inteiro e vai ao conteúdo.
-   Fica escondido até receber foco. */
-.skip-link {
-  position: absolute;
-  top: -100px;
-  left: var(--sp-4);
-  z-index: var(--camada-atalho);
-  padding: 10px 16px;
-  border-radius: var(--raio-pequeno);
-  background: var(--cor-accent);
-  color: var(--cor-sobre-accent);
-  font-weight: var(--peso-forte);
-  text-decoration: none;
-  transition: top var(--dur-rapida) var(--curva-padrao);
-}
-.skip-link:focus {
-  top: var(--sp-4);
-}
-
-/* ==========================================================================
-   MOVIMENTO REDUZIDO
-   Quem marcou "reduzir movimento" no sistema costuma fazê-lo por enjoo,
-   vertigem ou sensibilidade vestibular -- animação aí não é enfeite, é
-   sintoma. Zeramos tudo menos os fades, que não deslocam nada na tela.
-   ========================================================================== */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/*
- * O mesmo, mas por escolha feita AQUI dentro (Configurações > Aparência).
- * A do sistema continua valendo sozinha: quem já marcou "reduzir movimento"
- * no Windows não precisa marcar de novo aqui. Este bloco atende o caso
- * inverso -- a pessoa que gosta de animação no resto do computador e só não
- * quer neste painel, onde fica olhando tabela o dia todo.
- */
-:root[data-movimento="reduzido"] *,
-:root[data-movimento="reduzido"] *::before,
-:root[data-movimento="reduzido"] *::after {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.01ms !important;
-  scroll-behavior: auto !important;
 }
