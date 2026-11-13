@@ -57,7 +57,8 @@ export const RITMOS = [
  * visual, não a cor aplicada.
  */
 export const REALCES = [
-  { valor: "ouro", rotulo: "Ouro DevCore", hex: "#cfad68" },
+  { valor: "creme", rotulo: "Off-white", hex: "#e6e4dd" },
+  { valor: "ouro", rotulo: "Ouro", hex: "#cfad68" },
   { valor: "azul", rotulo: "Azul", hex: "#4a9eff" },
   { valor: "violeta", rotulo: "Violeta", hex: "#a78bfa" },
   { valor: "turquesa", rotulo: "Turquesa", hex: "#2dd4bf" },
@@ -210,7 +211,7 @@ export const ABAS_RELATORIO = [
 const PADROES = {
   // -- aparência --
   tema: "sistema",
-  realce: "ouro",
+  realce: "creme",
   escalaTexto: "padrao",
   movimento: "normal",
   fundoTela: "grade",

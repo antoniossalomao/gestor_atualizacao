@@ -15,9 +15,10 @@ Para o agente C#, o equivalente é
 
 ### Novembro de 2026
 
-- **Casca e paleta Dispatch DevCore (13/11/2026):** aplicação da identidade visual matte de alto contraste do Dispatch sobre o CSS e componentes originais (`theme.css`, `components.css` e `dispatch.css`), mantendo os cartões, gráficos, Kanban, campanhas, administração, tabelas, formulários e modais intactos e sem etapa de build no cliente.
-  - Novo realce padrão `ouro` (Ouro DevCore) com texto de alto contraste em botões primários, mantendo configuráveis em *Configurações › Interface e acessibilidade* todas as paletas anteriores (`azul`, `violeta`, `turquesa`, `verde`, `ambar`, `rosa`, `grafite`).
+- **Casca, realce Off-white e polimento Dispatch DevCore (13/11/2026):** aplicação da identidade visual matte de alto contraste do Dispatch sobre o CSS e componentes originais (`theme.css`, `components.css` e `dispatch.css`), mantendo os cartões de gráficos, tabelas, campanhas, administração, formulários e modais intactos e sem etapa de build no cliente.
+  - Novo realce padrão `creme` (`Off-white`, `#e6e4dd` no tema escuro e carvão `#24292f` no tema claro, com `--cor-sobre-accent` / `--cor-accent-texto` para contraste legível em botões e filtros ativos), mantendo configuráveis em *Configurações › Interface e acessibilidade* as opções `ouro` e todas as paletas anteriores (`azul`, `violeta`, `turquesa`, `verde`, `ambar`, `rosa`, `grafite`).
   - Barra lateral (`#111315`) ancorada à esquerda e mantida escura também no tema claro, topo compacto em linha única e gaveta lateral responsiva com backdrop no celular; alternância rápida de tema em três estados dentro do menu da conta (`MenuConta`).
+  - Faixa conectada de KPIs em *Resumo* (`.stat-tiles`) refinada em grade uniforme de 4 colunas (`4 -> 2×2 -> 1`) com divisores finos, rótulos, valores numéricos e ações alinhados na mesma linha visual; quadro Kanban de *Agendamentos* polido sem emojis e com paleta simplificada e neutra.
   - Navegação lateral vertical em *Configurações*, tela de entrada clássica em duas colunas com polimento matte e aviso automático de rolagem horizontal (`ui-tabela-dica`) em tabelas que transbordam.
 
 ### Outubro de 2026

@@ -256,6 +256,167 @@
   box-shadow: var(--sombra-card);
 }
 
+.app-account__avatar {
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto);
+  border: 1px solid var(--cor-borda-forte);
+}
+
+.btn--accent {
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.btn--accent:hover:not(:disabled) {
+  background: var(--cor-accent-forte);
+  color: var(--cor-sobre-accent);
+  box-shadow: none;
+}
+
+.badge--accent {
+  border-color: var(--cor-borda-forte);
+  background: var(--cor-accent-fraco);
+  color: var(--cor-texto);
+}
+
+.filtro-rapido.is-active,
+.btn--preset.is-active {
+  color: var(--cor-sobre-accent);
+}
+
+.cfg-cores {
+  flex-wrap: wrap;
+}
+
+/* Faixa conectada de KPIs do Resumo (alinhada em grade uniforme) */
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--cor-borda);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+  overflow: hidden;
+  box-shadow: var(--sombra-card);
+}
+
+.stat-tiles > .stat-tile {
+  appearance: none;
+  background: var(--cor-superficie);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 16px 20px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(32px, auto) auto auto;
+  align-content: start;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.14s ease;
+}
+
+.stat-tiles > .stat-tile:hover {
+  background: var(--cor-superficie-alta);
+}
+
+.stat-tiles > .stat-tile:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: -2px;
+}
+
+.stat-tiles .stat-tile__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  color: var(--cor-texto-fraco);
+  min-width: 0;
+}
+
+.stat-tiles .stat-tile__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  opacity: 0.68;
+}
+
+.stat-tiles .stat-tile__value-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  min-height: 30px;
+}
+
+.stat-tiles .stat-tile__value {
+  font-size: clamp(1.375rem, 2vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto);
+}
+
+.stat-tiles .stat-tile__delta {
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto-fraco);
+}
+
+.stat-tiles .stat-tile__go {
+  margin: 2px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--cor-texto-fraco);
+  transition: color 0.14s ease, transform 0.14s ease;
+}
+
+.stat-tiles .stat-tile__go svg {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+}
+
+.stat-tiles > .stat-tile:hover .stat-tile__go {
+  color: var(--cor-texto);
+  transform: translateX(2px);
+}
+
+@media (max-width: 1080px) {
+  .stat-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 580px) {
+  .stat-tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .menu-acoes__lista,
 .cmdk,
 .modal-box,
@@ -282,7 +443,7 @@
 }
 
 /* ==========================================================================
-   3. LOGIN CLASSICO REFINADO (duas colunas, superfice fosca e filete ouro)
+   3. LOGIN CLASSICO REFINADO (duas colunas, superficie fosca e filete off-white)
    ========================================================================== */
 
 .auth-screen {
@@ -310,7 +471,7 @@
 .auth-card {
   background: var(--cor-superficie);
   border: 1px solid var(--cor-borda-forte);
-  border-top: 3px solid var(--cor-accent);
+  border-top: 2px solid color-mix(in srgb, var(--cor-accent) 45%, var(--cor-borda));
   box-shadow: var(--sombra-flutuante);
 }
 
@@ -486,6 +647,93 @@
   display: flex;
 }
 
+/* Agendamentos: toolbar enxuta, quadro neutro e cartoes sem excesso de cor */
+.agendamentos-board-card {
+  gap: 14px;
+}
+
+.agendamentos-board-card .filtros-rapidos {
+  padding-top: 12px;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.kanban-column {
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio);
+}
+
+.kanban-column__header,
+.kanban-column__topo {
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.kanban-column__alert {
+  background: transparent;
+  border: 1px solid var(--cor-borda);
+  color: var(--cor-texto-fraco);
+  font-weight: 500;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.kanban-card {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-left: 1px solid var(--cor-borda);
+  border-radius: var(--raio-sm);
+  box-shadow: none;
+  padding: 12px 14px;
+}
+
+.kanban-card:hover {
+  border-color: var(--cor-borda-forte);
+  background: var(--cor-superficie-alta);
+}
+
+.kanban-card.is-urgente,
+.kanban-card.is-alta,
+.kanban-card.is-overdue {
+  border: 1px solid var(--cor-borda);
+  border-left: 1px solid var(--cor-borda);
+  background: var(--cor-superficie);
+  box-shadow: none;
+}
+
+.kanban-card.is-urgente:hover,
+.kanban-card.is-alta:hover,
+.kanban-card.is-overdue:hover {
+  border-color: var(--cor-borda-forte);
+  background: var(--cor-superficie-alta);
+}
+
+.kanban-card .badge {
+  font-weight: 500;
+  font-size: 11px;
+  box-shadow: none;
+}
+
+.kanban-card .badge--warning,
+.kanban-card .badge--accent {
+  background: var(--cor-superficie-alta);
+  border-color: var(--cor-borda-forte);
+  color: var(--cor-texto-suave);
+}
+
+.kanban-card .badge--danger {
+  background: var(--status-danger-bg);
+  border-color: color-mix(in srgb, var(--cor-perigo) 32%, var(--cor-borda));
+  color: var(--status-danger-fg);
+}
+
+.kanban-card .badge--success {
+  background: var(--status-success-bg);
+  border-color: color-mix(in srgb, var(--cor-sucesso) 28%, var(--cor-borda));
+  color: var(--status-success-fg);
+}
+
 .kanban-card__footer {
   flex-wrap: wrap;
   gap: 4px 8px;
@@ -497,6 +745,16 @@
 
 .kanban-card__time {
   font-size: 11px;
+}
+
+.kanban-card__time.is-today {
+  color: var(--cor-texto-fraco);
+  font-weight: 500;
+}
+
+.kanban-card__time.is-vencida,
+.kanban-card.is-overdue .kanban-card__time:not(.is-today) {
+  color: var(--status-danger-fg);
 }
 
 /* ==========================================================================

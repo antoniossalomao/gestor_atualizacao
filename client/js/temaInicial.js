@@ -29,10 +29,10 @@
   var tema = lido("tema", "sistema");
   if (tema === "claro" || tema === "escuro") raiz.setAttribute("data-tema", tema);
 
-  // Os padrões ("ouro", "padrao") não viram atributo: o :root do CSS já os
+  // Os padrões ("creme", "padrao") não viram atributo: o :root do CSS já os
   // traz, e escrevê-los só acrescentaria seletor para casar o mesmo resultado.
-  var realce = lido("realce", "ouro");
-  if (realce && realce !== "ouro") raiz.setAttribute("data-realce", realce);
+  var realce = lido("realce", "creme");
+  if (realce && realce !== "creme") raiz.setAttribute("data-realce", realce);
 
   var escala = lido("escalaTexto", "padrao");
   if (escala && escala !== "padrao") raiz.setAttribute("data-escala", escala);
