@@ -68,6 +68,7 @@
   --status-alerta-texto: #d1bc8c;
 
   --status-erro-bg: rgba(248, 113, 113, 0.10);
+  --status-erro-borda: rgba(248, 113, 113, 0.25);
   --status-erro-solido: #f87171;
   --status-erro-texto: #fca5a5;
 
@@ -319,6 +320,7 @@
   --status-alerta-texto: #92400e;
 
   --status-erro-bg: #fef2f2;
+  --status-erro-borda: #fecaca;
   --status-erro-solido: #c62f38;
   --status-erro-texto: #991b1b;
 
@@ -398,6 +400,7 @@
     --status-alerta-texto: #92400e;
 
     --status-erro-bg: #fef2f2;
+    --status-erro-borda: #fecaca;
     --status-erro-solido: #c62f38;
     --status-erro-texto: #991b1b;
 

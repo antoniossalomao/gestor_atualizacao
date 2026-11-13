@@ -302,6 +302,13 @@
   box-shadow: none;
 }
 
+.badge--neutral {
+  background: var(--cor-superficie-alta);
+  border: 1px solid var(--cor-borda-forte);
+  color: var(--cor-texto-sub);
+  box-shadow: none;
+}
+
 .filtro-rapido.is-active,
 .btn--preset.is-active {
   color: var(--cor-sobre-accent);
@@ -661,7 +668,7 @@
   padding: clamp(28px, 4vw, 42px);
   width: 100%;
   max-width: 420px;
-  transition: border-color var(--duracao-rapida) ease, box-shadow var(--duracao-rapida) ease;
+  transition: border-color var(--dur-rapida) ease, box-shadow var(--dur-rapida) ease;
 }
 
 .auth-card:focus-within {
@@ -737,7 +744,7 @@
   color: var(--cor-texto);
   font-size: var(--txt-base);
   padding: 10px 14px;
-  transition: border-color var(--duracao-rapida) ease, box-shadow var(--duracao-rapida) ease;
+  transition: border-color var(--dur-rapida) ease, box-shadow var(--dur-rapida) ease;
 }
 
 .auth-card .input:focus {
@@ -754,7 +761,7 @@
   border-radius: 8px;
   letter-spacing: 0.01em;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-  transition: transform var(--duracao-rapida) ease, box-shadow var(--duracao-rapida) ease;
+  transition: transform var(--dur-rapida) ease, box-shadow var(--dur-rapida) ease;
 }
 
 .auth-card button[type="submit"]:hover {
@@ -790,7 +797,7 @@
   color: var(--cor-texto-sub);
   border-radius: 6px;
   cursor: pointer;
-  transition: color var(--duracao-rapida) ease, background var(--duracao-rapida) ease;
+  transition: color var(--dur-rapida) ease, background var(--dur-rapida) ease;
 }
 
 .auth-card .input-com-acao .input-acao:hover {
@@ -1310,7 +1317,7 @@
   height: 30px;
   border-radius: 6px;
   color: var(--cor-texto-sub);
-  transition: color var(--duracao-rapida) ease, background var(--duracao-rapida) ease, border-color var(--duracao-rapida) ease;
+  transition: color var(--dur-rapida) ease, background var(--dur-rapida) ease, border-color var(--dur-rapida) ease;
 }
 
 .row-actions .btn--icon:hover {
@@ -1353,7 +1360,7 @@
   border-radius: 12px;
   background: var(--cor-superficie);
   padding: var(--sp-4);
-  box-shadow: var(--sombra-cartao);
+  box-shadow: var(--sombra-card);
 }
 
 .version-stat {
@@ -1362,7 +1369,7 @@
   border-radius: 10px;
   padding: 14px 16px;
   min-height: 90px;
-  transition: border-color var(--duracao-rapida) ease;
+  transition: border-color var(--dur-rapida) ease;
 }
 
 .version-stat:hover {
@@ -1399,8 +1406,8 @@
   border-left: 3px solid var(--cor-accent);
   border-radius: 10px;
   padding: 16px 18px;
-  box-shadow: var(--sombra-cartao);
-  transition: border-color var(--duracao-rapida) ease;
+  box-shadow: var(--sombra-card);
+  transition: border-color var(--dur-rapida) ease;
 }
 
 .published-release:hover {
