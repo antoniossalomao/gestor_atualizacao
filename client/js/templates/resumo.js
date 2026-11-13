@@ -16,18 +16,24 @@ import { iconeHtml } from "../utils/icones.js";
  * @param {string} rotulo
  * @param {string} destino
  */
-export function blocoDeNumero(chave, nomeIcone, rotulo, destino) {
+export function blocoDeNumero(chave, nomeIcone, rotulo, destino = "") {
   return html`
-    <button type="button" class="card stat-tile" data-stat="${chave}" data-destino="${destino}">
+    <button
+      type="button"
+      class="card stat-tile"
+      data-stat="${chave}"
+      data-destino="${destino}"
+      title="${destino || rotulo}"
+    >
       <div class="stat-tile__label">
-        <span class="stat-tile__icon">${iconeHtml(nomeIcone)}</span>
+        <span class="stat-tile__icon" aria-hidden="true">${iconeHtml(nomeIcone)}</span>
         <span data-role="rotulo">${rotulo}</span>
+        <span class="stat-tile__arrow" aria-hidden="true">${iconeHtml("seta")}</span>
       </div>
       <div class="stat-tile__value-row">
         <div class="stat-tile__value">—</div>
         <span class="stat-tile__delta" data-role="delta" hidden></span>
       </div>
-      <span class="stat-tile__go">${destino} ${iconeHtml("seta")}</span>
     </button>`;
 }
 

@@ -290,7 +290,7 @@
   flex-wrap: wrap;
 }
 
-/* Faixa conectada de KPIs do Resumo (alinhada em grade uniforme) */
+/* Faixa conectada de KPIs do Resumo (interativa, sem botao extra) */
 .stat-tiles {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -303,27 +303,52 @@
 }
 
 .stat-tiles > .stat-tile {
+  position: relative;
   appearance: none;
   background: var(--cor-superficie);
   border: 0;
   border-radius: 0;
   box-shadow: none;
   margin: 0;
-  padding: 16px 20px;
+  padding: 16px 18px;
   width: 100%;
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(32px, auto) auto auto;
-  align-content: start;
-  gap: 8px;
+  grid-template-rows: auto auto;
+  align-content: space-between;
+  gap: 10px;
   text-align: left;
   cursor: pointer;
   transition: background-color 0.14s ease;
 }
 
-.stat-tiles > .stat-tile:hover {
+.stat-tiles > .stat-tile::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 2px;
+  background: var(--cor-accent);
+  opacity: 0;
+  transform: scaleX(0.35);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.stat-tiles > .stat-tile:hover,
+.stat-tiles > .stat-tile:focus-visible {
   background: var(--cor-superficie-alta);
+}
+
+.stat-tiles > .stat-tile:hover::after,
+.stat-tiles > .stat-tile:focus-visible::after {
+  opacity: 0.85;
+  transform: scaleX(1);
+}
+
+.stat-tiles > .stat-tile:active {
+  background: var(--cor-superficie-hover);
 }
 
 .stat-tiles > .stat-tile:focus-visible {
@@ -333,16 +358,28 @@
 
 .stat-tiles .stat-tile__label {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
   margin: 0;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  line-height: 1.35;
+  line-height: 1.3;
   color: var(--cor-texto-fraco);
   min-width: 0;
+}
+
+.stat-tiles .stat-tile__label [data-role="rotulo"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  transition: color 0.14s ease;
+}
+
+.stat-tiles > .stat-tile:hover .stat-tile__label [data-role="rotulo"],
+.stat-tiles > .stat-tile:focus-visible .stat-tile__label [data-role="rotulo"] {
+  color: var(--cor-texto-sub);
 }
 
 .stat-tiles .stat-tile__icon {
@@ -352,8 +389,47 @@
   width: 14px;
   height: 14px;
   flex: 0 0 auto;
-  margin-top: 1px;
-  opacity: 0.68;
+  opacity: 0.72;
+  transition: color 0.14s ease, opacity 0.14s ease;
+}
+
+.stat-tiles > .stat-tile:hover .stat-tile__icon,
+.stat-tiles > .stat-tile:focus-visible .stat-tile__icon {
+  color: var(--cor-accent);
+  opacity: 1;
+}
+
+.stat-tiles .stat-tile__arrow {
+  margin-left: auto;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--cor-texto-fraco);
+  opacity: 0.6;
+  transition: transform 0.14s ease, opacity 0.14s ease, color 0.14s ease, background-color 0.14s ease, border-color 0.14s ease;
+}
+
+.stat-tiles .stat-tile__arrow svg {
+  width: 12px;
+  height: 12px;
+}
+
+.stat-tiles > .stat-tile:hover .stat-tile__arrow,
+.stat-tiles > .stat-tile:focus-visible .stat-tile__arrow {
+  opacity: 1;
+  color: var(--cor-accent);
+  background: var(--cor-accent-fraco);
+  border-color: color-mix(in srgb, var(--cor-accent) 28%, transparent);
+  transform: translateX(2px);
+}
+
+.stat-tiles > .stat-tile:active .stat-tile__arrow {
+  transform: translateX(3px) scale(0.92);
 }
 
 .stat-tiles .stat-tile__value-row {
@@ -366,13 +442,18 @@
   min-height: 30px;
 }
 
-.stat-tiles .stat-tile__value {
+:where(.stat-tiles) .stat-tile__value {
   font-size: clamp(1.375rem, 2vw, 1.75rem);
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
   color: var(--cor-texto);
+  transition: transform 0.12s ease;
+}
+
+.stat-tiles > .stat-tile:active .stat-tile__value {
+  transform: translateY(1px);
 }
 
 .stat-tiles .stat-tile__delta {
@@ -382,27 +463,11 @@
   color: var(--cor-texto-fraco);
 }
 
-.stat-tiles .stat-tile__go {
-  margin: 2px 0 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  color: var(--cor-texto-fraco);
-  transition: color 0.14s ease, transform 0.14s ease;
-}
-
-.stat-tiles .stat-tile__go svg {
-  width: 12px;
-  height: 12px;
-  flex: 0 0 auto;
-}
-
-.stat-tiles > .stat-tile:hover .stat-tile__go {
-  color: var(--cor-texto);
-  transform: translateX(2px);
+@media (hover: none) {
+  .stat-tiles .stat-tile__arrow {
+    opacity: 0.78;
+    background: color-mix(in srgb, var(--cor-superficie-alta) 70%, transparent);
+  }
 }
 
 @media (max-width: 1080px) {
@@ -443,7 +508,7 @@
 }
 
 /* ==========================================================================
-   3. LOGIN CLASSICO REFINADO (duas colunas, superficie fosca e filete off-white)
+   3. LOGIN CLASSICO REFINADO (duas colunas, superficie fosca e filete bege)
    ========================================================================== */
 
 .auth-screen {
@@ -647,7 +712,7 @@
   display: flex;
 }
 
-/* Agendamentos: toolbar enxuta, quadro neutro e cartoes sem excesso de cor */
+/* Agendamentos: toolbar enxuta, quadro neutro e destaques cromaticos discretos */
 .agendamentos-board-card {
   gap: 14px;
 }
@@ -668,10 +733,38 @@
   border-bottom: 1px solid var(--cor-borda);
 }
 
+.kanban-column__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.kanban-column__title::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--cor-texto-fraco);
+  flex: 0 0 auto;
+}
+
+.kanban-column--a-fazer .kanban-column__title::before {
+  background: var(--cor-accent);
+}
+
+.kanban-column--em-andamento .kanban-column__title::before {
+  background: color-mix(in srgb, var(--cor-amarelo) 78%, var(--cor-texto-fraco));
+}
+
+.kanban-column--sem-resposta .kanban-column__title::before {
+  background: var(--cor-texto-fraco);
+}
+
+.kanban-column--concluido .kanban-column__title::before {
+  background: color-mix(in srgb, var(--cor-verde) 78%, var(--cor-texto-fraco));
+}
+
 .kanban-column__alert {
-  background: transparent;
-  border: 1px solid var(--cor-borda);
-  color: var(--cor-texto-fraco);
   font-weight: 500;
   font-size: 11px;
   padding: 2px 7px;
@@ -679,11 +772,22 @@
   box-shadow: none;
 }
 
+.kanban-column__alert.badge--danger {
+  background: color-mix(in srgb, var(--cor-vermelho) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor-vermelho) 28%, var(--cor-borda));
+  color: var(--status-erro-texto);
+}
+
+.kanban-column__alert.badge--warning {
+  background: color-mix(in srgb, var(--cor-amarelo) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor-amarelo) 28%, var(--cor-borda));
+  color: color-mix(in srgb, var(--cor-amarelo) 84%, var(--cor-texto));
+}
+
 .kanban-card {
   background: var(--cor-superficie);
   border: 1px solid var(--cor-borda);
-  border-left: 1px solid var(--cor-borda);
-  border-radius: var(--raio-sm);
+  border-radius: var(--raio-pequeno, 7px);
   box-shadow: none;
   padding: 12px 14px;
 }
@@ -693,20 +797,20 @@
   background: var(--cor-superficie-alta);
 }
 
-.kanban-card.is-urgente,
-.kanban-card.is-alta,
-.kanban-card.is-overdue {
-  border: 1px solid var(--cor-borda);
-  border-left: 1px solid var(--cor-borda);
-  background: var(--cor-superficie);
-  box-shadow: none;
+.kanban-card.is-alta {
+  border-left: 2px solid color-mix(in srgb, var(--cor-amarelo) 56%, var(--cor-borda));
 }
 
-.kanban-card.is-urgente:hover,
-.kanban-card.is-alta:hover,
-.kanban-card.is-overdue:hover {
-  border-color: var(--cor-borda-forte);
-  background: var(--cor-superficie-alta);
+.kanban-card.is-urgente {
+  border-left: 2px solid color-mix(in srgb, var(--cor-vermelho) 58%, var(--cor-borda));
+}
+
+.kanban-card.is-overdue {
+  border-left: 2px solid color-mix(in srgb, var(--cor-vermelho) 74%, var(--cor-borda));
+}
+
+.kanban-column--concluido .kanban-card {
+  border-left: 2px solid color-mix(in srgb, var(--cor-verde) 42%, var(--cor-borda));
 }
 
 .kanban-card .badge {
@@ -715,23 +819,28 @@
   box-shadow: none;
 }
 
-.kanban-card .badge--warning,
-.kanban-card .badge--accent {
-  background: var(--cor-superficie-alta);
-  border-color: var(--cor-borda-forte);
-  color: var(--cor-texto-suave);
+.kanban-card .badge--danger {
+  background: color-mix(in srgb, var(--cor-vermelho) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor-vermelho) 26%, var(--cor-borda));
+  color: var(--status-erro-texto);
 }
 
-.kanban-card .badge--danger {
-  background: var(--status-danger-bg);
-  border-color: color-mix(in srgb, var(--cor-perigo) 32%, var(--cor-borda));
-  color: var(--status-danger-fg);
+.kanban-card .badge--warning {
+  background: color-mix(in srgb, var(--cor-amarelo) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor-amarelo) 26%, var(--cor-borda));
+  color: color-mix(in srgb, var(--cor-amarelo) 82%, var(--cor-texto));
+}
+
+.kanban-card .badge--accent {
+  background: var(--cor-accent-fraco);
+  border: 1px solid color-mix(in srgb, var(--cor-accent) 28%, var(--cor-borda));
+  color: var(--cor-accent);
 }
 
 .kanban-card .badge--success {
-  background: var(--status-success-bg);
-  border-color: color-mix(in srgb, var(--cor-sucesso) 28%, var(--cor-borda));
-  color: var(--status-success-fg);
+  background: var(--status-ok-bg);
+  border: 1px solid var(--status-ok-borda);
+  color: var(--status-ok-texto);
 }
 
 .kanban-card__footer {
@@ -748,13 +857,14 @@
 }
 
 .kanban-card__time.is-today {
-  color: var(--cor-texto-fraco);
+  color: var(--cor-accent);
   font-weight: 500;
 }
 
 .kanban-card__time.is-vencida,
 .kanban-card.is-overdue .kanban-card__time:not(.is-today) {
-  color: var(--status-danger-fg);
+  color: var(--status-erro-texto);
+  font-weight: 600;
 }
 
 /* ==========================================================================

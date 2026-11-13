@@ -465,10 +465,11 @@ test("Resumo - datas e indicadores", async (t) => {
     assert.equal(primeiroDiaDoMes(AGORA), "01/09/2026");
   });
 
-  await t.test("indicador é um <button> com o destino por escrito", () => {
-    const html = texto(blocoDeNumero("mes", "calendario", "Atualizações Este Mês", "Ver o mês"));
-    assert.match(html, /^\s*<button type="button" class="card stat-tile" data-stat="mes"/);
-    assert.match(html, /Ver o mês <svg/);
+  await t.test("indicador é um <button> interativo sem texto 'Ver ...'", () => {
+    const html = texto(blocoDeNumero("mes", "calendario", "Atualizações no mês", "Filtrar atualizações deste mês"));
+    assert.match(html, /^\s*<button\b[^>]*class="card stat-tile"[^>]*data-stat="mes"/);
+    assert.match(html, /stat-tile__arrow" aria-hidden="true"><svg/);
+    assert.doesNotMatch(html, /stat-tile__go/);
   });
 
   await t.test("seta só quando há variação", () => {
