@@ -15,10 +15,10 @@ Para o agente C#, o equivalente é
 
 ### Novembro de 2026
 
-- **Redesign completo Dispatch DevCore (13/11/2026):** interface reorganizada no padrão matte de alto contraste e modularizada em folhas por camada (`theme.css`, `base.css`, `shell.css`, `components.css`, `tables.css`, `views.css`), preservando zero etapa de build no cliente.
-  - Novo realce padrão `ouro` (Ouro DevCore) com botão de ação principal invertido em alto contraste, mantendo configuráveis em *Configurações › Interface e acessibilidade* todas as paletas anteriores (`azul`, `violeta`, `turquesa`, `verde`, `ambar`, `rosa`, `grafite`).
-  - Barra lateral (`#111315`) mantida escura e ancorada também no tema claro; alternância rápida de tema preservada em três estados dentro do menu da conta (`MenuConta`).
-  - Rail vertical de navegação em `Administração` e `Configurações`, faixa unificada de indicadores, cartões de Kanban com ícones SVG consistentes, aviso de rolagem horizontal em tabelas estreitas e preservação do layout em duas colunas da tela de entrada com polimento visual.
+- **Casca e paleta Dispatch DevCore (13/11/2026):** aplicação da identidade visual matte de alto contraste do Dispatch sobre o CSS e componentes originais (`theme.css`, `components.css` e `dispatch.css`), mantendo os cartões, gráficos, Kanban, campanhas, administração, tabelas, formulários e modais intactos e sem etapa de build no cliente.
+  - Novo realce padrão `ouro` (Ouro DevCore) com texto de alto contraste em botões primários, mantendo configuráveis em *Configurações › Interface e acessibilidade* todas as paletas anteriores (`azul`, `violeta`, `turquesa`, `verde`, `ambar`, `rosa`, `grafite`).
+  - Barra lateral (`#111315`) ancorada à esquerda e mantida escura também no tema claro, topo compacto em linha única e gaveta lateral responsiva com backdrop no celular; alternância rápida de tema em três estados dentro do menu da conta (`MenuConta`).
+  - Navegação lateral vertical em *Configurações*, tela de entrada clássica em duas colunas com polimento matte e aviso automático de rolagem horizontal (`ui-tabela-dica`) em tabelas que transbordam.
 
 ### Outubro de 2026
 

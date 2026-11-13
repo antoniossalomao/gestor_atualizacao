@@ -64,10 +64,8 @@ export class Modal {
     const iconeKind = question && danger ? "error" : kind;
     const tituloId = `modal-titulo-${Math.random().toString(36).slice(2, 8)}`;
     box.innerHTML = `
-      <div class="modal-box__head">
-        <div class="modal-box__icon modal-box__icon--${iconeKind}" aria-hidden="true">${ICONS[iconeKind] || "i"}</div>
-        <h3 class="modal-box__title" id="${tituloId}"></h3>
-      </div>
+      <div class="modal-box__icon modal-box__icon--${iconeKind}" aria-hidden="true">${ICONS[iconeKind] || "i"}</div>
+      <h3 class="modal-box__title" id="${tituloId}"></h3>
       <p class="modal-box__message"></p>
       <div class="modal-box__actions"></div>
     `;

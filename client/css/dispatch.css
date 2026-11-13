@@ -1,0 +1,636 @@
+/*
+ * Camada Dispatch DevCore (carregada por ultimo, depois de components.css):
+ * aplica o visual limpo na casca (barra lateral escura ancorada, topo compacto,
+ * gaveta movel), superficies matte sem vidro pesado, login classico refinado e
+ * navegacao vertical nas Configuracoes -- mantendo intactos todos os cards,
+ * graficos, Kanban, campanhas, tabelas e formularios originais.
+ */
+
+/* ==========================================================================
+   1. CASCA: BARRA LATERAL ESCURA ANCORADA + CABECALHO COMPACTO
+   ========================================================================== */
+
+.app-sidebar {
+  z-index: var(--camada-cabecalho);
+  padding: 20px 14px 16px;
+  background: var(--sidebar-fundo);
+  color: var(--sidebar-texto);
+  border-right: 1px solid var(--sidebar-borda);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  overscroll-behavior: contain;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 2px 6px 18px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--sidebar-borda);
+}
+
+.app-brand__mark {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: var(--sidebar-accent);
+  color: #111315;
+}
+
+.app-brand__mark svg {
+  width: 22px;
+  height: 22px;
+}
+
+.app-brand__text {
+  min-width: 0;
+}
+
+.app-brand__text strong {
+  display: block;
+  color: var(--sidebar-texto);
+  font: var(--peso-forte) 14.5px / 1.2 var(--fonte-display);
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+
+.app-brand__text span {
+  display: block;
+  margin-top: 2px;
+  color: var(--sidebar-mudo);
+  font-size: var(--txt-xs);
+  line-height: 1.2;
+}
+
+.app-sidebar__group-title {
+  color: var(--sidebar-mudo);
+  font-size: 11px;
+  font-weight: var(--peso-forte);
+  letter-spacing: 0.06em;
+  padding: 14px 10px 6px;
+}
+
+.tab-button {
+  color: var(--sidebar-sub);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.tab-button svg {
+  width: 17px;
+  height: 17px;
+  opacity: 0.85;
+}
+
+.tab-button:hover {
+  background: var(--sidebar-hover);
+  color: var(--sidebar-texto);
+}
+
+.tab-button.is-active {
+  background: var(--sidebar-ativo);
+  color: var(--sidebar-texto);
+  font-weight: var(--peso-forte);
+  box-shadow: inset 2px 0 0 var(--sidebar-accent);
+}
+
+.tab-button.is-active svg {
+  color: var(--sidebar-accent);
+  opacity: 1;
+}
+
+.tab-button__atalho {
+  font-family: var(--fonte-mono);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--sidebar-mudo);
+}
+
+.app-sidebar__footer {
+  border-top: 1px solid var(--sidebar-borda);
+  padding-top: 14px;
+}
+
+.app-sidebar .btn--sidebar {
+  justify-content: flex-start;
+  width: 100%;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sidebar-sub);
+  font-weight: var(--peso-medio);
+  box-shadow: none;
+}
+
+.app-sidebar .btn--sidebar:hover {
+  background: var(--sidebar-hover);
+  color: var(--sidebar-texto);
+}
+
+.app-sidebar .btn--sidebar.is-active {
+  background: var(--sidebar-ativo);
+  color: var(--sidebar-texto);
+  font-weight: var(--peso-forte);
+  box-shadow: inset 2px 0 0 var(--sidebar-accent);
+}
+
+.app-sidebar .btn--sidebar.is-active svg {
+  color: var(--sidebar-accent);
+}
+
+#app.is-sidebar-collapsed .app-brand {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+#app.is-sidebar-collapsed .app-brand__text {
+  display: none;
+}
+
+/* Cabecalho superior compacto em linha unica */
+.app-header {
+  min-height: 64px;
+  padding: 12px var(--pad-tela);
+  background: var(--cor-superficie);
+  border-bottom: 1px solid var(--cor-borda);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.app-header.is-grudado {
+  box-shadow: 0 2px 10px -4px rgba(0, 0, 0, 0.25);
+}
+
+.app-header__left {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.app-header__menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+
+.app-header__menu-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.app-header__titles {
+  min-width: 0;
+}
+
+.app-header__titles h1 {
+  margin: 0;
+  font: var(--peso-forte) 20px / 1.2 var(--fonte-display);
+  letter-spacing: -0.015em;
+  color: var(--cor-texto);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-header__titles p,
+.app-header__eyebrow {
+  display: none;
+}
+
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.app-header__search {
+  min-width: 180px;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--cor-fundo);
+  border-color: var(--cor-borda);
+  color: var(--cor-texto-fraco);
+}
+
+.app-header__search:hover {
+  border-color: var(--cor-borda-forte);
+  color: var(--cor-texto-sub);
+}
+
+.app-header__search kbd,
+.app-header__quick kbd {
+  font-family: var(--fonte-mono);
+}
+
+.app-header__quick {
+  height: 36px;
+}
+
+.app-sidebar-backdrop {
+  display: none;
+}
+
+/* ==========================================================================
+   2. SUPERFICIES MATTE (sem vidro fosco nem brilhos excessivos)
+   ========================================================================== */
+
+.card {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  box-shadow: var(--sombra-card);
+}
+
+.menu-acoes__lista,
+.cmdk,
+.modal-box,
+.drawer-panel,
+.app-menu {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda-forte);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: var(--sombra-flutuante);
+}
+
+.modal-overlay,
+.drawer-backdrop,
+.cmdk-overlay {
+  background: var(--veu-overlay);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+.modal-box,
+.drawer-panel {
+  overscroll-behavior: contain;
+}
+
+/* ==========================================================================
+   3. LOGIN CLASSICO REFINADO (duas colunas, superfice fosca e filete ouro)
+   ========================================================================== */
+
+.auth-screen {
+  background: var(--cor-fundo);
+}
+
+@media (min-width: 900px) {
+  .auth-screen__brand {
+    background: var(--cor-fundo-alt);
+    border-right: 1px solid var(--cor-borda);
+  }
+}
+
+.auth-screen__brand-mark {
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
+  box-shadow: none;
+}
+
+.auth-screen__brand-list svg {
+  background: color-mix(in srgb, var(--cor-accent) 14%, var(--cor-superficie));
+  color: var(--cor-accent);
+}
+
+.auth-card {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda-forte);
+  border-top: 3px solid var(--cor-accent);
+  box-shadow: var(--sombra-flutuante);
+}
+
+.auth-card h1,
+.auth-card h2 {
+  margin: 0 0 4px;
+  font-family: var(--fonte-display);
+  font-size: var(--txt-xl);
+  font-weight: var(--peso-extra);
+  letter-spacing: -0.015em;
+  color: var(--cor-texto);
+}
+
+.auth-card__logo {
+  background: var(--cor-accent);
+  color: var(--cor-sobre-accent);
+}
+
+.input-acao svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* ==========================================================================
+   4. CONFIGURACOES: NAVEGACAO VERTICAL A ESQUERDA + PREVIAS DISPATCH
+   ========================================================================== */
+
+@media (min-width: 960px) {
+  .tela-abas--vertical {
+    display: grid;
+    grid-template-columns: 232px minmax(0, 1fr);
+    gap: var(--sp-6);
+    align-items: start;
+  }
+
+  .tela-abas--vertical > .tela-abas__barra {
+    position: sticky;
+    top: 84px;
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: var(--sp-3);
+    border-bottom: 0;
+  }
+
+  .tela-abas--vertical .tela-abas__extra {
+    width: 100%;
+    margin-left: 0;
+    padding-bottom: 0;
+  }
+
+  .tela-abas--vertical .tela-abas__extra .cfg-busca {
+    width: 100%;
+  }
+
+  .tela-abas--vertical .tela-abas__lista {
+    width: 100%;
+    flex-direction: column;
+    overflow: visible;
+    gap: 2px;
+  }
+
+  .tela-abas--vertical .tela-abas__aba {
+    width: 100%;
+    align-items: flex-start;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 8px;
+    text-align: left;
+  }
+
+  .tela-abas--vertical .tela-abas__aba svg {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    flex: 0 0 auto;
+  }
+
+  .tela-abas--vertical .tela-abas__aba:hover {
+    background: var(--cor-superficie-alta);
+    color: var(--cor-texto);
+  }
+
+  .tela-abas--vertical .tela-abas__aba.is-active {
+    background: var(--cor-superficie);
+    color: var(--cor-texto);
+    border-bottom: 0;
+    box-shadow: inset 2px 0 0 var(--cor-accent), 0 0 0 1px var(--cor-borda);
+  }
+
+  .tela-abas--vertical .tela-abas__aba.is-active svg {
+    color: var(--cor-accent);
+  }
+
+  .tela-abas--vertical .tela-abas__contador {
+    margin-left: auto;
+    align-self: center;
+  }
+}
+
+.tela-abas__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.tela-abas__subtitulo {
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+@media (max-width: 959px) {
+  .tela-abas__subtitulo {
+    display: none;
+  }
+}
+
+@media (max-width: 1220px) {
+  .tela-abas--vertical .cfg-corpo--com-previa {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tela-abas--vertical .cfg-previa-cartao {
+    position: static;
+  }
+}
+
+/* Miniaturas de tema refletindo barra escura + fundo matte */
+.cfg-tema__preview--escuro {
+  background: #191c20;
+  color: #a8afb8;
+}
+.cfg-tema__preview--escuro .cfg-tema__barra {
+  background: #111315;
+}
+.cfg-tema__preview--claro {
+  background: #f4f5f6;
+  color: #5c626a;
+}
+.cfg-tema__preview--claro .cfg-tema__barra {
+  background: #111315;
+}
+.cfg-tema__preview--sistema {
+  background: #f4f5f6;
+  color: #5c626a;
+}
+.cfg-tema__preview--sistema .cfg-tema__barra {
+  background: #111315;
+}
+.cfg-tema__preview--sistema::after {
+  background: #191c20;
+}
+
+/* ==========================================================================
+   5. TABELAS: DICA DISCRETA DE ROLAGEM HORIZONTAL NO CELULAR
+   ========================================================================== */
+
+.ui-tabela-dica {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--cor-borda);
+  color: var(--cor-texto-fraco);
+  font-size: var(--txt-xs);
+}
+
+.table-wrap.has-overflow > .ui-tabela-dica {
+  display: flex;
+}
+
+.kanban-card__footer {
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.kanban-card__meta {
+  min-width: 0;
+}
+
+.kanban-card__time {
+  font-size: 11px;
+}
+
+/* ==========================================================================
+   6. RESPONSIVO MOVEL (<= 780px): GAVETA LATERAL + TOPO ENXUTO
+   ========================================================================== */
+
+@media (max-width: 780px) {
+  .app-shell,
+  #app.is-sidebar-collapsed .app-shell {
+    margin-left: 0;
+  }
+
+  .app-sidebar,
+  #app.is-sidebar-collapsed .app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 264px;
+    padding: 20px 14px 16px;
+    border-right: 1px solid var(--sidebar-borda);
+    border-bottom: 0;
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform var(--dur-media) var(--curva-padrao);
+    z-index: var(--camada-gaveta);
+  }
+
+  .app-sidebar.is-mobile-open,
+  #app.is-sidebar-collapsed .app-sidebar.is-mobile-open {
+    transform: translateX(0);
+  }
+
+  .app-sidebar .tabs {
+    flex-direction: column;
+    margin: 0;
+    overflow-x: visible;
+    flex: 1 1 auto;
+  }
+
+  .app-sidebar .tab-button {
+    width: 100%;
+    flex: 0 0 auto;
+    border-bottom: 0;
+  }
+
+  .app-sidebar .tab-button.is-active {
+    border-bottom-color: transparent;
+  }
+
+  .app-sidebar__footer {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #app.is-sidebar-collapsed .app-brand__text,
+  #app.is-sidebar-collapsed .tab-button span,
+  #app.is-sidebar-collapsed .btn--sidebar span,
+  #app.is-sidebar-collapsed .app-sidebar__group-title {
+    display: block;
+  }
+
+  #app.is-sidebar-collapsed .tab-button,
+  #app.is-sidebar-collapsed .btn--sidebar {
+    justify-content: flex-start;
+    padding: 8px 10px;
+  }
+
+  .app-sidebar-backdrop.is-open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: var(--camada-faixa);
+    background: var(--veu-overlay);
+  }
+
+  .app-header {
+    position: sticky;
+    top: 0;
+    flex-wrap: nowrap;
+    min-height: 56px;
+    padding: 8px 14px;
+    gap: 8px;
+  }
+
+  .app-header__left {
+    flex: 1 1 auto;
+    gap: 10px;
+  }
+
+  .app-header__titles h1 {
+    font-size: 17px;
+  }
+
+  .app-header__actions {
+    gap: 6px;
+  }
+
+  .app-header__menu-btn {
+    display: inline-flex;
+    width: 34px;
+    height: 34px;
+  }
+
+  .app-header__search {
+    min-width: 0;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .app-header__search span,
+  .app-header__search kbd {
+    display: none;
+  }
+
+  .app-header__quick-label,
+  .app-header__quick kbd {
+    display: none;
+  }
+
+  .app-header__quick {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .app-account__meta {
+    display: none;
+  }
+
+  .app-main {
+    padding: 16px 14px;
+  }
+}
