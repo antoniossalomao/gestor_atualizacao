@@ -255,8 +255,8 @@ export class DistribuicaoView extends View {
     ];
     this.container.querySelector('[data-role="indicators"]').innerHTML = `
       ${metrics.map((metric) => `<div class="card distribution-metric distribution-metric--${metric.tone}">
-        <div class="distribution-metric__head"><span>${metric.label}</span>${iconeSvg(metric.icon)}</div>
-        <strong>${metric.value}</strong><small>${metric.hint}</small>
+        <div class="distribution-metric__head"><span>${escaparHtml(metric.label)}</span>${iconeSvg(metric.icon)}</div>
+        <strong class="distribution-metric__value">${metric.value}</strong><small class="distribution-metric__hint">${escaparHtml(metric.hint)}</small>
       </div>`).join("")}`;
   }
 

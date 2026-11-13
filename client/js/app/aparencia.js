@@ -58,15 +58,19 @@ export const RITMOS = [
  */
 export const REALCES = [
   { valor: "creme", rotulo: "Bege", hex: "#dcd0bc" },
-  { valor: "ouro", rotulo: "Ouro", hex: "#cfad68" },
+  { valor: "ouro", rotulo: "Ocre", hex: "#9d836a" },
   { valor: "azul", rotulo: "Azul", hex: "#4a9eff" },
   { valor: "violeta", rotulo: "Violeta", hex: "#a78bfa" },
   { valor: "turquesa", rotulo: "Turquesa", hex: "#2dd4bf" },
   { valor: "verde", rotulo: "Verde", hex: "#4ade80" },
-  { valor: "ambar", rotulo: "Âmbar", hex: "#fbbf24" },
+  { valor: "ambar", rotulo: "Âmbar suave", hex: "#d1bc8c" },
   { valor: "rosa", rotulo: "Rosa", hex: "#f472b6" },
   { valor: "grafite", rotulo: "Grafite", hex: "#a8b8cf" },
 ];
+
+/** Aliases canônicos do catálogo de paletas de realce */
+export const PALETAS_REALCE = REALCES;
+export const PALETAS_REALCE_IDS = REALCES.map((r) => r.valor);
 
 /** Multiplicador da escala tipográfica inteira. */
 export const ESCALAS = [
@@ -273,7 +277,7 @@ const CHAVES_DESTE_APARELHO = ["notificarFalhas"];
  */
 const VALIDOS = {
   tema: ["sistema", "claro", "escuro"],
-  realce: REALCES.map((r) => r.valor),
+  realce: PALETAS_REALCE_IDS,
   escalaTexto: ESCALAS.map((e) => e.valor),
   movimento: ["normal", "reduzido"],
   fundoTela: ["grade", "liso"],

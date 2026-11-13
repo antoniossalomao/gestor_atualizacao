@@ -21,7 +21,7 @@ import { blocoDeNumero, deltaTendencia, corpoSituacao, corpoAtividade } from "..
  * @param {number|undefined} dias
  */
 function rotuloSemAtualizacao(dias) {
-  return dias ? `Sem atualizar (+${dias} dias)` : "Sem atualização recente";
+  return dias ? `Sem atualização (+${dias} dias)` : "Sem atualização recente";
 }
 
 export class ResumoView extends View {
@@ -174,10 +174,11 @@ export class ResumoView extends View {
     // rótulo usa o número com que o servidor MONTOU esta lista, não o que a
     // tela tinha guardado -- os dois não podem se contradizer.
     if (resumo.desatualizadoDias) {
-      this.container.querySelector('[data-stat="semAtualizacao"] [data-role="rotulo"]').textContent =
-        rotuloSemAtualizacao(resumo.desatualizadoDias);
+      const rotuloEl = this.container.querySelector('[data-stat="semAtualizacao"] [data-role="rotulo"]');
+      if (rotuloEl) rotuloEl.textContent = rotuloSemAtualizacao(resumo.desatualizadoDias);
     }
     this._definirVariacao("mes", tendenciaMensal(resumo.mesAtualComparavel, resumo.mesAnteriorComparavel));
+    this._atualizarAriaLabel(this.container.querySelector('[data-stat="semAtualizacao"]'));
 
     const semAtualizacaoTile = this.container.querySelector('[data-stat="semAtualizacao"]');
     semAtualizacaoTile.classList.toggle("is-alert", resumo.semAtualizacao.length > 0);
@@ -325,20 +326,39 @@ export class ResumoView extends View {
   }
 
   _definirNumero(key, value) {
-    this.container.querySelector(`[data-stat="${key}"] .stat-tile__value`).textContent = String(value);
+    const tile = this.container.querySelector(`[data-stat="${key}"]`);
+    if (!tile) return;
+    const valEl = tile.querySelector(".stat-tile__value");
+    if (valEl) valEl.textContent = String(value);
+    this._atualizarAriaLabel(tile);
+  }
+
+  _atualizarAriaLabel(tile) {
+    if (!tile) return;
+    const rotulo = tile.querySelector('[data-role="rotulo"]')?.textContent || "";
+    const valor = tile.querySelector(".stat-tile__value")?.textContent || "—";
+    const destino = tile.dataset.destino || tile.title || "";
+    const deltaEl = tile.querySelector('[data-role="delta"]');
+    const deltaTexto = deltaEl && !deltaEl.hidden ? ` (${deltaEl.textContent.trim()} vs mês anterior)` : "";
+    tile.setAttribute("aria-label", `${rotulo}: ${valor}${deltaTexto}. ${destino}`.trim());
   }
 
   /** @param {{pct: number, tendencia: "alta"|"baixa"|"neutra"}|null} tendencia */
   _definirVariacao(key, tendencia) {
-    const el = this.container.querySelector(`[data-stat="${key}"] [data-role="delta"]`);
+    const tile = this.container.querySelector(`[data-stat="${key}"]`);
+    if (!tile) return;
+    const el = tile.querySelector('[data-role="delta"]');
+    if (!el) return;
     if (!tendencia) {
       el.hidden = true;
+      this._atualizarAriaLabel(tile);
       return;
     }
     el.hidden = false;
     el.className = `stat-tile__delta is-${tendencia.tendencia}`;
     el.innerHTML = deltaTendencia(tendencia);
     el.title = "Comparado ao mesmo período do mês anterior";
+    this._atualizarAriaLabel(tile);
   }
 
   destroy() {

@@ -477,7 +477,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar,
               titulo: "Cor de destaque",
               ajuda: "Cor primária dos botões, links e abas ativas (padrão Bege).",
               chaves: ["realce"],
-              busca: "cor destaque realce accent bege creme off-white branco ouro dourado azul verde roxo violeta rosa âmbar grafite",
+              busca: "cor destaque realce accent bege creme off-white branco ocre taupe ouro dourado azul verde roxo violeta rosa âmbar grafite",
             },
             {
               id: "contraste",

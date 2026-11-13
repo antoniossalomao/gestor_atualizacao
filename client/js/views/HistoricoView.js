@@ -81,8 +81,8 @@ export class HistoricoView extends View {
       columns: [
         { key: "quando", label: "Quando", type: "text", title: (row) => formatarDataHora(row.criado_em) },
         { key: "usuario_nome", label: "Quem" },
-        { key: "acaoLabel", label: "Ação" },
-        { key: "entidadeLabel", label: "Tipo" },
+        { key: "acaoLabel", label: "Ação", render: (row) => badgeAcao(row.acao, row.acaoLabel) },
+        { key: "entidadeLabel", label: "Tipo", render: (row) => badgeEntidade(row.entidadeLabel) },
         { key: "descricao", label: "Descrição" },
       ],
       selectable: true,
@@ -243,4 +243,34 @@ function valorDiff(valor) {
   if (valor == null || valor === "") return "—";
   if (typeof valor === "object") return JSON.stringify(valor);
   return String(valor);
+}
+
+function badgeAcao(acao, rotulo) {
+  const span = document.createElement("span");
+  span.className = `badge badge--sm ${classeAcao(acao)}`;
+  span.textContent = rotulo;
+  return span;
+}
+
+function classeAcao(acao) {
+  switch (acao) {
+    case "criar":
+    case "publicar":
+    case "marcar_concluida":
+      return "badge--success";
+    case "excluir":
+      return "badge--danger";
+    case "atualizar":
+    case "restaurar_backup":
+      return "badge--warning";
+    default:
+      return "badge--neutral";
+  }
+}
+
+function badgeEntidade(rotulo) {
+  const span = document.createElement("span");
+  span.className = "badge badge--sm badge--neutral";
+  span.textContent = rotulo;
+  return span;
 }

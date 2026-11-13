@@ -1002,12 +1002,27 @@ kbd {
   background: var(--cor-superficie);
   border-radius: var(--raio);
   box-shadow: var(--sombra-card);
-  transition: border-color var(--transicao), background var(--transicao);
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 140ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 140ms ease,
+              background-color 140ms ease;
 }
 
 .stat-tile:hover {
+  transform: translateY(-2px);
   border-color: var(--cor-borda-forte);
   background: var(--cor-superficie-alta);
+  box-shadow: var(--sombra-card-hover);
+}
+
+.stat-tile:active {
+  transform: translateY(0) scale(0.99);
+  background: var(--cor-superficie-hover);
+}
+
+.stat-tile:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: 2px;
 }
 
 .stat-tile__go {
@@ -1064,6 +1079,7 @@ kbd {
 .stat-tile__value {
   font: var(--peso-forte) 28px/1 var(--fonte-display);
   letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
   color: var(--cor-texto);
 }
 
@@ -1080,6 +1096,7 @@ kbd {
   font-family: var(--fonte-display);
   font-size: var(--txt-2xs);
   font-weight: var(--peso-extra);
+  font-variant-numeric: tabular-nums;
 }
 .stat-tile__delta svg {
   width: 9px;
@@ -5482,40 +5499,73 @@ hr.separator {
 .distribution-metric {
   position: relative;
   min-height: 126px;
-  padding: var(--sp-4);
   overflow: hidden;
   padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio);
   background: var(--cor-superficie);
-  transition: transform var(--transicao), border-color var(--transicao), box-shadow var(--transicao);
   box-shadow: var(--sombra-card);
-  transition: border-color var(--transicao), background var(--transicao);
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 140ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 140ms ease,
+              background-color 140ms ease;
 }
+
 .distribution-metric:hover {
   transform: translateY(-2px);
-  border-color: var(--card-borda-hover);
-  box-shadow: var(--sombra-card-hover);
   border-color: var(--cor-borda-forte);
   background: var(--cor-superficie-alta);
+  box-shadow: var(--sombra-card-hover);
 }
+
+.distribution-metric:active {
+  transform: translateY(0) scale(0.99);
+  background: var(--cor-superficie-hover);
+}
+
+.distribution-metric:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: 2px;
+}
+
 .distribution-metric::after {
-  position: absolute;
-  right: -28px;
-  bottom: -42px;
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  background: var(--cor-accent-fraco);
   content: "";
-  opacity: 0.42;
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 2px;
+  background: var(--cor-accent);
+  opacity: 0;
+  transform: scaleX(0.35);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
 }
+
+.distribution-metric:hover::after,
+.distribution-metric:focus-visible::after {
+  opacity: 0.85;
+  transform: scaleX(1);
+}
+
+.distribution-metric--warning::after {
+  background: var(--cor-amarelo);
+}
+
+.distribution-metric--danger::after {
+  background: var(--cor-vermelho);
+}
+
 .distribution-metric--warning {
   border-color: color-mix(in srgb, var(--cor-amarelo) 44%, var(--cor-borda));
 }
+
 .distribution-metric--danger {
   border-color: color-mix(in srgb, var(--cor-vermelho) 44%, var(--cor-borda));
 }
+
 .distribution-metric__head {
   display: flex;
   align-items: flex-start;
@@ -5527,28 +5577,38 @@ hr.separator {
   letter-spacing: 0.035em;
   text-transform: uppercase;
 }
+
 .distribution-metric__head svg {
   width: 18px;
   height: 18px;
   color: var(--cor-accent);
 }
+
 .distribution-metric--warning .distribution-metric__head svg,
-.distribution-metric--warning > strong {
+.distribution-metric--warning > strong,
+.distribution-metric--warning .distribution-metric__value {
   color: var(--cor-amarelo);
 }
+
 .distribution-metric--danger .distribution-metric__head svg,
-.distribution-metric--danger > strong {
+.distribution-metric--danger > strong,
+.distribution-metric--danger .distribution-metric__value {
   color: var(--cor-vermelho);
 }
-.distribution-metric > strong {
+
+.distribution-metric > strong,
+.distribution-metric__value {
   position: relative;
   z-index: 1;
   display: block;
   margin-top: var(--sp-2);
   color: var(--cor-accent);
+  font-variant-numeric: tabular-nums;
   font: var(--peso-forte) var(--txt-numero)/1 var(--fonte-display);
 }
-.distribution-metric > small {
+
+.distribution-metric > small,
+.distribution-metric__hint {
   position: relative;
   z-index: 1;
   display: block;
@@ -7413,22 +7473,40 @@ h1, h2, h3, strong {
   flex-direction: column;
   gap: 8px;
   min-height: 94px;
-  transition: border-color var(--transicao), background-color var(--transicao);
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1), border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
 }
 .kanban-card:hover {
   border-color: var(--cor-borda-forte);
   background: var(--cor-superficie-alta);
+  transform: translateY(-1px);
+  box-shadow: var(--sombra-card-hover);
 }
 .kanban-card:active {
   cursor: grabbing;
+  transform: translateY(0);
+}
+.kanban-card:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: 2px;
 }
 .kanban-card.is-dragging {
   opacity: 0.35;
   border: 1px dashed var(--cor-accent);
   box-shadow: none;
+  transform: none;
+}
+/* Filetes laterais sutis (2-3px) por prioridade e vencimento (Dispatch DevCore) */
+.kanban-card.is-alta {
+  border-left: 3px solid var(--status-alerta-solido, color-mix(in srgb, var(--cor-amarelo) 56%, var(--cor-borda)));
+}
+.kanban-card.is-urgente {
+  border-left: 3px solid var(--status-erro-solido, color-mix(in srgb, var(--cor-vermelho) 58%, var(--cor-borda)));
 }
 .kanban-card.is-overdue {
-  border-left: 3px solid var(--cor-vermelho-forte, #ef4444);
+  border-left: 3px solid var(--status-erro-solido, color-mix(in srgb, var(--cor-vermelho) 74%, var(--cor-borda)));
+}
+.kanban-column--concluido .kanban-card {
+  border-left: 3px solid var(--status-ok-solido, color-mix(in srgb, var(--cor-verde) 42%, var(--cor-borda)));
 }
 .kanban-card__header {
   display: flex;
@@ -7474,7 +7552,7 @@ h1, h2, h3, strong {
   font-variant-numeric: tabular-nums;
 }
 .kanban-card__time.is-vencida {
-  color: var(--cor-vermelho-forte, #ef4444);
+  color: var(--status-erro-texto, var(--cor-vermelho));
   font-weight: 600;
 }
 .kanban-card__time.is-today {
@@ -7494,17 +7572,53 @@ h1, h2, h3, strong {
   font-size: 11px;
   padding: 4px 8px;
 }
+/* Soft pastel badges com status dot no card do Kanban */
 .kanban-card .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border-radius: 3px;
   font-size: 10px;
-  padding: 1px 5px;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 1px 6px;
+  letter-spacing: 0.02em;
+  box-shadow: none;
 }
-/* Borda esquerda colorida por prioridade (coexiste com .is-overdue) */
-.kanban-card.is-urgente {
-  border-left: 3px solid var(--cor-vermelho-forte, #dc2626);
+.kanban-card .badge::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
 }
-.kanban-card.is-alta {
-  border-left: 3px solid var(--cor-laranja, #f97316);
+.kanban-card .badge--danger {
+  background: color-mix(in srgb, var(--cor-vermelho) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor-vermelho) 26%, var(--cor-borda));
+  color: var(--status-erro-texto);
+}
+.kanban-card .badge--warning {
+  background: var(--status-alerta-bg, color-mix(in srgb, var(--cor-amarelo) 10%, transparent));
+  border: 1px solid var(--status-alerta-borda, color-mix(in srgb, var(--cor-amarelo) 26%, var(--cor-borda)));
+  color: var(--status-alerta-texto, color-mix(in srgb, var(--cor-amarelo) 82%, var(--cor-texto)));
+}
+.kanban-card .badge--accent {
+  background: var(--cor-accent-fraco);
+  border: 1px solid color-mix(in srgb, var(--cor-accent) 28%, var(--cor-borda));
+  color: var(--cor-accent);
+}
+.kanban-card .badge--success {
+  background: var(--status-ok-bg);
+  border: 1px solid var(--status-ok-borda);
+  color: var(--status-ok-texto);
+}
+.kanban-card .badge--neutral,
+.kanban-card .badge--muted {
+  background: transparent;
+  border: 1px solid var(--cor-borda);
+  color: var(--cor-texto-sub);
 }
 /* Prévia de obs no card: máximo 2 linhas, truncada */
 .kanban-card__obs {
@@ -7525,10 +7639,24 @@ h1, h2, h3, strong {
   gap: var(--sp-1);
 }
 .kanban-column__alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border-radius: 3px;
   font-size: 10px;
-  padding: 1px 5px;
+  font-weight: 500;
+  padding: 1px 6px;
   cursor: default;
+}
+.kanban-column__alert.badge--danger {
+  background: color-mix(in srgb, var(--cor-vermelho) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor-vermelho) 28%, var(--cor-borda));
+  color: var(--status-erro-texto);
+}
+.kanban-column__alert.badge--warning {
+  background: var(--status-alerta-bg, color-mix(in srgb, var(--cor-amarelo) 10%, transparent));
+  border: 1px solid var(--status-alerta-borda, color-mix(in srgb, var(--cor-amarelo) 28%, var(--cor-borda)));
+  color: var(--status-alerta-texto, color-mix(in srgb, var(--cor-amarelo) 84%, var(--cor-texto)));
 }
 /* Grupo de badges no header do card */
 .kanban-card__badges {

@@ -37,15 +37,15 @@
 
   /* -- destaque e estados (padrao bege creme matte estilo Dispatch) -- */
   --cor-accent: var(--realce-escuro, #dcd0bc);
-  --cor-accent-forte: var(--realce-escuro-forte, #e8decb);
+  --cor-accent-forte: var(--realce-escuro-forte, #edece6);
   --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 12%, transparent);
   --cor-verde: #34d399;
   --cor-verde-fraco: rgba(52, 211, 153, 0.12);
   --cor-vermelho: #f87171;
   --cor-vermelho-forte: #ef4444;
   --cor-vermelho-fraco: rgba(248, 113, 113, 0.12);
-  --cor-amarelo: #fbbf24;
-  --cor-amarelo-fraco: rgba(251, 191, 36, 0.12);
+  --cor-amarelo: #d1bc8c;
+  --cor-amarelo-fraco: rgba(209, 188, 140, 0.12);
   --cor-sobre-accent: #111315;
   --cor-accent-texto: var(--cor-sobre-accent);
   --cor-sobre-perigo: #ffffff;
@@ -62,8 +62,10 @@
   --status-ok-solido: #34d399;
   --status-ok-texto: #a7f3d0;
 
-  --status-alerta-bg: rgba(251, 191, 36, 0.10);
-  --status-alerta-solido: #fbbf24;
+  --status-alerta-bg: rgba(209, 188, 140, 0.10);
+  --status-alerta-borda: rgba(209, 188, 140, 0.25);
+  --status-alerta-solido: #d1bc8c;
+  --status-alerta-texto: #d1bc8c;
 
   --status-erro-bg: rgba(248, 113, 113, 0.10);
   --status-erro-solido: #f87171;
@@ -168,12 +170,20 @@
 }
 
 /* ==========================================================================
-   COR DE DESTAQUE (Bege creme como padrao, ouro e demais paletas preservadas)
+   COR DE DESTAQUE (Bege creme como padrao, ocre e demais paletas refinadas)
    ========================================================================== */
 
+:root[data-realce="creme"] {
+  --realce-escuro: #dcd0bc;
+  --realce-escuro-forte: #edece6;
+  --realce-claro: #2e2923;
+  --realce-claro-forte: #1b1814;
+  --cor-sobre-accent: #111315;
+}
+
 :root[data-realce="ouro"] {
-  --realce-escuro: #cfad68;
-  --realce-escuro-forte: #dfc183;
+  --realce-escuro: #9d836a;
+  --realce-escuro-forte: #b39b83;
   --realce-claro: #826426;
   --realce-claro-forte: #684f1d;
   --cor-sobre-accent: #111315;
@@ -212,10 +222,10 @@
 }
 
 :root[data-realce="ambar"] {
-  --realce-escuro: #fbbf24;
-  --realce-escuro-forte: #fcd34d;
-  --realce-claro: #a16207;
-  --realce-claro-forte: #854d0e;
+  --realce-escuro: #d1bc8c;
+  --realce-escuro-forte: #e3d2aa;
+  --realce-claro: #a78339;
+  --realce-claro-forte: #8a6a2a;
   --cor-sobre-accent: #111315;
 }
 
@@ -292,8 +302,8 @@
   --cor-vermelho: #c62f38;
   --cor-vermelho-forte: #a51f28;
   --cor-vermelho-fraco: rgba(198, 47, 56, 0.1);
-  --cor-amarelo: #9a6200;
-  --cor-amarelo-fraco: rgba(154, 98, 0, 0.12);
+  --cor-amarelo: #a78339;
+  --cor-amarelo-fraco: rgba(167, 131, 57, 0.12);
   --cor-sobre-accent: #ffffff;
   --cor-accent-texto: var(--cor-sobre-accent);
   --cor-sobre-perigo: #ffffff;
@@ -304,7 +314,9 @@
   --status-ok-texto: #065f46;
 
   --status-alerta-bg: #fffbeb;
-  --status-alerta-solido: #9a6200;
+  --status-alerta-borda: #fde68a;
+  --status-alerta-solido: #a78339;
+  --status-alerta-texto: #92400e;
 
   --status-erro-bg: #fef2f2;
   --status-erro-solido: #c62f38;
@@ -369,8 +381,8 @@
     --cor-vermelho: #c62f38;
     --cor-vermelho-forte: #a51f28;
     --cor-vermelho-fraco: rgba(198, 47, 56, 0.1);
-    --cor-amarelo: #9a6200;
-    --cor-amarelo-fraco: rgba(154, 98, 0, 0.12);
+    --cor-amarelo: #a78339;
+    --cor-amarelo-fraco: rgba(167, 131, 57, 0.12);
     --cor-sobre-accent: #ffffff;
     --cor-accent-texto: var(--cor-sobre-accent);
     --cor-sobre-perigo: #ffffff;
@@ -381,7 +393,9 @@
     --status-ok-texto: #065f46;
 
     --status-alerta-bg: #fffbeb;
-    --status-alerta-solido: #9a6200;
+    --status-alerta-borda: #fde68a;
+    --status-alerta-solido: #a78339;
+    --status-alerta-texto: #92400e;
 
     --status-erro-bg: #fef2f2;
     --status-erro-solido: #c62f38;

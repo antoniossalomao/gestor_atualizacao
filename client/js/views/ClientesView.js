@@ -77,7 +77,7 @@ export class ClientesView extends View {
           <div class="field">
             <div style="display:flex;justify-content:space-between;align-items:baseline;">
               <label class="field__label" for="cli-codigo">Código</label>
-              <button type="button" class="btn-link" data-action="gerar-codigo" style="font-size:var(--txt-xs);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;color:var(--cor-destaque);" title="Sugerir próximo código sequencial">Sugerir código</button>
+              <button type="button" class="btn-link" data-action="gerar-codigo" style="font-size:var(--txt-xs);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;color:var(--cor-accent);" title="Sugerir próximo código sequencial">Sugerir código</button>
             </div>
             <input type="text" class="input" id="cli-codigo" data-field="codigo" placeholder="ex.: C000123" />
           </div>

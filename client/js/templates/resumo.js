@@ -23,12 +23,13 @@ export function blocoDeNumero(chave, nomeIcone, rotulo, destino = "") {
       class="card stat-tile"
       data-stat="${chave}"
       data-destino="${destino}"
+      aria-label="${rotulo}: —. ${destino}"
       title="${destino || rotulo}"
     >
       <div class="stat-tile__label">
         <span class="stat-tile__icon" aria-hidden="true">${iconeHtml(nomeIcone)}</span>
         <span data-role="rotulo">${rotulo}</span>
-        <span class="stat-tile__arrow" aria-hidden="true">${iconeHtml("seta")}</span>
+        <span class="stat-tile__affordance stat-tile__arrow" aria-hidden="true">${iconeHtml("seta")}</span>
       </div>
       <div class="stat-tile__value-row">
         <div class="stat-tile__value">—</div>

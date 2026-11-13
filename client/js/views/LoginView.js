@@ -62,7 +62,7 @@ export class LoginView {
           : "Use o seu usuário e a senha da equipe."
       }</p>
       <div class="auth-card__error" role="alert" id="login-erro" hidden></div>
-      <form>
+      <form id="login-form">
         ${isSetup ? html`<div class="field"><label class="field__label" for="login-nome">Seu nome</label><input class="input" type="text" id="login-nome" name="nome" required autocomplete="name" /></div>` : ""}
         <div class="field">
           <!-- for/id: sem eles, o leitor de tela anunciava só "caixa de texto"
@@ -81,7 +81,7 @@ export class LoginView {
           <div class="input-com-acao">
             <input class="input" type="password" id="login-senha" name="senha" required
                    autocomplete="${isSetup ? "new-password" : "current-password"}" />
-            <button type="button" class="input-acao" data-action="ver-senha"
+            <button type="button" class="input-acao" data-action="alternar-senha"
                     aria-label="Mostrar a senha" aria-pressed="false" title="Mostrar a senha">${iconeHtml("olho")}</button>
           </div>
           <!--
@@ -113,7 +113,7 @@ export class LoginView {
    */
   _ligarSenha(card) {
     const campo = card.querySelector('input[name="senha"]');
-    const botao = card.querySelector('[data-action="ver-senha"]');
+    const botao = card.querySelector('[data-action="alternar-senha"]') || card.querySelector('[data-action="ver-senha"]');
     const aviso = card.querySelector('[data-role="capslock"]');
 
     botao.addEventListener("click", () => {
