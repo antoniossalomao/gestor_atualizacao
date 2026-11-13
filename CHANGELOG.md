@@ -13,6 +13,13 @@ do painel): é um diário de decisões, em ordem cronológica.
 Para o agente C#, o equivalente é
 [`atualizador/RISCOS-CONHECIDOS.md`](../atualizador/RISCOS-CONHECIDOS.md).
 
+### Novembro de 2026
+
+- **Redesign completo Dispatch DevCore (13/11/2026):** interface reorganizada no padrão matte de alto contraste e modularizada em folhas por camada (`theme.css`, `base.css`, `shell.css`, `components.css`, `tables.css`, `views.css`), preservando zero etapa de build no cliente.
+  - Novo realce padrão `ouro` (Ouro DevCore) com botão de ação principal invertido em alto contraste, mantendo configuráveis em *Configurações › Interface e acessibilidade* todas as paletas anteriores (`azul`, `violeta`, `turquesa`, `verde`, `ambar`, `rosa`, `grafite`).
+  - Barra lateral (`#111315`) mantida escura e ancorada também no tema claro; alternância rápida de tema preservada em três estados dentro do menu da conta (`MenuConta`).
+  - Rail vertical de navegação em `Administração` e `Configurações`, faixa unificada de indicadores, cartões de Kanban com ícones SVG consistentes, aviso de rolagem horizontal em tabelas estreitas e preservação do layout em duas colunas da tela de entrada com polimento visual.
+
 ### Outubro de 2026
 
 - **Revisão e limpeza (07/10/2026):** correções de concorrência e datas nos agendamentos; download por snapshot SQLite; restauração com cópia de segurança obrigatória e recuperação do banco anterior em caso de falha. O deploy também usa snapshot íntegro, com nome único.

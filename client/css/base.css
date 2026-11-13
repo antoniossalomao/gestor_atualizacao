@@ -140,6 +140,12 @@
     margin: var(--sp-4) 0;
   }
 
+  svg[viewBox="0 0 20 20"] {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
   @keyframes girar {
     to {
       transform: rotate(360deg);

@@ -981,6 +981,30 @@
       min-height: 44px;
     }
 
+    .app-header {
+      padding: 0 var(--sp-3);
+      gap: var(--sp-2);
+    }
+
+    .app-header__left {
+      gap: var(--sp-2);
+    }
+
+    .app-header__actions {
+      gap: 6px;
+    }
+
+    .app-header__search span {
+      display: none;
+    }
+
+    .app-header__search {
+      width: 44px;
+      padding: 0;
+      justify-content: center;
+      gap: 0;
+    }
+
     .app-header__quick-label {
       display: none;
     }

@@ -307,6 +307,28 @@
     color: var(--cor-texto);
   }
 
+  /* Garante que o botao da barra lateral permaneca escuro no tema claro. */
+  .app-sidebar .btn--sidebar {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
+    border-color: transparent;
+    background: transparent;
+    color: var(--sidebar-texto-sub);
+  }
+
+  .app-sidebar .btn--sidebar:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: transparent;
+    color: var(--sidebar-texto);
+  }
+
+  .app-sidebar .btn--sidebar.is-active {
+    background: var(--sidebar-elevated);
+    border-color: rgba(255, 255, 255, 0.06);
+    color: var(--sidebar-texto);
+  }
+
   .btn--small {
     height: 30px;
     padding: 0 10px;
