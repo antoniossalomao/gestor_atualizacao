@@ -90,7 +90,7 @@ export class OperacaoAdmin extends FormularioRegras {
           <div class="admin-sistemas__barra">
             <label class="cfg-busca admin-sistemas__filtro">
               <span class="cfg-busca__icone" aria-hidden="true">${iconeHtml("busca")}</span>
-              <input type="search" class="input" data-role="filtro-sistemas" placeholder="Filtrar sistemas…"
+              <input type="search" class="input" data-role="filtro-sistemas" placeholder="Filtrar sistemas"
                      aria-label="Filtrar sistemas" autocomplete="off" spellcheck="false" />
             </label>
             <span class="text-muted admin-sistemas__total" data-role="total-sistemas" aria-live="polite"></span>

@@ -16,9 +16,9 @@
   --cor-superficie: #191c20;
   --cor-superficie-alta: #202429;
   --cor-superficie-hover: #262b31;
-  --cor-borda: #2c3137;
-  --cor-borda-forte: #3e454e;
-  --cor-borda-campo: #434a54;
+  --cor-borda: rgba(255, 255, 255, 0.08);
+  --cor-borda-forte: rgba(255, 255, 255, 0.14);
+  --cor-borda-campo: rgba(255, 255, 255, 0.16);
 
   /* -- texto -- */
   --cor-texto: #eceef0;
@@ -109,7 +109,7 @@
 
   --peso-medio: 500;
   --peso-forte: 600;
-  --peso-extra: 700;
+  --peso-extra: 600;
 
   /* ==========================================================================
      ESPACAMENTO, FORMA, ELEVACAO E CAMADAS
@@ -131,7 +131,7 @@
 
   --sombra-card: none;
   --sombra-flutuante: 0 12px 32px -8px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.35);
-  --sombra-card-hover: 0 6px 20px -12px rgba(0, 0, 0, 0.6);
+  --sombra-card-hover: none;
 
   --dur-rapida: 120ms;
   --dur-media: 200ms;

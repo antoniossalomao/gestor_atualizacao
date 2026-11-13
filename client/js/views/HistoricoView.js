@@ -57,7 +57,7 @@ export class HistoricoView extends View {
         <div class="toolbar">
           <div class="field">
             <label class="field__label" for="his-busca">Buscar</label>
-            <input type="search" class="input" id="his-busca" data-role="search" placeholder="Pessoa ou descrição..." />
+            <input type="search" class="input" id="his-busca" data-role="search" placeholder="Filtrar histórico" />
           </div>
           <div class="field">
             <label class="field__label" for="his-tipo">Tipo</label>

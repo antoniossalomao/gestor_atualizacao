@@ -69,7 +69,11 @@ export class VersoesView extends View {
 
             <div class="field">
               <label class="field__label" for="version-package">Arquivo compactado</label>
-              <input class="input distribution-file" id="version-package" type="file" name="pacote" accept=".7z,.zip,.rar" required />
+              <div class="distribution-file" data-role="file-picker">
+                <input class="distribution-file__input" id="version-package" type="file" name="pacote" accept=".7z,.zip,.rar" required />
+                <span class="btn btn--small distribution-file__trigger" aria-hidden="true">Selecionar arquivo</span>
+                <span class="distribution-file__name" data-role="file-name">Nenhum arquivo selecionado</span>
+              </div>
               <small class="field__help">O SHA-256 e a URL de download serão gerados automaticamente.</small>
             </div>
 
@@ -150,7 +154,7 @@ export class VersoesView extends View {
         <div class="toolbar versions-filters">
           <div class="field">
             <label class="field__label" for="versions-search">Buscar</label>
-            <input type="search" class="input" id="versions-search" data-role="search" placeholder="Sistema ou versão..." />
+            <input type="search" class="input" id="versions-search" data-role="search" placeholder="Filtrar versões" />
           </div>
           <div class="field">
             <label class="field__label" for="versions-status">Status</label>
@@ -178,6 +182,8 @@ export class VersoesView extends View {
     `;
 
     this.form = this.container.querySelector('[data-role="form"]');
+    this.fileInput = this.container.querySelector("#version-package");
+    this.fileName = this.container.querySelector('[data-role="file-name"]');
     this.systemSelect = this.container.querySelector('[data-role="form-system"]');
     this.changelogItems = this.container.querySelector('[data-role="changelog-items"]');
     this.changelogValue = this.container.querySelector('[data-role="changelog-value"]');
@@ -188,6 +194,8 @@ export class VersoesView extends View {
       this.form.hidden = true;
     }
 
+    this.fileInput?.addEventListener("change", () => this._atualizarNomeArquivo());
+    this.form.addEventListener("reset", () => queueMicrotask(() => this._atualizarNomeArquivo()));
     this.form.addEventListener("submit", (event) => this._enviar(event));
     this.systemSelect.addEventListener("change", () => this._atualizarAvisoDeSubstituicao());
     for (const campo of this.form.querySelectorAll('[name="alcance"]')) campo.addEventListener("change", () => {
@@ -587,6 +595,19 @@ export class VersoesView extends View {
       .map((input) => input.value.trim())
       .filter(Boolean);
     this.changelogValue.value = items.map((item) => `- ${item}`).join("\n");
+  }
+
+  _atualizarNomeArquivo() {
+    if (!this.fileName) return;
+    const arquivo = this.fileInput?.files?.[0];
+    if (!arquivo) {
+      this.fileName.textContent = "Nenhum arquivo selecionado";
+      this.fileName.classList.remove("is-filled");
+      return;
+    }
+    const mb = arquivo.size >= 1024 * 1024 ? `${(arquivo.size / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(arquivo.size / 1024))} KB`;
+    this.fileName.textContent = `${arquivo.name} (${mb})`;
+    this.fileName.classList.add("is-filled");
   }
 
   async _enviar(event) {

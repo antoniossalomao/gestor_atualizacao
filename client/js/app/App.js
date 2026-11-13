@@ -489,7 +489,7 @@ export class App {
             -->
             <button type="button" class="btn btn--small app-header__search" data-action="buscar"
                     aria-label="Buscar telas, clientes e ações (Ctrl+K)">
-              ${iconeSvg("busca")}<span>Buscar…</span><kbd>Ctrl</kbd><kbd>K</kbd>
+              ${iconeSvg("busca")}<span>Buscar</span><kbd>Ctrl</kbd><kbd>K</kbd>
             </button>
             <button type="button" class="btn btn--accent btn--small app-header__quick" data-action="acao-rapida"
                     aria-label="Abrir ações rápidas (Alt+N)">+ <span class="app-header__quick-label">Ação rápida</span><kbd>Alt+N</kbd></button>

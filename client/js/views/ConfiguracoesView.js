@@ -90,7 +90,7 @@ export class ConfiguracoesView extends View {
       extra: html`
         <label class="cfg-busca">
           <span class="cfg-busca__icone" aria-hidden="true">${iconeHtml("busca")}</span>
-          <input type="search" class="input" data-role="busca" placeholder="Buscar um ajuste…"
+          <input type="search" class="input" data-role="busca" placeholder="Filtrar ajustes"
                  aria-label="Buscar um ajuste" autocomplete="off" spellcheck="false" />
         </label>`,
       criar: (key, painel) => this._criarAba(key, painel),

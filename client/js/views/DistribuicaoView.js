@@ -72,7 +72,7 @@ export class DistribuicaoView extends View {
         <div class="toolbar distribution-report-filters">
           <div class="field">
             <label class="field__label" for="dist-log-search">Buscar</label>
-            <input type="search" class="input" id="dist-log-search" data-role="log-search" placeholder="Empresa, script ou mensagem..." />
+            <input type="search" class="input" id="dist-log-search" data-role="log-search" placeholder="Filtrar logs" />
           </div>
           <div class="field">
             <label class="field__label" for="dist-log-status">Último resultado</label>
@@ -102,7 +102,7 @@ export class DistribuicaoView extends View {
         <div class="toolbar distribution-report-filters">
           <div class="field">
             <label class="field__label" for="dist-search">Buscar</label>
-            <input type="search" class="input" id="dist-search" data-role="search" placeholder="Empresa, identificador ou máquina..." />
+            <input type="search" class="input" id="dist-search" data-role="search" placeholder="Filtrar agentes" />
           </div>
           <div class="field">
             <label class="field__label" for="dist-situation">Situação</label>

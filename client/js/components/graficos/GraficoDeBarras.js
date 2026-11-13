@@ -47,10 +47,13 @@ export class GraficoDeBarras {
     const tag = this.aoClicar ? "button" : "div";
     this.container.innerHTML = html`<div class="bar-chart">${bars.map((bar, i) => {
       const dica = bar.dica || `${bar.label}: ${bar.total} (${Math.round((bar.total / total) * 100)}% do total)`;
+      const pct = Math.max(0, Math.min(100, Math.round((bar.total / max) * 100)));
+      const rankClass = bar.color ? "" : i === 0 ? "is-top" : "is-sub";
+      const fillStyle = bar.color ? `width:${pct}%; background:${bar.color}` : `width:${pct}%`;
       const miolo = html`
         <span class="bar-chart__label" title="${bar.label}">${bar.label}</span>
         <span class="bar-chart__track">
-          <span class="bar-chart__fill" data-pct="${Math.round((bar.total / max) * 100)}" style="width:0%; background:${bar.color || this.color}"></span>
+          <span class="bar-chart__fill ${rankClass}" data-pct="${pct}" style="${fillStyle}"></span>
           <span class="bar-chart__value">${bar.total}</span>
         </span>
         ${bar.variacao ? html`<span class="bar-chart__variacao is-${bar.variacao.tendencia}" title="${bar.variacao.dica || ""}">${bar.variacao.texto}</span>` : ""}`;
@@ -71,7 +74,7 @@ export class GraficoDeBarras {
     const fills = /** @type {NodeListOf<HTMLElement>} */ (this.container.querySelectorAll(".bar-chart__fill"));
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        for (const el of fills) el.style.width = `${el.dataset.pct}%`;
+        for (const el of fills) el.classList.add("is-visivel");
       });
     });
   }

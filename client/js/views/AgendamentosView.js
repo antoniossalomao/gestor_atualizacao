@@ -109,7 +109,7 @@ export class AgendamentosView extends View {
         <div class="toolbar">
           <div class="field">
             <label class="field__label" for="age-busca">Buscar</label>
-            <input type="search" class="input" id="age-busca" data-role="search" placeholder="Tarefa, cliente, responsável..." />
+            <input type="search" class="input" id="age-busca" data-role="search" placeholder="Filtrar agendamentos" />
           </div>
           <div class="field">
             <!-- id "age-filtro-*", e não "age-status": esse é o do campo do
