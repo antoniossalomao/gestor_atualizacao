@@ -80,8 +80,52 @@ export class GraficoDeLinhas {
       svg.appendChild(rotulo);
     }
 
-    const caminho = coords.map((p, i) => `${i ? "L" : "M"} ${p.x},${p.y}`).join(" ");
-    svg.appendChild(elemento("path", { d: `M ${coords[0].x},${base} ${caminho.replace(/^M/, "L")} L ${coords.at(-1).x},${base} Z`, fill: `url(#${this.id}-area)`, class: "line-chart__area" }));
+    const caminho = coords.length < 2
+      ? `M ${coords[0].x},${coords[0].y}`
+      : (() => {
+          const n = coords.length;
+          const dx = [];
+          const dy = [];
+          const d = [];
+          for (let i = 0; i < n - 1; i++) {
+            dx[i] = Math.max(1e-6, coords[i + 1].x - coords[i].x);
+            dy[i] = coords[i + 1].y - coords[i].y;
+            d[i] = dy[i] / dx[i];
+          }
+          const m = new Array(n).fill(0);
+          m[0] = d[0];
+          m[n - 1] = d[n - 2];
+          for (let i = 1; i < n - 1; i++) {
+            if (d[i - 1] * d[i] > 0) m[i] = (d[i - 1] + d[i]) / 2;
+          }
+          for (let i = 0; i < n - 1; i++) {
+            if (Math.abs(d[i]) < 1e-9) {
+              m[i] = 0;
+              m[i + 1] = 0;
+            } else {
+              const a = m[i] / d[i];
+              const b = m[i + 1] / d[i];
+              const h = Math.hypot(a, b);
+              if (h > 3) {
+                const s = 3 / h;
+                m[i] = s * a * d[i];
+                m[i + 1] = s * b * d[i];
+              }
+            }
+          }
+          let path = `M ${coords[0].x.toFixed(1)},${coords[0].y.toFixed(1)}`;
+          for (let i = 0; i < n - 1; i++) {
+            const p0 = coords[i];
+            const p1 = coords[i + 1];
+            const c1x = p0.x + dx[i] / 3;
+            const c1y = Math.min(base, p0.y + (dx[i] * m[i]) / 3);
+            const c2x = p1.x - dx[i] / 3;
+            const c2y = Math.min(base, p1.y - (dx[i] * m[i + 1]) / 3);
+            path += ` C ${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p1.x.toFixed(1)},${p1.y.toFixed(1)}`;
+          }
+          return path;
+        })();
+    svg.appendChild(elemento("path", { d: `M ${coords[0].x.toFixed(1)},${base} ${caminho.replace(/^M/, "L")} L ${coords.at(-1).x.toFixed(1)},${base} Z`, fill: `url(#${this.id}-area)`, class: "line-chart__area" }));
     svg.appendChild(elemento("path", { d: caminho, class: "line-chart__linha" }));
 
     const crosshair = elemento("line", { y1: T, y2: base, class: "line-chart__crosshair" });
@@ -117,9 +161,15 @@ export class GraficoDeLinhas {
     const focaveis = [];
     pontos.forEach((p, i) => {
       const { x, y } = coords[i];
+      const ehFim = i === pontos.length - 1;
+      const classePonto = [
+        "line-chart__ponto",
+        ehFim ? "line-chart__ponto--fim" : "",
+        p.total === 0 && !ehFim ? "is-zero" : "",
+      ].filter(Boolean).join(" ");
       const ponto = elemento("circle", {
-        cx: x, cy: y, r: i === pontos.length - 1 ? 5 : 3.5,
-        class: i === pontos.length - 1 ? "line-chart__ponto line-chart__ponto--fim" : "line-chart__ponto",
+        cx: x, cy: y, r: ehFim ? 4 : 3,
+        class: classePonto,
         tabindex: "0", role: "button", "aria-label": `${p.label}: ${p.total} ${p.total === 1 ? "atualização" : "atualizações"}${p.parcial ? ", mês em andamento" : ""}`,
       });
       ponto.addEventListener("focus", () => mostrar(i));

@@ -21,7 +21,7 @@ import { blocoDeNumero, deltaTendencia, corpoSituacao, corpoAtividade } from "..
  * @param {number|undefined} dias
  */
 function rotuloSemAtualizacao(dias) {
-  return dias ? `Sem Atualização Há Mais de ${dias} Dias` : "Sem Atualização Recente";
+  return dias ? `Sem atualização (+${dias} dias)` : "Sem atualização recente";
 }
 
 export class ResumoView extends View {
@@ -35,10 +35,10 @@ export class ResumoView extends View {
   _montarDom() {
     this.container.innerHTML = html`
       <div class="stat-tiles">
-        ${blocoDeNumero("clientes", "clientes", "Clientes", "Ver clientes")}
-        ${blocoDeNumero("atualizacoes", "atualizacoes", "Atualizações", "Ver histórico")}
-        ${blocoDeNumero("mes", "calendario", "Atualizações Este Mês", "Ver o mês")}
-        ${blocoDeNumero("semAtualizacao", "alerta", rotuloSemAtualizacao(this.desatualizadoDias), "Ver a lista")}
+        ${blocoDeNumero("clientes", "clientes", "Clientes cadastrados", "Abrir lista de clientes cadastrados")}
+        ${blocoDeNumero("atualizacoes", "atualizacoes", "Total de atualizações", "Abrir histórico completo de atualizações")}
+        ${blocoDeNumero("mes", "calendario", "Atualizações no mês", "Filtrar atualizações deste mês")}
+        ${blocoDeNumero("semAtualizacao", "alerta", rotuloSemAtualizacao(this.desatualizadoDias), "Listar clientes sem atualização no prazo")}
       </div>
 
       <!--
@@ -57,22 +57,22 @@ export class ResumoView extends View {
       -->
       <div class="card-row card-row--aside">
         <div class="card">
-          <h2 class="card__title">Frequência de Atualização</h2>
+          <h2 class="card__title">Frequência de atualização</h2>
           <div data-role="situacao"></div>
         </div>
         <div class="card">
-          <div class="tendencia-cabecalho"><h2 class="card__title">Tendência Mensal de Atualizações</h2><span data-role="tendencia-atual"></span></div>
+          <div class="tendencia-cabecalho"><h2 class="card__title">Tendência mensal de atualizações</h2><span data-role="tendencia-atual"></span></div>
           <div data-role="tendencia"></div>
         </div>
       </div>
 
       <div class="card-row">
         <div class="card">
-          <h2 class="card__title">Atualizações Por Responsável</h2>
+          <h2 class="card__title">Atualizações por responsável</h2>
           <div data-role="responsaveis"></div>
         </div>
         <div class="card">
-          <h2 class="card__title">Atualizações Por Sistema Este Mês</h2>
+          <h2 class="card__title">Atualizações por sistema no mês</h2>
           <p class="card__subtitle">Clientes atualizados em cada sistema. ▲▼ contra o mesmo período do mês anterior; clique para ver a lista.</p>
           <div data-role="sistemas"></div>
         </div>
@@ -174,10 +174,11 @@ export class ResumoView extends View {
     // rótulo usa o número com que o servidor MONTOU esta lista, não o que a
     // tela tinha guardado -- os dois não podem se contradizer.
     if (resumo.desatualizadoDias) {
-      this.container.querySelector('[data-stat="semAtualizacao"] [data-role="rotulo"]').textContent =
-        rotuloSemAtualizacao(resumo.desatualizadoDias);
+      const rotuloEl = this.container.querySelector('[data-stat="semAtualizacao"] [data-role="rotulo"]');
+      if (rotuloEl) rotuloEl.textContent = rotuloSemAtualizacao(resumo.desatualizadoDias);
     }
     this._definirVariacao("mes", tendenciaMensal(resumo.mesAtualComparavel, resumo.mesAnteriorComparavel));
+    this._atualizarAriaLabel(this.container.querySelector('[data-stat="semAtualizacao"]'));
 
     const semAtualizacaoTile = this.container.querySelector('[data-stat="semAtualizacao"]');
     semAtualizacaoTile.classList.toggle("is-alert", resumo.semAtualizacao.length > 0);
@@ -193,7 +194,7 @@ export class ResumoView extends View {
       (resumo.porResponsavel || []).map((r) => ({
         label: r.label,
         total: r.total,
-        dica: `${r.label}: ${plural(r.total, "atualização")}`,
+        dica: `${r.label}: ${plural(r.total, "atualização", "atualizações")}`,
       }))
     );
     const barras = barrasPorSistema(resumo.atualizadosMesPorSistema);
@@ -209,7 +210,7 @@ export class ResumoView extends View {
           }))
         : []
     );
-    this.container.querySelector('[data-role="tendencia-atual"]').textContent = `${plural(resumo.mesCount, "atualização")} neste mês (parcial)`;
+    this.container.querySelector('[data-role="tendencia-atual"]').textContent = `${plural(resumo.mesCount, "atualização", "atualizações")} neste mês (parcial)`;
     this.tendenciaChart.render(
       (resumo.atualizacoesPorMes || []).map((item) => ({ label: formatarMes(item.mes), total: item.total, parcial: item.mes === (resumo.atualizacoesPorMes || []).at(-1)?.mes }))
     );
@@ -325,20 +326,39 @@ export class ResumoView extends View {
   }
 
   _definirNumero(key, value) {
-    this.container.querySelector(`[data-stat="${key}"] .stat-tile__value`).textContent = String(value);
+    const tile = this.container.querySelector(`[data-stat="${key}"]`);
+    if (!tile) return;
+    const valEl = tile.querySelector(".stat-tile__value");
+    if (valEl) valEl.textContent = String(value);
+    this._atualizarAriaLabel(tile);
+  }
+
+  _atualizarAriaLabel(tile) {
+    if (!tile) return;
+    const rotulo = tile.querySelector('[data-role="rotulo"]')?.textContent || "";
+    const valor = tile.querySelector(".stat-tile__value")?.textContent || "—";
+    const destino = tile.dataset.destino || tile.title || "";
+    const deltaEl = tile.querySelector('[data-role="delta"]');
+    const deltaTexto = deltaEl && !deltaEl.hidden ? ` (${deltaEl.textContent.trim()} vs mês anterior)` : "";
+    tile.setAttribute("aria-label", `${rotulo}: ${valor}${deltaTexto}. ${destino}`.trim());
   }
 
   /** @param {{pct: number, tendencia: "alta"|"baixa"|"neutra"}|null} tendencia */
   _definirVariacao(key, tendencia) {
-    const el = this.container.querySelector(`[data-stat="${key}"] [data-role="delta"]`);
+    const tile = this.container.querySelector(`[data-stat="${key}"]`);
+    if (!tile) return;
+    const el = tile.querySelector('[data-role="delta"]');
+    if (!el) return;
     if (!tendencia) {
       el.hidden = true;
+      this._atualizarAriaLabel(tile);
       return;
     }
     el.hidden = false;
     el.className = `stat-tile__delta is-${tendencia.tendencia}`;
     el.innerHTML = deltaTendencia(tendencia);
     el.title = "Comparado ao mesmo período do mês anterior";
+    this._atualizarAriaLabel(tile);
   }
 
   destroy() {

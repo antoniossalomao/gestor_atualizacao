@@ -51,7 +51,7 @@ export class UsuariosAdmin extends View {
             <div data-role="resumo"></div>
             <label class="cfg-busca admin-pessoas__busca">
               <span class="cfg-busca__icone" aria-hidden="true">${iconeHtml("busca")}</span>
-              <input type="search" class="input" data-role="busca-pessoas" placeholder="Buscar por nome ou usuário…"
+              <input type="search" class="input" data-role="busca-pessoas" placeholder="Filtrar pessoas"
                      aria-label="Buscar pessoa" autocomplete="off" spellcheck="false" />
             </label>
           </div>

@@ -1,6 +1,7 @@
 import { ErroApi } from "../api/ApiPainel.js";
 import { marcarOcupado } from "../components/botaoOcupado.js";
-import { iconeSvg, simboloMarca } from "../utils/icones.js";
+import { confiavel, html } from "../utils/html.js";
+import { iconeHtml, iconeSvg, simboloMarca } from "../utils/icones.js";
 
 /**
  * Tela cheia de autenticação -- funciona em dois modos:
@@ -30,45 +31,39 @@ export class LoginView {
     const screen = document.createElement("div");
     screen.className = "auth-screen";
 
-    // Só aparece em telas largas (ver o media query em components.css) --
-    // reaproveita os mesmos três nomes de aba do resto do app (Clientes,
-    // Atualizações, Distribuição), então não é propaganda inventada, é o que
-    // o sistema de fato faz.
+    // Mantem o layout original em duas colunas no desktop (identidade a
+    // esquerda + cartao de login centralizado a direita), refinado nos tokens
+    // matte e bordas do sistema Dispatch DevCore.
     const brand = document.createElement("div");
     brand.className = "auth-screen__brand";
-    brand.innerHTML = `
-      <div class="auth-screen__brand-mark" aria-hidden="true">${simboloMarca()}</div>
+    brand.innerHTML = String(html`
+      <div class="auth-screen__brand-mark" aria-hidden="true">${confiavel(simboloMarca())}</div>
       <strong class="auth-screen__brand-name">Gestor de Atualizações</strong>
       <p class="auth-screen__brand-tagline">Bredas Sistemas · Atualizações dos clientes, num só lugar.</p>
       <ul class="auth-screen__brand-list">
-        <li>${iconeSvg("clientes")} Cadastro de clientes e sistemas</li>
-        <li>${iconeSvg("atualizacoes")} Histórico de atualizações</li>
-        <li>${iconeSvg("distribuicao")} Distribuição automática de versões</li>
+        <li>${iconeHtml("clientes")}<span>Cadastro de clientes e sistemas</span></li>
+        <li>${iconeHtml("atualizacoes")}<span>Histórico de atualizações</span></li>
+        <li>${iconeHtml("distribuicao")}<span>Distribuição automática de versões</span></li>
       </ul>
-    `;
+    `);
     screen.appendChild(brand);
 
     const card = document.createElement("div");
     card.className = "auth-card";
-    card.innerHTML = `
-      <!-- O mesmo logo da barra lateral. Era um "GA" digitado à mão, então a
-           primeira tela do sistema (a única que quem chega de fora sempre vê)
-           era justamente a que não mostrava a marca que o resto do app usa. -->
-      <!-- No celular o painel de marca some, e esta linha é o que diz que
-           sistema é este; em tela larga ela some e o painel fala por ela. -->
+    card.innerHTML = String(html`
       <div class="auth-card__marca">
-        <span class="auth-card__logo" aria-hidden="true">${simboloMarca()}</span>
+        <span class="auth-card__logo" aria-hidden="true">${confiavel(simboloMarca())}</span>
         <span class="auth-card__marca-nome">Gestor de Atualizações</span>
       </div>
-      <h2>${isSetup ? "Criar conta de administrador" : "Entrar"}</h2>
+      <h1>${isSetup ? "Criar conta de administrador" : "Entrar"}</h1>
       <p class="auth-card__subtitle">${
         isSetup
           ? "Esta é a primeira vez que o sistema é aberto. Crie a conta principal para começar a usar."
           : "Use o seu usuário e a senha da equipe."
       }</p>
-      <div class="auth-card__error" role="alert" id="login-erro"></div>
-      <form>
-        ${isSetup ? `<div class="field"><label class="field__label" for="login-nome">Seu nome</label><input class="input" type="text" id="login-nome" name="nome" required autocomplete="name" /></div>` : ""}
+      <div class="auth-card__error" role="alert" id="login-erro" hidden></div>
+      <form id="login-form">
+        ${isSetup ? html`<div class="field"><label class="field__label" for="login-nome">Seu nome</label><input class="input" type="text" id="login-nome" name="nome" required autocomplete="name" /></div>` : ""}
         <div class="field">
           <!-- for/id: sem eles, o leitor de tela anunciava só "caixa de texto"
                nos três campos (achado pelo teste de navegador). -->
@@ -86,8 +81,8 @@ export class LoginView {
           <div class="input-com-acao">
             <input class="input" type="password" id="login-senha" name="senha" required
                    autocomplete="${isSetup ? "new-password" : "current-password"}" />
-            <button type="button" class="input-acao" data-action="ver-senha"
-                    aria-label="Mostrar a senha" aria-pressed="false" title="Mostrar a senha">${iconeSvg("olho")}</button>
+            <button type="button" class="input-acao" data-action="alternar-senha"
+                    aria-label="Mostrar a senha" aria-pressed="false" title="Mostrar a senha">${iconeHtml("olho")}</button>
           </div>
           <!--
             Caps Lock ligado é a causa silenciosa de metade dos "minha senha
@@ -98,7 +93,7 @@ export class LoginView {
         </div>
         <button type="submit" class="btn btn--accent">${isSetup ? "Criar conta e entrar" : "Entrar"}</button>
       </form>
-    `;
+    `);
     screen.appendChild(card);
     this.root.appendChild(screen);
 
@@ -118,7 +113,7 @@ export class LoginView {
    */
   _ligarSenha(card) {
     const campo = card.querySelector('input[name="senha"]');
-    const botao = card.querySelector('[data-action="ver-senha"]');
+    const botao = card.querySelector('[data-action="alternar-senha"]') || card.querySelector('[data-action="ver-senha"]');
     const aviso = card.querySelector('[data-role="capslock"]');
 
     botao.addEventListener("click", () => {
@@ -188,6 +183,7 @@ export class LoginView {
    */
   _mostrarErro(message) {
     this.errorBox.textContent = message;
+    this.errorBox.hidden = false;
     this.errorBox.classList.add("is-visible");
     for (const campo of this._camposDeEntrada()) {
       campo.setAttribute("aria-invalid", "true");
@@ -197,6 +193,7 @@ export class LoginView {
   }
 
   _esconderErro() {
+    this.errorBox.hidden = true;
     this.errorBox.classList.remove("is-visible");
     for (const campo of this._camposDeEntrada()) {
       campo.removeAttribute("aria-invalid");

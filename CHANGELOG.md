@@ -13,6 +13,14 @@ do painel): é um diário de decisões, em ordem cronológica.
 Para o agente C#, o equivalente é
 [`atualizador/RISCOS-CONHECIDOS.md`](../atualizador/RISCOS-CONHECIDOS.md).
 
+### Novembro de 2026
+
+- **Casca, realce Bege e polimento Dispatch DevCore (13/11/2026):** aplicação da identidade visual matte de alto contraste do Dispatch sobre o CSS e componentes originais (`theme.css`, `components.css` e `dispatch.css`), mantendo os cartões de gráficos, tabelas, campanhas, administração, formulários e modais intactos e sem etapa de build no cliente.
+  - Novo realce padrão `creme` (`Bege`, `#dcd0bc` no tema escuro e carvão `#2e2923` no tema claro, com `--cor-sobre-accent` / `--cor-accent-texto` para contraste legível em botões e filtros ativos), mantendo configuráveis em *Configurações › Interface e acessibilidade* as opções `ouro` e todas as paletas anteriores (`azul`, `violeta`, `turquesa`, `verde`, `ambar`, `rosa`, `grafite`).
+  - Barra lateral (`#111315`) ancorada à esquerda e mantida escura também no tema claro, topo compacto em linha única e gaveta lateral responsiva com backdrop no celular; alternância rápida de tema em três estados dentro do menu da conta (`MenuConta`).
+  - Faixa conectada de KPIs em *Resumo* (`.stat-tiles`) refinada em grade uniforme de 4 colunas (`4 -> 2×2 -> 1`), rótulos mais claros (`Clientes cadastrados`, `Total de atualizações`, `Atualizações no mês`, `Sem atualizar (+60 dias)`), remoção dos links `"Ver ..."` em favor do cartão inteiro interativo com indicador direcional, e correção do plural de `"atualizações"`; quadro Kanban de *Agendamentos* polido sem emojis e com destaques cromáticos discretos por status, prioridade e prazo.
+  - Navegação lateral vertical em *Configurações*, tela de entrada clássica em duas colunas com polimento matte e aviso automático de rolagem horizontal (`ui-tabela-dica`) em tabelas que transbordam.
+
 ### Outubro de 2026
 
 - **Revisão e limpeza (07/10/2026):** correções de concorrência e datas nos agendamentos; download por snapshot SQLite; restauração com cópia de segurança obrigatória e recuperação do banco anterior em caso de falha. O deploy também usa snapshot íntegro, com nome único.

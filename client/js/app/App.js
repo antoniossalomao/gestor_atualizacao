@@ -441,25 +441,20 @@ export class App {
     this.root.className = recolhida ? "is-sidebar-collapsed" : "";
     this.root.innerHTML = `
       <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
-      <aside class="app-sidebar">
+      <aside class="app-sidebar" id="app-sidebar">
         <div class="app-brand">
           <div class="app-brand__mark" aria-hidden="true">${simboloMarca()}</div>
-          <!-- Um nome só em todo lugar (barra, login, aba do navegador). Antes
-               a barra dizia "ATUALIZADOR / Gestor de clientes" e a aba "Gestor
-               de Atualizações" -- e "Atualizador" é o nome do AGENTE que roda
-               no cliente, não do painel. Em duas linhas porque numa só o nome
-               não cabe nos 238px da barra; o descritor saiu pelo mesmo motivo
-               ("Bredas Sistemas" fica no login, onde há espaço). -->
-          <div class="app-brand__text"><strong>Gestor de<br />Atualizações</strong></div>
+          <div class="app-brand__text">
+            <strong>Gestor de Atualizações</strong>
+            <span>Bredas Sistemas</span>
+          </div>
         </div>
-        <!-- O botão de recolher também saiu: era um ícone sem rótulo cujo
-             efeito só se descobre clicando, e "Menu lateral: Aberto /
-             Recolhido" em Configurações diz a mesma coisa por extenso. -->
-        <nav class="tabs" role="tablist" aria-label="Telas do sistema"></nav>
+        <nav class="tabs app-sidebar__nav" role="tablist" aria-label="Telas do sistema"></nav>
         <div class="app-sidebar__footer">
           <button type="button" class="btn btn--small btn--sidebar" data-action="config" data-tooltip="Configurações">${iconeSvg("config")} <span>Configurações</span></button>
         </div>
       </aside>
+      <div class="app-sidebar-backdrop" data-action="fechar-menu" aria-hidden="true"></div>
       <section class="app-shell">
         <!--
           Um pixel invisível ANTES do cabeçalho. Quando ele sai de vista, o
@@ -473,10 +468,16 @@ export class App {
         -->
         <div data-role="sentinela" aria-hidden="true"></div>
         <header class="app-header">
-          <div class="app-header__titles">
-            <span class="app-header__eyebrow">Painel de controle</span>
-            <h1 data-role="titulo">Resumo</h1>
-            <p data-role="descricao"></p>
+          <div class="app-header__left">
+            <button type="button" class="app-header__menu-btn" data-action="abrir-menu"
+                    aria-label="Abrir navegação" aria-expanded="false" aria-controls="app-sidebar">
+              ${iconeSvg("menu")}
+            </button>
+            <div class="app-header__titles">
+              <span class="app-header__eyebrow">Painel de controle</span>
+              <h1 data-role="titulo">Resumo</h1>
+              <p data-role="descricao"></p>
+            </div>
           </div>
           <div class="app-header__actions">
             <!--
@@ -488,10 +489,10 @@ export class App {
             -->
             <button type="button" class="btn btn--small app-header__search" data-action="buscar"
                     aria-label="Buscar telas, clientes e ações (Ctrl+K)">
-              ${iconeSvg("busca")}<span>Buscar…</span><kbd>Ctrl</kbd><kbd>K</kbd>
+              ${iconeSvg("busca")}<span>Buscar</span><kbd>Ctrl</kbd><kbd>K</kbd>
             </button>
             <button type="button" class="btn btn--accent btn--small app-header__quick" data-action="acao-rapida"
-                    aria-label="Abrir ações rápidas (Alt+N)">+ <span>Ação rápida</span><kbd>Alt+N</kbd></button>
+                    aria-label="Abrir ações rápidas (Alt+N)">+ <span class="app-header__quick-label">Ação rápida</span><kbd>Alt+N</kbd></button>
             <!--
               O sino, ao lado da conta (ver MenuNotificacoes). Tudo o que o app
               tem a dizer sem ter sido perguntado passou a morar aqui: antes
@@ -515,6 +516,24 @@ export class App {
 
     this.tituloEl = this.root.querySelector('[data-role="titulo"]');
     this.descricaoEl = this.root.querySelector('[data-role="descricao"]');
+    this.sidebarEl = this.root.querySelector("#app-sidebar");
+    this.sidebarBackdropEl = this.root.querySelector(".app-sidebar-backdrop");
+    this.menuMobileBtn = this.root.querySelector('[data-action="abrir-menu"]');
+
+    this.menuMobileBtn?.addEventListener("click", () => {
+      const aberto = this.sidebarEl?.classList.contains("is-mobile-open");
+      this._definirMenuMobile(!aberto);
+    });
+    this.sidebarBackdropEl?.addEventListener("click", () => this._definirMenuMobile(false));
+    const onMenuEscape = (e) => {
+      if (e.key === "Escape" && this.sidebarEl?.classList.contains("is-mobile-open")) {
+        e.preventDefault();
+        this._definirMenuMobile(false);
+        this.menuMobileBtn?.focus();
+      }
+    };
+    document.addEventListener("keydown", onMenuEscape);
+    this._cleanups.push(() => document.removeEventListener("keydown", onMenuEscape));
 
     this.menuNotificacoes = new MenuNotificacoes(this.root.querySelector('[data-role="notificacoes"]'), {
       // Abrir o sino é a deixa para perguntar de novo: quem clica ali quer o
@@ -538,7 +557,10 @@ export class App {
     // O ícone que existia também no cabeçalho saiu -- virou item escrito por
     // extenso no menu da conta, com o atalho ao lado.
     for (const botao of this.root.querySelectorAll('[data-action="config"]')) {
-      botao.addEventListener("click", () => this._abrirConfiguracoes());
+      botao.addEventListener("click", () => {
+        this._definirMenuMobile(false);
+        this._abrirConfiguracoes();
+      });
     }
 
     this._montarAbas();
@@ -599,21 +621,32 @@ export class App {
     this._montarMenuConta();
   }
 
+  _definirMenuMobile(aberto) {
+    this.sidebarEl?.classList.toggle("is-mobile-open", aberto);
+    this.sidebarBackdropEl?.classList.toggle("is-open", aberto);
+    this.menuMobileBtn?.setAttribute("aria-expanded", String(aberto));
+  }
+
   _montarAbas() {
     const tabsNav = this.root.querySelector(".tabs");
     const main = this.root.querySelector(".app-main");
 
     let ultimoGrupo = null;
+    let grupoCont = tabsNav;
     for (const tab of this.tabsAtivas) {
       const container = this._montarContainerDaAba(main, tab);
       if (tab.rodape) continue; // sem item no menu (ver `rodape` em TABS)
       const i = this.tabsNoMenu.indexOf(tab);
       if (tab.grupo && tab.grupo !== ultimoGrupo) {
         ultimoGrupo = tab.grupo;
+        const bloco = document.createElement("div");
+        bloco.className = "app-sidebar__group";
         const grupoEl = document.createElement("div");
         grupoEl.className = "app-sidebar__group-title";
         grupoEl.textContent = tab.grupo;
-        tabsNav.appendChild(grupoEl);
+        bloco.appendChild(grupoEl);
+        tabsNav.appendChild(bloco);
+        grupoCont = bloco;
       }
 
       const button = document.createElement("button");
@@ -639,13 +672,16 @@ export class App {
       // sabe usar. Ela ocupa o espaço dela o tempo todo (muda só a opacidade),
       // senão cada aba mudaria de largura quando o mouse passasse.
       button.innerHTML = `${iconeSvg(tab.icon)}<span>${tab.label}</span>${atalho ? `<kbd class="tab-button__atalho">${atalho}</kbd>` : ""}`;
-      tabsNav.appendChild(button);
+      grupoCont.appendChild(button);
       container.setAttribute("aria-labelledby", `aba-${tab.key}`);
     }
 
     tabsNav.addEventListener("click", (event) => {
       const button = event.target.closest(".tab-button");
-      if (button) this.trocarAba(button.dataset.tab);
+      if (button) {
+        this._definirMenuMobile(false);
+        this.trocarAba(button.dataset.tab);
+      }
     });
     // Setas percorrem as abas sem sair do teclado, como manda o padrão ARIA
     // de tablist -- antes, Tab passava por cada uma das nove abas.

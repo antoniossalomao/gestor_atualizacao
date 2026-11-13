@@ -72,7 +72,7 @@ export class DistribuicaoView extends View {
         <div class="toolbar distribution-report-filters">
           <div class="field">
             <label class="field__label" for="dist-log-search">Buscar</label>
-            <input type="search" class="input" id="dist-log-search" data-role="log-search" placeholder="Empresa, script ou mensagem..." />
+            <input type="search" class="input" id="dist-log-search" data-role="log-search" placeholder="Filtrar logs" />
           </div>
           <div class="field">
             <label class="field__label" for="dist-log-status">Último resultado</label>
@@ -102,7 +102,7 @@ export class DistribuicaoView extends View {
         <div class="toolbar distribution-report-filters">
           <div class="field">
             <label class="field__label" for="dist-search">Buscar</label>
-            <input type="search" class="input" id="dist-search" data-role="search" placeholder="Empresa, identificador ou máquina..." />
+            <input type="search" class="input" id="dist-search" data-role="search" placeholder="Filtrar agentes" />
           </div>
           <div class="field">
             <label class="field__label" for="dist-situation">Situação</label>
@@ -255,8 +255,8 @@ export class DistribuicaoView extends View {
     ];
     this.container.querySelector('[data-role="indicators"]').innerHTML = `
       ${metrics.map((metric) => `<div class="card distribution-metric distribution-metric--${metric.tone}">
-        <div class="distribution-metric__head"><span>${metric.label}</span>${iconeSvg(metric.icon)}</div>
-        <strong>${metric.value}</strong><small>${metric.hint}</small>
+        <div class="distribution-metric__head"><span>${escaparHtml(metric.label)}</span>${iconeSvg(metric.icon)}</div>
+        <strong class="distribution-metric__value">${metric.value}</strong><small class="distribution-metric__hint">${escaparHtml(metric.hint)}</small>
       </div>`).join("")}`;
   }
 

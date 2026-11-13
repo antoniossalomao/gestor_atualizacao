@@ -89,7 +89,7 @@ export class AtualizacoesView extends View {
         <div class="toolbar atualizacoes-toolbar">
           <div class="field">
             <label class="field__label" for="atu-busca">Buscar</label>
-            <input type="search" class="input" id="atu-busca" data-role="search" placeholder="Cliente, sistema, responsável, motivo..." />
+            <input type="search" class="input" id="atu-busca" data-role="search" placeholder="Filtrar atualizações" />
           </div>
           <div class="field">
             <label class="field__label" for="atu-resp">Responsável</label>

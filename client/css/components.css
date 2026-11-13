@@ -82,13 +82,12 @@
         fora da tela e sem como alcançá-los. Com `overflow-x: hidden` o eixo
         vertical passa a `auto`, e a barra lateral rola sozinha quando precisa. */
   overflow-x: hidden;
-  transition: width var(--dur-media) var(--curva-padrao);
+  transition: opacity var(--dur-media) var(--curva-padrao), transform var(--dur-media) var(--curva-padrao);
 }
 
 .app-shell {
   min-height: 100vh;
   margin-left: var(--largura-sidebar);
-  transition: margin-left var(--dur-media) var(--curva-padrao);
 }
 
 /* Sidebar recolhida: só os ícones. Ganha ~174px de largura útil para as
@@ -789,7 +788,6 @@ kbd {
   min-width: 0;
   max-width: 1600px;
   padding: 28px var(--pad-tela) 44px;
-  transition: max-width var(--dur-media) var(--curva-padrao);
 }
 #app.is-sidebar-collapsed .app-main {
   /* Aproveita no conteúdo os mesmos 174px liberados ao recolher a sidebar,
@@ -1002,12 +1000,27 @@ kbd {
   background: var(--cor-superficie);
   border-radius: var(--raio);
   box-shadow: var(--sombra-card);
-  transition: border-color var(--transicao), background var(--transicao);
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 140ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 140ms ease,
+              background-color 140ms ease;
 }
 
 .stat-tile:hover {
+  transform: translateY(-2px);
   border-color: var(--cor-borda-forte);
   background: var(--cor-superficie-alta);
+  box-shadow: var(--sombra-card-hover);
+}
+
+.stat-tile:active {
+  transform: translateY(0) scale(0.99);
+  background: var(--cor-superficie-hover);
+}
+
+.stat-tile:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: 2px;
 }
 
 .stat-tile__go {
@@ -1064,6 +1077,7 @@ kbd {
 .stat-tile__value {
   font: var(--peso-forte) 28px/1 var(--fonte-display);
   letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
   color: var(--cor-texto);
 }
 
@@ -1080,6 +1094,7 @@ kbd {
   font-family: var(--fonte-display);
   font-size: var(--txt-2xs);
   font-weight: var(--peso-extra);
+  font-variant-numeric: tabular-nums;
 }
 .stat-tile__delta svg {
   width: 9px;
@@ -1170,12 +1185,12 @@ kbd {
   background: var(--cor-accent);
   border-color: var(--cor-accent);
   color: var(--cor-sobre-accent);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 4px 12px -6px var(--cor-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 .btn--accent:hover:not(:disabled) {
   background: var(--cor-accent-forte);
   border-color: var(--cor-accent-forte);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16), 0 6px 16px -6px var(--cor-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 .btn--accent:disabled {
   box-shadow: none;
@@ -1588,7 +1603,6 @@ select {
   width: 0;
   border-radius: var(--raio-pilula);
   background: var(--cor-accent);
-  transition: width var(--dur-media) var(--curva-padrao);
 }
 /* Sem tamanho total conhecido, a barra vira indeterminada em vez de mentir
    uma porcentagem. */
@@ -1899,7 +1913,7 @@ select {
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio-pilula);
   cursor: pointer;
-  transition: all var(--transicao);
+  transition: background-color var(--transicao), border-color var(--transicao), color var(--transicao);
 }
 
 .filtro-rapido:hover {
@@ -3926,9 +3940,7 @@ table.data-table {
   align-items: center;
   gap: var(--sp-5);
   padding: var(--sp-5) var(--sp-6);
-  background:
-    radial-gradient(120% 140% at 0% 0%, color-mix(in srgb, var(--cor-accent) 10%, transparent), transparent 60%),
-    var(--card-gradiente);
+  background: var(--cor-superficie);
 }
 .sobre-hero:focus {
   outline: none;
@@ -3942,7 +3954,6 @@ table.data-table {
   border-radius: 14px;
   background: var(--cor-accent);
   color: var(--cor-sobre-accent);
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--cor-accent) 30%, transparent);
 }
 .sobre-hero__marca svg {
   width: 36px;
@@ -4992,14 +5003,14 @@ button.consulta-matches__item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--raio-pilula);
+  padding: 6px 10px;
+  border-radius: 6px;
   font-size: var(--txt-sm);
   border: 1px solid var(--cor-borda);
   background: var(--cor-superficie);
   color: var(--cor-texto);
   cursor: pointer;
-  transition: all var(--transicao);
+  transition: border-color var(--transicao), color var(--transicao), background-color var(--transicao);
 }
 .consulta-recente-chip:hover {
   border-color: var(--cor-accent);
@@ -5061,13 +5072,7 @@ hr.separator {
   gap: var(--sp-4);
   overflow: hidden;
 }
-.distribution-form::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 3px;
-  background: var(--cor-accent);
-}
+/* Decorative top stripe removed per Unslop Pass 2 */
 
 .distribution-file {
   padding: 8px;
@@ -5482,40 +5487,73 @@ hr.separator {
 .distribution-metric {
   position: relative;
   min-height: 126px;
-  padding: var(--sp-4);
   overflow: hidden;
   padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   border: 1px solid var(--cor-borda);
   border-radius: var(--raio);
   background: var(--cor-superficie);
-  transition: transform var(--transicao), border-color var(--transicao), box-shadow var(--transicao);
   box-shadow: var(--sombra-card);
-  transition: border-color var(--transicao), background var(--transicao);
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 140ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 140ms ease,
+              background-color 140ms ease;
 }
+
 .distribution-metric:hover {
   transform: translateY(-2px);
-  border-color: var(--card-borda-hover);
-  box-shadow: var(--sombra-card-hover);
   border-color: var(--cor-borda-forte);
   background: var(--cor-superficie-alta);
+  box-shadow: var(--sombra-card-hover);
 }
+
+.distribution-metric:active {
+  transform: translateY(0) scale(0.99);
+  background: var(--cor-superficie-hover);
+}
+
+.distribution-metric:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: 2px;
+}
+
 .distribution-metric::after {
-  position: absolute;
-  right: -28px;
-  bottom: -42px;
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  background: var(--cor-accent-fraco);
   content: "";
-  opacity: 0.42;
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 2px;
+  background: var(--cor-accent);
+  opacity: 0;
+  transform: scaleX(0.35);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
 }
+
+.distribution-metric:hover::after,
+.distribution-metric:focus-visible::after {
+  opacity: 0.85;
+  transform: scaleX(1);
+}
+
+.distribution-metric--warning::after {
+  background: var(--cor-amarelo);
+}
+
+.distribution-metric--danger::after {
+  background: var(--cor-vermelho);
+}
+
 .distribution-metric--warning {
   border-color: color-mix(in srgb, var(--cor-amarelo) 44%, var(--cor-borda));
 }
+
 .distribution-metric--danger {
   border-color: color-mix(in srgb, var(--cor-vermelho) 44%, var(--cor-borda));
 }
+
 .distribution-metric__head {
   display: flex;
   align-items: flex-start;
@@ -5527,28 +5565,38 @@ hr.separator {
   letter-spacing: 0.035em;
   text-transform: uppercase;
 }
+
 .distribution-metric__head svg {
   width: 18px;
   height: 18px;
   color: var(--cor-accent);
 }
+
 .distribution-metric--warning .distribution-metric__head svg,
-.distribution-metric--warning > strong {
+.distribution-metric--warning > strong,
+.distribution-metric--warning .distribution-metric__value {
   color: var(--cor-amarelo);
 }
+
 .distribution-metric--danger .distribution-metric__head svg,
-.distribution-metric--danger > strong {
+.distribution-metric--danger > strong,
+.distribution-metric--danger .distribution-metric__value {
   color: var(--cor-vermelho);
 }
-.distribution-metric > strong {
+
+.distribution-metric > strong,
+.distribution-metric__value {
   position: relative;
   z-index: 1;
   display: block;
   margin-top: var(--sp-2);
   color: var(--cor-accent);
+  font-variant-numeric: tabular-nums;
   font: var(--peso-forte) var(--txt-numero)/1 var(--fonte-display);
 }
-.distribution-metric > small {
+
+.distribution-metric > small,
+.distribution-metric__hint {
   position: relative;
   z-index: 1;
   display: block;
@@ -6449,11 +6497,23 @@ hr.separator {
 .bar-chart__fill {
   display: block;
   flex: 0 1 auto;
-  height: 10px;
+  height: 4px;
   min-width: 3px;
   max-width: calc(100% - 40px);
-  border-radius: var(--raio-pilula);
-  transition: width var(--dur-lenta) var(--curva-padrao);
+  border-radius: 2px;
+  background: var(--cor-accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform var(--dur-lenta) var(--curva-padrao);
+}
+.bar-chart__fill.is-top {
+  background: var(--cor-accent);
+}
+.bar-chart__fill.is-sub {
+  background: color-mix(in srgb, var(--cor-texto) 36%, transparent);
+}
+.bar-chart__fill.is-visivel {
+  transform: scaleX(1);
 }
 
 .bar-chart__value {
@@ -6670,7 +6730,6 @@ hr.separator {
   border-radius: 13px;
   background: var(--cor-accent);
   color: var(--cor-sobre-accent);
-  box-shadow: 0 10px 30px color-mix(in srgb, var(--cor-accent) 35%, transparent);
 }
 .auth-screen__brand-mark svg {
   width: 38px;
@@ -7413,22 +7472,40 @@ h1, h2, h3, strong {
   flex-direction: column;
   gap: 8px;
   min-height: 94px;
-  transition: border-color var(--transicao), background-color var(--transicao);
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1), border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
 }
 .kanban-card:hover {
   border-color: var(--cor-borda-forte);
   background: var(--cor-superficie-alta);
+  transform: translateY(-1px);
+  box-shadow: var(--sombra-card-hover);
 }
 .kanban-card:active {
   cursor: grabbing;
+  transform: translateY(0);
+}
+.kanban-card:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: 2px;
 }
 .kanban-card.is-dragging {
   opacity: 0.35;
   border: 1px dashed var(--cor-accent);
   box-shadow: none;
+  transform: none;
+}
+/* Filetes laterais sutis (2-3px) por prioridade e vencimento (Dispatch DevCore) */
+.kanban-card.is-alta {
+  border-left: 3px solid var(--status-alerta-solido, color-mix(in srgb, var(--cor-amarelo) 56%, var(--cor-borda)));
+}
+.kanban-card.is-urgente {
+  border-left: 3px solid var(--status-erro-solido, color-mix(in srgb, var(--cor-vermelho) 58%, var(--cor-borda)));
 }
 .kanban-card.is-overdue {
-  border-left: 3px solid var(--cor-vermelho-forte, #ef4444);
+  border-left: 3px solid var(--status-erro-solido, color-mix(in srgb, var(--cor-vermelho) 74%, var(--cor-borda)));
+}
+.kanban-column--concluido .kanban-card {
+  border-left: 3px solid var(--status-ok-solido, color-mix(in srgb, var(--cor-verde) 42%, var(--cor-borda)));
 }
 .kanban-card__header {
   display: flex;
@@ -7474,7 +7551,7 @@ h1, h2, h3, strong {
   font-variant-numeric: tabular-nums;
 }
 .kanban-card__time.is-vencida {
-  color: var(--cor-vermelho-forte, #ef4444);
+  color: var(--status-erro-texto, var(--cor-vermelho));
   font-weight: 600;
 }
 .kanban-card__time.is-today {
@@ -7494,17 +7571,53 @@ h1, h2, h3, strong {
   font-size: 11px;
   padding: 4px 8px;
 }
+/* Soft pastel badges com status dot no card do Kanban */
 .kanban-card .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border-radius: 3px;
   font-size: 10px;
-  padding: 1px 5px;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 1px 6px;
+  letter-spacing: 0.02em;
+  box-shadow: none;
 }
-/* Borda esquerda colorida por prioridade (coexiste com .is-overdue) */
-.kanban-card.is-urgente {
-  border-left: 3px solid var(--cor-vermelho-forte, #dc2626);
+.kanban-card .badge::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
 }
-.kanban-card.is-alta {
-  border-left: 3px solid var(--cor-laranja, #f97316);
+.kanban-card .badge--danger {
+  background: color-mix(in srgb, var(--cor-vermelho) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor-vermelho) 26%, var(--cor-borda));
+  color: var(--status-erro-texto);
+}
+.kanban-card .badge--warning {
+  background: var(--status-alerta-bg, color-mix(in srgb, var(--cor-amarelo) 10%, transparent));
+  border: 1px solid var(--status-alerta-borda, color-mix(in srgb, var(--cor-amarelo) 26%, var(--cor-borda)));
+  color: var(--status-alerta-texto, color-mix(in srgb, var(--cor-amarelo) 82%, var(--cor-texto)));
+}
+.kanban-card .badge--accent {
+  background: var(--cor-accent-fraco);
+  border: 1px solid color-mix(in srgb, var(--cor-accent) 28%, var(--cor-borda));
+  color: var(--cor-accent);
+}
+.kanban-card .badge--success {
+  background: var(--status-ok-bg);
+  border: 1px solid var(--status-ok-borda);
+  color: var(--status-ok-texto);
+}
+.kanban-card .badge--neutral,
+.kanban-card .badge--muted {
+  background: transparent;
+  border: 1px solid var(--cor-borda);
+  color: var(--cor-texto-sub);
 }
 /* Prévia de obs no card: máximo 2 linhas, truncada */
 .kanban-card__obs {
@@ -7525,10 +7638,24 @@ h1, h2, h3, strong {
   gap: var(--sp-1);
 }
 .kanban-column__alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border-radius: 3px;
   font-size: 10px;
-  padding: 1px 5px;
+  font-weight: 500;
+  padding: 1px 6px;
   cursor: default;
+}
+.kanban-column__alert.badge--danger {
+  background: color-mix(in srgb, var(--cor-vermelho) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor-vermelho) 28%, var(--cor-borda));
+  color: var(--status-erro-texto);
+}
+.kanban-column__alert.badge--warning {
+  background: var(--status-alerta-bg, color-mix(in srgb, var(--cor-amarelo) 10%, transparent));
+  border: 1px solid var(--status-alerta-borda, color-mix(in srgb, var(--cor-amarelo) 28%, var(--cor-borda)));
+  color: var(--status-alerta-texto, color-mix(in srgb, var(--cor-amarelo) 84%, var(--cor-texto)));
 }
 /* Grupo de badges no header do card */
 .kanban-card__badges {
@@ -8574,7 +8701,7 @@ h1, h2, h3, strong {
   border-radius: var(--raio-pequeno);
 }
 .campanha__dados > div { display: inline-flex; align-items: baseline; gap: 6px; }
-.campanha__dados dt { color: var(--cor-texto-sub); font-size: var(--txt-xs); font-weight: var(--peso-medio); text-transform: uppercase; letter-spacing: 0.04em; }
+.campanha__dados dt { color: var(--cor-texto-sub); font-size: var(--txt-xs); font-weight: var(--peso-medio); }
 .campanha__dados dd { margin: 0; font-size: var(--txt-sm); font-weight: var(--peso-forte); color: var(--cor-texto); overflow-wrap: anywhere; }
 .campanha__acoes-secundarias { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding-top: var(--sp-3); }
 .campanha__mais[open] { flex-basis: 100%; }
@@ -8874,7 +9001,7 @@ h1, h2, h3, strong {
 }
 .situacao__hero-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--txt-sm); }
 .situacao__hero-texto small { color: var(--cor-texto-fraco); font-size: var(--txt-xs); }
-.situacao__barra { height: 14px; margin-bottom: var(--sp-3); }
+.situacao__barra { height: 6px; margin-bottom: var(--sp-3); border-radius: 3px; }
 
 .situacao__sistema {
   display: grid;
@@ -9219,8 +9346,6 @@ h1, h2, h3, strong {
 
 .app-sidebar {
   border-right: 1px solid var(--cor-borda);
-  -webkit-backdrop-filter: var(--vidro-desfoque);
-  backdrop-filter: var(--vidro-desfoque);
 }
 .app-sidebar__footer {
   border-top: 1px solid var(--cor-borda);
@@ -9228,23 +9353,20 @@ h1, h2, h3, strong {
 
 .app-header {
   border-bottom: 1px solid var(--cor-borda);
-  background: color-mix(in srgb, var(--cor-fundo) 80%, transparent);
-  -webkit-backdrop-filter: var(--vidro-desfoque);
-  backdrop-filter: var(--vidro-desfoque);
+  background: var(--cor-fundo);
 }
 
 /* Fundo escurecido atrás de modal e gaveta. */
 .modal-overlay,
 .drawer-backdrop {
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
-/* Estado ativo da navegação: pílula com indicador na cor de destaque. */
+/* Estado ativo da navegação: destaque sutil e plano. */
 .tab-button.is-active {
-  background: var(--cor-superficie-alta);
+  background: color-mix(in srgb, var(--cor-texto) 7%, transparent);
   color: var(--cor-texto);
-  box-shadow: var(--vidro-brilho);
 }
 .tab-button.is-active svg {
   color: var(--cor-accent);

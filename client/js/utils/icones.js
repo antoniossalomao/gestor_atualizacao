@@ -94,12 +94,13 @@ const PATHS = {
   // Bandeira: a meta de uma campanha de atualização (aba Campanhas).
   campanhas: '<path d="M5 17.5V3M5 3.5h9.5l-2 3.5 2 3.5H5" stroke-linecap="round" stroke-linejoin="round"/>',
   restaurar: '<path d="M4.2 9.5a5.9 5.9 0 1 0 1.9-4.1M4 3.6v3h3" stroke-linecap="round" stroke-linejoin="round"/>',
+  menu: '<path d="M3.5 5.5h13M3.5 10h13M3.5 14.5h13" stroke-linecap="round"/>',
 };
 
 /** @param {keyof typeof PATHS} name @returns {string} markup do `<svg>` pronto pra inserir via innerHTML */
 export function iconeSvg(name) {
   const inner = PATHS[name] || "";
-  return `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true" focusable="false">${inner}</svg>`;
+  return `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">${inner}</svg>`;
 }
 
 /**

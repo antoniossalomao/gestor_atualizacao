@@ -66,7 +66,7 @@ export class PaletaDeComandos {
         <div class="cmdk__field">
           ${iconeHtml("busca")}
           <input type="text" class="cmdk__input" role="combobox" aria-expanded="true" aria-controls="cmdk-lista"
-                 aria-autocomplete="list" placeholder="Buscar telas, ações e clientes..." autocomplete="off" />
+                 aria-autocomplete="list" placeholder="Buscar telas, ações ou clientes" autocomplete="off" />
           <kbd class="cmdk__esc">Esc</kbd>
         </div>
         <div class="cmdk__list" id="cmdk-lista" role="listbox"></div>

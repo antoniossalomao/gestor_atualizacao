@@ -109,11 +109,22 @@ export class TabelaOrdenavel {
     this.tbody = document.createElement("tbody");
     this.table.append(this.thead, this.tbody);
 
+    this.dicaRolagem = document.createElement("div");
+    this.dicaRolagem.className = "ui-tabela-dica";
+    this.dicaRolagem.setAttribute("aria-hidden", "true");
+    this.dicaRolagem.textContent = "Arraste ou role para o lado para ver todas as colunas";
+
     this.scrollBox = document.createElement("div");
     this.scrollBox.className = options.scroll === false ? "" : "table-scroll";
     this.scrollBox.appendChild(this.table);
+    if (options.scroll !== false) this.wrap.appendChild(this.dicaRolagem);
     this.wrap.appendChild(this.scrollBox);
     container.replaceChildren(this.wrap);
+    this._roOverflow = null;
+    if (options.scroll !== false && typeof ResizeObserver === "function") {
+      this._roOverflow = new ResizeObserver(() => this._atualizarDicaRolagem());
+      this._roOverflow.observe(this.scrollBox);
+    }
     // Só a tabela principal de uma tela: numa tabela dentro de modal ou num
     // cartão do Resumo, "o que sobra até o fim da janela" não quer dizer nada.
     this._encerrarAltura = null;
@@ -147,6 +158,12 @@ export class TabelaOrdenavel {
 
     this._desenharCabecalho();
     this._desenharCorpo();
+  }
+
+  _atualizarDicaRolagem() {
+    if (!this.scrollBox || !this.wrap) return;
+    const temOverflow = this.scrollBox.scrollWidth > this.scrollBox.clientWidth + 2;
+    this.wrap.classList.toggle("has-overflow", temOverflow);
   }
 
   /** Substitui os dados exibidos, mantendo ordenação/seleção quando possível. */
@@ -331,6 +348,7 @@ export class TabelaOrdenavel {
       else td.textContent = this.emptyMessage;
       tr.appendChild(td);
       this.tbody.appendChild(tr);
+      this._atualizarDicaRolagem();
       return;
     }
 
@@ -400,6 +418,7 @@ export class TabelaOrdenavel {
         else td.removeAttribute("title");
       });
     });
+    this._atualizarDicaRolagem();
   }
 
   /**
@@ -547,6 +566,10 @@ export class TabelaOrdenavel {
   }
 
   destroy() {
+    if (this._roOverflow) {
+      this._roOverflow.disconnect();
+      this._roOverflow = null;
+    }
     if (this._encerrarAltura) {
       this._encerrarAltura();
       this._encerrarAltura = null;

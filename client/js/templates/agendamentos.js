@@ -36,9 +36,9 @@ export function cartaoKanban(row, role, { agora = new Date() } = {}) {
   // Badge de prioridade — só para Alta e Urgente (Normal/Baixa não poluem o card)
   const badgePrioridade =
     row.prioridade === "Urgente"
-      ? html`<span class="badge badge--danger">🔴 Urgente</span>`
+      ? html`<span class="badge badge--danger">Urgente</span>`
       : row.prioridade === "Alta"
-      ? html`<span class="badge badge--warning">🟠 Alta</span>`
+      ? html`<span class="badge badge--warning">Alta</span>`
       : "";
 
   // Prévia de obs truncada (2 linhas via CSS)
@@ -96,8 +96,8 @@ export function colunasKanban(colunas, role, opcoes = {}) {
     const urgentes = naoArquivadas.filter((r) => r.prioridade === "Urgente" || r.prioridade === "Alta").length;
     const vencidas = naoArquivadas.filter((r) => estaAtrasada(r.data, agora)).length;
     const alertas = html`
-      ${vencidas > 0 ? html`<span class="badge badge--danger kanban-column__alert" title="${vencidas} vencida(s)">⚠ ${vencidas}</span>` : ""}
-      ${urgentes > 0 && vencidas === 0 ? html`<span class="badge badge--warning kanban-column__alert" title="${urgentes} urgente(s)/alta(s)">! ${urgentes}</span>` : ""}
+      ${vencidas > 0 ? html`<span class="badge badge--danger kanban-column__alert" title="${vencidas} vencida(s)">${vencidas} ${vencidas === 1 ? "vencida" : "vencidas"}</span>` : ""}
+      ${urgentes > 0 && vencidas === 0 ? html`<span class="badge badge--warning kanban-column__alert" title="${urgentes} urgente(s)/alta(s)">${urgentes} ${urgentes === 1 ? "prioritária" : "prioritárias"}</span>` : ""}
     `;
 
     return html`

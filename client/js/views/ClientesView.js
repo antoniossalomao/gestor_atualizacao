@@ -77,7 +77,7 @@ export class ClientesView extends View {
           <div class="field">
             <div style="display:flex;justify-content:space-between;align-items:baseline;">
               <label class="field__label" for="cli-codigo">Código</label>
-              <button type="button" class="btn-link" data-action="gerar-codigo" style="font-size:var(--txt-xs);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;color:var(--cor-destaque);" title="Sugerir próximo código sequencial">Sugerir código</button>
+              <button type="button" class="btn-link" data-action="gerar-codigo" style="font-size:var(--txt-xs);text-decoration:underline;cursor:pointer;background:none;border:none;padding:0;color:var(--cor-accent);" title="Sugerir próximo código sequencial">Sugerir código</button>
             </div>
             <input type="text" class="input" id="cli-codigo" data-field="codigo" placeholder="ex.: C000123" />
           </div>
@@ -178,15 +178,15 @@ export class ClientesView extends View {
     this.table = new TabelaOrdenavel(this.container.querySelector('[data-role="table"]'), {
       ocuparAltura: true,
       columns: [
-        { key: "id", label: "ID", type: "numeric", largura: "56px" },
-        { key: "codigo", label: "Código", largura: "80px" },
-        { key: "nome", label: "Cliente", largura: "26%" },
-        { key: "cidade", label: "Cidade", largura: "120px" },
-        { key: "regimeTributario", label: "Regime tributário", largura: "150px", render: (row) => row.regimeTributario || "—" },
+        { key: "id", label: "ID", type: "numeric", largura: "50px" },
+        { key: "codigo", label: "Código", largura: "72px" },
+        { key: "nome", label: "Cliente", largura: "22%" },
+        { key: "cidade", label: "Cidade", largura: "110px" },
+        { key: "regimeTributario", label: "Regime tributário", largura: "140px", render: (row) => row.regimeTributario || "—" },
         {
           key: "grupo",
           label: "Grupo/Rede",
-          largura: "130px",
+          largura: "116px",
           title: (row) => row.grupo || "",
           render: (row) => {
             const span = document.createElement("span");
@@ -195,8 +195,8 @@ export class ClientesView extends View {
           },
         },
         { key: "sistemasTexto", label: "Sistemas" },
-        { key: "maquinas", label: "Máquinas", type: "numeric", largura: "92px" },
-        { key: "acoes", label: "Ações", largura: "140px", render: (row) => acoesCliente(row, this.user?.role) },
+        { key: "maquinas", label: "Máquinas", type: "numeric", largura: "86px" },
+        { key: "acoes", label: "Ações", largura: "126px", render: (row) => acoesCliente(row, this.user?.role) },
       ],
       onSelect: (row) => this.abrirFicha(row),
       // Seleção múltipla: marcar um sistema em vários clientes de uma vez
