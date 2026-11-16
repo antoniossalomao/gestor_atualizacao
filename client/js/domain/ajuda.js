@@ -35,9 +35,9 @@ export const COMO_USAR_TELAS = {
   campanhas:
     "Metas de versão: escolha um sistema e uma versão e acompanhe quantos clientes já a receberam. A campanha pode valer para todos os clientes do sistema, para uma cidade ou só para clientes escolhidos.",
   administracao:
-    "Só para administradores: contas e papéis, regras da equipe (prazos, arquivamento, classificação dos sistemas), importação de dados, integrações, backups, auditoria e diagnóstico do servidor.",
+    "Só para administradores: contas e papéis, regras da equipe (prazos, arquivamento, classificação dos sistemas), importação de dados, integrações, backups, auditoria e diagnóstico do servidor, com navegação vertical e busca rápida.",
   configuracoes:
-    "As suas preferências: conta e senha, tela inicial, notificações, tema e tamanho do texto. Valem só para você, em qualquer computador em que você entrar.",
+    "As suas preferências: conta e senha, rotina, notificações, tema e realce (padrão Off-white), regras da equipe e ajuda. Valem só para você, em qualquer computador em que você entrar.",
 };
 
 /**
@@ -47,34 +47,34 @@ export const COMO_USAR_TELAS = {
  */
 export const NOVIDADES = [
   {
+    data: "16/11/2026",
+    titulo: "Administração vertical, índice lateral e busca rápida",
+    texto: "A Administração adotou menu lateral vertical com filtro instantâneo por seções e regras. Todas as abas de Configurações e Administração ganharam o índice lateral \"Nesta página\" para saltar entre blocos.",
+  },
+  {
+    data: "16/11/2026",
+    titulo: "Realce Off-white e paginação alinhada no rodapé",
+    texto: "Nova paleta padrão Off-white em alto contraste nos temas claro e escuro, além da barra de paginação integrada no rodapé das listas de Atualizações e Clientes sem sobrepor linhas.",
+  },
+  {
+    data: "13/11/2026",
+    titulo: "Gráficos refinados, Kanban limpo e seletor de arquivo em português",
+    texto: "Curva suave no gráfico de tendência mensal, barras proporcionais no Resumo, coluna Sistemas ampliada em Clientes, Kanban sem caixas aninhadas extras e controle de arquivo traduzido em Versões.",
+  },
+  {
+    data: "13/11/2026",
+    titulo: "Menu escuro fixo, KPIs interativos e destaques no Kanban",
+    texto: "Barra lateral escura fixa em toda a aplicação, alternância de tema pelo menu da conta, cartões de KPI clicáveis no Resumo e indicações discretas de urgência, prioridade e prazo nos Agendamentos.",
+  },
+  {
     data: "26/10/2026",
-    titulo: "Edição manual da versão na grid de atualizações",
+    titulo: "Edição manual da versão na grade de atualizações",
     texto: "A versão instalada agora pode ser informada ou editada diretamente no formulário, com opção de definir versões específicas por sistema ou manter o preenchimento automático oficial.",
   },
   {
-    data: "26/10/2026",
-    titulo: "Visual aprimorado com acabamento fosco",
-    texto: "Design escuro em grafite/ardósia com efeitos sutis de vidro fosco, mantendo a clássica cor de destaque nos botões primários e tipografia Inter limpa.",
-  },
-  {
-    data: "26/10/2026",
-    titulo: "Container distroless e limites de consumo",
-    texto: "Execução otimizada em container distroless sem privilégios de root (USER 1000), compressão Brotli/Gzip em tempo real e limites estritos de 512 MB de RAM e 0.5 CPU no Compose.",
-  },
-  {
     data: "30/09/2026",
-    titulo: "Situação com prazo depois da versão oficial",
-    texto: "Uma versão oficial nova não deixa mais todos os clientes desatualizados no dia seguinte: há um prazo (Administração) em que eles ficam \"Aguardando atualização\". Nunca atualizado conta como desatualizado.",
-  },
-  {
-    data: "30/09/2026",
-    titulo: "NFCe e Consignado M2 pela data do B_Vendas",
-    texto: "Sistemas que vão para o cliente junto com o B_Vendas usam a data da última atualização dele. A aba Sistemas e a ficha avisam \"pela data do B_Vendas\".",
-  },
-  {
-    data: "30/09/2026",
-    titulo: "Gráfico de atualizações por sistema",
-    texto: "Barras em ordem, com a comparação com o mês anterior. Clicar numa barra abre Atualizações filtrada pelo sistema e pelo mês.",
+    titulo: "Prazo após versão oficial e sistemas ligados ao B_Vendas",
+    texto: "Uma versão oficial nova abre prazo configurável de \"Aguardando atualização\" antes de contar atraso; sistemas dependentes acompanham a data da última atualização do B_Vendas.",
   },
 ];
 

@@ -15,6 +15,14 @@ Para o agente C#, o equivalente é
 
 ### Novembro de 2026
 
+- **Administração vertical, índice lateral global, Off-white e paginação (16/11/2026):**
+  - *Administração* migrada para o mesmo layout vertical com busca instantânea de *Configurações*, mantendo a faixa de pendências no topo da coluna principal.
+  - Componente reutilizável `IndicePagina` (`Nesta página`) aplicado em todas as abas de *Configurações* e *Administração*, incluindo pilha unificada com a *Prévia* em *Interface e acessibilidade*.
+  - Realce padrão `creme` calibrado para **Off-white** neutro (`#eae8e4` no tema escuro / `#272725` no claro), removendo excesso de tom amarelado, e correção do rodapé de paginação nas tabelas de *Atualizações* e *Clientes* (`:has(+ .pagination:not([hidden]))`).
+  - Linha do tempo *Novidades* em *Configurações › Sobre e ajuda* atualizada com as entregas de outubro e novembro (removendo referência obsoleta a Docker/Compose).
+
+- **Auditoria e polimento Unslop (13/11/2026):** curva cúbica monótona em `GraficoDeLinhas`, barras horizontais animadas por GPU (`scaleX`) em `GraficoDeBarras`, correção da largura da coluna *Sistemas* em *Clientes*, remoção de molduras aninhadas em tabelas/Kanban, seletor de pacotes em português em *Versões* e limpeza tipográfica geral (Sentence case e bordas hairline).
+
 - **Casca, realce Bege e polimento Dispatch DevCore (13/11/2026):** aplicação da identidade visual matte de alto contraste do Dispatch sobre o CSS e componentes originais (`theme.css`, `components.css` e `dispatch.css`), mantendo os cartões de gráficos, tabelas, campanhas, administração, formulários e modais intactos e sem etapa de build no cliente.
   - Novo realce padrão `creme` (`Bege`, `#dcd0bc` no tema escuro e carvão `#2e2923` no tema claro, com `--cor-sobre-accent` / `--cor-accent-texto` para contraste legível em botões e filtros ativos), mantendo configuráveis em *Configurações › Interface e acessibilidade* as opções `ouro` e todas as paletas anteriores (`azul`, `violeta`, `turquesa`, `verde`, `ambar`, `rosa`, `grafite`).
   - Barra lateral (`#111315`) ancorada à esquerda e mantida escura também no tema claro, topo compacto em linha única e gaveta lateral responsiva com backdrop no celular; alternância rápida de tema em três estados dentro do menu da conta (`MenuConta`).
