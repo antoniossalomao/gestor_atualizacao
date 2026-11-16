@@ -144,7 +144,7 @@ export function previaAmostra() {
         <span class="badge badge--warning">Desatualizado</span>
       </div>
       <div class="cfg-amostra__linha">
-        <input type="text" class="input" value="Buscar cliente…" tabindex="-1" readonly />
+        <input type="text" class="input" value="Buscar cliente" tabindex="-1" readonly />
         <button type="button" class="btn" tabindex="-1">Cancelar</button>
         <button type="button" class="btn btn--accent" tabindex="-1">Salvar</button>
       </div>

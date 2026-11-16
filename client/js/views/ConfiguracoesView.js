@@ -87,6 +87,7 @@ export class ConfiguracoesView extends View {
       idBase: "cfg",
       chavePrefs: "configuracoes:aba",
       layout: "vertical",
+      indiceLateral: true,
       extra: html`
         <label class="cfg-busca">
           <span class="cfg-busca__icone" aria-hidden="true">${iconeHtml("busca")}</span>

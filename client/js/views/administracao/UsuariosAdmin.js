@@ -46,7 +46,7 @@ export class UsuariosAdmin extends View {
         acoes: html`<button type="button" class="btn btn--accent" data-action="nova">${iconeHtml("plus")} Nova conta</button>`,
       })}
       <div class="admin-grade">
-        <div class="admin-pessoas">
+        <div class="admin-pessoas" data-indice-titulo="Contas e permissões">
           <div class="admin-pessoas__barra">
             <div data-role="resumo"></div>
             <label class="cfg-busca admin-pessoas__busca">

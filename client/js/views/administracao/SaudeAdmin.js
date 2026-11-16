@@ -26,7 +26,7 @@ export class SaudeAdmin extends View {
           <button type="button" class="btn" data-action="copiar" disabled>${iconeHtml("copiar")} Copiar para o suporte</button>
           <button type="button" class="btn" data-action="atualizar">${iconeHtml("atualizar")} Conferir de novo</button>`,
       })}
-      <div data-role="situacao"></div>
+      <div data-role="situacao" data-indice-titulo="Situação geral"></div>
       <div data-role="blocos"></div>`;
     this.situacao = this.container.querySelector('[data-role="situacao"]');
     this.blocos = this.container.querySelector('[data-role="blocos"]');

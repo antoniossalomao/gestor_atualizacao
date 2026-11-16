@@ -1,6 +1,7 @@
 import { prefs } from "../app/preferencias.js";
 import { html } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
+import { IndicePagina } from "./IndicePagina.js";
 
 /**
  * Uma tela dividida em abas sublinhadas -- a Administração e as
@@ -26,6 +27,7 @@ export class TelaComAbas {
    *   idBase: string,
    *   chavePrefs: string,
    *   layout?: "horizontal"|"vertical",
+   *   indiceLateral?: boolean,
    *   criar: (key: string, painel: HTMLElement) => {refresh?: () => any, destroy?: () => void},
    *   aoMostrar?: (key: string) => void,
    *   extra?: import("../utils/html.js").HtmlSeguro,
@@ -33,15 +35,16 @@ export class TelaComAbas {
    *   `extra` vai no fim da barra de abas, à direita (a busca das
    *   Configurações). `aoMostrar` avisa a troca de aba depois que ela aconteceu.
    */
-  constructor(container, { abas, rotulo, idBase, chavePrefs, layout = "horizontal", criar, aoMostrar, extra }) {
+  constructor(container, { abas, rotulo, idBase, chavePrefs, layout = "horizontal", indiceLateral = false, criar, aoMostrar, extra }) {
     this.container = container;
     this.abas = abas;
     this.idBase = idBase;
     this.chavePrefs = chavePrefs;
     this.layout = layout;
+    this.indiceLateral = indiceLateral;
     this.criar = criar;
     this.aoMostrar = aoMostrar || (() => {});
-    /** @type {Map<string, {painel: HTMLElement, instancia: any}>} */
+    /** @type {Map<string, {painel: HTMLElement, instancia: any, indice?: IndicePagina|null}>} */
     this.secoes = new Map();
     const salva = prefs.get(chavePrefs, abas[0].key);
     this.aba = abas.some((a) => a.key === salva) ? salva : abas[0].key;
@@ -117,16 +120,26 @@ export class TelaComAbas {
       painel.setAttribute("role", "tabpanel");
       painel.setAttribute("aria-labelledby", `${this.idBase}-aba-${key}`);
       this.paineis.appendChild(painel);
-      secao = { painel, instancia: this.criar(key, painel) };
+      const instancia = this.criar(key, painel);
+      const usarIndice = this.indiceLateral && key !== "ajuda" && !painel.querySelector(".cfg-corpo--com-previa");
+      let indice = null;
+      if (usarIndice) {
+        painel.classList.add("is-com-indice");
+        indice = new IndicePagina(painel, { prefixoId: `${this.idBase}-${key}` });
+      }
+      secao = { painel, instancia, indice };
       this.secoes.set(key, secao);
     }
     // `display`, e não `hidden`: é por ele que as views medem se estão
     // visíveis (ver View.visivel) -- inclusive a do Histórico, que é uma View
     // completa morando dentro da Administração.
-    for (const [k, { painel }] of this.secoes) painel.style.display = k === key ? "flex" : "none";
+    for (const [k, { painel }] of this.secoes) {
+      painel.style.display = k === key ? (painel.classList.contains("is-com-indice") ? "" : "flex") : "none";
+    }
 
     this.aoMostrar(key);
     await secao.instancia?.refresh?.();
+    secao.indice?.sincronizar();
   }
 
   /**
@@ -161,6 +174,9 @@ export class TelaComAbas {
   }
 
   destroy() {
-    for (const { instancia } of this.secoes.values()) instancia?.destroy?.();
+    for (const { instancia, indice } of this.secoes.values()) {
+      indice?.destroy?.();
+      instancia?.destroy?.();
+    }
   }
 }

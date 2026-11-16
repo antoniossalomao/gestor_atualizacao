@@ -1769,11 +1769,31 @@
   margin-bottom: calc(var(--sp-5) * -1);
 }
 
+:where(.view) .card [data-role="table"]:has(+ .pagination:not([hidden])) > .table-wrap,
+:where(.view) .card .table-wrap:has(+ .pagination:not([hidden])) {
+  margin-bottom: 0;
+  border-radius: 0;
+}
+
+:where(.view) .card > .pagination:not([hidden]) {
+  margin-top: 0;
+  margin-inline: calc(var(--sp-5) * -1);
+  margin-bottom: calc(var(--sp-5) * -1);
+  padding: 12px var(--sp-5);
+  border-top: 1px solid var(--cor-borda);
+  border-radius: 0 0 var(--raio) var(--raio);
+  background: var(--cor-superficie);
+}
+
 :where(.view) .card > .table-wrap:first-child,
 :where(.view) .card > [data-role="table"]:first-child > .table-wrap {
   border-top: 0;
   border-radius: var(--raio);
   margin-top: calc(var(--sp-5) * -1);
+}
+
+:where(.view) .card > [data-role="table"]:first-child:has(+ .pagination:not([hidden])) > .table-wrap {
+  border-radius: var(--raio) var(--raio) 0 0;
 }
 
 /* Pass 1 & 6: Flatten triple-boxed Kanban board */
@@ -1982,3 +2002,170 @@
     transition: none;
   }
 }
+
+/* ==========================================================================
+   NAVEGACAO VERTICAL ADMIN + INDICE LATERAL EM CONFIG E ADMIN
+   ========================================================================== */
+
+.indice-secao {
+  scroll-margin-top: 88px;
+}
+
+.indice-secao:focus {
+  outline: none;
+}
+
+@media (min-width: 960px) {
+  #painel-administracao .tela-abas--vertical .tela-abas__lista {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  #painel-administracao .tela-abas--vertical:not(.is-buscando) > .tela-abas__paineis {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    min-width: 0;
+  }
+
+  #painel-administracao .tela-abas--vertical.is-buscando > .tela-abas__paineis {
+    display: none;
+  }
+
+  #painel-administracao .admin-faixa-lugar:empty {
+    display: none;
+  }
+}
+
+@media (min-width: 1120px) {
+  .tela-abas__painel.is-com-indice {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 196px;
+    gap: var(--sp-4) var(--sp-5);
+    align-items: start;
+  }
+
+  .tela-abas__painel.is-com-indice > .secao-head {
+    grid-column: 1 / -1;
+  }
+
+  .tela-abas__painel.is-com-indice > :not(.secao-head):not(.sobre__indice) {
+    grid-column: 1;
+    min-width: 0;
+  }
+
+  .tela-abas__painel.is-com-indice > .sobre__indice {
+    grid-column: 2;
+    grid-row: 2 / span 20;
+    position: sticky;
+    top: 88px;
+  }
+
+  .tela-abas__painel.is-com-indice .cfg-cartoes--colunas,
+  #painel-administracao .tela-abas__painel.is-com-indice .admin-grade {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1119px) {
+  .tela-abas__painel.is-com-indice {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .tela-abas__painel.is-com-indice > .sobre__indice {
+    position: static;
+    order: 1;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .tela-abas__painel.is-com-indice > .secao-head {
+    order: 0;
+  }
+
+  .tela-abas__painel.is-com-indice > :not(.secao-head):not(.sobre__indice) {
+    order: 2;
+  }
+
+  .tela-abas__painel.is-com-indice > .sobre__indice .sobre__indice-titulo {
+    display: none;
+  }
+
+  .tela-abas__painel.is-com-indice > .sobre__indice ul {
+    flex-direction: row;
+    gap: var(--sp-2);
+    overflow-x: auto;
+  }
+
+  .tela-abas__painel.is-com-indice > .sobre__indice button {
+    width: auto;
+    padding: 5px var(--sp-3);
+    border: 1px solid var(--cor-borda);
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  .tela-abas__painel.is-com-indice > .sobre__indice button.is-atual::before {
+    content: none;
+  }
+}
+
+@media (min-width: 1221px) {
+  .tela-abas--vertical .cfg-corpo--com-previa {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: var(--sp-5);
+    align-items: start;
+  }
+
+  .cfg-lateral {
+    position: sticky;
+    top: 84px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    min-width: 0;
+  }
+
+  .cfg-lateral .sobre__indice,
+  .cfg-lateral .cfg-previa-cartao {
+    position: static;
+  }
+}
+
+@media (max-width: 1220px) {
+  .cfg-lateral {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+  }
+
+  .cfg-lateral .sobre__indice {
+    position: static;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .cfg-lateral .sobre__indice-titulo {
+    display: none;
+  }
+
+  .cfg-lateral .sobre__indice ul {
+    flex-direction: row;
+    gap: var(--sp-2);
+    overflow-x: auto;
+  }
+
+  .cfg-lateral .sobre__indice button {
+    width: auto;
+    padding: 5px var(--sp-3);
+    border: 1px solid var(--cor-borda);
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+
+  .cfg-lateral .sobre__indice button.is-atual::before {
+    content: none;
+  }
+}
+

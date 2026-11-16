@@ -3,6 +3,7 @@ import { html } from "../../utils/html.js";
 import { iconeHtml } from "../../utils/icones.js";
 import { cabecalhoSecao, tituloCartao } from "../../templates/secao.js";
 import { previaAmostra, previaTabela } from "../../templates/configuracoes.js";
+import { IndicePagina } from "../../components/IndicePagina.js";
 import { montarControle } from "./controles.js";
 
 /**
@@ -49,11 +50,14 @@ export class SecaoAjustes {
         <div class="cfg-cartoes${aba.previa ? "" : " cfg-cartoes--colunas"}" data-role="cartoes"></div>
         ${
           aba.previa &&
-          html`<aside class="card secao-card cfg-previa-cartao">
-            ${tituloCartao({ titulo: "Prévia", descricao: "Como ficam as telas com os ajustes desta aba." })}
-            ${previaAmostra()}
-            ${previaTabela()}
-          </aside>`
+          html`<div class="cfg-lateral">
+            <div data-role="indice-previa"></div>
+            <aside class="card secao-card cfg-previa-cartao">
+              ${tituloCartao({ titulo: "Prévia", descricao: "Como ficam as telas com os ajustes desta aba." })}
+              ${previaAmostra()}
+              ${previaTabela()}
+            </aside>
+          </div>`
         }
       </div>`.toString();
 
@@ -77,10 +81,23 @@ export class SecaoAjustes {
       cartoes.appendChild(el);
     }
 
+    if (aba.previa) {
+      this.indice = new IndicePagina(this.container, {
+        escopo: cartoes,
+        navDestino: this.container.querySelector('[data-role="indice-previa"]'),
+        prefixoId: `cfg-${aba.key}`,
+        extras: [{ alvo: ".cfg-previa-cartao", titulo: "Prévia" }],
+      });
+    }
+
     this.container
       .querySelector('[data-action="restaurar-secao"]')
       .addEventListener("click", () => this.acoes.aoRestaurarSecao(this.aba));
     this.atualizar();
+  }
+
+  destroy() {
+    this.indice?.destroy();
   }
 
   /** Chamado a cada vez que a aba aparece -- o valor pode ter mudado por fora. */
