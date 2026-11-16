@@ -7494,7 +7494,7 @@ h1, h2, h3, strong {
   box-shadow: none;
   transform: none;
 }
-/* Filetes laterais sutis (2-3px) por prioridade e vencimento (Dispatch DevCore) */
+/* Filetes laterais sutis (2-3px) por prioridade e vencimento */
 .kanban-card.is-alta {
   border-left: 3px solid var(--status-alerta-solido, color-mix(in srgb, var(--cor-amarelo) 56%, var(--cor-borda)));
 }
@@ -7685,8 +7685,11 @@ h1, h2, h3, strong {
 .bar-chart__row:hover::after, .bar-chart__row:focus::after { opacity: 1; transform: translate(-50%, 0); }
 .data-table td, .version-chip, time, .result-count { font-variant-numeric: tabular-nums; }
 
-@media (prefers-reduced-motion: reduce) {
-  .drawer-panel, .drawer-backdrop, .row-actions, .bar-chart__row::after { transition: none !important; }
+:root[data-movimento="reduzido"] .drawer-panel,
+:root[data-movimento="reduzido"] .drawer-backdrop,
+:root[data-movimento="reduzido"] .row-actions,
+:root[data-movimento="reduzido"] .bar-chart__row::after {
+  transition: none !important;
 }
 
 @media (max-width: 760px) {

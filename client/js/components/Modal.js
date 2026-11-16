@@ -217,7 +217,7 @@ export class Modal {
    */
   static _travarRolagem(travar) {
     Modal._abertos = (Modal._abertos || 0) + (travar ? 1 : -1);
-    document.body.classList.toggle("has-modal", Modal._abertos > 0);
+    document.body.classList.toggle("has-modal", Modal._abertos > 0 || document.documentElement.classList.contains("has-drawer"));
   }
 }
 

@@ -534,6 +534,32 @@ export class App {
     };
     document.addEventListener("keydown", onMenuEscape);
     this._cleanups.push(() => document.removeEventListener("keydown", onMenuEscape));
+    const viewportMobile = window.matchMedia("(max-width: 780px)");
+    const aoMudarViewport = () => {
+      if (!viewportMobile.matches) this._definirMenuMobile(false);
+    };
+    viewportMobile.addEventListener("change", aoMudarViewport);
+    this._cleanups.push(() => {
+      viewportMobile.removeEventListener("change", aoMudarViewport);
+      this._definirMenuMobile(false);
+    });
+    const conterFocoMobile = (event) => {
+      if (event.key !== "Tab" || !this.sidebarEl?.classList.contains("is-mobile-open")) return;
+      const itens = [...this.sidebarEl.querySelectorAll('button:not([disabled]), a[href], [tabindex="0"]')]
+        .filter((el) => el.tabIndex >= 0 && el.getClientRects().length);
+      const primeiro = itens[0];
+      const ultimo = itens[itens.length - 1];
+      if (!primeiro) return;
+      if (event.shiftKey && (document.activeElement === primeiro || !this.sidebarEl.contains(document.activeElement))) {
+        event.preventDefault();
+        ultimo.focus();
+      } else if (!event.shiftKey && (document.activeElement === ultimo || !this.sidebarEl.contains(document.activeElement))) {
+        event.preventDefault();
+        primeiro.focus();
+      }
+    };
+    document.addEventListener("keydown", conterFocoMobile);
+    this._cleanups.push(() => document.removeEventListener("keydown", conterFocoMobile));
 
     this.menuNotificacoes = new MenuNotificacoes(this.root.querySelector('[data-role="notificacoes"]'), {
       // Abrir o sino é a deixa para perguntar de novo: quem clica ali quer o
@@ -622,9 +648,21 @@ export class App {
   }
 
   _definirMenuMobile(aberto) {
+    aberto = aberto && window.matchMedia("(max-width: 780px)").matches;
+    const estavaAberto = this.sidebarEl?.classList.contains("is-mobile-open");
+    if (aberto && !estavaAberto) this._focoAntesDoMenu = document.activeElement;
     this.sidebarEl?.classList.toggle("is-mobile-open", aberto);
     this.sidebarBackdropEl?.classList.toggle("is-open", aberto);
     this.menuMobileBtn?.setAttribute("aria-expanded", String(aberto));
+    for (const elemento of this.root.querySelectorAll(".app-shell, .skip-link")) elemento.inert = aberto;
+    if (aberto && !estavaAberto) {
+      this.sidebarEl?.querySelector('.tab-button.is-active, button:not([disabled]), a[href]')?.focus();
+    } else if (!aberto && estavaAberto) {
+      const anterior = this._focoAntesDoMenu;
+      if (anterior?.isConnected && anterior.getClientRects().length) anterior.focus();
+      else this.root.querySelector(".app-main")?.focus();
+      this._focoAntesDoMenu = null;
+    }
   }
 
   _montarAbas() {
@@ -1169,8 +1207,15 @@ export class App {
     // de cada aba; daí em diante a troca é o fade curto do `.view` (ver o
     // comentário em components.css).
     if (entrada) {
-      entrada.container.classList.toggle("is-first-show", !this._jaMostradas.has(key));
+      const primeiraVez = !this._jaMostradas.has(key);
+      entrada.container.classList.toggle("is-first-show", primeiraVez);
       this._jaMostradas.add(key);
+      if (!mesmaAba) {
+        entrada.container.classList.remove("is-entering");
+        // Forca reflow leve apenas na troca de aba para reiniciar a animacao de entrada dos blocos
+        void entrada.container.offsetWidth;
+        entrada.container.classList.add("is-entering");
+      }
     }
 
     for (const [tabKey, { container }] of this.views) {

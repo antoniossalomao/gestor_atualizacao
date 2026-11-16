@@ -129,9 +129,10 @@ export function corpoSituacao(totais, maisAtrasados, prazoDias = null) {
  * Corpo do card de Frequência de Atualizações (baseado em tempo decorrido
  * desde a última atualização, sem depender de versões oficiais cadastradas).
  * @param {ReturnType<typeof import("../domain/situacao.js").totaisAtividade>} totais
- * @param {Array<any>} maisAntigos clientes sem atualização recente mais críticos
+ * @param {Array<any>} [maisAntigos] clientes sem atualização recente mais críticos
+ * @param {Array<{sistema: string, total: number, clientes?: number}>} [maisAtrasados] sistemas com mais atraso
  */
-export function corpoAtividade(totais, maisAntigos = []) {
+export function corpoAtividade(totais, maisAntigos = [], maisAtrasados = []) {
   if (totais.total === 0) {
     return html`
       <p class="situacao__vazio">
@@ -140,14 +141,18 @@ export function corpoAtividade(totais, maisAntigos = []) {
   }
   const descricaoBarra = totais.grupos.map((g) => `${g.rotulo}: ${g.total} (${g.pct}%)`).join(", ");
   const recentes = totais.grupos.find((g) => g.chave === "ate30");
-  const top = maisAntigos.slice(0, 4);
+  const ate60 = totais.grupos.find((g) => g.chave === "ate60");
+  const atualizados60 = (recentes?.total ?? 0) + (ate60?.total ?? 0);
+  const pctAtualizados60 = totais.total > 0 ? Math.round((atualizados60 / totais.total) * 100) : 0;
+  const topSistemas = maisAtrasados.slice(0, 3);
+  const comDataAntiga = maisAntigos.filter((c) => c.dias != null && c.dias < Number.MAX_SAFE_INTEGER).slice(0, 3);
 
   return html`
     <div class="situacao__destaque">
-      <strong class="situacao__hero">${recentes?.pct ?? 0}%</strong>
+      <strong class="situacao__hero">${pctAtualizados60}%</strong>
       <span class="situacao__hero-texto">
-        <span>Atualizados recentemente</span>
-        <small>${recentes?.total ?? 0} de ${plural(totais.total, "cliente")} nos últimos 30 dias</small>
+        <span>Atualizados nos últimos 60 dias</span>
+        <small>${atualizados60} de ${plural(totais.total, "cliente")} no ciclo recente</small>
       </span>
     </div>
     <div class="situacao__barra" role="img" aria-label="${descricaoBarra}">
@@ -164,18 +169,38 @@ export function corpoAtividade(totais, maisAntigos = []) {
           </button>`
       )}
     </div>
-    ${top.length
+    ${topSistemas.length
       ? html`
         <div class="situacao__sistemas">
-          <h3 class="situacao__subtitulo">Clientes sem atualização há mais tempo</h3>
+          <div class="situacao__sistemas-head">
+            <h3 class="situacao__subtitulo">Sistemas com mais pendências</h3>
+            ${maisAtrasados.length > topSistemas.length ? html`<button type="button" class="tabela-link situacao__ver-todos" data-action="todos-sistemas">Ver todos (${maisAtrasados.length})</button>` : ""}
+          </div>
           <ul>
-            ${top.map((c) => html`
-              <li><button type="button" class="situacao__sistema" data-cliente-critico="${c.nome}" title="Última atualização: ${c.ultima}. Clique para abrir o histórico.">
-                <span class="situacao__sistema-nome">${c.nome}</span>
-                <span class="situacao__sistema-conta">${c.cidade}</span>
-                <span class="situacao__sistema-pct text-muted">${c.dias ? `${c.dias} dias` : "Nunca"}</span>
-              </button></li>`)}
+            ${topSistemas.map((s) => {
+              const base = s.clientes || s.total;
+              const pct = base > 0 ? Math.round((s.total / base) * 100) : 0;
+              return html`
+                <li><button type="button" class="situacao__sistema" data-sistema="${s.sistema}" title="${s.sistema}: ${s.total} de ${plural(base, "cliente")} pendentes (${pct}%). Clique para abrir em Sistemas.">
+                  <span class="situacao__sistema-nome">${s.sistema}</span>
+                  <span class="situacao__sistema-conta">${s.total} de ${base}</span>
+                  <span class="situacao__sistema-trilho" aria-hidden="true"><span class="situacao__sistema-barra" style="width: ${pct}%"></span></span>
+                  <span class="situacao__sistema-pct">${pct}%</span>
+                </button></li>`;
+            })}
           </ul>
         </div>`
-      : ""}`;
+      : comDataAntiga.length
+        ? html`
+          <div class="situacao__sistemas">
+            <h3 class="situacao__subtitulo">Há mais tempo sem atualização</h3>
+            <ul>
+              ${comDataAntiga.map((c) => html`
+                <li><button type="button" class="situacao__cliente-item" data-cliente-critico="${c.nome}" title="Última atualização em ${c.ultima}. Clique para abrir o cliente.">
+                  <span class="situacao__cliente-nome">${c.nome}</span>
+                  <span class="situacao__cliente-dias">${c.dias} dias</span>
+                </button></li>`)}
+            </ul>
+          </div>`
+        : ""}`;
 }

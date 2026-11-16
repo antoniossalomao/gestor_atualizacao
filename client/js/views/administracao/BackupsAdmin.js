@@ -71,8 +71,12 @@ export class BackupsAdmin extends View {
       this.conteudo.replaceChildren(
         estadoVazio({
           titulo: "Nenhuma cópia ainda",
-          descricao: "A primeira cópia é realizada na próxima vez que o servidor iniciar. Até lá, use \"Baixar o banco de agora\".",
+          descricao: "Gere a primeira cópia de segurança agora, sem esperar o servidor reiniciar.",
           icone: "backups",
+          acao: {
+            label: "Fazer cópia agora",
+            onClick: () => this.container.querySelector('[data-action="fazer-copia"]').click(),
+          },
         })
       );
       return;

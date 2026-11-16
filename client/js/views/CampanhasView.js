@@ -178,7 +178,9 @@ export class CampanhasView extends View {
   _pintarLista() {
     // Sem nenhuma campanha, a coluna da lista some e o vazio do detalhe ocupa
     // o cartão inteiro (ver .campanhas.is-vazia no CSS).
-    this.container.querySelector(".campanhas").classList.toggle("is-vazia", this.campanhas.length === 0);
+    const vazia = this.campanhas.length === 0;
+    this.container.querySelector(".campanhas").classList.toggle("is-vazia", vazia);
+    if (this.listaEl) this.listaEl.hidden = vazia;
     this.listaEl.innerHTML = String(listaCampanhas(this.campanhas, this.selecionadaId, { encerradas: this.mostrarEncerradas, podeCriar: this.user?.role !== "consulta" }));
   }
 

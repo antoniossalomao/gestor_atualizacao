@@ -189,6 +189,10 @@ export class AgendamentosView extends View {
 
     this.statusFilter.addEventListener("change", () => {
       this.status = this.statusFilter.value;
+      if (this.status !== FILTRO_ARQUIVADAS && this.quando === "arquivadas") {
+        this.quando = "";
+      }
+      this._pintarFiltrosRapidos();
       this._pintarLimparFiltros();
       this._salvarFiltros();
       this._recarregarLista();
@@ -416,6 +420,15 @@ export class AgendamentosView extends View {
           if (other !== col) other.classList.remove("is-drop-target");
         }
         col.classList.add("is-drop-target");
+
+        // Destaca sutilmente o cartão sob o cursor como alvo de ordenação/posicionamento
+        const cardSobCursor = e.target.closest(".kanban-card");
+        for (const c of this.kanban.querySelectorAll(".kanban-card.is-drop-target-card")) {
+          if (c !== cardSobCursor) c.classList.remove("is-drop-target-card");
+        }
+        if (cardSobCursor && cardSobCursor.dataset.id !== this._draggedCardId) {
+          cardSobCursor.classList.add("is-drop-target-card");
+        }
       } else if (this._draggedColStatus || e.dataTransfer.types.includes("application/x-kanban-column")) {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
@@ -431,6 +444,9 @@ export class AgendamentosView extends View {
       if (col && !col.contains(e.relatedTarget)) {
         col.classList.remove("is-drop-target");
         col.classList.remove("is-col-target");
+        for (const c of col.querySelectorAll(".kanban-card.is-drop-target-card")) {
+          c.classList.remove("is-drop-target-card");
+        }
       }
     });
 
@@ -465,8 +481,9 @@ export class AgendamentosView extends View {
   }
 
   _encerrarArrasto() {
-    for (const c of this.kanban.querySelectorAll(".kanban-card.is-dragging")) {
+    for (const c of this.kanban.querySelectorAll(".kanban-card.is-dragging, .kanban-card.is-drop-target-card")) {
       c.classList.remove("is-dragging");
+      c.classList.remove("is-drop-target-card");
     }
     for (const col of this.kanban.querySelectorAll(".kanban-column")) {
       col.classList.remove("is-drop-target");

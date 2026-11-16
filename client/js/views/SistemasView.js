@@ -131,6 +131,10 @@ export class SistemasView extends View {
     this.situacaoFilter.value = this.situacao;
     this.buscaInput.value = this.busca;
     this.dataInput.value = this.atualizacaoAntesDe;
+    if (this.atualizacaoAntesDe) {
+      this.container.querySelector("#sis-filtros").hidden = false;
+      this.botaoFiltros.setAttribute("aria-expanded", "true");
+    }
     this._mostrarFiltrosAtivos();
 
     this.sistemaFilter.addEventListener("change", () => {
@@ -172,6 +176,18 @@ export class SistemasView extends View {
     this.container.querySelector('[data-action="oficiais"]').addEventListener("click", () => this._alternar("oficiais"));
     this.container.querySelector('[data-action="fechar-oficiais"]').addEventListener("click", () => this._fecharOficiais());
     this.container.querySelector('[data-role="oficiais-lista"]').addEventListener("click", (e) => this._acaoOficial(e));
+    this.container.querySelector('[data-role="oficiais-lista"]').addEventListener("keydown", (e) => {
+      if (e.target && e.target.matches('[data-role="edicao"]')) {
+        const linha = e.target.closest("[data-index]");
+        if (e.key === "Enter") {
+          e.preventDefault();
+          linha?.querySelector('[data-action="salvar"]')?.click();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          linha?.querySelector('[data-action="cancelar"]')?.click();
+        }
+      }
+    });
   }
 
   aplicarParams({ sistema } = {}) {

@@ -33,12 +33,12 @@ export function linhaRegraNumero({ nome, titulo, ajuda, unidade, valor, min, max
 }
 
 /** Barra de salvar de um formulário de regras. Começa desligada: nada mudou ainda. */
-export function rodapeFormulario() {
+export function rodapeFormulario(rotuloSalvar = "Salvar") {
   return html`
     <footer class="admin-form__rodape">
       <span class="admin-form__estado" data-role="estado" aria-live="polite"></span>
       <button type="button" class="btn" data-action="desfazer" disabled>Desfazer</button>
-      <button type="submit" class="btn btn--accent" data-action="salvar" disabled>Salvar</button>
+      <button type="submit" class="btn btn--accent" data-action="salvar" disabled>${rotuloSalvar}</button>
     </footer>`;
 }
 
@@ -202,7 +202,7 @@ export function conferenciaCadastros({ clientesSemSistema, sistemasSemReferencia
 
 /**
  * Conteúdo de uma `<tr>` da tabela de backups.
- * @param {{arquivo: string, label: string, data?: string|null, tamanhoBytes?: number, integro?: boolean}} b
+ * @param {{arquivo: string, label: string, data?: string|null, tamanhoBytes?: number, integro?: boolean|null}} b
  */
 export function linhaBackup(b) {
   return html`
@@ -216,7 +216,9 @@ export function linhaBackup(b) {
     <td data-label="Verificação">${
       b.integro === false
         ? html`<span class="badge badge--danger" title="Falhou na verificação de integridade logo após ser criada.">Corrompida</span>`
-        : html`<span class="badge badge--success">Íntegra</span>`
+        : b.integro === true
+          ? html`<span class="badge badge--success">Íntegra</span>`
+          : html`<span class="badge badge--neutral">Não verificada</span>`
     }</td>
     <td data-label="" class="admin-tabela__acoes">
       <a class="btn btn--small btn--ghost" href="/api/backups/${encodeURIComponent(b.arquivo)}/download" download="${b.arquivo}">
@@ -337,7 +339,11 @@ export function blocosSaude(dados, { atualizadorHabilitado }) {
           ? blocoSaude({
               icone: "distribuicao",
               titulo: "Agentes e pacotes",
-              selo: agentes.erro > 0 ? [`${agentes.erro} com erro`, "danger"] : ["Sem incidentes", "success"],
+              selo: agentes.erro > 0
+                ? [`${agentes.erro} com erro`, "danger"]
+                : agentes.offline > 0
+                  ? [`${agentes.offline} sem contato`, "warning"]
+                  : ["Sem falhas reportadas", "success"],
               linhas: [
                 ["Agentes", `${agentes.total ?? 0} (${agentes.ok ?? 0} em dia · ${agentes.offline ?? 0} sem contato)`],
                 ["Pacotes em disco", pacotes(dados.pacotes)],

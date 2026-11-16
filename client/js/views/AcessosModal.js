@@ -209,6 +209,7 @@ export class AcessosModal {
     this.cancelarEdicaoBtn.hidden = true;
     this.toggleBtn.innerHTML = `${iconeSvg("plus")} Nova Máquina`;
     this._alternarFormulario(false);
+    this.toggleBtn.focus();
     this._marcarEdicao();
   }
 
@@ -255,6 +256,7 @@ export class AcessosModal {
     try {
       await this.api.delete(`/clientes/acessos/${acesso.id}`);
       await this._recarregar();
+      (this.list.querySelector("button") || this.toggleBtn).focus();
       avisoRapido.sucesso(`Máquina "${acesso.maquina}" removida.`);
     } catch (err) {
       liberar();

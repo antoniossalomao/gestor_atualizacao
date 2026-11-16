@@ -251,6 +251,7 @@ export class TabelaOrdenavel {
   }
 
   _desenharCabecalho() {
+    const indiceFoco = [...this.thead.querySelectorAll(".data-table__sort")].indexOf(document.activeElement);
     const tr = document.createElement("tr");
 
     for (const col of this.columns) {
@@ -262,7 +263,7 @@ export class TabelaOrdenavel {
       // `aria-sort` é o que faz um leitor de tela anunciar "ordenado de forma
       // crescente" ao entrar na coluna. A setinha sozinha não diz nada a quem
       // não enxerga a tela.
-      th.setAttribute("aria-sort", ordenadaPor ? (this.sortState.reverse ? "descending" : "ascending") : "none");
+      if (ordenadaPor) th.setAttribute("aria-sort", this.sortState.reverse ? "descending" : "ascending");
 
       if (this.sortable) {
         // O cabeçalho vira um <button> de verdade: alcançável por Tab,
@@ -295,6 +296,7 @@ export class TabelaOrdenavel {
       tr.appendChild(th);
     }
     this.thead.replaceChildren(tr);
+    if (indiceFoco >= 0) this.thead.querySelectorAll(".data-table__sort")[indiceFoco]?.focus();
   }
 
   /**
@@ -361,18 +363,28 @@ export class TabelaOrdenavel {
     // Reaproveita as <tr> que já existem: trocar textContent de células é
     // muito mais barato (e não pisca) do que jogar fora e recriar o corpo.
     const existentes = [...this.tbody.querySelectorAll("tr[data-key]")];
-    const sobrando = existentes.length - this.rows.length;
-    for (let i = 0; i < sobrando; i++) existentes.pop().remove();
+    const porChave = new Map(existentes.map((tr) => [tr.dataset.key, tr]));
+    const chaves = new Set(this.rows.map((row) => String(this.rowKey(row))));
+    for (const tr of existentes) if (!chaves.has(tr.dataset.key)) tr.remove();
 
     this.rows.forEach((row, index) => {
       const key = this.rowKey(row);
-      let tr = existentes[index];
+      let tr = porChave.get(String(key));
       if (!tr) {
         tr = document.createElement("tr");
         for (let c = 0; c < this.columns.length; c++) tr.appendChild(document.createElement("td"));
         this.tbody.appendChild(tr);
       }
 
+      if (typeof this.tbody.moveBefore === "function") {
+        const referencia = this.tbody.children[index] || null;
+        if (referencia !== tr) this.tbody.moveBefore(tr, referencia);
+      } else {
+        // Append every row in data order, including in lightweight test DOMs.
+        const foco = document.activeElement;
+        this.tbody.appendChild(tr);
+        if (tr.contains(foco)) foco.focus();
+      }
       tr.dataset.key = String(key);
       tr.className = this.rowClass(row, index) || "";
       if (!this.selectable) {
@@ -392,6 +404,7 @@ export class TabelaOrdenavel {
       // latente; qualquer tabela futura com estilo condicional o acordaria.
       if (tr.style.cssText) tr.style.cssText = "";
       Object.assign(tr.style, this.rowStyle(row, index) || {});
+      tr.style.setProperty("--row-idx", String(Math.min(index, 14)));
 
       // A marca de "está no lote" vem do estado, e não do que a <tr>
       // reciclada tinha antes: sem isto, paginar deixaria a marca da linha

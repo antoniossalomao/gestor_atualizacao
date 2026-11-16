@@ -43,7 +43,7 @@ import { ALIASES_CONFIGURACOES, abaAtual } from "../domain/abas.js";
  *  - **Perfis.** Vinte e tantos ajustes é mais do que a maioria das pessoas
  *    quer decidir. Um clique em "Operação" ou "Leitura" põe a interface
  *    inteira numa configuração coerente, e cada ajuste continua editável.
- *  - **Selo "alterado", contagem por aba e restaurar só uma seção.** "O que
+ *  - **Selo "Personalizado", contagem por aba e restaurar só uma seção.** "O que
  *    aqui dentro fui EU que mexi?" é a primeira pergunta de quem herda uma
  *    máquina configurada por outra pessoa, ou de quem quer desfazer um ajuste
  *    de que se arrependeu sem zerar todo o resto junto.

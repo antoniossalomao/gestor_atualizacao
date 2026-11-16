@@ -69,6 +69,10 @@ export class FichaClienteModal {
       </div>
     `.toString();
 
+    const titulo = box.querySelector(".modal-ficha-cliente__nome");
+    titulo.id = `ficha-cliente-${Math.random().toString(36).slice(2, 10)}`;
+    box.setAttribute("aria-labelledby", titulo.id);
+    box.focus();
     box.querySelector('[data-action="fechar-x"]')?.addEventListener("click", () => close());
     box.querySelector('[data-action="fechar"]')?.addEventListener("click", () => close());
 
@@ -191,11 +195,35 @@ export class FichaClienteModal {
 
     // Ligar alternância de abas
     const tabsBar = corpo.querySelector(".modal-ficha-cliente__tabs");
+    const tabs = [...tabsBar.querySelectorAll("[data-client-tab]")];
+    const prefixo = this.box.getAttribute("aria-labelledby");
+    for (const [i, tab] of tabs.entries()) {
+      const painel = corpo.querySelector(`[data-client-panel="${tab.dataset.clientTab}"]`);
+      tab.id = `${prefixo}-tab-${i}`;
+      painel.id = `${prefixo}-panel-${i}`;
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-controls", painel.id);
+      tab.setAttribute("aria-selected", String(i === 0));
+      tab.tabIndex = i === 0 ? 0 : -1;
+      painel.setAttribute("role", "tabpanel");
+      painel.setAttribute("aria-labelledby", tab.id);
+      painel.tabIndex = 0;
+    }
+    tabsBar.addEventListener("keydown", (e) => {
+      const atual = tabs.indexOf(e.target);
+      if (atual < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+      e.preventDefault();
+      const indice = e.key === "Home" ? 0 : e.key === "End" ? tabs.length - 1 : (atual + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+      tabs[indice].click();
+      tabs[indice].focus();
+    });
     tabsBar?.addEventListener("click", (e) => {
       const botao = e.target.closest("[data-client-tab]");
       if (!botao) return;
       for (const item of tabsBar.querySelectorAll("[data-client-tab]")) {
         item.classList.toggle("is-active", item === botao);
+        item.setAttribute("aria-selected", String(item === botao));
+        item.tabIndex = item === botao ? 0 : -1;
       }
       for (const painel of corpo.querySelectorAll("[data-client-panel]")) {
         painel.hidden = painel.dataset.clientPanel !== botao.dataset.clientTab;

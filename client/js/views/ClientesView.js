@@ -194,7 +194,35 @@ export class ClientesView extends View {
             return span;
           },
         },
-        { key: "sistemasTexto", label: "Sistemas" },
+        {
+          key: "sistemasTexto",
+          label: "Sistemas",
+          title: (row) => row.sistemasTexto || "",
+          render: (row) => {
+            if (!row.sistemas || row.sistemas.length === 0) {
+              const emptySpan = document.createElement("span");
+              emptySpan.className = "text-muted";
+              emptySpan.textContent = "—";
+              return emptySpan;
+            }
+            const wrap = document.createElement("div");
+            wrap.className = "client-systems-pills";
+            wrap.style.display = "inline-flex";
+            wrap.style.flexWrap = "wrap";
+            wrap.style.gap = "4px";
+            wrap.style.alignItems = "center";
+            for (const sis of row.sistemas) {
+              const chip = document.createElement("span");
+              chip.className = "badge badge--muted";
+              chip.style.fontSize = "var(--txt-xs, 11px)";
+              chip.style.padding = "1px 6px";
+              chip.style.borderRadius = "10px";
+              chip.textContent = sis;
+              wrap.appendChild(chip);
+            }
+            return wrap;
+          },
+        },
         { key: "maquinas", label: "Máquinas", type: "numeric", largura: "86px" },
         { key: "acoes", label: "Ações", largura: "126px", render: (row) => acoesCliente(row, this.user?.role) },
       ],
@@ -689,6 +717,11 @@ export class ClientesView extends View {
     // Ver o comentário equivalente em AtualizacoesView._pintarBulk: evita os
     // dois botões de excluir (lote + avulso) na tela ao mesmo tempo.
     this.deleteBtn.hidden = n > 0;
+    if (n > 0) {
+      this.bulkBar.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.08)";
+      this.bulkBar.style.borderRadius = "var(--radius, 6px)";
+      this.bulkBar.style.transition = "all 0.2s ease";
+    }
   }
 
   /** Marca um sistema em todos os clientes selecionados de uma vez (idempotente: quem já tinha não muda). */

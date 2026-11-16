@@ -27,6 +27,7 @@ export class SaudeAdmin extends View {
           <button type="button" class="btn" data-action="atualizar">${iconeHtml("atualizar")} Conferir de novo</button>`,
       })}
       <div data-role="situacao" data-indice-titulo="Situação geral"></div>
+      <p class="admin-aviso admin-aviso--alerta" data-role="erro-atualizacao" role="status" hidden></p>
       <div data-role="blocos"></div>`;
     this.situacao = this.container.querySelector('[data-role="situacao"]');
     this.blocos = this.container.querySelector('[data-role="blocos"]');
@@ -67,6 +68,11 @@ export class SaudeAdmin extends View {
       ]);
     } catch (err) {
       if (err?.cancelled) return;
+      const aviso = this.container.querySelector('[data-role="erro-atualizacao"]');
+      aviso.hidden = false;
+      aviso.textContent = `Não foi possível atualizar o diagnóstico. ${this.conferidoEm
+        ? `Última verificação concluída em ${this.conferidoEm.toLocaleString("pt-BR")}. Os dados abaixo são dessa verificação.`
+        : "Nenhuma verificação foi concluída nesta sessão."} Use Conferir de novo para tentar novamente.`;
       avisoRapido.erro(mensagem(err));
       return;
     }
@@ -75,6 +81,8 @@ export class SaudeAdmin extends View {
       chaveAgentes: completa?.chaveAgentes ?? null,
     });
     const conferidoEm = new Date();
+    this.conferidoEm = conferidoEm;
+    this.container.querySelector('[data-role="erro-atualizacao"]').hidden = true;
     this.situacao.innerHTML = resumoDiagnostico(situacao, conferidoEm).toString();
     // O texto é do MESMO momento da tela, e não montado no clique: o que se
     // manda ao suporte é o que a pessoa está vendo.

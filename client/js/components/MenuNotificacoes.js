@@ -104,6 +104,17 @@ export class MenuNotificacoes {
     };
     this._aoTeclar = (e) => {
       if (!this.aberto) return;
+      const noPainel = this.menu.contains(document.activeElement);
+      const marcar = e.key.toLowerCase() === "m" || e.key === "Delete";
+      if (marcar && !noPainel) return;
+      if (!this.container.contains(document.activeElement)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.target?.closest?.("input, textarea, select, [contenteditable]")) return;
+      if (marcar) {
+        e.preventDefault();
+        this._marcarVistas();
+        this.gatilho.focus();
+        return;
+      }
       if (e.key === "Escape") {
         e.stopPropagation();
         this.fechar({ devolverFoco: true });

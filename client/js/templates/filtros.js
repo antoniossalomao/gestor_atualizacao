@@ -32,6 +32,6 @@ export function chipsFiltroAtualizacoes({ busca, responsavel, sistema = "", desd
 export function chipsHtml(chips) {
   return html`${chips.map(
     (c) =>
-      html`<span class="filter-chip"><span>${c.label}</span><button type="button" class="filter-chip__remove" data-chip="${c.id}" aria-label="Remover filtro">✕</button></span>`
+      html`<span class="filter-chip" role="status" aria-label="${c.label}"><span>${c.label}</span><button type="button" class="filter-chip__remove" data-chip="${c.id}" aria-label="Remover filtro" title="Remover filtro">✕</button></span>`
   )}`;
 }

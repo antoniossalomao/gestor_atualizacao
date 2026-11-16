@@ -134,7 +134,13 @@ export class TelaComAbas {
     // visíveis (ver View.visivel) -- inclusive a do Histórico, que é uma View
     // completa morando dentro da Administração.
     for (const [k, { painel }] of this.secoes) {
-      painel.style.display = k === key ? (painel.classList.contains("is-com-indice") ? "" : "flex") : "none";
+      const ativa = k === key;
+      painel.style.display = ativa ? (painel.classList.contains("is-com-indice") ? "" : "flex") : "none";
+      if (ativa) {
+        painel.classList.remove("is-entering");
+        void painel.offsetWidth;
+        painel.classList.add("is-entering");
+      }
     }
 
     this.aoMostrar(key);

@@ -1,4 +1,5 @@
 import { iconeHtml } from "../utils/icones.js";
+import { Modal } from "./Modal.js";
 import { html } from "../utils/html.js";
 
 const MAX_RESULTADOS = 12;
@@ -78,7 +79,7 @@ export class PaletaDeComandos {
       </div>
     `;
     document.body.appendChild(this.overlay);
-    document.body.classList.add("has-modal");
+    Modal._travarRolagem(true);
 
     this.input = this.overlay.querySelector(".cmdk__input");
     this.lista = this.overlay.querySelector(".cmdk__list");
@@ -114,7 +115,7 @@ export class PaletaDeComandos {
     saindo?.classList.add("is-closing");
     setTimeout(() => saindo?.remove(), SAIDA_MS);
     this.overlay = null;
-    document.body.classList.remove("has-modal");
+    Modal._travarRolagem(false);
     if (this._focoAnterior instanceof HTMLElement) this._focoAnterior.focus();
   }
 
@@ -134,6 +135,7 @@ export class PaletaDeComandos {
   _render() {
     this.lista.replaceChildren();
     if (this.filtrados.length === 0) {
+      this.input.removeAttribute("aria-activedescendant");
       this.lista.innerHTML = html`<div class="cmdk__empty">Nada encontrado para "${this.input.value}".</div>`;
       return;
     }

@@ -5,6 +5,7 @@ import { GraficoDeBarras } from "../components/graficos/GraficoDeBarras.js";
 import { GraficoDeLinhas } from "../components/graficos/GraficoDeLinhas.js";
 import { html, plural } from "../utils/html.js";
 import { hojeBR } from "../utils/data.js";
+import { casaBusca } from "../utils/busca.js";
 import { formatarMes, primeiroDiaDoMes, tendenciaMensal, barrasPorSistema, variacaoMesAnterior } from "../domain/resumo.js";
 import { GRUPOS_SITUACAO, GRUPOS_ATIVIDADE, totaisSituacao, totaisAtividade, descreverSistemasQueExplicam } from "../domain/situacao.js";
 import { blocoDeNumero, deltaTendencia, corpoSituacao, corpoAtividade } from "../templates/resumo.js";
@@ -78,9 +79,15 @@ export class ResumoView extends View {
         </div>
       </div>
 
-      <div data-role="gaveta-lista">
-        <p class="gaveta-lista__ajuda" data-role="gaveta-ajuda"></p>
-        <div data-role="gaveta-tabela"></div>
+      <div data-role="gaveta-lista" class="gaveta-lista">
+        <div class="gaveta-lista__topo">
+          <p class="gaveta-lista__ajuda" data-role="gaveta-ajuda"></p>
+          <div class="gaveta-lista__busca-wrap">
+            <input type="search" class="gaveta-lista__busca" data-role="gaveta-busca" placeholder="Filtrar na lista..." aria-label="Filtrar na lista" autocomplete="off" />
+            <span class="gaveta-lista__contagem" data-role="gaveta-contagem"></span>
+          </div>
+        </div>
+        <div data-role="gaveta-tabela" class="gaveta-lista__tabela"></div>
       </div>
     `;
 
@@ -120,8 +127,11 @@ export class ResumoView extends View {
     // número contou, sem uma segunda consulta que pudesse discordar dele.
     this.gavetaEl = this.container.querySelector('[data-role="gaveta-lista"]');
     this.gavetaAjuda = this.gavetaEl.querySelector('[data-role="gaveta-ajuda"]');
+    this.gavetaBusca = this.gavetaEl.querySelector('[data-role="gaveta-busca"]');
+    this.gavetaContagem = this.gavetaEl.querySelector('[data-role="gaveta-contagem"]');
     this.gavetaTabela = this.gavetaEl.querySelector('[data-role="gaveta-tabela"]');
     this.gaveta = new Gaveta(this.gavetaEl, { titulo: "Clientes" });
+    this.gavetaBusca.addEventListener("input", () => this._filtrarGaveta());
     this.gavetaEl.addEventListener("click", (e) => {
       const alvo = e.target.closest("[data-ir]");
       if (!alvo) return;
@@ -182,10 +192,23 @@ export class ResumoView extends View {
 
     const semAtualizacaoTile = this.container.querySelector('[data-stat="semAtualizacao"]');
     semAtualizacaoTile.classList.toggle("is-alert", resumo.semAtualizacao.length > 0);
+    // Suaviza o destaque sem quebrar contratos de classe nem seletores de teste:
+    // aplica borda e background semântico sutil (estilo Stripe/Linear warning) sem mancha vermelha pura.
+    if (resumo.semAtualizacao.length > 0) {
+      semAtualizacaoTile.style.borderColor = "color-mix(in srgb, var(--cor-vermelho, #e5484d) 35%, var(--cor-borda, transparent))";
+      semAtualizacaoTile.style.background = "color-mix(in srgb, var(--cor-vermelho, #e5484d) 4%, var(--cor-superficie))";
+    } else {
+      semAtualizacaoTile.style.borderColor = "";
+      semAtualizacaoTile.style.background = "";
+    }
 
     this.resumo = resumo;
     if (resumo.atividadeClientes) {
-      this.situacaoEl.innerHTML = corpoAtividade(totaisAtividade(resumo.atividadeClientes), resumo.semAtualizacao || []);
+      this.situacaoEl.innerHTML = corpoAtividade(
+        totaisAtividade(resumo.atividadeClientes),
+        resumo.semAtualizacao || [],
+        resumo.situacaoClientes?.sistemasMaisAtrasados || []
+      );
     } else {
       this.situacaoEl.innerHTML = corpoSituacao(totaisSituacao(resumo.situacaoClientes), resumo.situacaoClientes?.sistemasMaisAtrasados || [], resumo.prazoVersaoDias ?? null);
     }
@@ -210,24 +233,60 @@ export class ResumoView extends View {
           }))
         : []
     );
-    this.container.querySelector('[data-role="tendencia-atual"]').textContent = `${plural(resumo.mesCount, "atualização", "atualizações")} neste mês (parcial)`;
+    this.container.querySelector('[data-role="tendencia-atual"]').textContent =
+      resumo.mesCount > 0
+        ? `${plural(resumo.mesCount, "atualização", "atualizações")} neste mês (parcial)`
+        : "Nenhuma atualização registrada este mês ainda";
+
+    const historicoMeses = resumo.atualizacoesPorMes || [];
+    const totalHistorico = historicoMeses.reduce((acc, item) => acc + (item.total || 0), 0);
+    const containerTendencia = this.container.querySelector('[data-role="tendencia"]');
+    if (totalHistorico === 0) {
+      containerTendencia.setAttribute("data-vazio", "true");
+    } else {
+      containerTendencia.removeAttribute("data-vazio");
+    }
+
     this.tendenciaChart.render(
-      (resumo.atualizacoesPorMes || []).map((item) => ({ label: formatarMes(item.mes), total: item.total, parcial: item.mes === (resumo.atualizacoesPorMes || []).at(-1)?.mes }))
+      historicoMeses.map((item) => ({ label: formatarMes(item.mes), total: item.total, parcial: item.mes === historicoMeses.at(-1)?.mes }))
     );
+  }
+
+  aoEntrar() {
+    if (this.resumo) {
+      requestAnimationFrame(() => {
+        const historicoMeses = this.resumo?.atualizacoesPorMes || [];
+        this.tendenciaChart.render(
+          historicoMeses.map((item) => ({ label: formatarMes(item.mes), total: item.total, parcial: item.mes === historicoMeses.at(-1)?.mes }))
+        );
+        for (const el of this.container.querySelectorAll(".bar-chart__fill")) el.classList.add("is-visivel");
+      });
+    }
   }
 
   /** @param {string} chave ate30 | ate60 | mais60 | nunca */
   _listarGrupoAtividade(chave) {
     const grupo = GRUPOS_ATIVIDADE.find((g) => g.chave === chave);
     const clientes = this.resumo?.atividadeClientes?.[chave] || [];
+    const tomBadge = {
+      ate30: "badge--success",
+      ate60: "badge--neutral",
+      mais60: "badge--danger",
+      nunca: "badge--muted",
+    }[chave] || "badge--muted";
     this._abrirGaveta({
       titulo: `${grupo?.rotulo || "Clientes"} — ${plural(clientes.length, "cliente")}`,
       ajuda: grupo?.descricao || "Tempo desde a última atualização registrada.",
       colunas: [
         { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
-        { key: "cidade", label: "Cidade" },
-        { key: "ultima", label: "Última atualização", type: "date" },
-        { key: "dias", label: "Dias sem atualizar", type: "numeric", render: (row) => document.createTextNode(row.dias != null ? `${row.dias} dias` : "—") },
+        { key: "cidade", label: "Cidade", render: (row) => this._celulaSecundaria(row.cidade || "—") },
+        { key: "ultima", label: "Última atualização", type: "date", render: (row) => this._celulaMono(row.ultima || "Nunca") },
+        {
+          key: "dias",
+          label: "Tempo",
+          type: "numeric",
+          render: (row) => this._badgeDias(row.dias != null ? `${row.dias} ${row.dias === 1 ? "dia" : "dias"}` : "Nunca", tomBadge),
+        },
       ],
       linhas: clientes,
       chave: (row) => row.nome,
@@ -244,7 +303,7 @@ export class ResumoView extends View {
       ajuda: grupo.descricao,
       colunas: [
         { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
-        { key: "cidade", label: "Cidade" },
+        { key: "cidade", label: "Cidade", render: (row) => this._celulaSecundaria(row.cidade || "—") },
         { key: "sistemas", label: { desatualizado: "Sistemas atrasados", aguardando: "Sistemas aguardando" }[chave] || "Sistemas" },
       ],
       linhas: clientes.map((c) => ({ nome: c.nome, cidade: c.cidade, sistemas: descreverSistemasQueExplicam(c.explicam) })),
@@ -257,45 +316,48 @@ export class ResumoView extends View {
     const clientes = this.resumo?.semAtualizacao || [];
     this._abrirGaveta({
       titulo: `${rotuloSemAtualizacao(this.resumo?.desatualizadoDias)} — ${plural(clientes.length, "cliente")}`,
-      ajuda: "Tempo desde a última atualização registrada. Não diz se as versões estão em dia: isso está no card Atualização dos Clientes.",
+      ajuda: "Tempo desde a última atualização registrada. Clique num cliente para abrir a ficha completa.",
       colunas: [
         { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
-        { key: "cidade", label: "Cidade" },
-        { key: "ultima", label: "Última atualização", type: "date" },
+        { key: "cidade", label: "Cidade", render: (row) => this._celulaSecundaria(row.cidade || "—") },
+        { key: "ultima", label: "Última atualização", type: "date", render: (row) => this._celulaMono(row.ultima || "Nunca") },
         // Clientes sem registro anterior ou com data inválida mostram "Nunca"
         {
           key: "dias",
-          label: "Dias",
+          label: "Tempo",
           type: "numeric",
-          render: (row) =>
-            document.createTextNode(
-              row.dias == null || row.dias >= Number.MAX_SAFE_INTEGER || !row.ultima || row.ultima === "Nunca"
-                ? "Nunca"
-                : `${row.dias} dias`
-            ),
+          render: (row) => {
+            const nunca = row.dias == null || row.dias >= Number.MAX_SAFE_INTEGER || !row.ultima || row.ultima === "Nunca";
+            return this._badgeDias(nunca ? "Nunca" : `${row.dias} dias`, nunca ? "badge--muted" : "badge--danger");
+          },
         },
       ],
       linhas: clientes,
       chave: (row) => row.nome,
-      vazio: "Todos os clientes foram atendidos dentro do prazo.",
+      vazio: "Todos os clientes foram atualizados dentro do prazo.",
     });
   }
 
   _listarSistemas() {
     const sistemas = this.resumo?.situacaoClientes?.sistemasMaisAtrasados || [];
     this._abrirGaveta({
-      titulo: "Clientes atrasados por sistema",
-      ajuda: "Conta cada sistema separado: um cliente atrasado em dois sistemas aparece nos dois, e um cliente em dia pelo B_Vendas ainda aparece aqui se outro sistema dele estiver atrasado.",
+      titulo: "Clientes pendentes por sistema",
+      ajuda: "Conta cada sistema separado: um cliente pendente em dois sistemas aparece nos dois. Clique no sistema para abrir a aba Sistemas.",
       colunas: [
         { key: "sistema", label: "Sistema", render: (row) => this._link("sistema", row.sistema) },
-        { key: "total", label: "Atrasados", type: "numeric" },
-        { key: "clientes", label: "Clientes no sistema", type: "numeric" },
-        { key: "pct", label: "% atrasado", type: "numeric", render: (row) => document.createTextNode(`${row.pct}%`) },
+        { key: "total", label: "Pendentes", type: "numeric", render: (row) => this._celulaMono(String(row.total)) },
+        { key: "clientes", label: "Total no sistema", type: "numeric", render: (row) => this._celulaMono(String(row.clientes)) },
+        {
+          key: "pct",
+          label: "Proporção",
+          type: "numeric",
+          render: (row) => this._barraProporcao(row.pct),
+        },
       ],
       // A mesma proporção do card: atrasados sobre quem usa o sistema.
       linhas: sistemas.map((s) => ({ ...s, clientes: s.clientes || s.total, pct: Math.round((s.total / (s.clientes || s.total || 1)) * 100) })),
       chave: (row) => row.sistema,
-      vazio: "Nenhum sistema com cliente atrasado.",
+      vazio: "Nenhum sistema com cliente pendente.",
     });
   }
 
@@ -306,11 +368,68 @@ export class ResumoView extends View {
   _abrirGaveta({ titulo, ajuda, colunas, linhas, chave, vazio }) {
     const alvo = document.createElement("div");
     this.gavetaTabela.replaceChildren(alvo);
-    const tabela = new TabelaOrdenavel(alvo, { columns: colunas, rowKey: chave, emptyMessage: vazio, selectable: false });
-    tabela.definirLinhas(linhas);
+    this._gavetaLinhasOriginais = linhas;
+    this._gavetaVazioOriginal = vazio;
+    this._gavetaTabelaInstancia = new TabelaOrdenavel(alvo, { columns: colunas, rowKey: chave, emptyMessage: vazio, selectable: false });
+    this._gavetaTabelaInstancia.definirLinhas(linhas);
     this.gavetaAjuda.textContent = ajuda;
+    this.gavetaBusca.value = "";
+    this.gavetaBusca.parentElement.hidden = linhas.length <= 5;
+    this.gavetaContagem.textContent = `${plural(linhas.length, "item", "itens")}`;
     this.gaveta.setTitulo(titulo);
-    this.gaveta.abrir();
+    this.gaveta.abrir({ foco: linhas.length > 5 ? this.gavetaBusca : undefined });
+  }
+
+  _filtrarGaveta() {
+    if (!this._gavetaTabelaInstancia || !this._gavetaLinhasOriginais) return;
+    const termo = this.gavetaBusca.value.trim();
+    const filtradas = !termo
+      ? this._gavetaLinhasOriginais
+      : this._gavetaLinhasOriginais.filter((row) =>
+          casaBusca([row.nome, row.sistema, row.cidade, row.ultima, row.sistemas].filter(Boolean).join(" "), termo)
+        );
+    this._gavetaTabelaInstancia.emptyMessage = termo ? `Nenhum resultado para "${termo}".` : this._gavetaVazioOriginal;
+    this._gavetaTabelaInstancia.definirLinhas(filtradas);
+    this.gavetaContagem.textContent = termo
+      ? `${filtradas.length} de ${this._gavetaLinhasOriginais.length}`
+      : `${plural(this._gavetaLinhasOriginais.length, "item", "itens")}`;
+  }
+
+  _celulaSecundaria(texto) {
+    const span = document.createElement("span");
+    span.className = "gaveta-lista__cidade";
+    span.textContent = texto;
+    span.title = texto;
+    return span;
+  }
+
+  _celulaMono(texto) {
+    const span = document.createElement("span");
+    span.className = "gaveta-lista__mono";
+    span.textContent = texto;
+    return span;
+  }
+
+  _badgeDias(texto, classeBadge) {
+    const span = document.createElement("span");
+    span.className = `badge ${classeBadge} gaveta-lista__badge`;
+    span.textContent = texto;
+    return span;
+  }
+
+  _barraProporcao(pct) {
+    const wrap = document.createElement("span");
+    wrap.className = "gaveta-lista__proporcao";
+    const trilho = document.createElement("span");
+    trilho.className = "gaveta-lista__proporcao-trilho";
+    const barra = document.createElement("span");
+    barra.className = "gaveta-lista__proporcao-barra";
+    barra.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+    trilho.appendChild(barra);
+    const rotulo = document.createElement("strong");
+    rotulo.textContent = `${pct}%`;
+    wrap.append(trilho, rotulo);
+    return wrap;
   }
 
   /** @param {"cliente"|"sistema"} destino @param {string} valor */

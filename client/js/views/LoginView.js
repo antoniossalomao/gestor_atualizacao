@@ -33,7 +33,7 @@ export class LoginView {
 
     // Mantem o layout original em duas colunas no desktop (identidade a
     // esquerda + cartao de login centralizado a direita), refinado nos tokens
-    // matte e bordas do sistema Dispatch DevCore.
+    // matte e bordas do sistema visual do Gestor.
     const brand = document.createElement("div");
     brand.className = "auth-screen__brand";
     brand.innerHTML = String(html`
@@ -59,7 +59,7 @@ export class LoginView {
       <p class="auth-card__subtitle">${
         isSetup
           ? "Esta é a primeira vez que o sistema é aberto. Crie a conta principal para começar a usar."
-          : "Use o seu usuário e a senha da equipe."
+          : "Use seu usuário e sua senha"
       }</p>
       <div class="auth-card__error" role="alert" id="login-erro" hidden></div>
       <form id="login-form">
@@ -71,7 +71,7 @@ export class LoginView {
           <input class="input" type="text" id="login-usuario" name="usuario" required autocomplete="username" />
         </div>
         <div class="field">
-          <label class="field__label" for="login-senha">Senha</label>
+          <label class="field__label" for="login-senha">Sua senha</label>
           <!--
             O olho de "mostrar senha" não é enfeite: a senha é digitada às
             cegas, e quando ela é longa (ou o teclado é de notebook, com o
@@ -100,7 +100,7 @@ export class LoginView {
     this.errorBox = card.querySelector(".auth-card__error");
     card.querySelector("form").addEventListener("submit", (e) => this._aoEnviar(e));
     this._ligarSenha(card);
-    card.querySelector('input[name="usuario"]').focus();
+    card.querySelector(isSetup ? 'input[name="nome"]' : 'input[name="usuario"]').focus();
   }
 
   /**
@@ -164,10 +164,19 @@ export class LoginView {
       const { user } = await this.api.post(path, dados);
       this.onSuccess(user);
     } catch (err) {
-      this._mostrarErro(err instanceof ErroApi ? err.message : "Não foi possível conectar ao servidor.");
-      // O foco volta para a senha: é o campo que quase sempre precisa mudar,
-      // e sem isso a pessoa tem que pegar o mouse depois de cada erro.
-      form.querySelector('input[name="senha"]').select();
+      const mensagem = err instanceof ErroApi ? err.message : "Não foi possível conectar ao servidor.";
+      const relevantes = [];
+      if (err instanceof ErroApi && err.status === 401) {
+        relevantes.push("usuario", "senha");
+      } else if (err instanceof ErroApi && err.status === 400) {
+        if (/usuário|usuario/i.test(mensagem)) relevantes.push("usuario");
+        else if (/nome/i.test(mensagem)) relevantes.push("nome");
+        if (/senha/i.test(mensagem)) relevantes.push("senha");
+      }
+      this._mostrarErro(mensagem, relevantes);
+      if (relevantes.length) {
+        form.querySelector(`[name="${relevantes.includes("senha") ? "senha" : relevantes[0]}"]`)?.select();
+      }
     } finally {
       for (const campo of campos) campo.readOnly = false;
       form.removeAttribute("aria-busy");
@@ -181,11 +190,12 @@ export class LoginView {
    * ouve de novo por que o login falhou, e a marca some assim que a pessoa
    * começa a corrigir.
    */
-  _mostrarErro(message) {
+  _mostrarErro(message, relevantes = []) {
     this.errorBox.textContent = message;
     this.errorBox.hidden = false;
     this.errorBox.classList.add("is-visible");
     for (const campo of this._camposDeEntrada()) {
+      if (!relevantes.includes(campo.name)) continue;
       campo.setAttribute("aria-invalid", "true");
       campo.setAttribute("aria-describedby", "login-erro");
       campo.addEventListener("input", () => this._esconderErro(), { once: true });
@@ -202,6 +212,6 @@ export class LoginView {
   }
 
   _camposDeEntrada() {
-    return this.root.querySelectorAll('.auth-card input[name="usuario"], .auth-card input[name="senha"]');
+    return this.root.querySelectorAll('.auth-card input[name="nome"], .auth-card input[name="usuario"], .auth-card input[name="senha"]');
   }
 }
