@@ -13,6 +13,7 @@ export class GraficoDeLinhas {
     this.renderHeight = 0;
     if (typeof ResizeObserver !== "undefined") {
       this.observer = new ResizeObserver(() => {
+        if (!this.container.clientWidth && !this.container.clientHeight) return;
         const largura = this._larguraGrafico();
         const altura = this._alturaGrafico();
         if (this.pontos.length && (largura !== this.renderWidth || altura !== this.renderHeight)) this.render(this.pontos);
@@ -126,7 +127,7 @@ export class GraficoDeLinhas {
           return path;
         })();
     svg.appendChild(elemento("path", { d: `M ${coords[0].x.toFixed(1)},${base} ${caminho.replace(/^M/, "L")} L ${coords.at(-1).x.toFixed(1)},${base} Z`, fill: `url(#${this.id}-area)`, class: "line-chart__area" }));
-    svg.appendChild(elemento("path", { d: caminho, class: "line-chart__linha" }));
+    svg.appendChild(elemento("path", { d: caminho, pathLength: 1, class: "line-chart__linha" }));
 
     const crosshair = elemento("line", { y1: T, y2: base, class: "line-chart__crosshair" });
     svg.appendChild(crosshair);

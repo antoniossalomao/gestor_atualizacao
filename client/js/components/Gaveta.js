@@ -66,22 +66,27 @@ export class Gaveta {
     this.overlay.classList.add("is-open");
     this.overlay.setAttribute("aria-hidden", "false");
     document.documentElement.classList.add("has-drawer");
-    setTimeout(() => (foco || this.conteudo.querySelector("input, select, textarea, button"))?.focus(), 180);
+    this._timerFoco = setTimeout(() => {
+      this._timerFoco = null;
+      if (this.aberta && !this._descartePendente) (foco || this.conteudo.querySelector("input, select, textarea, button"))?.focus();
+    }, 180);
   }
 
   async fechar({ forcar = false } = {}) {
+    clearTimeout(this._timerFoco);
+    this._timerFoco = null;
     if (!this.aberta) return true;
+    if (this._descartePendente) return false;
     if (!forcar && this.suja) {
-      const ok = await Modal.confirm("Descartar alterações?", "Há dados não salvos no formulário.", {
-        confirmLabel: "Descartar",
-        danger: true,
-      });
+      const ok = await this._confirmarDescarte();
       if (!ok) return false;
     }
+    if (!this.aberta) return true;
     this.aberta = false;
     this.overlay.classList.remove("is-open");
     this.overlay.setAttribute("aria-hidden", "true");
     document.documentElement.classList.remove("has-drawer");
+    document.body.classList.toggle("has-modal", (Modal._abertos || 0) > 0);
     this.conteudo.hidden = true;
     this.marcador.after(this.conteudo);
     this.aoFechar();
@@ -117,6 +122,19 @@ export class Gaveta {
     Modal._prenderFoco(e, painel);
   }
 
+  async _confirmarDescarte() {
+    if (this._descartePendente) return false;
+    this._descartePendente = true;
+    try {
+      return await Modal.confirm("Descartar alterações?", "Há dados não salvos no formulário.", {
+        confirmLabel: "Descartar",
+        danger: true,
+      });
+    } finally {
+      this._descartePendente = false;
+    }
+  }
+
   marcarLimpa() {
     this._estadoLimpo = this._serializar();
   }
@@ -132,6 +150,8 @@ export class Gaveta {
   }
 
   destroy() {
+    clearTimeout(this._timerFoco);
+    this.aberta = false;
     document.removeEventListener("keydown", this._aoTecla);
     this.overlay.removeEventListener("click", this._aoClique);
     this.conteudo.hidden = false;
@@ -139,5 +159,6 @@ export class Gaveta {
     this.marcador.remove();
     this.overlay.remove();
     document.documentElement.classList.remove("has-drawer");
+    document.body.classList.toggle("has-modal", (Modal._abertos || 0) > 0);
   }
 }

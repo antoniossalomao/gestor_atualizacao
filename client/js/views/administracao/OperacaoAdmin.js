@@ -79,7 +79,7 @@ export class OperacaoAdmin extends FormularioRegras {
             min: d.agendamentoArquivarDias.min,
             max: d.agendamentoArquivarDias.max,
           })}
-          ${rodapeFormulario()}
+          ${rodapeFormulario("Salvar prazos")}
         </form>
 
         <section class="card secao-card" data-role="secao-sistemas">
@@ -101,8 +101,9 @@ export class OperacaoAdmin extends FormularioRegras {
           <footer class="admin-form__rodape admin-sistemas__rodape" data-role="rodape-sistemas">
             <span class="admin-form__estado" data-role="estado-sistemas" aria-live="polite"></span>
             <button type="button" class="btn" data-action="desfazer-sistemas" disabled>Desfazer</button>
-            <button type="button" class="btn btn--accent" data-action="salvar-sistemas" disabled>Salvar</button>
+            <button type="button" class="btn btn--accent" data-action="salvar-sistemas" disabled>Salvar classificações</button>
           </footer>
+          <p class="admin-form__estado" data-role="alteradas-ocultas" role="status" hidden></p>
         </section>
       </div>`;
   }
@@ -216,6 +217,18 @@ export class OperacaoAdmin extends FormularioRegras {
     this.container.querySelector('[data-role="rodape-sistemas"]').classList.toggle("is-sujo", n > 0);
     /** @type {HTMLButtonElement} */ (this.container.querySelector('[data-action="salvar-sistemas"]')).disabled = n === 0;
     /** @type {HTMLButtonElement} */ (this.container.querySelector('[data-action="desfazer-sistemas"]')).disabled = n === 0;
+    this._atualizarOcultas();
+  }
+
+  _atualizarOcultas() {
+    const n = this._alteracoesSistemas().filter(({ id }) =>
+      /** @type {HTMLElement|null} */ (this.container.querySelector(`[data-linha="${id}"]`))?.hidden
+    ).length;
+    const aviso = this.container.querySelector('[data-role="alteradas-ocultas"]');
+    aviso.hidden = n === 0;
+    aviso.textContent = n === 1
+      ? "1 sistema alterado está oculto pelo filtro e também será salvo. Limpe o filtro para conferir."
+      : `${n} sistemas alterados estão ocultos pelo filtro e também serão salvos. Limpe o filtro para conferir.`;
   }
 
   /** O filtro só esconde linhas: uma linha alterada e escondida continua contando no Salvar. */
@@ -229,6 +242,7 @@ export class OperacaoAdmin extends FormularioRegras {
     }
     const total = this.container.querySelector('[data-role="total-sistemas"]');
     total.textContent = termo ? `${visiveis.size} de ${this.sistemas.length}` : `${this.sistemas.length} sistemas`;
+    this._atualizarOcultas();
   }
 
   /**
@@ -245,6 +259,10 @@ export class OperacaoAdmin extends FormularioRegras {
     for (const { id, ...corpo } of mudancas) {
       try {
         await this.api.patch(`/sistemas/${id}/classificacao`, corpo);
+        // Atualiza somente a base salva de quem teve sucesso. As escolhas
+        // com falha permanecem nos controles e continuam pendentes para retry.
+        const sistema = this.sistemas.find((s) => s.id === id);
+        if (sistema) Object.assign(sistema, corpo);
       } catch (err) {
         falhas.push(`${this.sistemas.find((s) => s.id === id)?.nome || id}: ${err.message || "erro inesperado"}`);
       }
@@ -252,13 +270,9 @@ export class OperacaoAdmin extends FormularioRegras {
     for (const chave of ["resumo", "sistemas:", "consulta:", "atualizacoes:"]) this.cache?.invalidar(chave);
     liberar();
     const salvos = mudancas.length - falhas.length;
-    // Recarrega do servidor: as que falharam voltam ao valor salvo, e a tela
-    // mostra a verdade em vez do que se tentou. Zerar a lista antes é o que
-    // deixa `_carregarSistemas` passar pela trava de "há alteração".
-    this.sistemas = [];
-    await this._carregarSistemas();
+    this._atualizarEstadoSistemas();
     if (falhas.length === 0) avisoRapido.sucesso(salvos === 1 ? "Classificação salva para a equipe." : `${salvos} sistemas reclassificados para a equipe.`);
-    else Modal.alert("Alguns sistemas não foram salvos", `${salvos} salvo(s). Não foi possível salvar:\n\n${falhas.join("\n")}`, "warning");
+    else Modal.alert("Alguns sistemas não foram salvos", `${salvos} de ${mudancas.length} salvo(s). Suas escolhas que falharam continuam marcadas; use Salvar classificações para tentar novamente.\n\n${falhas.join("\n")}`, "warning");
   }
 
   destroy() {

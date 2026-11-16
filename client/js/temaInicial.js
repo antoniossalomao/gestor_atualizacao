@@ -49,6 +49,7 @@
   // página inteira se reorganiza na frente de quem acabou de abri-la.
   if (lido("fonte", "inter") === "sistema") raiz.setAttribute("data-fonte", "sistema");
   if (lido("largura", "limitada") === "total") raiz.setAttribute("data-largura", "total");
+  if (lido("movimento", "normal") === "reduzido") raiz.setAttribute("data-movimento", "reduzido");
 
   // Captura qualquer erro global ou rejeição assíncrona para que o usuário
   // nunca fique diante de uma tela preta vazia sem diagnóstico.

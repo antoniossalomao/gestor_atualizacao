@@ -33,11 +33,13 @@ export function cartaoKanban(row, role, { agora = new Date() } = {}) {
     row.prioridade === "Urgente" ? " is-urgente" :
     row.prioridade === "Alta"    ? " is-alta"    : "";
 
-  // Badge de prioridade — só para Alta e Urgente (Normal/Baixa não poluem o card)
+  // Badge de prioridade — mantendo hierarquia limpa (Unslop): quando a tarefa está vencida,
+  // o status de tempo é o alerta crítico principal; prioridade alta é indicada via borda semântica
+  // evitando poluição de dois badges vermelhos concorrentes no mesmo cabeçalho.
   const badgePrioridade =
-    row.prioridade === "Urgente"
+    row.prioridade === "Urgente" && !vencida
       ? html`<span class="badge badge--danger">Urgente</span>`
-      : row.prioridade === "Alta"
+      : row.prioridade === "Alta" && !vencida
       ? html`<span class="badge badge--warning">Alta</span>`
       : "";
 

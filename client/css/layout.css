@@ -1,5 +1,5 @@
 /*
- * Camada Dispatch DevCore (carregada por ultimo, depois de components.css):
+ * Camada de Layout e Acabamento Visual (carregada por ultimo, depois de components.css):
  * aplica o visual limpo na casca (barra lateral escura ancorada, topo compacto,
  * gaveta movel), superficies matte sem vidro pesado, login classico refinado e
  * navegacao vertical nas Configuracoes -- mantendo intactos todos os cards,
@@ -51,7 +51,7 @@
 .app-brand__text strong {
   display: block;
   color: var(--sidebar-texto);
-  font: var(--peso-forte) 14.5px / 1.2 var(--fonte-display);
+  font: var(--peso-forte) calc(14.5px * var(--escala)) / 1.2 var(--fonte-display);
   letter-spacing: -0.015em;
   white-space: nowrap;
 }
@@ -350,8 +350,8 @@
   cursor: pointer;
   transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 140ms cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 140ms ease,
-              background-color 140ms ease;
+              border-color 140ms var(--curva-padrao),
+              background-color 140ms var(--curva-padrao);
 }
 
 .stat-tiles > .stat-tile::after {
@@ -364,7 +364,7 @@
   background: var(--cor-accent);
   opacity: 0;
   transform: scaleX(0.35);
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition: opacity 0.15s var(--curva-padrao), transform 0.15s var(--curva-padrao);
   pointer-events: none;
 }
 
@@ -414,7 +414,7 @@
 .stat-tiles .stat-tile__label [data-role="rotulo"] {
   flex: 1 1 auto;
   min-width: 0;
-  transition: color 0.14s ease;
+  transition: color 0.14s var(--curva-padrao);
 }
 
 .stat-tiles > .stat-tile:hover .stat-tile__label [data-role="rotulo"],
@@ -430,7 +430,7 @@
   height: 14px;
   flex: 0 0 auto;
   opacity: 0.72;
-  transition: color 0.14s ease, opacity 0.14s ease;
+  transition: color 0.14s var(--curva-padrao), opacity 0.14s var(--curva-padrao);
 }
 
 .stat-tiles > .stat-tile:hover .stat-tile__icon,
@@ -453,10 +453,10 @@
   color: var(--cor-texto-fraco);
   opacity: 0.6;
   transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 140ms ease,
-              color 140ms ease,
-              background-color 140ms ease,
-              border-color 140ms ease;
+              opacity 140ms var(--curva-padrao),
+              color 140ms var(--curva-padrao),
+              background-color 140ms var(--curva-padrao),
+              border-color 140ms var(--curva-padrao);
 }
 
 .stat-tiles .stat-tile__arrow svg,
@@ -498,7 +498,7 @@
   letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
   color: var(--cor-texto);
-  transition: transform 0.12s ease;
+  transition: transform 0.12s var(--curva-padrao);
 }
 
 .stat-tiles > .stat-tile:active .stat-tile__value {
@@ -532,12 +532,12 @@
   }
 }
 
-/* Polimento Dispatch dos cards da Distribuicao */
+/* Polimento visual dos cards da Distribuicao */
 .distribution-metric {
   transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1),
               box-shadow 140ms cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 140ms ease,
-              background-color 140ms ease;
+              border-color 140ms var(--curva-padrao),
+              background-color 140ms var(--curva-padrao);
 }
 
 .distribution-metric:hover {
@@ -669,7 +669,7 @@
   padding: clamp(28px, 4vw, 42px);
   width: 100%;
   max-width: 420px;
-  transition: border-color var(--dur-rapida) ease, box-shadow var(--dur-rapida) ease;
+  transition: border-color var(--dur-rapida) var(--curva-padrao), box-shadow var(--dur-rapida) var(--curva-padrao);
 }
 
 .auth-card:focus-within {
@@ -745,7 +745,7 @@
   color: var(--cor-texto);
   font-size: var(--txt-base);
   padding: 10px 14px;
-  transition: border-color var(--dur-rapida) ease, box-shadow var(--dur-rapida) ease;
+  transition: border-color var(--dur-rapida) var(--curva-padrao), box-shadow var(--dur-rapida) var(--curva-padrao);
 }
 
 .auth-card .input:focus {
@@ -762,7 +762,7 @@
   border-radius: 8px;
   letter-spacing: 0.01em;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-  transition: transform var(--dur-rapida) ease, box-shadow var(--dur-rapida) ease;
+  transition: transform var(--dur-rapida) var(--curva-padrao), box-shadow var(--dur-rapida) var(--curva-padrao);
 }
 
 .auth-card button[type="submit"]:hover {
@@ -797,9 +797,9 @@
   border: none;
   background: transparent;
   color: var(--cor-texto-sub);
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
-  transition: color var(--dur-rapida) ease, background var(--dur-rapida) ease;
+  transition: color var(--dur-rapida) var(--curva-padrao), background var(--dur-rapida) var(--curva-padrao);
 }
 
 .auth-card .input-com-acao .input-acao:hover {
@@ -840,7 +840,7 @@
 }
 
 /* ==========================================================================
-   4. CONFIGURACOES: NAVEGACAO VERTICAL A ESQUERDA + PREVIAS DISPATCH
+   4. CONFIGURACOES: NAVEGACAO VERTICAL A ESQUERDA + PREVIAS DE INTERFACE
    ========================================================================== */
 
 @media (min-width: 960px) {
@@ -1283,7 +1283,7 @@
 }
 
 /* ==========================================================================
-   7. POLIMENTO DE TELAS: CLIENTES, VERSOES E HISTORICO (Dispatch DevCore)
+   7. POLIMENTO DE TELAS: CLIENTES, VERSOES E HISTORICO
    ========================================================================== */
 
 /* --- Clientes --- */
@@ -1319,7 +1319,7 @@
   height: 30px;
   border-radius: 6px;
   color: var(--cor-texto-sub);
-  transition: color var(--dur-rapida) ease, background var(--dur-rapida) ease, border-color var(--dur-rapida) ease;
+  transition: color var(--dur-rapida) var(--curva-padrao), background var(--dur-rapida) var(--curva-padrao), border-color var(--dur-rapida) var(--curva-padrao);
 }
 
 .row-actions .btn--icon:hover {
@@ -1371,7 +1371,7 @@
   border-radius: 10px;
   padding: 14px 16px;
   min-height: 90px;
-  transition: border-color var(--dur-rapida) ease;
+  transition: border-color var(--dur-rapida) var(--curva-padrao);
 }
 
 .version-stat:hover {
@@ -1409,7 +1409,7 @@
   border-radius: 10px;
   padding: 16px 18px;
   box-shadow: var(--sombra-card);
-  transition: border-color var(--dur-rapida) ease;
+  transition: border-color var(--dur-rapida) var(--curva-padrao);
 }
 
 .published-release:hover {
@@ -1566,7 +1566,7 @@
   scrollbar-color: var(--cor-borda-forte) transparent;
 }
 
-:root[data-tema="claro"] {
+:root[data-tema="claro"]:not([data-contraste="alto"]) {
   --cor-borda: rgba(24, 24, 27, 0.1);
   --cor-borda-forte: rgba(24, 24, 27, 0.17);
   --cor-borda-campo: rgba(24, 24, 27, 0.19);
@@ -1575,7 +1575,7 @@
 }
 
 @media (prefers-color-scheme: light) {
-  :root:not([data-tema="escuro"]) {
+  :root:not([data-tema="escuro"]):not([data-contraste="alto"]) {
     --cor-borda: rgba(24, 24, 27, 0.1);
     --cor-borda-forte: rgba(24, 24, 27, 0.17);
     --cor-borda-campo: rgba(24, 24, 27, 0.19);
@@ -1591,7 +1591,7 @@
 }
 
 /* Pass 1 & 5: Sidebar 4px grid rhythm & sentence-case group headings */
-.app-sidebar__brand strong {
+.app-brand strong {
   font-weight: 600;
   letter-spacing: 0;
 }
@@ -1600,12 +1600,12 @@
   padding: 20px 10px 6px;
   text-transform: none;
   letter-spacing: 0;
-  font-size: 11.5px;
+  font-size: calc(11.5px * var(--escala));
   font-weight: 500;
-  color: var(--cor-texto-fraco);
+  color: var(--sidebar-mudo);
 }
 
-.app-sidebar__nav > .app-sidebar__group-title:first-child {
+.app-sidebar__nav > .app-sidebar__group:first-child .app-sidebar__group-title {
   padding-top: 4px;
 }
 
@@ -1623,7 +1623,7 @@
 
 .tab-button.is-active {
   box-shadow: none;
-  background: color-mix(in srgb, var(--cor-texto) 7%, transparent);
+  background: var(--sidebar-ativo);
 }
 
 /* Pass 2 & 5: Header & primary CTA cleanup */
@@ -1633,7 +1633,7 @@
 }
 
 .app-header .btn.btn--accent.app-header__quick {
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  box-shadow: none;
 }
 
 .app-header .btn.btn--accent.app-header__quick kbd {
@@ -1663,7 +1663,7 @@
 .auth-card .field__label {
   text-transform: none;
   letter-spacing: 0;
-  font-size: 12.5px;
+  font-size: calc(12.5px * var(--escala));
   font-weight: 500;
 }
 
@@ -1921,20 +1921,363 @@
 }
 
 /* Pass 7: Crisp charts & progress bars (no bulky capsules) */
+.card-row--aside {
+  grid-template-columns: minmax(320px, 380px) 1fr;
+}
+
+.card-row--aside > .card:first-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-row--aside > .card:first-child > [data-role="situacao"] {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.is-fora {
+  --situacao-cor: color-mix(in srgb, var(--cor-texto-fraco) 42%, var(--cor-superficie-alta));
+}
+
+.situacao__destaque {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+
 .situacao__hero {
   font-weight: 600;
+  font-size: calc(32px * var(--escala, 1));
   letter-spacing: -0.025em;
 }
 
 .situacao__barra {
-  height: 6px;
+  height: 7px;
   gap: 2px;
+  margin-bottom: var(--sp-3);
   border-radius: 3px;
-  background: transparent;
+  background: var(--cor-superficie-alta);
 }
 
 .situacao__parte {
   border-radius: 2px;
+}
+
+.situacao__parte.is-fora {
+  background: color-mix(in srgb, var(--cor-texto-fraco) 28%, var(--cor-superficie-alta));
+}
+
+.situacao__totais {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-top: 1px solid var(--cor-borda);
+  border-bottom: 1px solid var(--cor-borda);
+  padding: 4px 0;
+}
+
+.situacao__total {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto 40px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  margin-inline: -8px;
+  width: calc(100% + 16px);
+  border: 0;
+  border-radius: var(--raio-pequeno);
+  background: transparent;
+  transition: background-color var(--dur-rapida) var(--curva-padrao);
+}
+
+.situacao__total:hover {
+  background: var(--cor-superficie-hover);
+}
+
+.situacao__rotulo {
+  font-size: var(--txt-sm);
+  color: var(--cor-texto-sub);
+}
+
+.situacao__total:hover .situacao__rotulo {
+  color: var(--cor-texto);
+}
+
+.situacao__valor {
+  font-family: var(--fonte-mono);
+  font-size: var(--txt-sm);
+  font-weight: var(--peso-forte);
+  color: var(--cor-texto);
+}
+
+.situacao__pct {
+  font-family: var(--fonte-mono);
+  font-size: var(--txt-xs);
+  color: var(--cor-texto-fraco);
+  text-align: right;
+}
+
+.situacao__sistemas {
+  margin-top: auto;
+  padding-top: var(--sp-3);
+  border-top: 0;
+}
+
+.situacao__sistemas-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: var(--sp-2);
+}
+
+.situacao__sistemas-head .situacao__subtitulo {
+  margin: 0;
+}
+
+.situacao__ver-todos {
+  font-size: var(--txt-xs);
+  color: var(--cor-texto-sub);
+}
+
+.situacao__ver-todos:hover {
+  color: var(--cor-texto);
+}
+
+.situacao__sistema {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "nome  conta"
+    "trilho pct";
+  align-items: center;
+  gap: 5px 12px;
+  padding: 6px 8px;
+  margin-inline: -8px;
+  width: calc(100% + 16px);
+  text-align: left;
+}
+
+.situacao__sistema-trilho {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--cor-texto) 8%, transparent);
+  overflow: hidden;
+}
+
+.situacao__sistema-barra {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--cor-accent);
+}
+
+/* Subgrid / Gaveta de listas do Resumo (sem scroll duplo, com filtro instantaneo) */
+.drawer-panel:has(.gaveta-lista) {
+  width: min(780px, 94vw);
+  max-height: min(86vh, 760px);
+}
+
+.drawer-body:has(> .gaveta-lista) {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.gaveta-lista {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.gaveta-lista__topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-6);
+  border-bottom: 1px solid var(--cor-borda);
+  background: var(--cor-superficie);
+}
+
+.gaveta-lista__ajuda {
+  margin: 0;
+  flex: 1 1 240px;
+  font-size: var(--txt-xs);
+  color: var(--cor-texto-sub);
+}
+
+.gaveta-lista__busca-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 0 1 280px;
+  margin-left: auto;
+}
+
+.gaveta-lista__busca-wrap[hidden] {
+  display: none !important;
+}
+
+.gaveta-lista__busca {
+  flex: 1;
+  min-width: 160px;
+  height: 32px;
+  padding: 4px 10px;
+  font-size: var(--txt-sm);
+  border: 1px solid var(--cor-borda-campo);
+  border-radius: var(--raio-pequeno);
+  background: var(--cor-campo);
+  color: var(--cor-texto);
+}
+
+.gaveta-lista__contagem {
+  flex: 0 0 auto;
+  font-family: var(--fonte-mono);
+  font-size: var(--txt-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto-fraco);
+  white-space: nowrap;
+}
+
+.gaveta-lista__tabela {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.gaveta-lista__tabela > div {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.gaveta-lista__tabela .table-wrap {
+  flex: 1;
+  max-height: calc(86vh - 140px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.gaveta-lista__tabela .data-table th:first-child,
+.gaveta-lista__tabela .data-table td:first-child {
+  padding-left: var(--sp-6);
+}
+
+.gaveta-lista__tabela .data-table th:last-child,
+.gaveta-lista__tabela .data-table td:last-child {
+  padding-right: var(--sp-6);
+}
+
+.gaveta-lista__tabela .tabela-link {
+  display: inline-block;
+  max-width: 310px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--peso-medio);
+  color: var(--cor-texto);
+}
+
+.gaveta-lista__tabela .tabela-link:hover {
+  color: var(--cor-accent);
+}
+
+.gaveta-lista__cidade {
+  display: inline-block;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cor-texto-sub);
+  font-size: var(--txt-xs);
+}
+
+.gaveta-lista__mono {
+  font-family: var(--fonte-mono);
+  font-size: var(--txt-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--cor-texto-sub);
+}
+
+.gaveta-lista__badge {
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.gaveta-lista__proporcao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 110px;
+  font-family: var(--fonte-mono);
+  font-size: var(--txt-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.gaveta-lista__proporcao-trilho {
+  width: 56px;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--cor-texto) 10%, transparent);
+  overflow: hidden;
+}
+
+.gaveta-lista__proporcao-barra {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--cor-accent);
+}
+
+.situacao__cliente-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: calc(100% + 16px);
+  margin-inline: -8px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--raio-pequeno);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--txt-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-rapida) var(--curva-padrao);
+}
+
+.situacao__cliente-item:hover {
+  background: var(--cor-superficie-hover);
+}
+
+.situacao__cliente-nome {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--cor-texto-sub);
+}
+
+.situacao__cliente-dias {
+  flex: 0 0 auto;
+  font-family: var(--fonte-mono);
+  font-size: var(--txt-xs);
+  color: var(--cor-texto-fraco);
 }
 
 .situacao__sistema-trilho,
@@ -1996,11 +2339,9 @@
   stroke-width: 3;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bar-chart__fill {
-    transform: scaleX(1);
-    transition: none;
-  }
+:root[data-movimento="reduzido"] .bar-chart__fill {
+  transform: scaleX(1);
+  transition: none;
 }
 
 /* ==========================================================================
@@ -2167,5 +2508,249 @@
   .cfg-lateral .sobre__indice button.is-atual::before {
     content: none;
   }
+}
+
+/* ==========================================================================
+   SISTEMA GLOBAL DE MOTION & MICRO-INTERACOES (SPRING / EXPO-OUT)
+   ========================================================================== */
+
+:root {
+  --curva-padrao: cubic-bezier(0.22, 1, 0.36, 1);
+  --curva-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --curva-saida: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* 1. Entrada e troca de pagina / abas com cascata suave (stagger) */
+@keyframes view-enter-smooth {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.994);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes block-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.view.is-entering,
+.tela-abas__painel.is-entering {
+  animation: view-enter-smooth 260ms var(--curva-spring) both;
+}
+
+.view.is-entering > * {
+  animation: block-rise 320ms var(--curva-spring) both;
+}
+
+.view.is-entering > *:nth-child(1) { animation-delay: 0ms; }
+.view.is-entering > *:nth-child(2) { animation-delay: 40ms; }
+.view.is-entering > *:nth-child(3) { animation-delay: 80ms; }
+.view.is-entering > *:nth-child(4) { animation-delay: 115ms; }
+
+.view.is-entering .stat-tiles > .stat-tile {
+  animation: block-rise 320ms var(--curva-spring) both;
+}
+.view.is-entering .stat-tiles > .stat-tile:nth-child(1) { animation-delay: 15ms; }
+.view.is-entering .stat-tiles > .stat-tile:nth-child(2) { animation-delay: 50ms; }
+.view.is-entering .stat-tiles > .stat-tile:nth-child(3) { animation-delay: 85ms; }
+.view.is-entering .stat-tiles > .stat-tile:nth-child(4) { animation-delay: 120ms; }
+
+/* 2. Abertura de formularios, gavetas, subgrids e modais */
+.drawer-backdrop {
+  transition: opacity 220ms var(--curva-spring),
+              visibility 220ms var(--curva-spring);
+}
+
+.drawer-panel {
+  transform: translateY(14px) scale(0.965);
+  opacity: 0;
+  transition: transform 280ms var(--curva-spring),
+              opacity 200ms var(--curva-padrao);
+}
+
+.drawer-backdrop.is-open .drawer-panel {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.drawer-backdrop.is-open .drawer-body .field,
+.drawer-backdrop.is-open .drawer-body .form-grid > *,
+.drawer-backdrop.is-open .gaveta-lista__topo,
+.drawer-backdrop.is-open .gaveta-lista__tabela {
+  animation: block-rise 280ms var(--curva-spring) both;
+}
+
+.drawer-backdrop.is-open .gaveta-lista__topo { animation-delay: 35ms; }
+.drawer-backdrop.is-open .gaveta-lista__tabela { animation-delay: 70ms; }
+
+@keyframes modal-spring-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-box,
+.cmdk {
+  animation: modal-spring-in 260ms var(--curva-spring) both;
+}
+
+/* 3. Linhas de grids e subgrids entrando em cascata e hover fluido */
+.data-table tbody tr[data-key] {
+  animation: row-enter 220ms var(--curva-spring) both;
+  animation-delay: calc(var(--row-idx, 0) * 14ms);
+  transition: background-color 140ms var(--curva-padrao),
+              transform 140ms var(--curva-padrao);
+}
+
+.gaveta-lista__tabela .data-table tbody tr[data-key]:hover {
+  background-color: var(--cor-superficie-hover);
+}
+
+/* 4. Graficos vivos: linha desenhando progresivamente e barras suaves */
+@keyframes line-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes area-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.line-chart__linha {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: line-draw 680ms var(--curva-spring) both;
+}
+
+.line-chart__area {
+  animation: area-fade 520ms var(--curva-padrao) 100ms both;
+}
+
+.situacao__parte,
+.situacao__sistema-barra,
+.gaveta-lista__proporcao-barra {
+  transform-origin: left center;
+  animation: bar-grow 520ms var(--curva-spring) both;
+}
+
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* 5. Feedback tatil ao clicar ou passar o mouse em botoes, abas, filtros e cards */
+.btn,
+.tab-button,
+.tela-abas__aba,
+.filtro-rapido,
+.chip,
+.situacao__total,
+.situacao__sistema,
+.bar-chart__row--acao,
+.kanban-card {
+  transition: background-color 150ms var(--curva-padrao),
+              border-color 150ms var(--curva-padrao),
+              color 150ms var(--curva-padrao),
+              box-shadow 160ms var(--curva-spring),
+              transform 150ms var(--curva-spring);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.965);
+  transition-duration: 60ms;
+}
+
+.tab-button:hover:not(.is-active),
+.tela-abas__aba:hover:not(.is-active) {
+  transform: translateX(2px);
+}
+
+.tab-button:active,
+.tela-abas__aba:active,
+.filtro-rapido:active,
+.situacao__total:active,
+.situacao__sistema:active,
+.bar-chart__row--acao:active {
+  transform: scale(0.985);
+  transition-duration: 60ms;
+}
+
+.situacao__total:hover,
+.situacao__sistema:hover,
+.bar-chart__row--acao:hover {
+  transform: translateX(2px);
+}
+
+.kanban-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--cor-borda-forte);
+}
+
+.kanban-card:active {
+  transform: scale(0.985);
+}
+
+/* Campos de formulario com foco suave */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  transition: border-color 150ms var(--curva-padrao),
+              background-color 150ms var(--curva-padrao),
+              box-shadow 180ms var(--curva-spring);
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+select:focus,
+textarea:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cor-accent) 16%, transparent);
+}
+
+/* Menus suspensos e acordeoes (<details>) */
+details > summary + * {
+  animation: block-rise 200ms var(--curva-spring) both;
+}
+
+:root[data-movimento="reduzido"] .view.is-entering,
+:root[data-movimento="reduzido"] .tela-abas__painel.is-entering,
+:root[data-movimento="reduzido"] .view.is-entering > *,
+:root[data-movimento="reduzido"] .view.is-entering .stat-tiles > .stat-tile,
+:root[data-movimento="reduzido"] .data-table tbody tr[data-key],
+:root[data-movimento="reduzido"] .line-chart__linha,
+:root[data-movimento="reduzido"] .line-chart__area,
+:root[data-movimento="reduzido"] .situacao__parte,
+:root[data-movimento="reduzido"] .situacao__sistema-barra,
+:root[data-movimento="reduzido"] .gaveta-lista__proporcao-barra {
+  animation: none !important;
 }
 

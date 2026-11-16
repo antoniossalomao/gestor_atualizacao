@@ -161,8 +161,8 @@ export function acoesClienteCampanha(row, { role, encerrada, podeRetirar = false
   if (role !== "consulta") botoes.push(["acessos", "acessos", "Gerenciar acessos remotos"]);
   botoes.push(["ficha", "olho", "Abrir ficha do cliente"]);
   if (role !== "consulta" && !encerrada && podeRetirar) botoes.push(["remover", "fechar", "Retirar da campanha"]);
-  return html`<div class="row-actions">${botoes.map(
-    ([acao, ico, titulo]) => html`<button type="button" class="btn btn--icon" data-row-action="${acao}" data-id="${row.id}" title="${titulo}" aria-label="${titulo}: ${row.nome}">${iconeHtml(ico)}</button>`
+  return html`<div class="row-actions" style="display:inline-flex;gap:4px;align-items:center;">${botoes.map(
+    ([acao, ico, titulo]) => html`<button type="button" class="btn btn--icon" data-row-action="${acao}" data-id="${row.id}" title="${titulo}" aria-label="${titulo}: ${row.nome}" style="min-width:30px;min-height:30px;padding:4px;border-radius:var(--radius-sm, 4px);">${iconeHtml(ico)}</button>`
   )}</div>`;
 }
 
@@ -220,15 +220,15 @@ export function filtrosEscolhaClientes(opcoes, filtros, { podeFiltrarQuemFalta }
  */
 export function blocoEscolhaClientes({ oculto = false } = {}) {
   return html`
-    <div class="field campanha-escolha" data-role="escolha" ${oculto ? html`hidden` : ""}>
-      <div class="campanha-escolha__barra">
-        <input class="input" type="search" data-role="busca-escolha" autocomplete="off" placeholder="Buscar cliente, código ou cidade" aria-label="Buscar cliente, código ou cidade" />
+    <div class="field campanha-escolha" data-role="escolha" ${oculto ? html`hidden` : ""} style="background:var(--bg-card-alt, rgba(0,0,0,0.02));padding:var(--sp-3, 12px);border-radius:var(--radius, 6px);border:1px solid var(--border-subtle, rgba(0,0,0,0.08));">
+      <div class="campanha-escolha__barra" style="display:flex;gap:var(--sp-2, 8px);align-items:center;margin-bottom:var(--sp-2, 8px);">
+        <input class="input" type="search" data-role="busca-escolha" autocomplete="off" placeholder="Buscar cliente, código ou cidade" aria-label="Buscar cliente, código ou cidade" style="flex:1;" />
         <button type="button" class="btn btn--small" data-action="marcar-visiveis">Marcar os visíveis</button>
         <button type="button" class="btn btn--small" data-action="limpar-escolha">Limpar</button>
       </div>
-      <div class="campanha-escolha__filtros" data-role="filtros-escolha"></div>
-      <div class="campanha-escolha__lista" data-role="lista-escolha" role="group" aria-label="Clientes da campanha"></div>
-      <div class="field__help" data-role="contagem-escolha" aria-live="polite"></div>
+      <div class="campanha-escolha__filtros" data-role="filtros-escolha" style="display:flex;flex-wrap:wrap;gap:var(--sp-2, 8px);margin-bottom:var(--sp-2, 8px);"></div>
+      <div class="campanha-escolha__lista" data-role="lista-escolha" role="group" aria-label="Clientes da campanha" style="max-height:220px;overflow-y:auto;border:1px solid var(--border, #ccc);border-radius:var(--radius-sm, 4px);padding:var(--sp-2, 8px);background:var(--bg, #fff);"></div>
+      <div class="field__help" data-role="contagem-escolha" aria-live="polite" style="margin-top:var(--sp-2, 8px);"></div>
     </div>`;
 }
 

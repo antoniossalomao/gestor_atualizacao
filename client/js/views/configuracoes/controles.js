@@ -52,7 +52,7 @@ function linha({ titulo, ajuda, id }) {
     <div class="cfg-group__labels">
       <div class="cfg-group__title-row">
         <label class="cfg-group__title" id="cfg-titulo-${id}">${titulo}</label>
-        <span class="cfg-group__selo" hidden>alterado</span>
+        <span class="cfg-group__selo" hidden>Personalizado</span>
       </div>
       ${ajuda && html`<p class="cfg-group__help" id="cfg-help-${id}">${ajuda}</p>`}
     </div>`.toString();

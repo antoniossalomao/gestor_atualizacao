@@ -116,6 +116,7 @@ export class IntegracoesAdmin extends FormularioRegras {
   }
 
   async _testarDiscord(botao) {
+    if (!this._validarUrl("discordWebhookUrl", true)) return;
     const url = this.form.querySelector('[data-regra="discordWebhookUrl"]')?.value?.trim();
     const liberar = marcarOcupado(botao);
     try {
@@ -126,7 +127,46 @@ export class IntegracoesAdmin extends FormularioRegras {
       avisoRapido.erro(mensagem(err));
     } finally {
       liberar();
+      this._atualizarEstado();
     }
+  }
+
+  _atualizarEstado() {
+    super._atualizarEstado();
+    const campo = this.form.querySelector('[data-regra="discordWebhookUrl"]');
+    const botao = this.form.querySelector('[data-action="testar-discord"]');
+    const vazio = !campo.value.trim();
+    botao.disabled = vazio || botao.dataset.ocupado === "1";
+    botao.textContent = vazio ? "Preencha o webhook para testar" : "Testar URL digitada";
+    botao.title = vazio ? "Informe a URL do webhook do Discord antes de enviar um teste." : "Testa a URL digitada; não salva a configuração.";
+  }
+
+  _validarUrl(nome, obrigatoria = false) {
+    const campo = /** @type {HTMLInputElement} */ (this.form.querySelector(`[data-regra="${nome}"]`));
+    const valor = campo.value.trim();
+    let valida = !valor && !obrigatoria;
+    if (valor) {
+      try {
+        const url = new URL(valor);
+        valida = ["https:", "http:"].includes(url.protocol) && Boolean(url.hostname);
+      } catch { valida = false; }
+    }
+    campo.setCustomValidity(valida ? "" : "Informe uma URL completa, começando por http:// ou https://.");
+    campo.setAttribute("aria-invalid", String(!valida));
+    campo.oninput = () => {
+      campo.setCustomValidity("");
+      campo.removeAttribute("aria-invalid");
+    };
+    if (!valida) {
+      campo.focus();
+      campo.reportValidity();
+    }
+    return valida;
+  }
+
+  async _salvar() {
+    if (!this._validarUrl("discordWebhookUrl") || !this._validarUrl("publicUrl")) return;
+    await super._salvar();
   }
 
   aposSalvar(mudou) {

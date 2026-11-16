@@ -213,6 +213,15 @@ export class AdministracaoView extends View {
       this._limparBusca();
       this._irParaItem(alvo.dataset.aba, alvo.dataset.ajuste);
     });
+    this.resultados.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      const itens = [...this.resultados.querySelectorAll(".cfg-resultado")];
+      const i = itens.indexOf(/** @type {Element} */ (document.activeElement));
+      if (i === -1) return;
+      e.preventDefault();
+      if (e.key === "ArrowUp" && i === 0) campo.focus();
+      else /** @type {HTMLElement} */ (itens[Math.min(itens.length - 1, Math.max(0, i + (e.key === "ArrowDown" ? 1 : -1)))]).focus();
+    });
   }
 
   _limparBusca() {
@@ -233,7 +242,11 @@ export class AdministracaoView extends View {
     destaque.classList.remove("is-destacado");
     void /** @type {HTMLElement} */ (destaque).offsetWidth;
     destaque.classList.add("is-destacado");
-    if (alvo instanceof HTMLElement && typeof alvo.focus === "function") alvo.focus({ preventScroll: true });
+    const seletorControle = 'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href]';
+    const controle = /** @type {HTMLElement|null} */ (alvo.matches(seletorControle) ? alvo : alvo.querySelector(seletorControle));
+    const foco = controle || alvo;
+    if (!controle) foco.setAttribute("tabindex", "-1");
+    foco.focus({ preventScroll: true });
   }
 
   destroy() {

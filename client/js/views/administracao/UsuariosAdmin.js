@@ -103,6 +103,10 @@ export class UsuariosAdmin extends View {
 
     this.container.querySelector('[data-action="nova"]').addEventListener("click", () => {
       this.form.reset();
+      for (const input of this.form.querySelectorAll("input")) {
+        input.setCustomValidity("");
+        input.removeAttribute("aria-invalid");
+      }
       this.drawer.marcarLimpa();
       this.drawer.abrir({ foco: this.form.querySelector('[data-field="nome"]') });
     });
@@ -158,6 +162,26 @@ export class UsuariosAdmin extends View {
 
   async _criar() {
     const campo = (nome) => this.form.querySelector(`[data-field="${nome}"]`);
+    let primeiroInvalido = null;
+    for (const nome of ["nome", "usuario", "senha"]) {
+      const input = campo(nome);
+      const mensagem = !input.value.trim()
+        ? "Preencha este campo."
+        : nome === "senha" && input.value.length < SENHA_MINIMA
+          ? `A senha precisa de pelo menos ${SENHA_MINIMA} caracteres.` : "";
+      input.setCustomValidity(mensagem);
+      input.setAttribute("aria-invalid", String(Boolean(mensagem)));
+      if (mensagem && !primeiroInvalido) primeiroInvalido = input;
+      input.oninput = () => {
+        input.setCustomValidity("");
+        input.removeAttribute("aria-invalid");
+      };
+    }
+    if (primeiroInvalido) {
+      primeiroInvalido.focus();
+      primeiroInvalido.reportValidity();
+      return;
+    }
     const dados = {
       nome: campo("nome").value.trim(),
       usuario: campo("usuario").value.trim(),
@@ -313,7 +337,8 @@ export class UsuariosAdmin extends View {
       Modal.alert("Não foi possível trocar o nome", mensagem(err), "warning");
     } finally {
       liberar();
-      c.salvarNome.disabled = true;
+      const nome = c.nome.value.trim().replace(/\s+/g, " ");
+      c.salvarNome.disabled = !nome || nome === this.alvo?.nome;
     }
   }
 

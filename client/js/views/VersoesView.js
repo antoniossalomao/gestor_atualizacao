@@ -41,6 +41,7 @@ export class VersoesView extends View {
   _montarDom() {
     this.container.innerHTML = `
       <div class="toolbar versions-toolbar">
+        <button type="button" class="btn btn--accent btn--small" data-action="focar-preparo">${iconeSvg("plus")} Nova versão</button>
         <div class="toolbar-spacer"></div>
         <button type="button" class="btn btn--small btn--ghost" data-action="refresh">${iconeSvg("atualizar")} Atualizar dados</button>
       </div>
@@ -205,6 +206,10 @@ export class VersoesView extends View {
     });
     this.pilotSearch.addEventListener("input", () => this._desenharSeletorDePiloto());
     this.container.querySelector('[data-action="add-changelog-item"]').addEventListener("click", () => this._adicionarItemDeNovidades("", true));
+    this.container.querySelector('[data-action="focar-preparo"]')?.addEventListener("click", () => {
+      this.systemSelect?.focus();
+      this.form?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
     this._reiniciarNovidades();
     this.container.querySelector('[data-action="refresh"]').addEventListener("click", () => this.refresh(true));
     this.container.querySelector('[data-role="search"]').addEventListener("input", (event) => {

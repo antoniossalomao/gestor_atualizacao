@@ -83,7 +83,28 @@ export class HistoricoView extends View {
         { key: "usuario_nome", label: "Quem" },
         { key: "acaoLabel", label: "Ação", render: (row) => badgeAcao(row.acao, row.acaoLabel) },
         { key: "entidadeLabel", label: "Tipo", render: (row) => badgeEntidade(row.entidadeLabel) },
-        { key: "descricao", label: "Descrição" },
+        { key: "descricao", label: "Descrição", render: (row) => {
+          const conteudo = document.createElement("div");
+          const descricao = document.createElement("span");
+          descricao.textContent = row.descricao;
+          conteudo.appendChild(descricao);
+          if (row.detalhes_json) {
+            const botao = document.createElement("button");
+            botao.type = "button";
+            botao.className = "btn btn--small btn--ghost";
+            botao.textContent = "Ver alterações";
+            botao.setAttribute("aria-label", `Ver alterações: ${row.descricao}`);
+            botao.addEventListener("keydown", (e) => e.stopPropagation());
+            botao.addEventListener("click", () => this._abrirDiff(row));
+            conteudo.appendChild(botao);
+          } else {
+            const estado = document.createElement("small");
+            estado.className = "text-muted";
+            estado.textContent = " — Sem detalhes de alteração";
+            conteudo.appendChild(estado);
+          }
+          return conteudo;
+        } },
       ],
       selectable: true,
       onSelect: (row) => this._abrirDiff(row),
@@ -217,9 +238,18 @@ export class HistoricoView extends View {
   }
 
   _abrirDiff(row) {
-    if (!row.detalhes_json) return;
+    if (!row.detalhes_json) {
+      Modal.alert("Sem detalhes de alteração", "Este registro não possui uma comparação de antes e depois.", "info");
+      return;
+    }
     let detalhes;
-    try { detalhes = JSON.parse(row.detalhes_json); } catch { return; }
+    try {
+      detalhes = JSON.parse(row.detalhes_json);
+      if (!detalhes || typeof detalhes !== "object" || Array.isArray(detalhes)) throw new Error("Detalhes inválidos");
+    } catch {
+      Modal.alert("Detalhes indisponíveis", "Não foi possível ler os detalhes desta alteração.", "warning");
+      return;
+    }
     const antes = detalhes.antes || {};
     const depois = detalhes.depois || {};
     const chaves = [...new Set([...Object.keys(antes), ...Object.keys(depois)])].filter((chave) => !["id", "criadoEm", "atualizadoEm", "revisao"].includes(chave));

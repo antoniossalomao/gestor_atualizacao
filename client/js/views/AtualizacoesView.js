@@ -143,10 +143,10 @@ export class AtualizacoesView extends View {
           Sem coluna de caixinhas, o Shift+clique não tem NENHUM indício visual
           na tabela -- é um gesto que ninguém adivinha sozinho. Esta linha é a
           única pista de que ele existe (a lista de atalhos, aberta com "?",
-          também o documenta -- ver atalhos.js). Fica sempre visível, mas
-          discreta: uma frase, não um card chamando atenção.
+          também o documenta -- ver atalhos.js). Fica compacta e discreta acima
+          da tabela, sem roubar respiro vertical.
         -->
-        <p class="text-muted bulk-hint">
+        <p class="text-muted bulk-hint" style="margin: var(--sp-1) 0 var(--sp-2) 0; font-size: var(--txt-xs); line-height: 1.4; opacity: 0.85;">
           Dica: segure <kbd>Shift</kbd> e clique em duas linhas para selecionar tudo entre elas.
         </p>
         <!--
@@ -545,6 +545,8 @@ export class AtualizacoesView extends View {
 
   async _recarregarLista() {
     this.table.definirRecarregando(true);
+    const tableContainer = this.table?.container || this.container.querySelector('[data-role="table"]');
+    if (tableContainer) tableContainer.setAttribute("aria-busy", "true");
     try {
       const resposta = await this.swr(
         this._chaveLista(),
@@ -580,6 +582,7 @@ export class AtualizacoesView extends View {
         return this._recarregarLista();
       }
     } finally {
+      if (tableContainer) tableContainer.removeAttribute("aria-busy");
       this.table.definirRecarregando(false);
     }
   }
