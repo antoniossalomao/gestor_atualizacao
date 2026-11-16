@@ -15,6 +15,11 @@ Para o agente C#, o equivalente é
 
 ### Novembro de 2026
 
+- **Documentação de Implantação e Atualização em Produção (Windows Nativo / NSSM) (16/11/2026):**
+  - Adicionado guia completo no `README.md` e `docs/OPERACAO.md` para hospedagem em Máquinas Virtuais (VMs) na nuvem ou ambientes sem suporte a virtualização aninhada (*Nested virtualization is not available* no Docker Desktop).
+  - Arquitetura nativa documentada com Node.js local (porta `3000`) e Caddy Server nativo para HTTPS (porta `443`), gerenciados via NSSM como serviços Windows automáticos (`GestorApp` e `GestorProxy`).
+  - Procedimento operacional padrão de atualização de versão no servidor Windows nativo, com backup preventivo do `gestao.db`, cuidados com `.env`/`data/` e migrações automáticas de schema.
+
 - **Frequência em 60 dias, filtros na gaveta, validações e acessibilidade (16/11/2026 — PR #34):**
   - *Resumo*: cartão de frequência atualizado para janela de **60 dias**, exibição dos sistemas com mais pendências (e modal/lista *Ver todos*), destaque semântico para clientes sem atualização e filtro instantâneo nas gavetas de listas rápidas.
   - *Administração*: salvamento explícito por bloco em *Operação* (prazos e classificações) com aviso de sistemas ocultos pelo filtro; validação instantânea de URLs e botão *Testar URL digitada* em *Integrações*.

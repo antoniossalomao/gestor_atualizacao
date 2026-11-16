@@ -305,12 +305,12 @@ A restauração de backup conta com proteção operacional reforçada:
 ## Implantação (deixar acessível para a equipe)
 
 Na rede, o painel **só atende por HTTPS** (decisão de 29/09/2026, registrada no
-[ADR-0010](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0010)). O caminho é o
-Docker: o `docker-compose.yml` sobe o painel e, na frente dele, um proxy
-[Caddy](https://caddyserver.com/) que cuida do certificado. Ver
-[Rodar em Docker](#rodar-em-docker) e [HTTPS](#https).
+[ADR-0010](docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0010)). Há dois caminhos suportados em produção:
 
-`npm start` e `npm run dev` fora do Docker atendem em HTTP puro, e **só na
+1. **Docker (Recomendado para servidores com virtualização completa):** sobe o painel e o proxy Caddy em containers isolados via `docker compose`. Ver [Rodar em Docker](#rodar-em-docker) e [HTTPS](#https).
+2. **Windows Nativo com NSSM (Recomendado para Máquinas Virtuais / VMs sem virtualização aninhada):** sobe o Node.js e o Caddy diretamente no Windows gerenciados como Serviços do Windows. Ver [Windows Nativo com NSSM](#hospedagem-em-produção-windows-nativo-com-nssm-sem-docker).
+
+`npm start` e `npm run dev` fora do Docker e sem proxy atendem em HTTP puro, e **só na
 própria máquina** (`http://localhost:3000`): os outros PCs recebem "conexão
 recusada". Isso é para quem desenvolve, não para a equipe usar.
 
@@ -498,6 +498,125 @@ agentes" passa a ser `https://` + o `GESTOR_ENDERECO`. Os agentes C# que
 apontavam para `http://IP:3000` param de alcançar o painel; ao reativar o
 Atualizador, cada um precisa do endereço novo no `atualizador.ini` e da raiz
 instalada na máquina do cliente.
+
+## Hospedagem em Produção: Windows Nativo com NSSM (Sem Docker)
+
+Quando o servidor onde o painel vai rodar é uma **Máquina Virtual (VM)** na nuvem ou Hyper-V/ESXi local sem suporte a virtualização aninhada (*"Nested virtualization is not available"* no Docker Desktop), o sistema pode ser hospedado de forma **100% nativa no Windows**, sem Docker e com baixo consumo de recursos.
+
+A arquitetura de segurança é rigorosamente a mesma do Docker: o **Node.js** roda o servidor localmente (porta interna `3000`), e o executável nativo do **Caddy** atende a rede na porta `443` com HTTPS (`tls internal`), encaminhando o tráfego para `127.0.0.1:3000`. O **NSSM** (Non-Sucking Service Manager) registra e monitora os dois processos como Serviços do Windows, garantindo que subam sozinhos no boot do servidor (mesmo sem logon) e reiniciem em caso de falha.
+
+### 1. Pré-requisitos no Servidor Windows
+Abra o **PowerShell como Administrador** no servidor e instale os componentes:
+```powershell
+# 1. Node.js LTS (v22)
+winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
+
+# 2. Caddy Server (proxy reverso HTTPS)
+winget install CaddyServer.Caddy --accept-package-agreements --accept-source-agreements
+
+# 3. NSSM (gerenciador de serviços Windows)
+winget install nssm --accept-package-agreements --accept-source-agreements
+```
+*(Feche e reabra o PowerShell após a instalação para recarregar o PATH).*
+
+### 2. Estrutura de Pastas e Instalação de Dependências
+Copie os arquivos do projeto para o diretório de destino (recomendado: `C:\gestor`). No PowerShell:
+```powershell
+# Habilita execução de scripts no PowerShell (caso bloqueado)
+Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+
+# Instala as dependências do servidor
+cd C:\gestor
+npm.cmd run install:all
+```
+
+### 3. Configurar o `server/.env`
+Crie ou edite `C:\gestor\server\.env`:
+```env
+PORT=3000
+DB_PATH=./data/gestao.db
+
+# Segredo de sessão (gerar com: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
+SESSION_SECRET=coloque-um-segredo-forte-e-aleatorio-aqui
+
+# No Windows nativo com Caddy local, ative ambos:
+SESSION_SECURE=true
+TRUST_PROXY=true
+
+# Endereço HTTPS pelo qual a rede/agentes acessam o servidor:
+PUBLIC_URL=https://192.168.0.109
+
+# Token compartilhado com os agentes do Atualizador:
+AGENT_API_TOKEN=coloque-um-token-forte-aqui
+```
+
+### 4. Configurar o `proxy/Caddyfile`
+Em `C:\gestor\proxy\Caddyfile`, aponte o `reverse_proxy` para `127.0.0.1:3000` (Node local):
+```caddy
+{
+	auto_https disable_redirects
+	default_sni 192.168.0.109
+}
+
+# Endereços permitidos (nome DNS e/ou IP do servidor)
+gestoratualizacao, 192.168.0.109 {
+	tls internal
+	reverse_proxy 127.0.0.1:3000
+}
+```
+
+### 5. Registrar os Serviços no Windows via NSSM
+No PowerShell como Administrador:
+```powershell
+# 1. Serviço do Node.js (GestorApp)
+nssm install GestorApp "C:\Program Files\nodejs\node.exe" "C:\gestor\server\server.js"
+nssm set GestorApp AppDirectory "C:\gestor\server"
+nssm start GestorApp
+
+# 2. Serviço do Caddy (GestorProxy)
+nssm install GestorProxy "caddy" "run --config C:\gestor\proxy\Caddyfile"
+nssm set GestorProxy AppDirectory "C:\gestor\proxy"
+nssm start GestorProxy
+```
+
+> **Atenção:** No `GestorApp`, certifique-se de que os parâmetros apontem para o caminho completo `C:\gestor\server\server.js` e o diretório seja `C:\gestor\server`. Se apontar para `C:\gestor\server.js`, o Node falha na subida com `Cannot find module`.
+
+### 6. Instalar o Certificado Raiz nos Computadores
+O Caddy cria sua autoridade certificadora na primeira subida. No servidor, copie o arquivo para `C:\gestor\caddy-raiz.crt`:
+```powershell
+$cert = Get-ChildItem -Path "$env:AppData\Caddy", "C:\Windows\System32\config\systemprofile\AppData\Roaming\Caddy" -Filter "root.crt" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+Copy-Item $cert.FullName "C:\gestor\caddy-raiz.crt"
+```
+Em seguida, instale no repositório de Autoridades Raiz Confiáveis da máquina (e das máquinas dos usuários da rede):
+```powershell
+certutil -addstore -f Root "C:\gestor\caddy-raiz.crt"
+```
+Feche e reabra o navegador: o cadeado HTTPS ficará verde/ativo sem nenhum aviso de segurança.
+
+### 7. Como Atualizar o Código em Produção (Windows Nativo)
+Sempre que houver uma nova versão do painel pronta para subir no servidor:
+
+```powershell
+# 1. No servidor, faça um backup preventivo do banco SQLite atual:
+Copy-Item "C:\gestor\server\data\gestao.db" "C:\gestor\server\data\gestao-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss').db"
+
+# 2. Pare o serviço do Gestor (libera arquivos em uso):
+nssm stop GestorApp
+
+# 3. Copie os novos arquivos do projeto para C:\gestor\
+# ATENÇÃO: NÃO sobrescreva nem apague:
+#   - C:\gestor\server\data\ (banco de dados e backups)
+#   - C:\gestor\server\.env (senhas e configurações)
+#   - C:\gestor\proxy\Caddyfile (configuração do HTTPS)
+
+# 4. Atualize dependências (se houver novas bibliotecas):
+cd C:\gestor
+npm.cmd run install:all
+
+# 5. Inicie o serviço novamente:
+nssm start GestorApp
+```
+*(As migrações de schema do SQLite rodam sozinhas na inicialização. Dê `Ctrl + F5` no navegador para atualizar o cache).*
 
 ## Limitações conhecidas
 

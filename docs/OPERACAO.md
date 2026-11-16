@@ -21,6 +21,7 @@ Os comandos assumem que você está no servidor onde o painel roda, na pasta
 | Faixa vermelha "Sem conexão com o servidor" no alto, ou aviso amarelo "Não foi possível atualizar" numa tela | [Servidor fora do ar](#servidor-fora-do-ar) (se o aviso diz "erro ao buscar os dados", veja o log do `gestor`) |
 | "Ninguém consegue entrar" | [Ninguém consegue entrar](#ninguém-consegue-entrar) |
 | "Esqueci minha senha" | [Recuperar acesso](#recuperar-acesso-de-uma-conta) |
+| "Preciso atualizar o painel para a versão nova" | [Atualizar versão do painel](#atualizar-versão-do-painel) |
 | "O cliente X não está atualizando" | [Agente parado](#um-agente-parou-de-atualizar) |
 | "Sumiu/está errado um registro" | [Restaurar backup](#restaurar-um-backup) |
 | "A página abre em branco" | [Página em branco](#página-em-branco-ou-sem-estilo) |
@@ -62,7 +63,31 @@ Os dois somem sozinhos quando o servidor volta.
    | `SQLITE_CANTOPEN` | caminho do `DB_PATH` errado | conferir `server/.env` (no Docker, deixe o padrão) |
    | `SQLITE_BUSY` / `database is locked` | duas instâncias abrindo o mesmo banco | garantir que ninguém está com `npm start` aberto no mesmo banco |
 
-4. **Nome não encontrado** ("não foi possível encontrar o endereço IP do
+4. **No Windows Nativo (sem Docker, via NSSM):**
+   - **Os serviços estão rodando?**
+     ```powershell
+     Get-Service GestorApp, GestorProxy
+     # ou via NSSM:
+     nssm status GestorApp
+     nssm status GestorProxy
+     ```
+   - **GestorApp em pausa ou caindo na subida?** Ative os logs para inspecionar:
+     ```powershell
+     nssm set GestorApp AppStdout "C:\gestor\server\log_sucesso.log"
+     nssm set GestorApp AppStderr "C:\gestor\server\log_erro.log"
+     nssm restart GestorApp
+     Get-Content "C:\gestor\server\log_erro.log"
+     ```
+     - Se aparecer `Cannot find module 'C:\gestor\server.js'`, o caminho do script está errado. Corrija com:
+       ```powershell
+       nssm set GestorApp AppParameters "C:\gestor\server\server.js"
+       nssm set GestorApp AppDirectory "C:\gestor\server"
+       nssm restart GestorApp
+       ```
+   - **GestorProxy/Caddy devolvendo 502 / MIME type vazio no navegador:**
+     Abra `C:\gestor\proxy\Caddyfile` e verifique se o proxy aponta para `127.0.0.1:3000` (Node local) e não para `gestor:3000` (que é o nome do container no Docker).
+
+5. **Nome não encontrado** ("não foi possível encontrar o endereço IP do
    servidor"): o problema é o nome, não o painel. Confira o DNS da empresa ou
    o `hosts` daquele PC — ver "Nome em vez de IP" no README. Se funciona pelo
    IP e não pelo nome, é isto.
@@ -97,8 +122,15 @@ Quase sempre é **cookie de sessão que não chega**. Duas causas conhecidas:
 Não há envio de e-mail neste sistema — de propósito. O fator de recuperação é
 **ter acesso ao arquivo do banco**, o que só quem chega no servidor tem.
 
+**No Docker:**
 ```powershell
 docker compose exec gestor node resetar-senha.js <usuario> "<nova senha>"
+```
+
+**No Windows Nativo (NSSM):**
+```powershell
+cd C:\gestor\server
+node resetar-senha.js <usuario> "<nova senha>"
 ```
 
 Funciona mesmo para o único administrador, e não exige saber a senha antiga.
@@ -106,6 +138,43 @@ Funciona mesmo para o único administrador, e não exige saber a senha antiga.
 Se **nenhuma conta de administrador existir mais** (situação que o app tenta
 impedir: não deixa rebaixar nem excluir o último admin), a saída é restaurar um
 backup anterior — ver abaixo.
+
+---
+
+## Atualizar versão do painel
+
+Procedimento seguro para subir uma versão nova do código no servidor de produção:
+
+### No Windows Nativo (com NSSM)
+```powershell
+# 1. Backup preventivo do banco atual
+Copy-Item "C:\gestor\server\data\gestao.db" "C:\gestor\server\data\gestao-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss').db"
+
+# 2. Parar o serviço do Node para liberar os arquivos
+nssm stop GestorApp
+
+# 3. Copiar os novos arquivos do projeto para C:\gestor\
+# ATENÇÃO: NUNCA sobrescreva:
+#   - C:\gestor\server\data\ (dados, banco e pacotes)
+#   - C:\gestor\server\.env (segredos e configurações de rede)
+#   - C:\gestor\proxy\Caddyfile (configuração do HTTPS)
+
+# 4. Atualizar dependências (se houver pacotes novos)
+cd C:\gestor
+npm.cmd run install:all
+
+# 5. Iniciar o serviço novamente
+nssm start GestorApp
+```
+*(O banco de dados aplica as migrações automaticamente no arranque do `GestorApp`).*
+
+### No Docker
+Basta executar na pasta `web/`:
+```powershell
+.\deploy.ps1
+# ou dê dois cliques em deploy.bat
+```
+*(O script faz backup do banco para `..\backups-deploy`, roda `docker compose up -d --build` e aguarda o container ficar `healthy`).*
 
 ---
 
