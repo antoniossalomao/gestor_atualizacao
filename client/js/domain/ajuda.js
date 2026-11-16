@@ -48,6 +48,16 @@ export const COMO_USAR_TELAS = {
 export const NOVIDADES = [
   {
     data: "16/11/2026",
+    titulo: "Resumo em 60 dias, pendências por sistema e filtro na gaveta",
+    texto: "O cartão de frequência passou a destacar os clientes atualizados nos últimos 60 dias e exibe os sistemas com mais pendências (com opção \"Ver todos\"). As gavetas de listas rápidas ganharam o campo \"Filtrar na lista...\" com contagem de resultados.",
+  },
+  {
+    data: "16/11/2026",
+    titulo: "Teclado, validações e transições entre telas",
+    texto: "Validação imediata de URLs em Administração › Integrações, salvamento direto por bloco em Operação, edição de versão com Enter/Escape em Sistemas, navegação por setas na Ficha 360°, atalhos M e Delete no sino de notificações e transições suaves entre abas.",
+  },
+  {
+    data: "16/11/2026",
     titulo: "Administração vertical, índice lateral e busca rápida",
     texto: "A Administração adotou menu lateral vertical com filtro instantâneo por seções e regras. Todas as abas de Configurações e Administração ganharam o índice lateral \"Nesta página\" para saltar entre blocos.",
   },

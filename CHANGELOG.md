@@ -15,6 +15,11 @@ Para o agente C#, o equivalente é
 
 ### Novembro de 2026
 
+- **Frequência em 60 dias, filtros na gaveta, validações e acessibilidade (16/11/2026 — PR #34):**
+  - *Resumo*: cartão de frequência atualizado para janela de **60 dias**, exibição dos sistemas com mais pendências (e modal/lista *Ver todos*), destaque semântico para clientes sem atualização e filtro instantâneo nas gavetas de listas rápidas.
+  - *Administração*: salvamento explícito por bloco em *Operação* (prazos e classificações) com aviso de sistemas ocultos pelo filtro; validação instantânea de URLs e botão *Testar URL digitada* em *Integrações*.
+  - *Teclado, foco e CSS*: `layout.css` (antigo `dispatch.css`) com transições entre abas e suporte a subgrids, contenção de foco/`inert` no menu mobile, atalhos `M`/`Delete` no sino de notificações, setas `←`/`→`/`Home`/`End` na Ficha 360°, edição inline `Enter`/`Escape` em *Sistemas* e confirmação antes de descartar alterações em gavetas.
+
 - **Administração vertical, índice lateral global, Off-white e paginação (16/11/2026):**
   - *Administração* migrada para o mesmo layout vertical com busca instantânea de *Configurações*, mantendo a faixa de pendências no topo da coluna principal.
   - Componente reutilizável `IndicePagina` (`Nesta página`) aplicado em todas as abas de *Configurações* e *Administração*, incluindo pilha unificada com a *Prévia* em *Interface e acessibilidade*.
