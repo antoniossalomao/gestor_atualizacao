@@ -468,15 +468,12 @@
 .stat-tiles > .stat-tile:focus-visible .stat-tile__arrow,
 .stat-tiles > .stat-tile:focus-visible .stat-tile__affordance {
   opacity: 1;
-  color: var(--cor-accent);
-  background: var(--cor-accent-fraco);
-  border-color: color-mix(in srgb, var(--cor-accent) 28%, transparent);
-  transform: translate(2px, -2px);
+  color: var(--cor-texto);
 }
 
 .stat-tiles > .stat-tile:active .stat-tile__arrow,
 .stat-tiles > .stat-tile:active .stat-tile__affordance {
-  transform: translate(1px, -1px) scale(0.92);
+  opacity: 0.8;
 }
 
 .stat-tiles .stat-tile__value-row {

@@ -8024,17 +8024,18 @@ h1, h2, h3, strong {
 }
 .admin-pessoa__avatar--ponto {
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  margin-right: var(--sp-1);
-  border: 1px solid var(--cor-borda-forte);
-  vertical-align: -1px;
+  width: 7px;
+  height: 7px;
+  margin-right: 0;
+  border: 0;
+  background: var(--cor-texto-fraco);
+  vertical-align: middle;
 }
 .admin-pessoa__avatar--ponto.admin-pessoa__avatar--admin {
-  border-color: var(--cor-accent);
+  background: var(--cor-accent);
 }
 .admin-pessoa__avatar--ponto.admin-pessoa__avatar--operador {
-  border-color: var(--status-ok-solido);
+  background: var(--status-ok-solido);
 }
 
 /* Gaveta "Gerenciar conta": blocos separados por fio, a remoção por último. */
@@ -8129,13 +8130,22 @@ h1, h2, h3, strong {
   gap: var(--sp-2) var(--sp-4);
   color: var(--cor-texto-sub);
   font-size: var(--txt-sm);
+  font-variant-numeric: tabular-nums;
+}
+.admin-resumo-papeis__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 .admin-resumo-papeis strong {
   color: var(--cor-texto);
+  font-weight: var(--peso-forte);
 }
 .admin-resumo-papeis__total {
   padding-right: var(--sp-4);
   border-right: 1px solid var(--cor-borda);
+  white-space: nowrap;
 }
 .admin-papel {
   width: auto;
