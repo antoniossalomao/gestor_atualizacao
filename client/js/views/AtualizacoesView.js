@@ -177,8 +177,8 @@ export class AtualizacoesView extends View {
     // barra de rolagem. "obs" ocupava quase um quarto da tabela para
     // exibir, na prática, poucas palavras.
     const LARGURAS_ATUALIZACAO = {
-      id: "46px",
-      cliente: "20%",
+      id: "58px",
+      cliente: "19%",
       sistema: "16%",
       // Versão e Data são datas dd/mm/aaaa: abaixo de ~96px a fonte em
       // negrito corta o ano ("26/09/2..."), mesmo com espaço sobrando nas
@@ -711,16 +711,20 @@ export class AtualizacoesView extends View {
     this._pintarModo();
   }
 
-  /** Aplica o período vindo do Resumo ou abre uma nova atualização. */
-  aplicarParams({ desde, ate, novo, sistema } = {}) {
+  /** Aplica o período/responsável vindo do Resumo ou abre uma nova atualização. */
+  aplicarParams({ desde, ate, novo, sistema, responsavel } = {}) {
     // Vindo de um indicador do Resumo: não é para preencher formulário
-    // nenhum, é para FILTRAR a lista pelo período que aquele número contava.
-    // O sistema vem junto só do gráfico por sistema; os outros indicadores
-    // não o mandam, e aí ele sai -- senão o total da lista não bateria com
-    // o número clicado.
-    if (desde || ate) {
+    // nenhum, é para FILTRAR a lista pelo recorte que aquele número contava.
+    if (desde !== undefined || ate !== undefined || sistema !== undefined || responsavel !== undefined) {
+      if (responsavel !== undefined) {
+        this.responsavel = responsavel || "Todos";
+        if (this.responsavelFilter) {
+          const temOpcao = [...this.responsavelFilter.options].some((o) => o.value === this.responsavel);
+          if (temOpcao) this.responsavelFilter.value = this.responsavel;
+        }
+      }
       this.sistema = sistema || "";
-      this._aplicarPeriodo(desde, ate);
+      this._aplicarPeriodo(desde ?? "", ate ?? "");
       return;
     }
     if (novo) {
@@ -797,6 +801,7 @@ export class AtualizacoesView extends View {
       Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
+      if (this.deleteBtn && this.selectedId == null) this.deleteBtn.disabled = true;
     }
   }
 
@@ -820,6 +825,7 @@ export class AtualizacoesView extends View {
       Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
+      if (this.deleteBtn && this.selectedId == null) this.deleteBtn.disabled = true;
     }
   }
 
@@ -860,6 +866,7 @@ export class AtualizacoesView extends View {
       Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
+      if (this.deleteBtn && this.selectedId == null) this.deleteBtn.disabled = true;
     }
   }
 
@@ -933,6 +940,7 @@ export class AtualizacoesView extends View {
       Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
+      if (this.deleteBtn && this.selectedId == null) this.deleteBtn.disabled = true;
     }
   }
 

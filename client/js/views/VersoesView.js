@@ -102,7 +102,7 @@ export class VersoesView extends View {
                 <div class="pilot-picker__search-wrap">
                   ${iconeSvg("busca")}
                   <input class="input pilot-picker__search" id="version-pilot-search" type="search" autocomplete="off"
-                         placeholder="Digite o código ou nome do cliente" data-role="pilot-search" />
+                         placeholder="Código ou nome" data-role="pilot-search" />
                 </div>
                 <div class="pilot-picker__selected" data-role="pilot-selected"></div>
                 <div class="pilot-picker__suggestions" data-role="pilot-suggestions" aria-live="polite"></div>

@@ -2802,11 +2802,12 @@ table.data-table {
 }
 .cfg-amostra__linha {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-2);
 }
 .cfg-amostra__linha .input {
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 1 1 120px;
+  min-width: 120px;
 }
 
 /* -- Regras da equipe: o número grande, o que ele faz embaixo -- */
@@ -7416,10 +7417,8 @@ h1, h2, h3, strong {
 .kanban-column__title {
   margin: 0;
   font-family: var(--fonte-display);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: var(--peso-forte);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--cor-texto-sub);
 }
 .kanban-column__count {
@@ -7493,6 +7492,7 @@ h1, h2, h3, strong {
   user-select: none;
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
   gap: 8px;
   min-height: 94px;
   transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1), border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
@@ -7500,7 +7500,6 @@ h1, h2, h3, strong {
 .kanban-card:hover {
   border-color: var(--cor-borda-forte);
   background: var(--cor-superficie-alta);
-  transform: translateY(-1px);
   box-shadow: var(--sombra-card-hover);
 }
 .kanban-card:active {
@@ -7551,6 +7550,22 @@ h1, h2, h3, strong {
   color: var(--cor-texto);
   line-height: 1.4;
   word-break: break-word;
+}
+.kanban-card__trigger {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.kanban-card__trigger:focus-visible {
+  outline: 2px solid var(--cor-accent);
+  outline-offset: 2px;
 }
 .kanban-card__footer {
   display: flex;
@@ -9246,11 +9261,12 @@ h1, h2, h3, strong {
   #painel-administracao .admin-pessoas__barra > [data-role="resumo"] { flex: 1 1 20rem; }
   #painel-administracao .admin-pessoas__busca { max-width: 100%; }
   .admin-tabela--pessoas { table-layout: fixed; }
-  .admin-tabela--pessoas th:nth-child(1) { width: 38%; }
+  .admin-tabela--pessoas th:nth-child(1) { width: 35%; }
   .admin-tabela--pessoas th:nth-child(2) { width: 22%; text-align: center; }
   .admin-tabela--pessoas th:nth-child(3) { width: 24%; }
-  .admin-tabela--pessoas th:nth-child(4) { width: 16%; }
+  .admin-tabela--pessoas th:nth-child(4) { width: 19%; }
   .admin-tabela--pessoas td { white-space: normal; overflow-wrap: anywhere; }
+  .admin-tabela--pessoas td .btn { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
   .admin-tabela--pessoas td:nth-child(2) { text-align: center; }
   .admin-tabela--pessoas .admin-pessoa__texto { flex: 1; line-height: 1.5; }
   .admin-tabela--pessoas .admin-papel {
@@ -9309,11 +9325,12 @@ h1, h2, h3, strong {
   #admin-painel-auditoria .toolbar .field:has(input[type="search"]) { flex: 1 1 16rem; }
   #admin-painel-auditoria .result-count { padding-bottom: 0; }
   #admin-painel-auditoria .data-table td { white-space: normal; overflow-wrap: anywhere; }
-  #admin-painel-auditoria th:nth-child(1) { width: 14%; }
-  #admin-painel-auditoria th:nth-child(2) { width: 18%; }
-  #admin-painel-auditoria th:nth-child(3),
-  #admin-painel-auditoria th:nth-child(4) { width: 12%; }
-  #admin-painel-auditoria th:nth-child(5) { width: 44%; }
+  #painel-administracao .badge { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+  #admin-painel-auditoria th:nth-child(1) { width: 13%; }
+  #admin-painel-auditoria th:nth-child(2) { width: 17%; }
+  #admin-painel-auditoria th:nth-child(3) { width: 12%; }
+  #admin-painel-auditoria th:nth-child(4) { width: 16%; }
+  #admin-painel-auditoria th:nth-child(5) { width: 42%; }
   #painel-administracao .admin-diagnostico { background: var(--cor-superficie); }
   #painel-administracao .admin-diagnostico:not(.is-alerta):not(.is-perigo) { border-left-color: var(--cor-borda-forte); }
   #painel-administracao .admin-diagnostico:not(.is-alerta):not(.is-perigo) .admin-diagnostico__icone {

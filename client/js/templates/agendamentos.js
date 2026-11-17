@@ -46,7 +46,7 @@ export function cartaoKanban(row, role, { agora = new Date() } = {}) {
   // Prévia de obs truncada (2 linhas via CSS)
   const obsPreview = row.obs ? html`<p class="kanban-card__obs">${row.obs}</p>` : "";
 
-  return html`<article class="kanban-card${vencida ? " is-overdue" : ""}${classePrioridade}" ${podeArrastar && confiavel('draggable="true"')} data-id="${row.id}" data-status="${row.status}" tabindex="0" role="button" aria-label="Tarefa ${row.tarefa}">
+  return html`<article class="kanban-card${vencida ? " is-overdue" : ""}${classePrioridade}" ${podeArrastar && confiavel('draggable="true"')} data-id="${row.id}" data-status="${row.status}">
     <div class="kanban-card__header">
       <strong class="kanban-card__client" title="${cliente}">${cliente}</strong>
       <div class="kanban-card__badges">
@@ -54,7 +54,9 @@ export function cartaoKanban(row, role, { agora = new Date() } = {}) {
         ${vencida ? html`<span class="badge badge--danger">Vencida</span>` : hoje && html`<span class="badge badge--accent">Hoje</span>`}
       </div>
     </div>
-    <p class="kanban-card__title">${row.tarefa}</p>
+    <p class="kanban-card__title">
+      <button type="button" class="kanban-card__trigger" data-row-action="editar" data-id="${row.id}" aria-label="Tarefa ${row.tarefa}">${row.tarefa}</button>
+    </p>
     ${obsPreview}
     <div class="kanban-card__footer">
       <span class="kanban-card__meta">${meta || "—"}</span>

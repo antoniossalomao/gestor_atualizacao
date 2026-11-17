@@ -416,6 +416,7 @@ export class App {
       const ok = await Modal.confirm("Sair", "Deseja encerrar sua sessão?", { confirmLabel: "Sair", danger: false });
       if (!ok) return;
     }
+    this._fecharEventosEmTempoReal();
     await this.api.post("/auth/logout");
     this._desmontar();
     this.start();

@@ -83,7 +83,7 @@ export class ResumoView extends View {
         <div class="gaveta-lista__topo">
           <p class="gaveta-lista__ajuda" data-role="gaveta-ajuda"></p>
           <div class="gaveta-lista__busca-wrap">
-            <input type="search" class="gaveta-lista__busca" data-role="gaveta-busca" placeholder="Filtrar na lista..." aria-label="Filtrar na lista" autocomplete="off" />
+            <input type="search" class="gaveta-lista__busca" data-role="gaveta-busca" placeholder="Filtrar" aria-label="Filtrar na lista" autocomplete="off" />
             <span class="gaveta-lista__contagem" data-role="gaveta-contagem"></span>
           </div>
         </div>

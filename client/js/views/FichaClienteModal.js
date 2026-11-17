@@ -104,9 +104,12 @@ export class FichaClienteModal {
     this.cliente = cliente;
 
     const podeVerAcessos = ["operador", "admin"].includes(this.opcoes.role);
+    const podeVerVersoes = this.opcoes.atualizadorHabilitado !== false;
     const [historico, painelVersoes, acessos, situacaoSistemas] = await Promise.all([
       this.api.get(`/atualizacoes/recent-by-client/${encodeURIComponent(nome)}`, { limit: 10 }, { key: "consulta:historico" }).catch(() => []),
-      this.api.get("/versoes/painel", null, { key: "consulta:painel" }).catch(() => null),
+      podeVerVersoes
+        ? this.api.get("/versoes/painel", null, { key: "consulta:painel" }).catch(() => null)
+        : Promise.resolve(null),
       podeVerAcessos
         ? this.api.get(`/clientes/${cliente.id}/acessos`, null, { key: "consulta:acessos" }).catch(() => [])
         : Promise.resolve([]),

@@ -163,7 +163,7 @@ export function relatorioDoPeriodo(resumo) {
   const f = resumo.filtros;
   return ["RELATÓRIO DE ATUALIZAÇÕES POR PERÍODO",
     `Período: ${f.desde || "Início do histórico"} até ${f.ate || "Sem limite final"}\nResponsável: ${f.responsavel}\nBusca: ${f.search || "Todas"}`,
-    `${plural(resumo.total, "atualização")} · ${plural(resumo.clientes, "cliente distinto")}`,
+    `${plural(resumo.total, "atualização", "atualizações")} · ${plural(resumo.clientes, "cliente distinto", "clientes distintos")}`,
     ["POR SISTEMA", ...resumo.porSistema.map((s) => `${s.nome}: ${s.total}`)].join("\n"),
     ["POR RESPONSÁVEL", ...resumo.porResponsavel.map((s) => `${s.nome}: ${s.total}`)].join("\n"),
     "Uma atualização pode envolver vários sistemas. As contagens por sistema podem superar o total de atualizações.",

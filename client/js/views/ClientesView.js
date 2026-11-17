@@ -114,8 +114,8 @@ export class ClientesView extends View {
       <div class="card">
         <div class="toolbar">
           <div class="field">
-            <label class="field__label" for="cli-busca">Buscar (nome, código, cidade, sistema ou grupo)</label>
-            <input type="search" class="input" id="cli-busca" data-role="search" />
+            <label class="field__label" for="cli-busca">Buscar</label>
+            <input type="search" class="input" id="cli-busca" data-role="search" placeholder="Nome, código, cidade ou sistema" aria-label="Buscar cliente por nome, código, cidade, sistema ou grupo" />
           </div>
           <div class="toolbar__clear">
             <button type="button" class="btn btn--small btn--ghost" data-action="limpar-filtros" hidden>Limpar busca</button>
@@ -393,6 +393,7 @@ export class ClientesView extends View {
     if (!clienteRef) return;
     const modal = new FichaClienteModal(this.api, clienteRef, {
       role: this.user?.role,
+      atualizadorHabilitado: this.atualizadorHabilitado,
       onEditar: (cli) => {
         this._carregarNoFormulario(cli);
         this.alternarFormulario(true);
@@ -650,6 +651,7 @@ export class ClientesView extends View {
       Modal.alert("Validação", mensagemDeErro(err), "warning");
     } finally {
       liberar();
+      if (this.deleteBtn && this.selectedId == null) this.deleteBtn.disabled = true;
     }
   }
 
@@ -673,6 +675,7 @@ export class ClientesView extends View {
       Modal.alert("Validação", mensagemDeErro(err), "warning");
     } finally {
       liberar();
+      if (this.deleteBtn && this.selectedId == null) this.deleteBtn.disabled = true;
     }
   }
 
@@ -707,6 +710,7 @@ export class ClientesView extends View {
       Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
+      if (this.deleteBtn && this.selectedId == null) this.deleteBtn.disabled = true;
     }
   }
 
@@ -749,6 +753,7 @@ export class ClientesView extends View {
       Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
+      if (this.deleteBtn && this.selectedId == null) this.deleteBtn.disabled = true;
     }
   }
 
@@ -784,6 +789,7 @@ export class ClientesView extends View {
       Modal.alert("Erro", mensagemDeErro(err), "error");
     } finally {
       liberar();
+      if (this.deleteBtn && this.selectedId == null) this.deleteBtn.disabled = true;
     }
   }
 
