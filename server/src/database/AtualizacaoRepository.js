@@ -1,6 +1,7 @@
 const { BaseRepository } = require("./BaseRepository");
 const { montarOrdenacao } = require("./ordenacao");
 const { primeiraMaiuscula } = require("../shared/normalizacao");
+const { normalizarTextoBusca, clausulaBuscaSemAcento } = require("./busca");
 
 // Datas sao guardadas como texto "dd/mm/aaaa"; esta expressao SQL as
 // converte para "aaaammdd" para permitir ordenacao cronologica (ordenar o
@@ -210,9 +211,10 @@ class AtualizacaoRepository extends BaseRepository {
   _filtros(search, responsavel, { desde = "", ate = "", sistema = "" } = {}) {
     const clauses = [];
     const params = {};
-    if (search) {
-      clauses.push("(cliente LIKE @like OR sistema LIKE @like OR responsavel LIKE @like OR motivo LIKE @like)");
-      params.like = `%${search}%`;
+    const termoNorm = normalizarTextoBusca(search).trim();
+    if (termoNorm) {
+      clauses.push(clausulaBuscaSemAcento(["cliente", "sistema", "responsavel", "motivo"]));
+      params.termoNorm = termoNorm;
     }
     if (responsavel && responsavel !== "Todos") {
       clauses.push("lower(trim(responsavel)) = lower(trim(@responsavel))");

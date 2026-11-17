@@ -114,7 +114,7 @@ export class ClientesView extends View {
       <div class="card">
         <div class="toolbar">
           <div class="field">
-            <label class="field__label" for="cli-busca">Buscar (nome, cidade, sistema ou grupo)</label>
+            <label class="field__label" for="cli-busca">Buscar (nome, código, cidade, sistema ou grupo)</label>
             <input type="search" class="input" id="cli-busca" data-role="search" />
           </div>
           <div class="toolbar__clear">

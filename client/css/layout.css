@@ -2556,11 +2556,11 @@
 
 .view.is-entering,
 .tela-abas__painel.is-entering {
-  animation: view-enter-smooth 260ms var(--curva-spring) both;
+  animation: view-enter-smooth 260ms var(--curva-spring) backwards;
 }
 
 .view.is-entering > * {
-  animation: block-rise 320ms var(--curva-spring) both;
+  animation: block-rise 320ms var(--curva-spring) backwards;
 }
 
 .view.is-entering > *:nth-child(1) { animation-delay: 0ms; }
@@ -2569,7 +2569,7 @@
 .view.is-entering > *:nth-child(4) { animation-delay: 115ms; }
 
 .view.is-entering .stat-tiles > .stat-tile {
-  animation: block-rise 320ms var(--curva-spring) both;
+  animation: block-rise 320ms var(--curva-spring) backwards;
 }
 .view.is-entering .stat-tiles > .stat-tile:nth-child(1) { animation-delay: 15ms; }
 .view.is-entering .stat-tiles > .stat-tile:nth-child(2) { animation-delay: 50ms; }
@@ -2594,11 +2594,22 @@
   opacity: 1;
 }
 
+/* `backwards` evita manter `transform: translateY(0)` apos o fim da animacao,
+   impedindo que cada `.field` crie um novo stacking context que prende
+   autocompletes/dropdowns atras dos campos seguintes. */
 .drawer-backdrop.is-open .drawer-body .field,
 .drawer-backdrop.is-open .drawer-body .form-grid > *,
 .drawer-backdrop.is-open .gaveta-lista__topo,
 .drawer-backdrop.is-open .gaveta-lista__tabela {
-  animation: block-rise 280ms var(--curva-spring) both;
+  animation: block-rise 280ms var(--curva-spring) backwards;
+}
+
+.field:has(.autocomplete__list.is-open),
+.form-grid > *:has(.autocomplete__list.is-open),
+.toolbar:has(.autocomplete__list.is-open, .menu-acoes__lista:not([hidden])),
+.card:has(.autocomplete__list.is-open, .menu-acoes__lista:not([hidden])) {
+  position: relative;
+  z-index: var(--camada-menu);
 }
 
 .drawer-backdrop.is-open .gaveta-lista__topo { animation-delay: 35ms; }
@@ -2617,12 +2628,12 @@
 
 .modal-box,
 .cmdk {
-  animation: modal-spring-in 260ms var(--curva-spring) both;
+  animation: modal-spring-in 260ms var(--curva-spring) backwards;
 }
 
 /* 3. Linhas de grids e subgrids entrando em cascata e hover fluido */
 .data-table tbody tr[data-key] {
-  animation: row-enter 220ms var(--curva-spring) both;
+  animation: row-enter 220ms var(--curva-spring) backwards;
   animation-delay: calc(var(--row-idx, 0) * 14ms);
   transition: background-color 140ms var(--curva-padrao),
               transform 140ms var(--curva-padrao);
@@ -2738,7 +2749,7 @@ textarea:focus {
 
 /* Menus suspensos e acordeoes (<details>) */
 details > summary + * {
-  animation: block-rise 200ms var(--curva-spring) both;
+  animation: block-rise 200ms var(--curva-spring) backwards;
 }
 
 :root[data-movimento="reduzido"] .view.is-entering,

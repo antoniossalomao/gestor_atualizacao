@@ -17,6 +17,7 @@ const { VersaoRepository } = require("./VersaoRepository");
 const { ConfiguracaoSistemaRepository } = require("./ConfiguracaoSistemaRepository");
 const { CampanhaRepository } = require("./CampanhaRepository");
 const { MIGRACOES, criarVisoes } = require("./migracoes");
+const { normalizarTextoBusca } = require("./busca");
 
 /**
  * Abre a conexao SQLite, garante o schema (criando/migrando tabelas) e
@@ -55,6 +56,8 @@ class BancoDeDados {
     // mesmo tempo.
     this.conn.pragma("journal_mode = WAL");
     this.conn.pragma("foreign_keys = ON");
+    // Busca sem diferenciar caixa ou acentos nas queries SQLite (`instr(sem_acento(...), ...)`).
+    this.conn.function("sem_acento", { deterministic: true }, normalizarTextoBusca);
 
     this._migrate();
 

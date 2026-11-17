@@ -1,6 +1,7 @@
 import { iconeHtml } from "../utils/icones.js";
 import { Modal } from "./Modal.js";
 import { html } from "../utils/html.js";
+import { normalizarBusca } from "../utils/busca.js";
 
 const MAX_RESULTADOS = 12;
 
@@ -240,21 +241,22 @@ export class PaletaDeComandos {
  */
 function pontuar(cmd, termo, posicaoRecente) {
   const bonusRecente = posicaoRecente >= 0 ? 40 - posicaoRecente : 0;
-  if (!termo) return 10 + bonusRecente;
+  const termoNorm = normalizarBusca(termo).trim();
+  if (!termoNorm) return 10 + bonusRecente;
 
-  const alvo = `${cmd.titulo} ${cmd.subtitulo || ""} ${cmd.grupo}`.toLowerCase();
-  const titulo = cmd.titulo.toLowerCase();
+  const alvo = normalizarBusca(`${cmd.titulo} ${cmd.subtitulo || ""} ${cmd.grupo}`);
+  const titulo = normalizarBusca(cmd.titulo);
 
-  if (titulo.startsWith(termo)) return 1000 + bonusRecente;
-  if (titulo.includes(termo)) return 700 + bonusRecente;
-  if (alvo.includes(termo)) return 400 + bonusRecente;
+  if (titulo.startsWith(termoNorm)) return 1000 + bonusRecente;
+  if (titulo.includes(termoNorm)) return 700 + bonusRecente;
+  if (alvo.includes(termoNorm)) return 400 + bonusRecente;
 
   // Subsequência: "cls" casa com "CLienteS". Vale menos que um trecho
   // literal, mas é o que permite digitar só as consoantes.
   let i = 0;
   for (const letra of alvo) {
-    if (letra === termo[i]) i += 1;
-    if (i === termo.length) return 150 + bonusRecente;
+    if (letra === termoNorm[i]) i += 1;
+    if (i === termoNorm.length) return 150 + bonusRecente;
   }
   return 0;
 }

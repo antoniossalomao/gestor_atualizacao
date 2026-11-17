@@ -3,6 +3,7 @@ const { DATE_SORT_EXPR } = require("./AtualizacaoRepository");
 const { primeiraMaiuscula } = require("../shared/normalizacao");
 const { montarOrdenacao } = require("./ordenacao");
 const { FILTRO_ARQUIVADAS, OPCOES_STATUS } = require("../config/constantes");
+const { normalizarTextoBusca, clausulaBuscaSemAcento } = require("./busca");
 
 const STATUS_CONCLUIDO = OPCOES_STATUS[OPCOES_STATUS.length - 1];
 
@@ -73,9 +74,10 @@ class AgendamentoRepository extends BaseRepository {
   list(search = "", status = "Todos", { page = 1, pageSize = 50, sortBy, sortDir, prioridade, quando } = {}) {
     const clauses = [];
     const params = {};
-    if (search) {
-      clauses.push("(tarefa LIKE @like OR cliente LIKE @like OR responsavel LIKE @like)");
-      params.like = `%${search}%`;
+    const termoNorm = normalizarTextoBusca(search).trim();
+    if (termoNorm) {
+      clauses.push(clausulaBuscaSemAcento(["tarefa", "cliente", "responsavel"]));
+      params.termoNorm = termoNorm;
     }
     // "Arquivadas" nao e um status -- e o pedido de ver justamente o que sai
     // da lista. Por isso ele SUBSTITUI o recorte por status em vez de se

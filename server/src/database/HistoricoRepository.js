@@ -1,4 +1,5 @@
 const { montarOrdenacao } = require("./ordenacao");
+const { normalizarTextoBusca, clausulaBuscaSemAcento } = require("./busca");
 
 /** Colunas que a tela pode pedir para ordenar, e a expressao SQL segura correspondente. */
 const SORT_MAP = {
@@ -48,9 +49,10 @@ class HistoricoRepository {
       clauses.push("entidade = @entidade");
       params.entidade = entidade;
     }
-    if (search) {
-      clauses.push("(usuario_nome LIKE @like OR descricao LIKE @like)");
-      params.like = `%${search}%`;
+    const termoNorm = normalizarTextoBusca(search).trim();
+    if (termoNorm) {
+      clauses.push(clausulaBuscaSemAcento(["usuario_nome", "descricao"]));
+      params.termoNorm = termoNorm;
     }
     const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
 

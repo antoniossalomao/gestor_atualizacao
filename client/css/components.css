@@ -4751,6 +4751,7 @@ body:has(.conexao-aviso) .dados-aviso {
 }
 
 .autocomplete__list {
+  box-sizing: border-box;
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -4762,11 +4763,33 @@ body:has(.conexao-aviso) .dados-aviso {
   border: 1px solid var(--cor-borda-forte);
   border-radius: var(--raio-pequeno);
   background: var(--cor-superficie-alta);
+  color: var(--cor-texto);
   box-shadow: var(--sombra-flutuante);
+}
+
+.autocomplete__list.is-flipped {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.autocomplete__list[popover] {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  right: auto;
+  background: var(--cor-superficie-alta);
+  color: var(--cor-texto);
 }
 
 .autocomplete__list.is-open {
   display: block;
+}
+
+@supports selector(:popover-open) {
+  .autocomplete__list[popover]:popover-open {
+    display: block;
+  }
 }
 
 .autocomplete__item {

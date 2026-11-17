@@ -6,6 +6,7 @@ import { escaparAtributo, escaparHtml, plural } from "../utils/html.js";
 import { formatarDataHora, tempoRelativo, formatarBytes } from "../utils/data.js";
 import { Modal } from "../components/Modal.js";
 import { ErroApi } from "../api/ApiPainel.js";
+import { casaBusca } from "../utils/busca.js";
 
 const STATUS = {
   publicada: { texto: "No ar", classe: "badge--success" },
@@ -535,10 +536,10 @@ export class VersoesView extends View {
     }
 
     suggestions.replaceChildren();
-    const query = this.pilotSearch?.value.trim().toLocaleLowerCase("pt-BR") || "";
+    const query = this.pilotSearch?.value.trim() || "";
     const disponiveis = this.clients
       .filter((item) => !this.pilotCodes.has(item.codigo))
-      .filter((item) => !query || `${item.codigo} ${item.nome} ${item.cidade || ""}`.toLocaleLowerCase("pt-BR").includes(query))
+      .filter((item) => !query || casaBusca(`${item.codigo} ${item.nome} ${item.cidade || ""}`, query))
       .slice(0, 6);
     if (!disponiveis.length) {
       const empty = document.createElement("span");

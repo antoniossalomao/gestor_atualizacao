@@ -1,5 +1,6 @@
 const { BaseRepository } = require("./BaseRepository");
 const { montarOrdenacao } = require("./ordenacao");
+const { normalizarTextoBusca, clausulaBuscaSemAcento } = require("./busca");
 
 /** Colunas que a tela pode pedir para ordenar, e a expressao SQL segura correspondente. */
 const SORT_MAP = {
@@ -25,8 +26,11 @@ class ClienteRepository extends BaseRepository {
 
   /** Uma página de clientes. Devolve `{ rows, total, page, pageSize }`. */
   list(search = "", { page = 1, pageSize = 50, sortBy, sortDir } = {}) {
-    const where = search ? "WHERE nome LIKE @like OR cidade LIKE @like OR regime_tributario LIKE @like OR sistemas LIKE @like OR grupo LIKE @like" : "";
-    const params = search ? { like: `%${search}%` } : {};
+    const termoNorm = normalizarTextoBusca(search).trim();
+    const where = termoNorm
+      ? `WHERE ${clausulaBuscaSemAcento(["nome", "codigo", "cidade", "regime_tributario", "sistemas", "grupo"])}`
+      : "";
+    const params = termoNorm ? { termoNorm } : {};
 
     const total = this.conn.prepare(`SELECT COUNT(*) AS total FROM clientes_v ${where}`).get(params).total;
 

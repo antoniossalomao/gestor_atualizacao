@@ -378,3 +378,18 @@ test("ClienteService - geração e unicidade de código do cliente", () => {
     env.cleanup();
   }
 });
+
+test("ClienteService - busca ignora acentos, caixa e encontra pelo código", () => {
+  const env = ambiente();
+  try {
+    env.service.create({ nome: "AÇOUGUE CENTRAL", codigo: "C000901", cidade: "São Paulo" }, USUARIO);
+    env.service.create({ nome: "Padaria João & Cia", codigo: "C000902", cidade: "Ribeirão Preto" }, USUARIO);
+
+    assert.deepEqual(env.service.list("acougue").rows.map((c) => c.nome), ["AÇOUGUE CENTRAL"]);
+    assert.deepEqual(env.service.list("joao").rows.map((c) => c.nome), ["Padaria João & Cia"]);
+    assert.deepEqual(env.service.list("ribeirao").rows.map((c) => c.nome), ["Padaria João & Cia"]);
+    assert.deepEqual(env.service.list("c000901").rows.map((c) => c.nome), ["AÇOUGUE CENTRAL"]);
+  } finally {
+    env.cleanup();
+  }
+});
