@@ -37,10 +37,22 @@ test("lerTransporte - combinações do .env", async (t) => {
     assert.match(problemas[0], /TRUST_PROXY/);
   });
 
-  await t.test("SESSION_SECURE=true com proxy sobe e escuta em todas as interfaces (o proxy no Docker precisa)", () => {
+  await t.test("SESSION_SECURE=true com proxy sobe e escuta em todas as interfaces (padrão sem HOST)", () => {
     const { config, problemas } = lerTransporte({ SESSION_SECURE: "true", TRUST_PROXY: "true" });
     assert.deepEqual(problemas, []);
     assert.deepEqual(config, { sessionSecure: true, trustProxy: true, host: undefined });
+  });
+
+  await t.test("SESSION_SECURE=true com HOST=127.0.0.1 trava o bind apenas para o proxy local", () => {
+    const { config, problemas } = lerTransporte({ SESSION_SECURE: "true", TRUST_PROXY: "true", HOST: "127.0.0.1" });
+    assert.deepEqual(problemas, []);
+    assert.deepEqual(config, { sessionSecure: true, trustProxy: true, host: "127.0.0.1" });
+  });
+
+  await t.test("HOST inválido com SESSION_SECURE=true recusa a subida", () => {
+    const { problemas } = lerTransporte({ SESSION_SECURE: "true", TRUST_PROXY: "true", HOST: "192.168.0.10" });
+    assert.equal(problemas.length, 1);
+    assert.match(problemas[0], /HOST/);
   });
 
   await t.test("valor fora de true/false recusa, em vez de virar false calado", () => {
@@ -150,6 +162,29 @@ test("Servidor com HTTPS ligado (SESSION_SECURE=true)", async (t) => {
     assert.equal(r.status, 200);
     assert.match(r.headers.get("strict-transport-security") || "", /max-age=\d+/);
     assert.match(r.headers.get("content-security-policy") || "", /upgrade-insecure-requests/);
+  });
+
+  await t.test("Azure App Service: reconhece X-ARR-SSL como HTTPS e aceita X-Forwarded-For com porta no rate limit", async () => {
+    const ARR_AZURE = { "x-arr-ssl": "2048|256|CN=Azure|CN=AppService", "x-forwarded-for": "203.0.113.10:54321" };
+    const r = await fetch(`${base}/api/auth/login`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...ARR_AZURE },
+      body: JSON.stringify({ usuario: ADMIN.usuario, senha: ADMIN.senha }),
+    });
+    assert.equal(r.status, 200);
+    const [cookie] = r.headers.getSetCookie();
+    assert.match(cookie, /;\s*Secure/i);
+
+    const bkp = await fetch(`${base}/api/backups`, {
+      headers: { ...ARR_AZURE, cookie: cookie.split(";")[0] },
+    });
+    assert.equal(bkp.status, 200);
+
+    const dl = await fetch(`${base}/api/backups/atual/download`, {
+      headers: { ...ARR_AZURE, cookie: cookie.split(";")[0] },
+    });
+    assert.equal(dl.status, 200);
+    await dl.arrayBuffer();
   });
 });
 

@@ -288,8 +288,9 @@ class ClienteService {
     if (!cliente) throw new ErroNaoEncontrado("Cliente não encontrado.");
     const { maquina, anydesk, suporteBredas, observacoes } = this._validarAcesso(input);
     const id = this.db.clienteAcessos.insert(clienteId, maquina, anydesk, suporteBredas, observacoes);
-    this.historico.registrar(usuario, "criar", "acesso", `Acesso "${maquina}" de "${cliente.nome}"`);
-    return this.db.clienteAcessos.obterPorId(id);
+    const criado = this.db.clienteAcessos.obterPorId(id);
+    this.historico.registrar(usuario, "criar", "acesso", `Acesso "${maquina}" de "${cliente.nome}"`, { antes: null, depois: criado });
+    return criado;
   }
 
   alterarAcesso(id, input, usuario) {
@@ -297,9 +298,16 @@ class ClienteService {
     if (!existente) throw new ErroNaoEncontrado("Acesso não encontrado.");
     const { maquina, anydesk, suporteBredas, observacoes } = this._validarAcesso(input);
     this.db.clienteAcessos.update(id, maquina, anydesk, suporteBredas, observacoes);
+    const atualizado = this.db.clienteAcessos.obterPorId(id);
     const cliente = this.db.clientes.obterPorId(existente.clienteId);
-    this.historico.registrar(usuario, "atualizar", "acesso", `Acesso "${maquina}" de "${cliente ? cliente.nome : existente.clienteId}"`);
-    return this.db.clienteAcessos.obterPorId(id);
+    this.historico.registrar(
+      usuario,
+      "atualizar",
+      "acesso",
+      `Acesso "${maquina}" de "${cliente ? cliente.nome : existente.clienteId}"`,
+      { antes: existente, depois: atualizado }
+    );
+    return atualizado;
   }
 
   removerAcesso(id, usuario) {
@@ -311,7 +319,8 @@ class ClienteService {
       usuario,
       "excluir",
       "acesso",
-      `Acesso "${existente.maquina}" de "${cliente ? cliente.nome : existente.clienteId}"`
+      `Acesso "${existente.maquina}" de "${cliente ? cliente.nome : existente.clienteId}"`,
+      { antes: existente, depois: null }
     );
   }
 

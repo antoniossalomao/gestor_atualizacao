@@ -21,6 +21,7 @@ class BackupsController {
     try {
       const arquivo = req.params.arquivo;
       const caminho = this.backupService.caminhoDoBackup(arquivo);
+      this.backupService.registrarDownload(arquivo, req.session?.user);
       res.download(caminho, arquivo);
     } catch (err) {
       next(err);
@@ -31,9 +32,10 @@ class BackupsController {
    * Cria e faz o download de um snapshot (cópia temporária íntegra) do banco de dados atual.
    * Rota: GET /api/backups/download-current
    */
-  downloadCurrent = async (_req, res, next) => {
+  downloadCurrent = async (req, res, next) => {
     let copia;
     try {
+      this.backupService.registrarDownload("banco atual", req.session?.user);
       copia = await this.backupService.criarCopiaTemporaria();
       const filename = `gestao_atual_${new Date().toISOString().replace(/[:.]/g, "-")}.db`;
       res.download(copia.caminho, filename, (err) => {

@@ -1,5 +1,8 @@
 const crypto = require("crypto");
 
+/** O valor do .env.example. Chave igual a esta é pública e equivale a não ter chave. */
+const TOKEN_DE_EXEMPLO = "troque-por-um-token-longo-e-aleatorio";
+
 /**
  * Compara token e segredo em tempo constante (usado também pela proteção
  * CSRF, middlewares/protecaoCsrf.js). `timingSafeEqual` exige os
@@ -14,13 +17,13 @@ function tokensIguais(a, b) {
 }
 
 function exigirAgente(req, res, next) {
-  const expected = req.app.locals.agentApiToken;
+  const expected = String(req.app.locals.agentApiToken || "").trim();
   const supplied = req.get("x-agent-token");
-  if (!expected || !supplied || !tokensIguais(supplied, expected)) {
+  if (!expected || expected === TOKEN_DE_EXEMPLO || !supplied || !tokensIguais(supplied, expected)) {
     res.status(401).json({ error: "Agente não autenticado." });
     return;
   }
   next();
 }
 
-module.exports = { exigirAgente, tokensIguais };
+module.exports = { exigirAgente, tokensIguais, TOKEN_DE_EXEMPLO };

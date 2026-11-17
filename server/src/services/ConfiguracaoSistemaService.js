@@ -1,8 +1,6 @@
 const { ErroDePermissao, ErroDeValidacao } = require("../shared/erros");
 const { REGRAS, validarRegra, converterRegra } = require("../config/regrasEquipe");
-
-/** O valor do .env.example. Chave igual a esta é o mesmo que não ter chave. */
-const TOKEN_DE_EXEMPLO = "troque-por-um-token-longo-e-aleatorio";
+const { TOKEN_DE_EXEMPLO } = require("../middlewares/exigirAgente");
 
 /**
  * Regras da equipe inteira (não de uma conta) -- ver a lista e o porquê de

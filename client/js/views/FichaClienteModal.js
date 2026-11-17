@@ -103,10 +103,13 @@ export class FichaClienteModal {
     }
     this.cliente = cliente;
 
+    const podeVerAcessos = ["operador", "admin"].includes(this.opcoes.role);
     const [historico, painelVersoes, acessos, situacaoSistemas] = await Promise.all([
       this.api.get(`/atualizacoes/recent-by-client/${encodeURIComponent(nome)}`, { limit: 10 }, { key: "consulta:historico" }).catch(() => []),
       this.api.get("/versoes/painel", null, { key: "consulta:painel" }).catch(() => null),
-      this.api.get(`/clientes/${cliente.id}/acessos`, null, { key: "consulta:acessos" }).catch(() => []),
+      podeVerAcessos
+        ? this.api.get(`/clientes/${cliente.id}/acessos`, null, { key: "consulta:acessos" }).catch(() => [])
+        : Promise.resolve([]),
       this.api.get(`/atualizacoes/situacao-cliente/${encodeURIComponent(nome)}`, null, { key: "consulta:situacao" }).catch(() => []),
     ]);
 
@@ -178,18 +181,18 @@ export class FichaClienteModal {
     corpo.innerHTML = html`
       <nav class="modal-ficha-cliente__tabs" role="tablist" aria-label="Abas da ficha do cliente">
         <button type="button" class="btn is-active" data-client-tab="resumo">Resumo & Cadastro</button>
-        <button type="button" class="btn" data-client-tab="acessos">Acessos Remotos (${acessos.length})</button>
+        ${podeEditar ? html`<button type="button" class="btn" data-client-tab="acessos">Acessos Remotos (${acessos.length})</button>` : ""}
         <button type="button" class="btn" data-client-tab="versoes">Matriz de Versões</button>
         <button type="button" class="btn" data-client-tab="timeline">Linha do Tempo (${historico.length})</button>
       </nav>
       <section class="client-hub-panel" data-client-panel="resumo" data-role="resumo-panel"></section>
-      <section class="client-hub-panel" data-client-panel="acessos" hidden><div class="access-grid" data-role="acessos"></div></section>
+      ${podeEditar ? html`<section class="client-hub-panel" data-client-panel="acessos" hidden><div class="access-grid" data-role="acessos"></div></section>` : ""}
       <section class="client-hub-panel" data-client-panel="versoes" hidden><div data-role="versao-matriz"></div></section>
       <section class="client-hub-panel" data-client-panel="timeline" hidden><div class="client-timeline" data-role="ultima"></div></section>
     `.toString();
 
     this._desenharResumo(corpo.querySelector('[data-role="resumo-panel"]'));
-    this._desenharAcessos(corpo.querySelector('[data-role="acessos"]'));
+    if (podeEditar) this._desenharAcessos(corpo.querySelector('[data-role="acessos"]'));
     this._desenharMatrizVersoes(corpo.querySelector('[data-role="versao-matriz"]'));
     this._desenharLinhaDoTempo(corpo.querySelector('[data-role="ultima"]'));
 

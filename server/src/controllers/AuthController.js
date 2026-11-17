@@ -16,10 +16,12 @@ class AuthController {
   /**
    * @param {import('../services/AuthService').AuthService} authService
    * @param {import('../services/ConfiguracaoSistemaService').ConfiguracaoSistemaService} configuracaoSistemaService
+   * @param {{sessionSecure?: boolean}} [opcoes]
    */
-  constructor(authService, configuracaoSistemaService) {
+  constructor(authService, configuracaoSistemaService, { sessionSecure = false } = {}) {
     this.authService = authService;
     this.configuracaoSistemaService = configuracaoSistemaService;
+    this.sessionSecure = Boolean(sessionSecure);
   }
 
   // "/auth/status" já é a primeira chamada que o front-end faz ao abrir a
@@ -97,7 +99,11 @@ class AuthController {
   logout = (req, res, next) => {
     req.session.destroy((err) => {
       if (err) return next(err);
-      res.clearCookie("gestor.sid");
+      res.clearCookie("gestor.sid", {
+        httpOnly: true,
+        secure: this.sessionSecure,
+        sameSite: "strict",
+      });
       res.status(204).end();
     });
   };

@@ -21,17 +21,18 @@ trate como incidente: rotacione primeiro, avise depois.
 
 | Proteção | Onde | Por quê |
 |---|---|---|
-| Senhas com `bcrypt` | `services/AuthService.js` | nunca se guarda senha legível |
-| Sessão em SQLite, cookie `httpOnly` + `sameSite=lax` | `database/ArmazemDeSessaoSqlite.js`, `Servidor.js` | JS da página não lê o cookie; reduz CSRF |
-| Token CSRF por sessão em toda escrita da API | `middlewares/protecaoCsrf.js`, `client/js/api/ApiPainel.js` | outra página aberta no navegador não altera nada em nome de quem está logado, nem por formulário multipart |
-| Limite de tentativas de login | `middlewares/LimitadorDeLogin.js` | força bruta contra senha fraca |
-| Papéis (RBAC) por subárvore de rota | `middlewares/exigirPapel.js`, `routes/index.js` | padrão fechado: rota nova nasce protegida |
-| CSP sem `script-src unsafe-inline` | `Servidor.js` | reduz o estrago de um XSS |
+| Senhas com `bcrypt` (teto de 128 chars e tempo constante no login) | `services/AuthService.js` | nunca se guarda senha legível e impede enumeração de usuários por timing |
+| Sessão em SQLite com faxina periódica, cookie `httpOnly` + `sameSite=strict` | `database/ArmazemDeSessaoSqlite.js`, `Servidor.js`, `controllers/AuthController.js` | JS da página não lê o cookie; reduz CSRF e limpa sessões expiradas |
+| Token CSRF por sessão + `Sec-Fetch-Site` em toda escrita da API | `middlewares/protecaoCsrf.js`, `client/js/api/ApiPainel.js` | outra página aberta no navegador não altera nada em nome de quem está logado, nem por formulário multipart |
+| Limite de tentativas por IP+usuário, por IP e global por conta | `middlewares/LimitadorDeLogin.js`, `routes/index.js` | barra força bruta e password spraying no login, setup e troca de senha |
+| Papéis (RBAC) por subárvore/rota (acessos, backups e histórico restritos) | `middlewares/exigirPapel.js`, `routes/index.js` | `consulta` não lê acessos remotos; só `admin` lê backups e trilha de auditoria |
+| `Cache-Control: no-store` na API e CSP sem `script-src unsafe-inline` | `routes/index.js`, `Servidor.js` | evita gravação de respostas sensíveis em cache e reduz impacto de XSS |
 | `ORDER BY` só a partir de lista fixa | `database/ordenacao.js` | injeção de SQL via `?sortBy=` |
-| Escape de HTML na montagem de tela | `client/js/utils/html.js` | XSS armazenado vindo de campo de texto |
-| Somente HTTPS na rede | `docker-compose.yml`, `proxy/Caddyfile`, `config/transporte.js`, `middlewares/exigirHttps.js` | senha e cookie nunca trafegam em texto puro; HTTP puro só escuta em `127.0.0.1` |
+| Escape de HTML automático com tag `html` | `client/js/utils/html.js` | XSS armazenado vindo de campo de texto |
+| Somente HTTPS na rede + bind restrito em `127.0.0.1` (`HOST=127.0.0.1`) | `proxy/Caddyfile`, `config/transporte.js`, `middlewares/exigirHttps.js`, `Servidor.js` | senha e cookie nunca trafegam em texto puro e o Node só aceita o proxy local (`loopback`) |
 | Cookie `Secure` + HSTS com HTTPS ligado | `Servidor.js` | o navegador não manda a sessão nem volta a tentar `http://` |
-| Token compartilhado para os agentes C# | `middlewares/exigirAgente.js` | as rotas do agente não usam sessão de navegador |
+| Token compartilhado forte para agentes + rate limit | `middlewares/exigirAgente.js`, `routes/index.js` | recusa valor público de exemplo e limita rajadas em `/api/update/*` |
+| Auditoria de alterações de acessos e downloads de backup | `services/ClienteService.js`, `services/BackupService.js` | registra diff `{ antes, depois }` de acessos e quem baixou o banco |
 | 404 explícito em vez de fallback de SPA | `middlewares/rotaNaoEncontrada.js` | rota de API errada devolvia HTML e escondia o erro |
 
 ## Segredos
@@ -50,29 +51,22 @@ trate como incidente: rotacione primeiro, avise depois.
   agentes — senão eles param de conseguir atualizar, em silêncio, do ponto de
   vista de quem olha o painel.
 
-## Limites conhecidos (e assumidos)
+## Limites conhecidos (e cuidados na nuvem / Azure)
 
-Isto não é uma lista de pendências: são escolhas conscientes, dado o contexto
-de rede interna. Se o sistema for exposto à internet, **todas** precisam ser
-revistas:
+Mesmo com o sistema endurecido na aplicação, hospedar na **Azure** (exposição fora da rede local) exige cuidados de infraestrutura:
 
-- **Certificado de autoridade própria.** O Caddy assina com uma raiz gerada
-  na instalação (`tls internal`), que cada máquina da equipe instala. Quem
-  tiver a chave da raiz (volume `caddy-data`) consegue emitir certificado
-  aceito por essas máquinas. Na internet, com domínio público, troque por
-  certificado público (ver `proxy/Caddyfile`).
-- **A proteção contra `X-Forwarded-Proto` forjado é a rede, não o código.**
-  `TRUST_PROXY=true` confia em quem conectar direto no Node; é seguro porque
-  o `docker-compose.yml` não publica a porta dele. Publicá-la de volta abre
-  o furo.
+- **Azure App Service (Instância Web) — proxy da Azure, instância única e persistência:**
+  - O balanceador da Azure termina o TLS e envia `X-Forwarded-For: IP:porta` (e `X-ARR-SSL` no Windows); o servidor normaliza ambos quando `TRUST_PROXY=true`.
+  - Mantenha **`HOST` vazio** no App Service (o roteador da Azure conecta fora do loopback), ative **HTTPS Only**, **TLS >= 1.2**, desative **FTP/FTPS** e restrinja acesso por IP em **Networking → Access Restrictions** (ou **Microsoft Entra ID / EasyAuth** na frente do app).
+  - Mantenha **`Scale Out = 1`** (nunca 2+ instâncias com SQLite) e `DB_PATH` fora de `wwwroot` (ex.: `/home/data/gestao.db` no Linux ou `D:\home\data\gestao.db` no Windows).
+- **VM Azure com Caddy — certificado e isolamento da porta 3000.**
+  Em rede privada ou VPN, o Caddy assina com raiz própria (`tls internal`); em VM com domínio público DNS, use Let's Encrypt. Com o Caddy na mesma VM, defina `HOST=127.0.0.1` no `server/.env` e **bloqueie a porta 3000 no Network Security Group (NSG)**, liberando apenas a porta 443.
 - **Login e configuração inicial não exigem o token CSRF** (não há sessão
   antes deles). Outra página não consegue enviá-los porque só aceitam JSON,
   que o navegador não manda para outra origem sem autorização (CORS), que o
   servidor não dá. Habilitar CORS no servidor abre esse caminho.
-- **Não há auditoria de leitura.** O `HistoricoService` registra quem *alterou*
-  o quê; não registra quem *consultou* — inclusive quem abriu a tela de Acessos.
-- **Backups do banco ficam em disco, sem criptografia**, em `server/data/backups/`.
-  Quem tem acesso ao sistema de arquivos do servidor tem os dados.
+- **Auditoria de leitura:** o `HistoricoService` registra alterações (incluindo diff de acessos remotos) e downloads de backup (`baixar_backup`), mas não registra quem *visualizou* um cadastro de cliente/acesso sem editar.
+- **Backups do banco ficam em disco sem criptografia própria da aplicação**, em `server/data/backups/` (ou no diretório definido por `DB_PATH`). Na Azure, habilite backup gerenciado (App Service Backup ou Azure Backup da VM) em cofre protegido por RBAC/MFA.
 
 ## Dependências
 

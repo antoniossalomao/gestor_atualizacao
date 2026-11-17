@@ -248,11 +248,12 @@ uma. As principais:
 | Variável | Para que serve |
 |---|---|
 | `PORT` | Porta em que o servidor escuta (padrão 3000). |
+| `HOST` | Interface de escuta com HTTPS ligado. Use `127.0.0.1` quando o proxy (Caddy) roda na mesma máquina/VM (impede acesso direto à porta 3000 pela rede). |
 | `DB_PATH` | Caminho do arquivo `gestao.db`. |
 | `SESSION_SECRET` | Texto usado para assinar o cookie de login. **Obrigatório:** o servidor não sobe sem ele nem com o valor de exemplo do `.env.example`. Use um valor longo e aleatório. |
-| `SESSION_SECURE` | `true` atrás do proxy HTTPS. No Docker vem fixo do `docker-compose.yml`; em desenvolvimento, deixe vazio. |
-| `AGENT_API_TOKEN` | Chave compartilhada com os agentes do Atualizador. Para trocar, ver "Rotacionar o token dos agentes" em `docs/OPERACAO.md`. |
-| `TRUST_PROXY` | `true` atrás do proxy HTTPS, junto com `SESSION_SECURE`. Mesmo caso: fixo no Docker, vazio em desenvolvimento. |
+| `SESSION_SECURE` | `true` atrás do proxy HTTPS. Em produção com Caddy local, ative junto com `TRUST_PROXY=true` e `HOST=127.0.0.1`; em desenvolvimento, deixe vazio. |
+| `AGENT_API_TOKEN` | Chave compartilhada com os agentes do Atualizador (o servidor recusa o valor de exemplo). Para trocar, ver "Rotacionar o token dos agentes" em `docs/OPERACAO.md`. |
+| `TRUST_PROXY` | `true` atrás do proxy HTTPS, junto com `SESSION_SECURE=true`. Com `HOST=127.0.0.1`, o Express confia apenas em `loopback`. |
 
 **Regras da equipe** (webhook do Discord, URL pública para os agentes, dias sem
 atualização até um cliente entrar na lista do Resumo, prazo depois da versão
@@ -539,9 +540,10 @@ DB_PATH=./data/gestao.db
 # Segredo de sessão (gerar com: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
 SESSION_SECRET=coloque-um-segredo-forte-e-aleatorio-aqui
 
-# No Windows nativo com Caddy local, ative ambos:
+# No Windows nativo / VM Azure com Caddy local, ative todos os três:
 SESSION_SECURE=true
 TRUST_PROXY=true
+HOST=127.0.0.1
 
 # Endereço HTTPS pelo qual a rede/agentes acessam o servidor:
 PUBLIC_URL=https://192.168.0.109
@@ -617,6 +619,42 @@ npm.cmd run install:all
 nssm start GestorApp
 ```
 *(As migrações de schema do SQLite rodam sozinhas na inicialização. Dê `Ctrl + F5` no navegador para atualizar o cache).*
+
+### 8. Implantação no Azure App Service (Instância Web / Web App)
+
+O sistema é compatível com uma **instância Web do Azure App Service** (Node.js 22 LTS em Linux ou Windows), sem precisar de Caddy (a própria Azure termina o TLS/HTTPS na borda):
+
+1. **Configurações de Aplicativo (*Environment variables / App Settings*):**
+   - `SESSION_SECURE=true`
+   - `TRUST_PROXY=true`
+   - `HOST=` *(deixe **vazio / não defina** `127.0.0.1` — diferente da VM com Caddy local, no App Service o roteador da Azure encaminha requisições de fora do loopback)*
+   - `SESSION_SECRET=<valor aleatório de 64 chars hex>`
+   - `AGENT_API_TOKEN=<token aleatório forte>`
+   - `DB_PATH=/home/data/gestao.db` *(Linux)* ou `D:\home\data\gestao.db` *(Windows)* — mantém o banco SQLite, as sessões e os backups **fora de `wwwroot`**, que é sobrescrito a cada deploy (sem `DB_PATH`, o `server.js` já assume automaticamente `$HOME/data/gestao.db` quando detecta `WEBSITE_SITE_NAME`).
+   - `SCM_DO_BUILD_DURING_DEPLOYMENT=true` (e garanta a instalação de `server/`, ex.: comando de startup/deploy executando `npm install --prefix server --omit=dev && npm start --prefix server`).
+
+2. **Trava obrigatória de instância única (*Scale Out = 1*):**
+   - Por usar SQLite (`gestao.db` e `sessions.sqlite`), mantenha o plano de Serviço de Aplicativo travado em **exatamente 1 instância** (*Manual Scale: Instance count = 1*, sem autoscale horizontal). Escalar para 2 ou mais instâncias simultâneas divide ou corrompe o arquivo SQLite.
+
+3. **Configurações de Segurança e Resiliência no Portal da Azure:**
+   - **HTTPS Only:** `On` (*Settings → Configuration / TLS/SSL settings*).
+   - **Minimum Inbound TLS Version:** `1.2` ou `1.3`.
+   - **FTP state:** `Disabled` (*Settings → Configuration → General settings*).
+   - **Networking → Access Restrictions:** restrinja o acesso público apenas aos IPs fixos do escritório/VPN (ou configure **Microsoft Entra ID / EasyAuth** na frente do Web App como camada extra de login corporativo antes da aplicação).
+   - **Health Check:** aponte para `/api/auth/status` (*Monitoring → Health check*).
+   - **Backups:** habilite **App Service Backup** (armazenando fora da instância) ou exporte periodicamente pela tela *Administração → Backups*.
+
+### 9. Implantação Segura na Azure (VM)
+
+Caso opte por uma **Máquina Virtual (VM) na Azure** (Windows Server com NSSM + Caddy, ou Ubuntu Linux com systemd + Caddy), o SQLite roda sobre o **Managed Disk SSD local** da própria VM:
+
+- **Isolamento de rede (NSG e `HOST=127.0.0.1`):**
+  - Defina `HOST=127.0.0.1`, `SESSION_SECURE=true` e `TRUST_PROXY=true` no `server/.env`. Assim o Node.js aceita tráfego apenas do Caddy na mesma máquina e confia somente em `loopback` para `X-Forwarded-*`.
+  - No **Network Security Group (NSG)** da Azure, libere entrada pública **apenas na porta 443 (HTTPS)** (preferencialmente restrita aos IPs fixos da empresa ou acessível apenas via VPN/WireGuard) e mantenha a porta `3000` bloqueada. Restrinja RDP (`3389`) ou SSH (`22`) via **Azure Bastion**, JIT (*Just-In-Time Access*) ou IP fixo administrativo.
+- **Certificado TLS no `proxy/Caddyfile`:**
+  - Com **domínio DNS público** (ex.: `painel.suaempresa.com.br`): remova `tls internal`, `default_sni` e `auto_https disable_redirects` do `proxy/Caddyfile` (e libere a porta `80` no NSG apenas para o desafio ACME/redirect) para o Caddy emitir e renovar automaticamente um certificado público válido via **Let's Encrypt**.
+  - Com **acesso exclusivo via VPN ou IP privado**: mantenha `tls internal` e distribua o `caddy-raiz.crt` conforme a seção 6 acima.
+- **Criptografia em repouso e backups:** mantenha a criptografia do Managed Disk da VM ativa na Azure (SSE / BitLocker no Windows) e habilite o **Azure Backup** periódico da VM (além das cópias automáticas em `server/data/backups/`).
 
 ## Limitações conhecidas
 

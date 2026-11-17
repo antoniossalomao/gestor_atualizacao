@@ -1,10 +1,11 @@
-# Proxy HTTPS na frente do painel (ADR-0010), usado pelo
-# docker-compose.yml. Passo a passo na seção "HTTPS" do README.
+# Proxy HTTPS na frente do painel (ADR-0010). Passo a passo na seção "HTTPS" do README.
 
 {
-	# Somente HTTPS (decisão de 29/09/2026): a porta 80 não é publicada, e
-	# o redirecionamento http:// -> https:// que o Caddy faria nela não serve
-	# para nada. Desligado para não deixar um ouvinte a mais no container.
+	# Somente HTTPS (decisão de 29/09/2026): em rede interna ou VM com acesso
+	# restrito pela 443, a porta 80 não é necessária.
+	# Nota para Azure com domínio público (Let's Encrypt): se quiser emitir
+	# certificado público automático pelo desafio HTTP-01 na porta 80, remova
+	# "auto_https disable_redirects" e a diretiva "tls internal" abaixo.
 	auto_https disable_redirects
 
 	# Quem acessa por https://IP, o navegador não diz o endereço ao pedir o
@@ -13,26 +14,20 @@
 	# mensagem útil -- descoberto na primeira subida em produção, 29/09/2026:
 	# pelo nome abria, pelo IP não. GESTOR_IP vem do web/.env; sem ele,
 	# "localhost" não casa com nenhum site, e o acesso por IP fica desligado.
+	# Em servidor com domínio público DNS (Let's Encrypt), remova esta linha.
 	default_sni {$GESTOR_IP:localhost}
 }
 
 # GESTOR_ENDERECO é o endereço pelo qual a equipe acessa, sem "https://":
-# um nome (gestoratualizacao), o IP da máquina (192.168.0.10), ou os dois
-# separados por vírgula ("gestoratualizacao, 192.168.0.10"). Vem do .env
-# da pasta web/ (o do compose, não o server/.env). É a URL canônica: o
-# certificado só vale para eles, então acessar por outro nome ou IP dá aviso
-# de certificado no navegador -- e é assim que deve ser. O nome precisa
-# existir no DNS da empresa ou no arquivo hosts de cada máquina (README).
+# um nome DNS (ex.: painel.suaempresa.com.br ou gestoratualizacao) ou o IP.
+# O certificado só vale para os endereços listados aqui.
 {$GESTOR_ENDERECO} {
-	# Certificado emitido pela autoridade PRÓPRIA do Caddy, gerada na primeira
-	# subida e guardada no volume caddy-data. Serve para IP e nome interno,
-	# que nenhuma autoridade pública assina, mas só vira "cadeado" sem aviso
-	# depois que o certificado-raiz for instalado nas máquinas da equipe
-	# (README, "HTTPS"). A raiz vale 10 anos; o certificado do site é
-	# renovado sozinho pelo Caddy, sem ninguém precisar lembrar.
+	# Em rede interna / VPN / acesso por IP privado, usa autoridade PRÓPRIA (tls internal).
+	# Em servidor na Azure com domínio público DNS real, comente/remova "tls internal"
+	# para o Caddy emitir e renovar certificado público Let's Encrypt automaticamente.
 	tls internal
 
-	# O Caddy já manda X-Forwarded-For e X-Forwarded-Proto por conta própria,
-	# que é do que o servidor precisa (TRUST_PROXY=true no docker-compose.yml).
-	reverse_proxy gestor:3000
+	# Por padrão encaminha para o Node rodando localmente na mesma máquina (127.0.0.1:3000),
+	# com HOST=127.0.0.1 no server/.env. Pode ser sobrescrito via GESTOR_UPSTREAM.
+	reverse_proxy {$GESTOR_UPSTREAM:127.0.0.1:3000}
 }

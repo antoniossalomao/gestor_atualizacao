@@ -85,7 +85,13 @@ Os dois somem sozinhos quando o servidor volta.
        nssm restart GestorApp
        ```
    - **GestorProxy/Caddy devolvendo 502 / MIME type vazio no navegador:**
-     Abra `C:\gestor\proxy\Caddyfile` e verifique se o proxy aponta para `127.0.0.1:3000` (Node local) e não para `gestor:3000` (que é o nome do container no Docker).
+     Abra `C:\gestor\proxy\Caddyfile` e verifique se o proxy aponta para `127.0.0.1:3000` (ou `{$GESTOR_UPSTREAM:127.0.0.1:3000}` com `HOST=127.0.0.1` no `server/.env`) e não para `gestor:3000`.
+   - **Em VM na Azure, o painel não abre pelo navegador externo:**
+     Confira se a porta `443` está liberada no **Network Security Group (NSG)** da Azure (para o IP da equipe ou VPN) e no Firewall do Windows da VM, enquanto a porta `3000` deve permanecer fechada externamente (acessada só em `127.0.0.1` pelo Caddy).
+   - **No Azure App Service (Instância Web), o painel retorna 403/502 ou perde dados após deploy:**
+     1. Confira se `HOST` **não** está definido como `127.0.0.1` (no App Service o roteador da Azure conecta fora do loopback — `HOST` deve ficar vazio).
+     2. Confira se `SESSION_SECURE=true` e `TRUST_PROXY=true` estão ativos nas *App Settings* (o servidor aceita tanto `X-Forwarded-Proto` quanto `X-ARR-SSL` do Windows App Service).
+     3. Confira se `DB_PATH` aponta para fora de `wwwroot` (`/home/data/gestao.db` ou `D:\home\data\gestao.db`) e se o plano está travado em **1 instância (`Scale Out = 1`)**.
 
 5. **Nome não encontrado** ("não foi possível encontrar o endereço IP do
    servidor"): o problema é o nome, não o painel. Confira o DNS da empresa ou

@@ -349,3 +349,158 @@ test("SESSION_SECRET - o servidor recusa subir com segredo ausente ou de exemplo
     }
   });
 });
+
+test("AGENT_API_TOKEN - exigirAgente recusa token ausente ou igual ao valor de exemplo", async (t) => {
+  const { exigirAgente, TOKEN_DE_EXEMPLO } = require("../src/middlewares/exigirAgente");
+
+  await t.test("a constante bate com o que o server/.env.example traz", () => {
+    const exemplo = fs.readFileSync(path.join(__dirname, "..", ".env.example"), "utf8");
+    assert.match(exemplo, new RegExp(`^AGENT_API_TOKEN=${TOKEN_DE_EXEMPLO}$`, "m"));
+  });
+
+  await t.test("recusa quando o servidor está com o token público de exemplo", () => {
+    let status = null;
+    let body = null;
+    let passou = false;
+    const req = {
+      app: { locals: { agentApiToken: TOKEN_DE_EXEMPLO } },
+      get: (h) => (h.toLowerCase() === "x-agent-token" ? TOKEN_DE_EXEMPLO : undefined),
+    };
+    const res = {
+      status(code) {
+        status = code;
+        return this;
+      },
+      json(data) {
+        body = data;
+      },
+    };
+    exigirAgente(req, res, () => {
+      passou = true;
+    });
+    assert.equal(passou, false);
+    assert.equal(status, 401);
+    assert.match(body.error, /não autenticado/i);
+  });
+
+  await t.test("aceita um token forte diferente do valor de exemplo", () => {
+    let passou = false;
+    const req = {
+      app: { locals: { agentApiToken: "token-forte-aleatorio-0123456789abcdef" } },
+      get: (h) => (h.toLowerCase() === "x-agent-token" ? "token-forte-aleatorio-0123456789abcdef" : undefined),
+    };
+    exigirAgente(req, { status: () => ({ json: () => {} }) }, () => {
+      passou = true;
+    });
+    assert.equal(passou, true);
+  });
+});
+
+test("AuthService - teto de 128 caracteres na senha", () => {
+  const env = criarAmbienteTeste();
+  try {
+    const { SENHA_MAX_LENGTH } = require("../src/services/AuthService");
+    assert.equal(SENHA_MAX_LENGTH, 128);
+    const longa = "a".repeat(129);
+    assert.throws(
+      () => env.auth.configurarAdmin({ nome: "Admin", usuario: "admin", senha: longa }),
+      /no máximo 128 caracteres/
+    );
+    const admin = env.auth.configurarAdmin({ nome: "Admin", usuario: "admin", senha: "senhaValida123" });
+    const op = env.auth.criarUsuario({ nome: "Op", usuario: "op", senha: "senhaValida123", role: "operador" }, admin);
+    assert.throws(() => env.auth.redefinirSenha(op.id, longa, admin), /no máximo 128 caracteres/);
+    assert.throws(() => env.auth.trocarSenha({ ...admin, usuario: "admin" }, "senhaValida123", longa), /no máximo 128 caracteres/);
+    assert.throws(() => env.auth.login("admin", longa), /Usuário ou senha inválidos/);
+  } finally {
+    env.cleanup();
+  }
+});
+
+test("Rotas HTTP sensíveis - RBAC de acessos, backups, histórico e Cache-Control", async () => {
+  const { Servidor } = require("../src/Servidor");
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gestor-rbac-http-"));
+  const server = new Servidor({
+    port: 0,
+    host: "127.0.0.1",
+    dbPath: path.join(tmpDir, "gestao.db"),
+    sessionSecret: "segredo-de-teste",
+    sessionSecure: false,
+    agentApiToken: "token-de-teste-seguro",
+  });
+  await server.start();
+  const base = `http://127.0.0.1:${server.httpServer.address().port}/api`;
+
+  try {
+    const tokens = new Map();
+    const pedir = async (caminho, { cookie, metodo = "GET", corpo } = {}) => {
+      const r = await fetch(`${base}${caminho}`, {
+        method: metodo,
+        headers: {
+          ...(corpo !== undefined ? { "content-type": "application/json" } : {}),
+          ...(cookie ? { cookie, "x-csrf-token": tokens.get(cookie) ?? "" } : {}),
+        },
+        body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
+      });
+      const novoCookie = r.headers.get("set-cookie")?.split(";")[0];
+      if (r.headers.get("x-csrf-token")) tokens.set(novoCookie || cookie, r.headers.get("x-csrf-token"));
+      return r;
+    };
+
+    const setup = await pedir("/auth/setup", {
+      metodo: "POST",
+      corpo: { nome: "Admin", usuario: "admin", senha: "senha-admin-123" },
+    });
+    assert.equal(setup.status, 201);
+    const adminCookie = setup.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+
+    await pedir("/usuarios", {
+      cookie: adminCookie,
+      metodo: "POST",
+      corpo: { nome: "Operador", usuario: "op", senha: "senha-op-12345", role: "operador" },
+    });
+    await pedir("/usuarios", {
+      cookie: adminCookie,
+      metodo: "POST",
+      corpo: { nome: "Consulta", usuario: "cons", senha: "senha-cons-1234", role: "consulta" },
+    });
+
+    const loginComo = async (usuario, senha) => {
+      const r = await pedir("/auth/login", { metodo: "POST", corpo: { usuario, senha } });
+      assert.equal(r.status, 200);
+      return r.headers.getSetCookie().map((c) => c.split(";")[0]).join("; ");
+    };
+    const opCookie = await loginComo("op", "senha-op-12345");
+    const consCookie = await loginComo("cons", "senha-cons-1234");
+
+    const cliResp = await pedir("/clientes", {
+      cookie: adminCookie,
+      metodo: "POST",
+      corpo: { nome: "Cliente Teste" },
+    });
+    assert.equal(cliResp.status, 201);
+    const clienteId = (await cliResp.json()).id;
+
+    // Consulta não pode ler acessos remotos, backups nem histórico
+    const acCons = await pedir(`/clientes/${clienteId}/acessos`, { cookie: consCookie });
+    assert.equal(acCons.status, 403);
+    assert.equal(acCons.headers.get("cache-control"), "no-store");
+    assert.equal((await pedir("/backups", { cookie: consCookie })).status, 403);
+    assert.equal((await pedir("/historico", { cookie: consCookie })).status, 403);
+
+    // Operador lê acessos remotos, mas não lista backups nem histórico
+    const acOp = await pedir(`/clientes/${clienteId}/acessos`, { cookie: opCookie });
+    assert.equal(acOp.status, 200);
+    assert.equal(acOp.headers.get("cache-control"), "no-store");
+    assert.equal((await pedir("/backups", { cookie: opCookie })).status, 403);
+    assert.equal((await pedir("/historico", { cookie: opCookie })).status, 403);
+
+    // Admin acessa todos
+    assert.equal((await pedir(`/clientes/${clienteId}/acessos`, { cookie: adminCookie })).status, 200);
+    assert.equal((await pedir("/backups", { cookie: adminCookie })).status, 200);
+    assert.equal((await pedir("/historico", { cookie: adminCookie })).status, 200);
+  } finally {
+    await server.stop().catch(() => {});
+    server.db.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});

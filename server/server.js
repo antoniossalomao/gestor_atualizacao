@@ -39,10 +39,22 @@ if (transporte.problemas.length) {
   process.exit(1);
 }
 
+// Azure App Service (Windows/iisnode) injeta PORT como named pipe (\\.\pipe\...),
+// enquanto Linux Web App e desenvolvimento usam número TCP (ex.: 8080 ou 3000).
+const portaBruta = String(process.env.PORT || "").trim();
+const port = portaBruta.startsWith("\\\\.\\pipe\\") ? portaBruta : Number(portaBruta) || 3000;
+
+// No Azure App Service, a pasta da aplicação (wwwroot) é sobrescrita a cada
+// deploy; sem DB_PATH explícito, grava em $HOME/data/gestao.db fora de wwwroot.
+const dbPathPadrao =
+  process.env.WEBSITE_SITE_NAME && process.env.HOME
+    ? path.resolve(process.env.HOME, "data", "gestao.db")
+    : "./data/gestao.db";
+
 const config = {
-  port: Number(process.env.PORT) || 3000,
+  port,
   host: transporte.config.host,
-  dbPath: path.resolve(__dirname, process.env.DB_PATH || "./data/gestao.db"),
+  dbPath: path.resolve(__dirname, process.env.DB_PATH || dbPathPadrao),
   sessionSecret: String(process.env.SESSION_SECRET),
   sessionSecure: transporte.config.sessionSecure,
   agentApiToken: process.env.AGENT_API_TOKEN || "",
@@ -67,7 +79,7 @@ server.start().then(() => {
   // não conhece; o que ele sabe dizer é onde o proxy deve encaminhar. Sem
   // HTTPS, avisa que a rede não alcança -- quem acessava por http://IP:3000
   // antes do P01 acha aqui por que parou.
-  const local = `http://${config.host || "localhost"}:${config.port}`;
+  const local = typeof config.port === "string" ? config.port : `http://${config.host || "localhost"}:${config.port}`;
   if (config.sessionSecure) console.log(`Gestor de Atualizações rodando em ${local}, só para o proxy HTTPS`);
   else console.log(`Gestor de Atualizações rodando em ${local} (HTTP só nesta máquina; para a rede, ver "HTTPS" no README)`);
   console.log(`Banco de dados: ${config.dbPath}`);

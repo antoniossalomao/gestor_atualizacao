@@ -3,12 +3,11 @@ import { TabelaOrdenavel } from "../components/TabelaOrdenavel.js";
 import { Paginacao } from "../components/Paginacao.js";
 import { aguardarPausa } from "../utils/aguardarPausa.js";
 import { estadoVazio } from "../components/estadoVazio.js";
-import { plural } from "../utils/html.js";
+import { plural, html } from "../utils/html.js";
 import { tempoRelativo, formatarDataHora } from "../utils/data.js";
 import { prefs } from "../app/preferencias.js";
 import { aparencia } from "../app/aparencia.js";
 import { Modal } from "../components/Modal.js";
-import { escaparHtml } from "../utils/html.js";
 
 const ACAO_LABEL = {
   criar: "Criou",
@@ -17,6 +16,7 @@ const ACAO_LABEL = {
   marcar_concluida: "Concluiu",
   publicar: "Publicou",
   restaurar_backup: "Restaurou backup",
+  baixar_backup: "Baixou backup",
 };
 
 const ENTIDADE_LABEL = {
@@ -52,7 +52,7 @@ export class HistoricoView extends View {
   }
 
   _montarDom() {
-    this.container.innerHTML = `
+    this.container.innerHTML = html`
       <div class="card">
         <div class="toolbar">
           <div class="field">
@@ -63,7 +63,7 @@ export class HistoricoView extends View {
             <label class="field__label" for="his-tipo">Tipo</label>
             <select class="input" id="his-tipo" data-role="entidade-filter">
               <option value="Todos">Todos</option>
-              ${ENTIDADES.map((e) => `<option value="${e}">${ENTIDADE_LABEL[e]}</option>`).join("")}
+              ${ENTIDADES.map((e) => html`<option value="${e}">${ENTIDADE_LABEL[e]}</option>`)}
             </select>
           </div>
           <div class="toolbar__clear">
@@ -75,7 +75,7 @@ export class HistoricoView extends View {
         <div data-role="table"></div>
         <div data-role="pagination"></div>
       </div>
-    `;
+    `.toString();
 
     this.table = new TabelaOrdenavel(this.container.querySelector('[data-role="table"]'), {
       columns: [
@@ -256,9 +256,9 @@ export class HistoricoView extends View {
     const linhas = chaves.filter((chave) => JSON.stringify(antes[chave] ?? null) !== JSON.stringify(depois[chave] ?? null));
     const { box, close } = Modal.abrirCaixa({ largura: 680 });
     if (this.container.closest("#painel-administracao")) box.classList.add("admin-auditoria-detalhe");
-    box.innerHTML = `<h3 class="modal-box__title">Antes × Depois</h3><p class="modal-box__message">${escaparHtml(row.descricao)}</p>
-      <div class="audit-diff">${linhas.length ? linhas.map((chave) => `<div class="audit-diff__row"><strong>${escaparHtml(rotuloCampo(chave))}</strong><del>${escaparHtml(valorDiff(antes[chave]))}</del><span aria-hidden="true">→</span><ins>${escaparHtml(valorDiff(depois[chave]))}</ins></div>`).join("") : "<p>Nenhum campo comparável foi alterado.</p>"}</div>
-      <div class="modal-box__actions"><button type="button" class="btn btn--accent" data-action="fechar">Fechar</button></div>`;
+    box.innerHTML = html`<h3 class="modal-box__title">Antes × Depois</h3><p class="modal-box__message">${row.descricao}</p>
+      <div class="audit-diff">${linhas.length ? linhas.map((chave) => html`<div class="audit-diff__row"><strong>${rotuloCampo(chave)}</strong><del>${valorDiff(antes[chave])}</del><span aria-hidden="true">→</span><ins>${valorDiff(depois[chave])}</ins></div>`) : html`<p>Nenhum campo comparável foi alterado.</p>`}</div>
+      <div class="modal-box__actions"><button type="button" class="btn btn--accent" data-action="fechar">Fechar</button></div>`.toString();
     box.querySelector('[data-action="fechar"]').addEventListener("click", close);
   }
 

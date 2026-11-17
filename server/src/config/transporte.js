@@ -69,7 +69,15 @@ function lerTransporte(env) {
     );
   }
 
-  return { config: { sessionSecure, trustProxy, host: sessionSecure ? undefined : HOST_SO_LOCAL }, problemas };
+  let host = HOST_SO_LOCAL;
+  if (sessionSecure) {
+    const hostEnv = String(env.HOST ?? "").trim().toLowerCase();
+    if (hostEnv === "" || hostEnv === "0.0.0.0") host = undefined;
+    else if (hostEnv === "127.0.0.1" || hostEnv === "localhost") host = HOST_SO_LOCAL;
+    else problemas.push(`HOST="${env.HOST}" não é válido. Use 127.0.0.1 (proxy na mesma máquina) ou deixe vazio.`);
+  }
+
+  return { config: { sessionSecure, trustProxy, host }, problemas };
 }
 
 module.exports = { lerTransporte };

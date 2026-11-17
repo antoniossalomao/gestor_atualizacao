@@ -94,6 +94,34 @@ test("LimitadorDeLogin - o bloqueio é por IP + usuário", async (t) => {
     assert.equal(chamar(limiter, { ip: "10.0.0.2", usuario: "camila" }).passou, true);
   });
 
+  await t.test("variações de espaço e maiúsculas/minúsculas contam na mesma chave", () => {
+    const limiter = new LimitadorDeLogin({ maxTentativas: 3, maxPorIp: 20, maxPorUsuario: 20, janelaMs: 60_000 });
+    assert.equal(chamar(limiter, { usuario: "camila" }).passou, true);
+    assert.equal(chamar(limiter, { usuario: " CAMILA " }).passou, true);
+    assert.equal(chamar(limiter, { usuario: "  camila" }).passou, true);
+    assert.equal(chamar(limiter, { usuario: "Camila" }).status, 429);
+  });
+
+  await t.test("força bruta distribuída de vários IPs é barrada pelo limite global por usuário", () => {
+    const limiter = new LimitadorDeLogin({ maxTentativas: 10, maxPorIp: 30, maxPorUsuario: 3, janelaMs: 60_000 });
+    assert.equal(chamar(limiter, { ip: "10.0.0.1", usuario: "admin" }).passou, true);
+    assert.equal(chamar(limiter, { ip: "10.0.0.2", usuario: "admin" }).passou, true);
+    assert.equal(chamar(limiter, { ip: "10.0.0.3", usuario: "admin" }).passou, true);
+    assert.equal(chamar(limiter, { ip: "10.0.0.4", usuario: "admin" }).status, 429);
+    assert.equal(chamar(limiter, { ip: "10.0.0.4", usuario: "outro" }).passou, true, "outro usuário segue liberado");
+  });
+
+  await t.test("IPs vindos com porta TCP (Azure App Service) contam na mesma chave", () => {
+    const limiter = new LimitadorDeLogin({ maxTentativas: 2, maxPorIp: 20, maxPorUsuario: 20, janelaMs: 60_000 });
+    assert.equal(chamar(limiter, { ip: "203.0.113.10:54321", usuario: "camila" }).passou, true);
+    assert.equal(chamar(limiter, { ip: "203.0.113.10:54322", usuario: "camila" }).passou, true);
+    assert.equal(chamar(limiter, { ip: "203.0.113.10:54323", usuario: "camila" }).status, 429);
+
+    assert.equal(chamar(limiter, { ip: "[2001:db8::1]:54321", usuario: "marcos" }).passou, true);
+    assert.equal(chamar(limiter, { ip: "[2001:db8::1]:54322", usuario: "marcos" }).passou, true);
+    assert.equal(chamar(limiter, { ip: "[2001:db8::1]:54323", usuario: "marcos" }).status, 429);
+  });
+
   await t.test("requisição sem corpo não derruba o middleware", () => {
     // `/auth/login` sem JSON, ou com corpo vazio, é o que uma varredura
     // automatizada manda primeiro. Tem que ser tratado como tentativa, não

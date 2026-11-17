@@ -38,6 +38,12 @@ class BackupService {
     return this.db.criarCopiaTemporaria();
   }
 
+  /** Registra na Auditoria o download de uma cópia do banco (contém dados sensíveis). */
+  registrarDownload(arquivo, usuario) {
+    if (!usuario) return;
+    this.historico?.registrar(usuario, "baixar_backup", "backup", `Download de backup (${arquivo})`);
+  }
+
   /**
    * Uma cópia agora, pedida pela tela -- antes de mexer em muita coisa (uma
    * importação grande, uma reclassificação de sistemas), quando a última

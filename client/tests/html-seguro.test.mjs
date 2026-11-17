@@ -25,8 +25,6 @@ const TETO = {
   "views/VersoesView.js": 9,
   "views/DistribuicaoView.js": 5,
   "app/App.js": 4,
-  "views/AcessosModal.js": 3,
-  "views/HistoricoView.js": 2,
   "views/AgenteDetalheModal.js": 2,
   "views/SistemasView.js": 1,
   "components/Paginacao.js": 1,

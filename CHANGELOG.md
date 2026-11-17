@@ -15,6 +15,17 @@ Para o agente C#, o equivalente é
 
 ### Novembro de 2026
 
+- **Adaptação para Azure App Service (Instância Web) (17/11/2026):**
+  - *IP e cabeçalhos do balanceador Azure:* criada função `extrairIpCliente` em `LimitadorDeLogin.js` para remover a porta TCP anexada em `X-Forwarded-For` (`IPv4:porta` / `[IPv6]:porta`), aplicada também no `keyGenerator` (`ipKeyGenerator`) dos limitadores `express-rate-limit` em `routes/index.js` (evitando `ERR_ERL_INVALID_IP_ADDRESS`). `Servidor.js` normaliza `X-ARR-SSL` do Azure App Service Windows para `X-Forwarded-Proto: https` quando `trustProxy` está ativo.
+  - *Runtime e persistência no App Service:* `server/server.js` passa a aceitar named pipes (`\\.\pipe\...`) em `PORT` (Windows/iisnode) e assume `$HOME/data/gestao.db` (fora de `wwwroot`) por padrão quando `WEBSITE_SITE_NAME` está definido sem `DB_PATH` explícito; `BancoDeDados.js` passa a aplicar `PRAGMA busy_timeout = 5000`.
+  - *Documentação:* guia específico para **Azure App Service (Instância Web)** em `README.md`, `SECURITY.md` e `docs/OPERACAO.md` (*App Settings*, `HOST` vazio, `Scale Out = 1`, *HTTPS Only*, *Access Restrictions* e *Microsoft Entra ID*).
+
+- **Auditoria de Segurança e Guia de Hospedagem Segura na Azure (17/11/2026):**
+  - *Autenticação e força bruta:* `AuthService.login()` agora executa comparação `bcrypt` em tempo constante mesmo quando o usuário não existe (evitando oráculo de enumeração de contas), e o sistema impõe teto de 128 caracteres nas senhas (`SENHA_MAX_LENGTH`). O `LimitadorDeLogin` normaliza usuário (`trim().toLowerCase()`), aplica limite global por conta entre múltiplos IPs (`maxPorUsuario`), protege também `PUT /api/usuarios/me/senha`, e as rotas `/api/update/*` receberam rate limit dedicado além de recusa explícita ao `TOKEN_DE_EXEMPLO` em `exigirAgente`.
+  - *RBAC, privacidade e auditoria:* `GET /api/clientes/:id/acessos` restrito a `operador` e `admin` (também ocultado para `consulta` na `FichaClienteModal`), `GET /api/backups` e `GET /api/historico` restritos a `admin`, cabeçalho `Cache-Control: no-store` em toda a API, auditoria `{ antes, depois }` nas operações de acessos remotos e registro de downloads de backup (`baixar_backup`).
+  - *Sessão, proxy e XSS:* `ArmazemDeSessaoSqlite` limpa sessões expiradas periodicamente a cada 1 hora; `AuthController.logout` passa `httpOnly`/`secure`/`sameSite` no `clearCookie`; `lerTransporte` suporta `HOST=127.0.0.1` com `SESSION_SECURE=true` restringindo `trust proxy` para `"loopback"`; `proxy/Caddyfile` atualizado para `127.0.0.1:3000`; `AcessosModal.js` e `HistoricoView.js` migrados para a tag segura `html`.
+  - *Azure:* documentado no `README.md`, `SECURITY.md` e `docs/OPERACAO.md` o modelo suportado (Azure VM + Managed Disk SSD local para SQLite WAL, NSG restrito à porta 443, `HOST=127.0.0.1`, Let's Encrypt ou `tls internal` e Azure Backup).
+
 - **Documentação de Implantação e Atualização em Produção (Windows Nativo / NSSM) (16/11/2026):**
   - Adicionado guia completo no `README.md` e `docs/OPERACAO.md` para hospedagem em Máquinas Virtuais (VMs) na nuvem ou ambientes sem suporte a virtualização aninhada (*Nested virtualization is not available* no Docker Desktop).
   - Arquitetura nativa documentada com Node.js local (porta `3000`) e Caddy Server nativo para HTTPS (porta `443`), gerenciados via NSSM como serviços Windows automáticos (`GestorApp` e `GestorProxy`).

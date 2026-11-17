@@ -21,18 +21,23 @@
  * última tentativa já saiu da janela.
  */
 class LimitadorDeLogin {
-  /** @param {{maxTentativas?: number, maxPorIp?: number, janelaMs?: number}} opcoes */
-  constructor({ maxTentativas = 10, maxPorIp = 30, janelaMs = 10 * 60 * 1000 } = {}) {
+  /** @param {{maxTentativas?: number, maxPorIp?: number, maxPorUsuario?: number, janelaMs?: number}} opcoes */
+  constructor({ maxTentativas = 10, maxPorIp = 30, maxPorUsuario = 30, janelaMs = 10 * 60 * 1000 } = {}) {
     this.maxTentativas = maxTentativas;
     // Teto por IP, somando TODOS os usuários: sem ele, quem testa uma senha
     // em cada um de muitos nomes de usuário nunca bate no limite por
     // IP+usuário (password spraying).
     this.maxPorIp = maxPorIp;
+    // Teto por usuário, somando TODOS os IPs: impede força bruta distribuída
+    // contra uma mesma conta a partir de vários endereços.
+    this.maxPorUsuario = maxPorUsuario;
     this.janelaMs = janelaMs;
     /** @type {Map<string, number[]>} chave (IP+usuário) -> horários das tentativas recentes */
     this.tentativas = new Map();
     /** @type {Map<string, number[]>} IP -> horários das tentativas recentes (qualquer usuário) */
     this.tentativasPorIp = new Map();
+    /** @type {Map<string, number[]>} usuário normalizado -> horários das tentativas recentes (qualquer IP) */
+    this.tentativasPorUsuario = new Map();
 
     // Uma faxina por janela é suficiente (não precisa ser mais frequente que
     // o próprio período que decide "essa tentativa ainda conta"). "unref":
@@ -44,15 +49,33 @@ class LimitadorDeLogin {
 
   /** Middleware Express: chame `.middleware` diretamente em `app.use`/`router.post`. */
   middleware = (req, res, next) => {
-    const usuario = (req.body && req.body.usuario) || "";
-    const ip = req.ip;
+    const usuarioBruto =
+      req.body && typeof req.body.usuario === "string"
+        ? req.body.usuario
+        : typeof req.session?.user?.usuario === "string"
+          ? req.session.user.usuario
+          : "";
+    const usuario = usuarioBruto.trim().toLowerCase();
+    const ip = extrairIpCliente(req.ip);
     const chave = `${ip}:${usuario}`;
     const agora = Date.now();
 
     const recentesIp = (this.tentativasPorIp.get(ip) || []).filter((t) => agora - t < this.janelaMs);
     const recentes = (this.tentativas.get(chave) || []).filter((t) => agora - t < this.janelaMs);
-    if (recentes.length >= this.maxTentativas || recentesIp.length >= this.maxPorIp) {
-      const maisAntiga = recentes.length >= this.maxTentativas ? recentes[0] : recentesIp[0];
+    const recentesUsuario = usuario
+      ? (this.tentativasPorUsuario.get(usuario) || []).filter((t) => agora - t < this.janelaMs)
+      : [];
+    if (
+      recentes.length >= this.maxTentativas ||
+      recentesIp.length >= this.maxPorIp ||
+      (usuario && recentesUsuario.length >= this.maxPorUsuario)
+    ) {
+      const maisAntiga =
+        recentes.length >= this.maxTentativas
+          ? recentes[0]
+          : recentesIp.length >= this.maxPorIp
+            ? recentesIp[0]
+            : recentesUsuario[0];
       res.set?.("Retry-After", String(Math.max(1, Math.ceil((maisAntiga + this.janelaMs - agora) / 1000))));
       res.status(429).json({ error: "Muitas tentativas seguidas. Aguarde alguns minutos e tente novamente." });
       return;
@@ -61,13 +84,17 @@ class LimitadorDeLogin {
     recentesIp.push(agora);
     this.tentativas.set(chave, recentes);
     this.tentativasPorIp.set(ip, recentesIp);
+    if (usuario) {
+      recentesUsuario.push(agora);
+      this.tentativasPorUsuario.set(usuario, recentesUsuario);
+    }
     next();
   };
 
   /** Remove chaves cujas tentativas já saíram todas da janela. */
   _faxina() {
     const agora = Date.now();
-    for (const mapa of [this.tentativas, this.tentativasPorIp]) {
+    for (const mapa of [this.tentativas, this.tentativasPorIp, this.tentativasPorUsuario]) {
       for (const [chave, tentativas] of mapa) {
         if (!tentativas.some((t) => agora - t < this.janelaMs)) mapa.delete(chave);
       }
@@ -75,4 +102,19 @@ class LimitadorDeLogin {
   }
 }
 
-module.exports = { LimitadorDeLogin };
+/**
+ * Remove eventual porta TCP anexada ao IP pelo balanceador (ex.: X-Forwarded-For
+ * no formato "203.0.113.10:54321" ou "[2001:db8::1]:54321" do Azure App Service).
+ * @param {string|undefined} ip
+ * @returns {string}
+ */
+function extrairIpCliente(ip) {
+  const texto = String(ip ?? "").trim();
+  const ipv4ComPorta = /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/.exec(texto);
+  if (ipv4ComPorta) return ipv4ComPorta[1];
+  const ipv6ComPorta = /^\[([^\]]+)\]:\d+$/.exec(texto);
+  if (ipv6ComPorta) return ipv6ComPorta[1];
+  return texto;
+}
+
+module.exports = { LimitadorDeLogin, extrairIpCliente };

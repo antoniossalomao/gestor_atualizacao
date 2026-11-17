@@ -1,8 +1,8 @@
 import { ErroApi } from "../api/ApiPainel.js";
 import { Modal } from "../components/Modal.js";
 import { avisoRapido } from "../components/AvisosRapidos.js";
-import { iconeSvg } from "../utils/icones.js";
-import { escaparHtml } from "../utils/html.js";
+import { iconeSvg, iconeHtml } from "../utils/icones.js";
+import { html } from "../utils/html.js";
 import { copiarParaAreaDeTransferencia } from "../components/areaDeTransferencia.js";
 import { marcarOcupado } from "../components/botaoOcupado.js";
 import { estadoVazio } from "../components/estadoVazio.js";
@@ -27,12 +27,12 @@ export class AcessosModal {
     this.box = box;
     this.close = close;
 
-    box.innerHTML = `
-      <h3 class="modal-box__title" id="acessos-titulo">Acessos — ${escaparHtml(this.cliente.nome)}</h3>
+    box.innerHTML = html`
+      <h3 class="modal-box__title" id="acessos-titulo">Acessos — ${this.cliente.nome}</h3>
       <p class="modal-box__message">AnyDesk e Suporte Bredas de cada máquina deste cliente.</p>
       <div class="users-list" data-role="list"></div>
       <button type="button" class="btn btn--small" data-action="toggle-form" aria-expanded="false" aria-controls="nova-maquina">
-        ${iconeSvg("plus")} Nova Máquina
+        ${iconeHtml("plus")} Nova Máquina
       </button>
       <form class="users-new" id="nova-maquina" data-role="form" hidden>
         <div class="form-grid form-grid--2">
@@ -49,7 +49,7 @@ export class AcessosModal {
       <div class="modal-box__actions">
         <button type="button" class="btn" data-action="close">Fechar</button>
       </div>
-    `;
+    `.toString();
     box.setAttribute("aria-labelledby", "acessos-titulo");
 
     box.querySelector('[data-action="close"]').addEventListener("click", () => close());
@@ -190,7 +190,7 @@ export class AcessosModal {
     this.salvarBtn.textContent = "Salvar Máquina";
     this.cancelarEdicaoBtn.hidden = false;
     this.toggleBtn.textContent = "";
-    this.toggleBtn.innerHTML = `${iconeSvg("minus")} Nova Máquina`;
+    this.toggleBtn.innerHTML = html`${iconeHtml("minus")} Nova Máquina`.toString();
     this._alternarFormulario(true);
     this._marcarEdicao();
   }
@@ -207,7 +207,7 @@ export class AcessosModal {
     for (const input of Object.values(this.fields)) input.value = "";
     this.salvarBtn.textContent = "Adicionar Máquina";
     this.cancelarEdicaoBtn.hidden = true;
-    this.toggleBtn.innerHTML = `${iconeSvg("plus")} Nova Máquina`;
+    this.toggleBtn.innerHTML = html`${iconeHtml("plus")} Nova Máquina`.toString();
     this._alternarFormulario(false);
     this.toggleBtn.focus();
     this._marcarEdicao();

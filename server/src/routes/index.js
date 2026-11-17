@@ -1,6 +1,6 @@
 const express = require("express");
 const multer = require("multer");
-const { rateLimit } = require("express-rate-limit");
+const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
 const fs = require("fs");
 const path = require("path");
 
@@ -9,6 +9,7 @@ const { exigirPapel } = require("../middlewares/exigirPapel");
 const { exigirAgente } = require("../middlewares/exigirAgente");
 const { exigirAtualizadorHabilitado } = require("../middlewares/exigirAtualizadorHabilitado");
 const { protecaoCsrf } = require("../middlewares/protecaoCsrf");
+const { extrairIpCliente } = require("../middlewares/LimitadorDeLogin");
 const { LIMITE_UPLOAD_MB, LIMITE_ROTAS_DE_BACKUP } = require("../config/constantes");
 const { ErroDeValidacao } = require("../shared/erros");
 
@@ -71,12 +72,28 @@ class ApiRouter {
     // daquele é específica do login, e o CodeQL (js/missing-rate-limiting) só
     // reconhece limitadores de bibliotecas conhecidas -- com um caseiro, o
     // alerta continuaria aberto em toda PR que tocasse nestas linhas.
+    const keyGenerator = (req) => ipKeyGenerator(extrairIpCliente(req.ip || "127.0.0.1") || "127.0.0.1");
     this.limitadorDeBackup = rateLimit({
       windowMs: LIMITE_ROTAS_DE_BACKUP.janelaMs,
       limit: LIMITE_ROTAS_DE_BACKUP.maxPedidos,
+      keyGenerator,
       standardHeaders: "draft-8",
       legacyHeaders: false,
       message: { error: "Muitos pedidos de backup seguidos. Aguarde alguns minutos e tente novamente." },
+    });
+    this.limitadorDeAgente = rateLimit({
+      windowMs: 60 * 1000,
+      limit: 120,
+      keyGenerator,
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+      message: { error: "Muitas requisições de agente seguidas. Aguarde um instante." },
+    });
+    // Evita cache de respostas da API (dados de clientes, acessos e auditoria)
+    // em disco no navegador ou em proxies intermediários.
+    this.router.use((_req, res, next) => {
+      res.set("Cache-Control", "no-store");
+      next();
     });
     // Antes de qualquer rota, inclusive dos uploads: uma escrita recusada
     // não pode deixar nem o arquivo gravado pelo multer. Ver protecaoCsrf.js.
@@ -97,7 +114,7 @@ class ApiRouter {
     // enquanto o Atualizador estiver desativado em Configurações, bloqueadas
     // também aqui -- ver exigirAtualizadorHabilitado).
     const agent = express.Router();
-    agent.use("/update", exigirAgente, exigirAtualizadorHabilitado(this.configuracaoSistemaService));
+    agent.use("/update", this.limitadorDeAgente, exigirAgente, exigirAtualizadorHabilitado(this.configuracaoSistemaService));
     agent.get("/update/check/:cnpj", this.controllers.versoes.check);
     agent.post("/update/log", this.controllers.versoes.log);
     agent.get("/update/packages/:filename", this.controllers.versoes.download);
@@ -158,7 +175,7 @@ class ApiRouter {
     api.put("/clientes/:id", exigirPapel("operador", "admin"), clientes.update);
     api.delete("/clientes/:id", exigirPapel("operador", "admin"), clientes.remove);
 
-    api.get("/clientes/:id/acessos", clientes.listarAcessos);
+    api.get("/clientes/:id/acessos", exigirPapel("operador", "admin"), clientes.listarAcessos);
     api.post("/clientes/:id/acessos", exigirPapel("operador", "admin"), clientes.adicionarAcesso);
     api.put("/clientes/acessos/:acessoId", exigirPapel("operador", "admin"), clientes.alterarAcesso);
     api.delete("/clientes/acessos/:acessoId", exigirPapel("operador", "admin"), clientes.removerAcesso);
@@ -219,10 +236,10 @@ class ApiRouter {
 
     // Resumo e Histórico
     api.get("/resumo", resumo.get);
-    api.get("/historico", historico.list);
+    api.get("/historico", exigirPapel("admin"), historico.list);
 
-    // Backups: listagem para usuários autorizados, download e restore exclusivos do Admin
-    api.get("/backups", backups.list);
+    // Backups: listagem, download e restore exclusivos do Admin
+    api.get("/backups", exigirPapel("admin"), backups.list);
     api.post("/backups", this.limitadorDeBackup, exigirPapel("admin"), backups.criar);
     api.get("/backups/atual/download", this.limitadorDeBackup, exigirPapel("admin"), backups.downloadCurrent);
     api.get("/backups/:arquivo/download", this.limitadorDeBackup, exigirPapel("admin"), backups.download);
@@ -240,7 +257,7 @@ class ApiRouter {
     api.delete("/usuarios/me/sessoes/:id", usuarios.encerrarSessao);
     api.post("/usuarios", exigirPapel("admin"), usuarios.create);
     api.put("/usuarios/:id", exigirPapel("admin"), usuarios.update);
-    api.put("/usuarios/me/senha", usuarios.changeOwnPassword);
+    api.put("/usuarios/me/senha", this.loginLimiter.middleware, usuarios.changeOwnPassword);
     api.delete("/usuarios/:id", exigirPapel("admin"), usuarios.remove);
     // Ações do administrador sobre OUTRA conta. Depois das rotas de "me"
     // de propósito, como as outras com ":id".

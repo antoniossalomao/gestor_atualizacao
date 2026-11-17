@@ -55,6 +55,7 @@ class BancoDeDados {
     // consulta -- necessario porque o painel e usado por varias pessoas ao
     // mesmo tempo.
     this.conn.pragma("journal_mode = WAL");
+    this.conn.pragma("busy_timeout = 5000");
     this.conn.pragma("foreign_keys = ON");
     // Busca sem diferenciar caixa ou acentos nas queries SQLite (`instr(sem_acento(...), ...)`).
     this.conn.function("sem_acento", { deterministic: true }, normalizarTextoBusca);

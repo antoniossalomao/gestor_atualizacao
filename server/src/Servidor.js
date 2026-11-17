@@ -122,7 +122,7 @@ class Servidor {
     const s = this.services;
     this.controllers = {
       eventos: new EventosController(s.eventos),
-      auth: new AuthController(s.auth, s.configuracaoSistema),
+      auth: new AuthController(s.auth, s.configuracaoSistema, { sessionSecure: Boolean(this.config.sessionSecure) }),
       clientes: new ClientesController(s.clientes),
       sistemas: new SistemasController(s.clientes),
       atualizacoes: new AtualizacoesController(s.atualizacoes),
@@ -185,7 +185,21 @@ class Servidor {
     // burlar o rate limiter do login. Confiar em "um salto, seja quem for"
     // só é seguro porque, no docker-compose.yml, a porta do Node não é
     // publicada: o único que alcança o Node é o proxy.
-    this.app.set("trust proxy", this.config.trustProxy ? 1 : false);
+    // Quando o proxy (Caddy) roda na mesma máquina (HOST=127.0.0.1), confiar
+    // apenas em loopback impede que qualquer conexão direta forje X-Forwarded-*.
+    this.app.set("trust proxy", this.config.trustProxy ? (this.config.host === "127.0.0.1" ? "loopback" : 1) : false);
+    if (this.config.trustProxy) {
+      // No Azure App Service (Windows ARR), o balanceador envia X-ARR-SSL em
+      // requisições HTTPS sem preencher X-Forwarded-Proto. Normalizamos antes
+      // do helmet/exigirHttps/express-session para que o cookie Secure e a
+      // exigência de HTTPS funcionem normalmente na instância Web.
+      this.app.use((req, _res, next) => {
+        if (!req.headers["x-forwarded-proto"] && req.headers["x-arr-ssl"]) {
+          req.headers["x-forwarded-proto"] = "https";
+        }
+        next();
+      });
+    }
   }
 
   _aplicarCabecalhosDeSeguranca() {

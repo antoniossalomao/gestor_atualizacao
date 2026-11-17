@@ -2,6 +2,7 @@ const Sqlite3 = require("better-sqlite3");
 const session = require("express-session");
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
+const UMA_HORA_MS = 60 * 60 * 1000;
 
 /**
  * Guarda as sessoes de login num arquivo SQLite proprio (sessions.sqlite,
@@ -46,6 +47,9 @@ class ArmazemDeSessaoSqlite extends session.Store {
     // Limpa sessoes ja expiradas de execucoes anteriores do servidor, para
     // o arquivo nao crescer para sempre com "lixo" de sessoes vencidas.
     this._limparExpiradas();
+    // Faxina periódica em servidores de longa duração (ex.: VM na Azure).
+    this._timer = setInterval(() => this._limparExpiradas(), UMA_HORA_MS);
+    this._timer.unref?.();
   }
 
   /** Le a sessao gravada para `sid`; devolve null se nao existir ou ja tiver expirado. */
@@ -159,6 +163,7 @@ class ArmazemDeSessaoSqlite extends session.Store {
    * com EBUSY (foi exatamente assim que a falta deste metodo apareceu).
    */
   close() {
+    clearInterval(this._timer);
     try {
       this.conn.close();
     } catch {

@@ -6,6 +6,14 @@ const { textoDoCampo } = require("./validacao");
 
 const SALT_ROUNDS = 10;
 const SENHA_MIN_LENGTH = 8;
+/** Teto para evitar bloqueio do event loop no bcrypt e truncamento silencioso em 72 bytes. */
+const SENHA_MAX_LENGTH = 128;
+/**
+ * Hash usado quando o usuário não existe (ou a entrada é inválida) para que
+ * login() sempre execute uma rodada de bcrypt, evitando oráculo de tempo que
+ * revelaria quais nomes de usuário existem no banco.
+ */
+const HASH_FICTICIO = bcrypt.hashSync("senha-ficticia-para-tempo-constante", SALT_ROUNDS);
 /** O nome aparece no menu da conta, no Histórico e como responsável dos registros novos. */
 const NOME_MAX_LENGTH = 80;
 
@@ -83,6 +91,9 @@ class AuthService {
 
     if (typeof senha !== "string" || senha.length < SENHA_MIN_LENGTH) {
       throw new ErroDeValidacao(`A senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
+    }
+    if (senha.length > SENHA_MAX_LENGTH) {
+      throw new ErroDeValidacao(`A senha pode ter no máximo ${SENHA_MAX_LENGTH} caracteres.`);
     }
     if (this.db.usuarios.buscarPorUsuario(usuarioLimpo)) {
       throw new ErroDeValidacao(`Já existe uma conta com o usuário '${usuarioLimpo}'.`);
@@ -235,6 +246,9 @@ class AuthService {
     if (typeof senhaNova !== "string" || senhaNova.length < SENHA_MIN_LENGTH) {
       throw new ErroDeValidacao(`A nova senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
     }
+    if (senhaNova.length > SENHA_MAX_LENGTH) {
+      throw new ErroDeValidacao(`A nova senha precisa ter no máximo ${SENHA_MAX_LENGTH} caracteres.`);
+    }
     this.db.usuarios.alterarHashDaSenha(id, bcrypt.hashSync(senhaNova, SALT_ROUNDS));
     this.sessionStore?.limparPorUsuario(id);
     this.historico?.registrar(usuarioLogado, "atualizar", "usuario", `Senha de "${alvo.nome}" (@${alvo.usuario}) redefinida por um administrador`);
@@ -277,10 +291,13 @@ class AuthService {
     // nomes de usuario existem no sistema.
     const erroPadrao = new ErroDeValidacao("Usuário ou senha inválidos.");
     if (typeof usuario !== "string" || typeof senha !== "string") throw erroPadrao;
-    const linha = this.db.usuarios.buscarPorUsuario(usuario.trim());
-    if (!linha) throw erroPadrao;
-    const confere = bcrypt.compareSync(senha || "", linha.senha_hash);
-    if (!confere) throw erroPadrao;
+    const usuarioLimpo = usuario.trim();
+    const linha = usuarioLimpo ? this.db.usuarios.buscarPorUsuario(usuarioLimpo) : null;
+    const confere =
+      senha && senha.length <= SENHA_MAX_LENGTH
+        ? bcrypt.compareSync(senha, linha ? linha.senha_hash : HASH_FICTICIO)
+        : (bcrypt.compareSync("invalida", HASH_FICTICIO), false);
+    if (!linha || !confere) throw erroPadrao;
     this.db.usuarios.registrarLogin(linha.id);
     return { id: linha.id, nome: linha.nome, usuario: linha.usuario, role: linha.role };
   }
@@ -300,11 +317,19 @@ class AuthService {
     // abrir e este pedido chegar -- não é um caminho que a tela normal
     // alcança, mas devolve um erro claro em vez de travar num bcrypt.compareSync(null).
     if (!linha) throw new ErroDeValidacao("Sua conta não foi encontrada. Faça login novamente.");
-    if (typeof senhaAtual !== "string" || !bcrypt.compareSync(senhaAtual, linha.senha_hash)) {
+    if (
+      typeof senhaAtual !== "string" ||
+      !senhaAtual ||
+      senhaAtual.length > SENHA_MAX_LENGTH ||
+      !bcrypt.compareSync(senhaAtual, linha.senha_hash)
+    ) {
       throw new ErroDeValidacao("Senha atual incorreta.");
     }
     if (typeof senhaNova !== "string" || senhaNova.length < SENHA_MIN_LENGTH) {
       throw new ErroDeValidacao(`A nova senha precisa ter pelo menos ${SENHA_MIN_LENGTH} caracteres.`);
+    }
+    if (senhaNova.length > SENHA_MAX_LENGTH) {
+      throw new ErroDeValidacao(`A nova senha precisa ter no máximo ${SENHA_MAX_LENGTH} caracteres.`);
     }
     this.db.usuarios.alterarHashDaSenha(linha.id, bcrypt.hashSync(senhaNova, SALT_ROUNDS));
     this.historico.registrar(usuarioLogado, "atualizar", "usuario", `Senha de "${linha.nome}" (@${linha.usuario}) alterada`);
@@ -442,4 +467,4 @@ function ultimoUsoDaSessao(expiraEm, duracaoMs) {
   return new Date(expiraEm - duracaoMs).toISOString();
 }
 
-module.exports = { AuthService, NOME_MAX_LENGTH };
+module.exports = { AuthService, NOME_MAX_LENGTH, SENHA_MAX_LENGTH };
