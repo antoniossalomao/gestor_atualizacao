@@ -9,7 +9,7 @@ Responda em português do Brasil, de forma direta. Leia [`CONTRIBUTING.md`](CONT
 2. **Rápido e bem feito.** Escolha o caminho mais rápido que não sacrifique qualidade. Leia só o contexto necessário, sem buscas e testes repetidos. Agir quando já há informação suficiente.
 3. **Frameworks e dependências.** Se atualizar, trocar ou remover um framework ou biblioteca melhorar o resultado, **sugira e pergunte** (ganho, risco, esforço). Nunca altere `package.json` ou o lockfile por conta própria.
 4. **Repositório limpo.** Ao terminar cada tarefa: apague o lixo que você criou (rascunhos, logs, arquivos temporários, código morto, imports e comentários de depuração, saídas de teste), reorganize o que ficou fora de lugar e confira `git status`. Nada de arquivo solto na raiz. Rascunho vive fora do repositório.
-5. **Git.** Nunca trabalhe direto em `main`. Mudança vai para branch própria, commit pequeno e com mensagem clara, push dessa branch. **Só faça commit e push quando o usuário pedir.** Antes de qualquer ação difícil de desfazer (apagar, sobrescrever, `reset --hard`, `push --force`, mexer em arquivo que não é seu), olhe o alvo e confirme. Faça stage só dos arquivos da tarefa.
+5. **Git.** Trabalhe na branch `gestorv2`, commit pequeno e com mensagem clara, push dessa branch. **Só faça commit e push quando o usuário pedir.** Antes de qualquer ação difícil de desfazer (apagar, sobrescrever, `reset --hard`, `push --force`, mexer em arquivo que não é seu), olhe o alvo e confirme. Faça stage só dos arquivos da tarefa.
 6. **Ordem de verdade.** Pedido do usuário > este arquivo > `docs/agents/` > seu julgamento.
 
 ## Nomes de arquivos: inglês
@@ -94,6 +94,6 @@ Testes sobem um `Server`/`BancoDeDados` de verdade num diretório temporário. S
 
 Se mudou comportamento visível, acrescente ao [`CHANGELOG.md`](CHANGELOG.md). Se tomou uma decisão cara de reverter, registre-a como nova subseção na [seção de decisões da documentação consolidada](docs/DOCUMENTACAO_CONSOLIDADA.md#4-decisões-de-arquitetura--adrs-do-painel-web). Depois, faça a limpeza do item 4 de "Como trabalhar".
 
-## Segundo Cérebro (Obsidian / "Vault")
+## Segundo Cérebro ("Vault")
 
-O Vault **é um repositório GitHub**: `antoniossalomao/vault` (privado), não uma pasta local nem um MCP no PC do usuário. Em sessão na nuvem, anexe-o com `add_repo` (`access: "push"`), leia o `claude.md` da raiz dele e grave a nota em `Recursos/Claude/Conversas/`. Não responda "não tenho acesso ao Vault": se o `add_repo` for negado, diga que foi negado e peça ao usuário para liberar.
+O Vault **é um repositório GitHub**: `antoniossalomao/vault` (privado), não uma pasta local nem um MCP no PC do usuário. Em sessão na nuvem, anexe-o com `add_repo` (`access: "push"`), leia o `claude.md` da raiz dele e grave a nota em `Recursos/"NomedoAgente"/Conversas/`. Não responda "não tenho acesso ao Vault": se o `add_repo` for negado, diga que foi negado e peça ao usuário para liberar.
