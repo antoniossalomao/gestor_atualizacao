@@ -9,7 +9,9 @@ Revisão de UI: leia o(s) arquivo(s), confira contra as regras abaixo e reporte 
 
 ## Prioridade (UI/UX Pro Max): resolva de cima para baixo
 
-1. Acessibilidade (crítico) · 2. Toque e interação (crítico) · 3. Performance · 4. Estilo consistente · 5. Layout responsivo · 6. Tipografia e cor · 7. Animação · 8. Formulários e feedback · 9. Navegação · 10. Gráficos e dados.
+1. Acessibilidade (crítico) · 2. Interação por mouse e teclado (crítico) · 3. Performance · 4. Estilo consistente · 5. Layout desktop · 6. Tipografia e cor · 7. Animação · 8. Formulários e feedback · 9. Navegação · 10. Gráficos e dados.
+
+Escopo: **somente desktop** (largura mínima 1280 px). Não se aplicam regras de celular ou tablet (toque, safe-area, breakpoints pequenos).
 
 ## Acessibilidade
 
@@ -49,8 +51,8 @@ Revisão de UI: leia o(s) arquivo(s), confira contra as regras abaixo e reporte 
 - `<img>` com `width` e `height`; abaixo da dobra `loading="lazy"`; crítica acima da dobra `fetchpriority="high"`. CLS < 0,1.
 - Listas > 50 itens: virtualizar ou `content-visibility: auto`. Sem leitura de layout (`getBoundingClientRect`, `offsetHeight`) em laço; agrupe leituras e escritas do DOM.
 - Fonte crítica com `preload` e `font-display: swap`. Preferir vídeo mudo em loop a GIF.
-- Mobile-first, sem scroll horizontal, nunca `user-scalable=no`. Corpo ≥ 16px, entrelinha ≈ 1,5. Alvo de toque ≥ 44×44px com ≥ 8px entre alvos.
-- `env(safe-area-inset-*)` em layout de borda a borda; `overscroll-behavior: contain` em modal e gaveta; `touch-action: manipulation`.
+- Sem scroll horizontal a partir de 1280 px, nunca `user-scalable=no`. Corpo ≥ 16px, entrelinha ≈ 1,5. Zoom do navegador até 200% sem perder conteúdo.
+- `overscroll-behavior: contain` em modal e gaveta.
 
 ## Estado e navegação
 
