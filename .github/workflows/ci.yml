@@ -28,7 +28,7 @@ jobs:
           # A mesma linha usada em desenvolvimento e em producao. Nao usar
           # "latest": uma versao nova do Node saindo nao pode quebrar o CI de
           # um projeto que nao mudou.
-          node-version: "22"
+          node-version: "24"
           cache: npm
           # Os dois package-lock.json: o da raiz tem so a ferramenta de
           # verificacao de tipos (devDependency), o de server/ tem o que o app
@@ -76,7 +76,7 @@ jobs:
       - name: Configurar o Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: npm
           cache-dependency-path: server/package-lock.json
 
