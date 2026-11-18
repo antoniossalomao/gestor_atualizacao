@@ -50,7 +50,7 @@ Os dois têm que passar. Não relate conclusão sem ter rodado.
 
 ## Front-end: guia de design
 
-Não há testes de navegador (a suíte saiu em 29/09/2026) e `npm test` não enxerga modal aberto atrás da gaveta nem foco perdido ao fechar formulário. **Mexeu em tela, componente ou CSS? Abra a tela no navegador, nos dois temas (claro e escuro), e confira o que mudou** — teclado, foco, contraste, mobile.
+Não há testes de navegador (a suíte saiu em 29/09/2026) e `npm test` não enxerga modal aberto atrás da gaveta nem foco perdido ao fechar formulário. **Mexeu em tela, componente ou CSS? Abra a tela no navegador, nos dois temas (claro e escuro), e confira o que mudou** — teclado, foco, contraste. O sistema é **somente desktop** (largura mínima 1280 px): não projete nem teste para celular ou tablet.
 
 Leia sob demanda, **só o que a tarefa pede** (não carregue tudo):
 

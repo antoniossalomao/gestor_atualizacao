@@ -21,7 +21,7 @@ Fontes: [anthropics/skills · frontend-design](https://github.com/anthropics/ski
 - Movimento só quando responde a uma ação (abrir, expandir, confirmar). Nada de fade-and-slide em cada seção nem hover animado em todo card.
 - Hierarquia por escala, peso e espaçamento, não por sombra. Botões mostram que clicam por cor, espaço e tipografia; cards usam borda de 1px ou troca de fundo.
 - Paleta: 4–5 neutros levemente dessaturados + 1–3 acentos. Escala tipográfica matemática (ex.: 1,25×). Espaçamento em base 4px (4/8/16/24/32/48).
-- Piso de qualidade sem alarde: responsivo até mobile, foco visível, `prefers-reduced-motion`, contraste AA.
+- Piso de qualidade sem alarde: funciona em desktop (1280 px ou mais; sem mobile), foco visível, `prefers-reduced-motion`, contraste AA.
 
 ## Sinais de "gerado por IA" (remova, não troque por outra tendência)
 
