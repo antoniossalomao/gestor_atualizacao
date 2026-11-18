@@ -22,6 +22,6 @@
   },
   "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
-    "typescript": "^5.2.2"
+    "typescript": "^7.0.2"
   }
 }

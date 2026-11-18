@@ -34,8 +34,11 @@
     "checkJs": true,
 
     "target": "es2022",
-    "module": "commonjs",
-    "moduleResolution": "node",
+    // TypeScript 7 removeu `moduleResolution: "node"` (node10). `node16` é o
+    // equivalente para CommonJS: o pacote do servidor é "type": "commonjs", então
+    // os .js continuam sendo lidos como CJS e o resultado da checagem não muda.
+    "module": "node16",
+    "moduleResolution": "node16",
     // Sem "dom" e sem "node": é essa ausência que garante que nada aqui dentro
     // passe a depender do navegador nem do runtime. Um arquivo novo que precise
     // de `fs` para passar está na pasta errada, e o erro é o aviso.
