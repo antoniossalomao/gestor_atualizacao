@@ -16,7 +16,7 @@ const { tokensIguais } = require("./exigirAgente");
  * de chegar ao controller, antes até de o multer gravar um upload.
  *
  * Por que token, e não só conferir o cabeçalho Origin (decisão de 29/09/2026,
- * ADR-0011 na documentação consolidada):
+ * docs/ARQUITETURA.md#adr-0011):
  * - O cookie já é SameSite=Lax e a API só entende JSON, o que barra a maior
  *   parte dos ataques -- mas não todos: um <form> de outra página manda
  *   multipart (importação de planilha, envio de pacote) e POST sem corpo

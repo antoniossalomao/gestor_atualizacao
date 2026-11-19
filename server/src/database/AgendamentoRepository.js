@@ -9,8 +9,7 @@ const STATUS_CONCLUIDO = OPCOES_STATUS[OPCOES_STATUS.length - 1];
 
 /**
  * Hoje no relógio LOCAL, na forma aaaammdd de DATE_SORT_EXPR. Local, e não
- * UTC, pelo mesmo motivo do TZ no Dockerfile: das 21h à meia-noite de
- * Brasília o UTC já é amanhã.
+ * UTC, porque das 21h à meia-noite de Brasília o UTC já é amanhã.
  */
 function hojeOrdenavel(agora = new Date()) {
   return `${agora.getFullYear()}${String(agora.getMonth() + 1).padStart(2, "0")}${String(agora.getDate()).padStart(2, "0")}`;

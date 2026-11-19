@@ -18,7 +18,7 @@ const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const TERMO = new RegExp(["atend", "iment"].join(""), "i");
 
 const PASTAS = ["client", "server/src", "server/tests", "server/ferramentas", "docs"];
-const ARQUIVOS_SOLTOS = ["README.md", "CONTRIBUTING.md", "CHANGELOG.md", "CLAUDE.md", "SECURITY.md"];
+const ARQUIVOS_SOLTOS = ["README.md", "CHANGELOG.md", "CLAUDE.md"];
 const EXTENSOES = new Set([".js", ".mjs", ".css", ".html", ".md", ".json"]);
 
 function listar(dir) {

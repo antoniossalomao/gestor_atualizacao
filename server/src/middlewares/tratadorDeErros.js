@@ -42,7 +42,7 @@ function tratadorDeErros(err, req, res, _next) {
  *  - unhandledRejection: só registra no log e segue -- o servidor continua
  *    atendendo. Sem este handler, o Node 15+ encerraria o processo.
  *  - uncaughtException: o estado do processo é incerto; registra, encerra com
- *    ordem (`aoEncerrar`) e sai com código 1 (o Docker reinicia o container).
+ *    ordem (`aoEncerrar`) e sai com código 1 (o NSSM/gerenciador de serviço reinicia).
  *    Há um teto de 5 s para não ficar pendurado se o encerramento travar.
  *
  * @param {{aoEncerrar?: () => Promise<void>|void, log?: Pick<Console, "error">, sair?: (codigo: number) => void, alvo?: NodeJS.Process}} [opcoes]

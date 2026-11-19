@@ -1,20 +1,17 @@
-# Proxy HTTPS na frente do painel (ADR-0010). Passo a passo na seção "HTTPS" do README.
+# Proxy HTTPS na frente do painel (ver docs/ARQUITETURA.md#adr-0010).
+# Passo a passo completo em docs/OPERACAO.md.
 
 {
 	# Somente HTTPS (decisão de 29/09/2026): em rede interna ou VM com acesso
 	# restrito pela 443, a porta 80 não é necessária.
-	# Nota para Azure com domínio público (Let's Encrypt): se quiser emitir
-	# certificado público automático pelo desafio HTTP-01 na porta 80, remova
-	# "auto_https disable_redirects" e a diretiva "tls internal" abaixo.
+	# Nota para VM com domínio público DNS (Let's Encrypt): remova
+	# "auto_https disable_redirects" e "tls internal" abaixo para emissão
+	# automática via desafio HTTP-01 na porta 80.
 	auto_https disable_redirects
 
-	# Quem acessa por https://IP, o navegador não diz o endereço ao pedir o
-	# certificado (sem SNI: IP não vai no SNI, pela especificação do TLS). Sem
-	# isto, o Caddy não sabe qual certificado entregar e a conexão cai sem
-	# mensagem útil -- descoberto na primeira subida em produção, 29/09/2026:
-	# pelo nome abria, pelo IP não. GESTOR_IP vem do web/.env; sem ele,
-	# "localhost" não casa com nenhum site, e o acesso por IP fica desligado.
-	# Em servidor com domínio público DNS (Let's Encrypt), remova esta linha.
+	# Quem acessa por https://IP não envia SNI ao pedir o certificado (especificação TLS).
+	# Defina a variável de ambiente GESTOR_IP com o IP do servidor ao iniciar o Caddy;
+	# sem ela, fica em "localhost" e o acesso direto via https://IP não abre.
 	default_sni {$GESTOR_IP:localhost}
 }
 
@@ -22,8 +19,8 @@
 # um nome DNS (ex.: painel.suaempresa.com.br ou gestoratualizacao) ou o IP.
 # O certificado só vale para os endereços listados aqui.
 {$GESTOR_ENDERECO} {
-	# Em rede interna / VPN / acesso por IP privado, usa autoridade PRÓPRIA (tls internal).
-	# Em servidor na Azure com domínio público DNS real, comente/remova "tls internal"
+	# Em rede interna / VPN / acesso por IP privado, usa autoridade própria (tls internal).
+	# Em servidor com domínio público DNS real, comente/remova "tls internal"
 	# para o Caddy emitir e renovar certificado público Let's Encrypt automaticamente.
 	tls internal
 

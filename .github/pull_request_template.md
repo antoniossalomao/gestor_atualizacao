@@ -17,9 +17,9 @@
 - [ ] Toda regra que, se quebrar, **erra em silêncio** tem teste
 - [ ] Comentário novo explica *por quê*, não *o quê*
 - [ ] Se mexi em rota: conferi `exigirLogin`/`exigirPapel` em `routes/index.js`
-- [ ] Se montei HTML com dado do usuário: passei por `escaparHtml`
-- [ ] Se ordeno por coluna: usei `shared/sortHelper.js`, não interpolei no SQL
-- [ ] Se a decisão é cara de reverter: escrevi um ADR em `docs/adr/`
+- [ ] Se montei HTML com dado do usuário: usei a tag `html` (`client/js/utils/html.js`)
+- [ ] Se ordeno por coluna: usei `server/src/database/ordenacao.js`, não interpolei no SQL
+- [ ] Se a decisão é cara de reverter: registrei em `docs/ARQUITETURA.md`
 - [ ] Se muda o comportamento para quem usa: atualizei `CHANGELOG.md`
 
 <!-- Item que não se aplica: risque em vez de marcar (~~texto~~) e siga. -->

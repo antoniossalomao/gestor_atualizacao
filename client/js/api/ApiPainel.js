@@ -53,10 +53,10 @@ const TIMEOUT_UPLOAD_MS = 10 * 60 * 1000;
 const CABECALHO_CSRF = "X-CSRF-Token";
 const METODOS_SEGUROS = new Set(["GET", "HEAD"]);
 
-// Com o Caddy na frente (docker-compose.yml), o painel fora do ar não
+// Com o proxy reverso na frente (Caddy/Azure), o painel fora do ar não
 // aparece como "não conectou": o proxy está de pé e responde 502/503/504.
 // Contando isso como resposta, a faixa de "sem conexão" nunca aparecia
-// justamente no caso mais comum de queda -- o container reiniciando.
+// justamente no caso mais comum de queda -- o serviço Node reiniciando.
 const PAINEL_INDISPONIVEL = new Set([502, 503, 504]);
 
 /**

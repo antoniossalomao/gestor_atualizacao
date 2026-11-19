@@ -7,11 +7,9 @@
  * com ele equivale a não ter login.
  *
  * Antes o server.js caía nesse valor sozinho quando a variável faltava, e
- * isso acontecia sem aviso no caso mais comum: no Docker, se o server/.env
- * não existir antes do primeiro "up", o Docker cria uma PASTA com esse nome,
- * o dotenv não lê nada e o servidor subia normalmente com o segredo público
- * (ver o README, seção "Rodar em Docker"). Recusar a subida transforma esse
- * erro silencioso num container que não sobe e diz por quê no log.
+ * isso acontecia sem aviso se alguém subisse com o arquivo copiado sem
+ * editar o segredo público (ver o README e docs/OPERACAO.md). Recusar a subida
+ * transforma esse erro silencioso num servidor que não sobe e diz por quê no log.
  *
  * Função pura (não lê process.env nem encerra o processo) para ser testável
  * -- quem decide o que fazer com a resposta é o server.js.

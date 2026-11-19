@@ -192,9 +192,9 @@ class Servidor {
     // Configuravel via TRUST_PROXY=true no .env: falso por padrao (rede
     // local sem proxy) para que o IP real do cliente nunca venha de um
     // cabecalho X-Forwarded-For que o cliente possa forjar e usar para
-    // burlar o rate limiter do login. Confiar em "um salto, seja quem for"
-    // só é seguro porque, no docker-compose.yml, a porta do Node não é
-    // publicada: o único que alcança o Node é o proxy.
+    // burlar o rate limiter do login. Confiar em "um salto" só é seguro
+    // porque a porta do Node fica isolada do acesso externo (HOST=127.0.0.1 +
+    // firewall/NSG ou ambiente gerenciado): o único que alcança o Node é o proxy.
     // Quando o proxy (Caddy) roda na mesma máquina (HOST=127.0.0.1), confiar
     // apenas em loopback impede que qualquer conexão direta forje X-Forwarded-*.
     this.app.set("trust proxy", this.config.trustProxy ? (this.config.host === "127.0.0.1" ? "loopback" : 1) : false);

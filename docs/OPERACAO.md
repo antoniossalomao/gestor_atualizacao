@@ -1,355 +1,195 @@
-# Runbook operacional
+# Implantação e Runbook Operacional
 
-O que fazer quando alguma coisa dá errado, escrito para ser lido **durante** o
-problema — não antes. Cada seção começa pelo sintoma como ele aparece para quem
-reclama, não pelo nome técnico da causa.
+Guia único de operação em produção e solução rápida de incidentes (escrito por sintoma). Os caminhos abaixo assumem PowerShell no servidor Windows onde o painel roda.
 
-Os comandos assumem que você está no servidor onde o painel roda, na pasta
-`web/`, num PowerShell. Onde for preciso ser administrador, está dito.
-
-> **Antes de qualquer intervenção que mexa em dados:** baixe o banco atual pelo
-> painel (**Administração → Backups → Baixar o banco de agora**). Leva
-> segundos e é a diferença entre um susto e um prejuízo.
+> **Antes de mexer em dados em produção:** baixe o banco atual pelo painel (**Administração → Backups → Baixar o banco de agora**).
 
 ---
 
-## Índice de sintomas
+## 1. Implantação em produção
 
-| O que a pessoa diz | Vá para |
-|---|---|
-| "O painel não abre" / "deu erro de conexão" | [Servidor fora do ar](#servidor-fora-do-ar) |
-| Faixa vermelha "Sem conexão com o servidor" no alto, ou aviso amarelo "Não foi possível atualizar" numa tela | [Servidor fora do ar](#servidor-fora-do-ar) (se o aviso diz "erro ao buscar os dados", veja o log do `gestor`) |
-| "Ninguém consegue entrar" | [Ninguém consegue entrar](#ninguém-consegue-entrar) |
-| "Esqueci minha senha" | [Recuperar acesso](#recuperar-acesso-de-uma-conta) |
-| "Preciso atualizar o painel para a versão nova" | [Atualizar versão do painel](#atualizar-versão-do-painel) |
-| "O cliente X não está atualizando" | [Agente parado](#um-agente-parou-de-atualizar) |
-| "Sumiu/está errado um registro" | [Restaurar backup](#restaurar-um-backup) |
-| "A página abre em branco" | [Página em branco](#página-em-branco-ou-sem-estilo) |
-| "Está muito lento" | [Lentidão](#lentidão) |
-| Disco enchendo no servidor | [Espaço em disco](#espaço-em-disco) |
+Na rede, o painel atende **exclusivamente via HTTPS** ([ADR-0010](ARQUITETURA.md#adr-0010)). Os modelos suportados são **Windows Nativo (NSSM + Caddy)**, **Azure App Service (Instância Web)** e **VM na Azure**.
 
----
+### 1.1 Windows Nativo com NSSM + Caddy (recomendado para servidores e VMs sem Docker)
 
-## Servidor fora do ar
+Arquitetura: **Node.js** escuta localmente em `127.0.0.1:3000` (`GestorApp`) e o **Caddy Server** atende a porta `443` com HTTPS encaminhando para o Node (`GestorProxy`). Ambos rodam como serviços do Windows via NSSM.
 
-**Sintoma:** o navegador diz "não foi possível acessar esse site". Com o
-painel já aberto: a faixa vermelha "Sem conexão com o servidor" no alto e,
-nas telas, o aviso "Não foi possível atualizar. Mostrando os dados de …" —
-os números na tela são daquele horário, não de agora. Com o `proxy` de pé e
-o `gestor` caído, o aviso diz "O servidor do painel não está respondendo".
-Os dois somem sozinhos quando o servidor volta.
-
-1. **Os containers estão de pé?** Na pasta `web/` do servidor:
+1. **Pré-requisitos** (PowerShell como Administrador):
    ```powershell
-   docker compose ps
+   winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
+   winget install CaddyServer.Caddy --accept-package-agreements --accept-source-agreements
+   winget install nssm --accept-package-agreements --accept-source-agreements
    ```
-   `gestor` precisa estar `healthy` e `proxy` rodando. Parado →
-   `docker compose up -d`.
-
-2. **Subiu e caiu na hora?** O motivo fica no log do container:
+2. **Copiar o projeto para `C:\gestor`** e instalar dependências do servidor:
    ```powershell
-   docker compose logs --tail 40 gestor
-   docker compose logs --tail 40 proxy
+   cd C:\gestor
+   npm.cmd run install:all
    ```
+3. **Configurar `C:\gestor\server\.env`:**
+   ```env
+   PORT=3000
+   DB_PATH=./data/gestao.db
+   SESSION_SECRET=cole-aqui-64-caracteres-hex-gerados-com-crypto
+   SESSION_SECURE=true
+   TRUST_PROXY=true
+   HOST=127.0.0.1
+   AGENT_API_TOKEN=cole-aqui-um-token-forte
+   ```
+   *(Gere chaves aleatórias com `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`).*
+4. **Configurar `C:\gestor\proxy\Caddyfile`:** ajuste o bloco do site com o nome DNS e/ou IP pelo qual a equipe acessa (ou passe via variáveis `GESTOR_ENDERECO` / `GESTOR_IP`):
+   ```caddy
+   {
+     auto_https disable_redirects
+     default_sni 192.168.0.109
+   }
 
-3. **Causas mais comuns**, em ordem de frequência:
-
-   | No log aparece | Causa | O que fazer |
-   |---|---|---|
-   | `port is already allocated` (ao dar `up`) | outra coisa já usa a 443 (IIS, outro site) | `Get-NetTCPConnection -LocalPort 443` e decida quem fica, ou mude a porta do `proxy` no `docker-compose.yml` |
-   | `defina GESTOR_ENDERECO` (ao dar `up`) | falta o `web/.env` | copiar `web/.env.example` para `web/.env` e ajustar |
-   | `O servidor NÃO foi iniciado: SESSION_SECRET ...` | `server/.env` ausente ou com o segredo de exemplo | ver "Primeira vez" em "Rodar em Docker" no README |
-   | `O servidor NÃO foi iniciado: SESSION_SECURE ...` / `TRUST_PROXY ...` | alguém mexeu nessas variáveis | no Docker elas vêm fixas do `docker-compose.yml`; desfaça a mudança |
-   | `SQLITE_CANTOPEN` | caminho do `DB_PATH` errado | conferir `server/.env` (no Docker, deixe o padrão) |
-   | `SQLITE_BUSY` / `database is locked` | duas instâncias abrindo o mesmo banco | garantir que ninguém está com `npm start` aberto no mesmo banco |
-
-4. **No Windows Nativo (sem Docker, via NSSM):**
-   - **Os serviços estão rodando?**
-     ```powershell
-     Get-Service GestorApp, GestorProxy
-     # ou via NSSM:
-     nssm status GestorApp
-     nssm status GestorProxy
-     ```
-   - **GestorApp em pausa ou caindo na subida?** Ative os logs para inspecionar:
-     ```powershell
-     nssm set GestorApp AppStdout "C:\gestor\server\log_sucesso.log"
-     nssm set GestorApp AppStderr "C:\gestor\server\log_erro.log"
-     nssm restart GestorApp
-     Get-Content "C:\gestor\server\log_erro.log"
-     ```
-     - Se aparecer `Cannot find module 'C:\gestor\server.js'`, o caminho do script está errado. Corrija com:
-       ```powershell
-       nssm set GestorApp AppParameters "C:\gestor\server\server.js"
-       nssm set GestorApp AppDirectory "C:\gestor\server"
-       nssm restart GestorApp
-       ```
-   - **GestorProxy/Caddy devolvendo 502 / MIME type vazio no navegador:**
-     Abra `C:\gestor\proxy\Caddyfile` e verifique se o proxy aponta para `127.0.0.1:3000` (ou `{$GESTOR_UPSTREAM:127.0.0.1:3000}` com `HOST=127.0.0.1` no `server/.env`) e não para `gestor:3000`.
-   - **Em VM na Azure, o painel não abre pelo navegador externo:**
-     Confira se a porta `443` está liberada no **Network Security Group (NSG)** da Azure (para o IP da equipe ou VPN) e no Firewall do Windows da VM, enquanto a porta `3000` deve permanecer fechada externamente (acessada só em `127.0.0.1` pelo Caddy).
-   - **No Azure App Service (Instância Web), o painel retorna 403/502 ou perde dados após deploy:**
-     1. Confira se `HOST` **não** está definido como `127.0.0.1` (no App Service o roteador da Azure conecta fora do loopback — `HOST` deve ficar vazio).
-     2. Confira se `SESSION_SECURE=true` e `TRUST_PROXY=true` estão ativos nas *App Settings* (o servidor aceita tanto `X-Forwarded-Proto` quanto `X-ARR-SSL` do Windows App Service).
-     3. Confira se `DB_PATH` aponta para fora de `wwwroot` (`/home/data/gestao.db` ou `D:\home\data\gestao.db`) e se o plano está travado em **1 instância (`Scale Out = 1`)**.
-
-5. **Nome não encontrado** ("não foi possível encontrar o endereço IP do
-   servidor"): o problema é o nome, não o painel. Confira o DNS da empresa ou
-   o `hosts` daquele PC — ver "Nome em vez de IP" no README. Se funciona pelo
-   IP e não pelo nome, é isto.
-
----
-
-## Ninguém consegue entrar
-
-**Sintoma:** a tela de login aceita a senha e volta para o login, ou diz
-"não autenticado" sem explicação.
-
-Quase sempre é **cookie de sessão que não chega**. Duas causas conhecidas:
-
-1. **Acesso por `http://` ou pela porta 3000.** Na rede, o painel só atende
-   `https://` + o endereço oficial (o `GESTOR_ENDERECO` do `web/.env`). Por
-   `http://` ele nem responde; batendo direto no Node, recusa com "só aceita
-   conexões HTTPS".
-
-2. **`SESSION_SECRET` mudou.** Trocar esse valor invalida todas as sessões —
-   é o comportamento correto, e todo mundo só precisa entrar de novo. Se isso
-   aconteceu sem ninguém ter mexido, alguém recriou o `.env` a partir do
-   `.env.example`, e aí o segredo voltou a ser o valor público de exemplo.
-   **Isso é um incidente de segurança**: gere um novo e reinicie.
+   gestoratualizacao, 192.168.0.109 {
+     tls internal
+     reverse_proxy 127.0.0.1:3000
+   }
+   ```
+5. **Registrar serviços no NSSM:**
    ```powershell
-   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   nssm install GestorApp "C:\Program Files\nodejs\node.exe" "C:\gestor\server\server.js"
+   nssm set GestorApp AppDirectory "C:\gestor\server"
+   nssm start GestorApp
+
+   nssm install GestorProxy "caddy" "run --config C:\gestor\proxy\Caddyfile"
+   nssm set GestorProxy AppDirectory "C:\gestor\proxy"
+   nssm start GestorProxy
    ```
+6. **Instalar certificado raiz nos PCs da equipe** (em rede privada usando `tls internal`):
+   ```powershell
+   # No servidor, localize root.crt gerado pelo Caddy e copie para um local acessível:
+   $cert = Get-ChildItem -Path "$env:AppData\Caddy", "C:\Windows\System32\config\systemprofile\AppData\Roaming\Caddy" -Filter "root.crt" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+   Copy-Item $cert.FullName "C:\gestor\caddy-raiz.crt"
 
----
+   # Em cada computador da equipe (PowerShell como Administrador):
+   certutil -addstore -f Root "C:\caminho\para\caddy-raiz.crt"
+   ```
+   *(No Firefox, importe o mesmo `.crt` em Privacidade e Segurança → Certificados. Feche e reabra o navegador).*
 
-## Recuperar acesso de uma conta
-
-Não há envio de e-mail neste sistema — de propósito. O fator de recuperação é
-**ter acesso ao arquivo do banco**, o que só quem chega no servidor tem.
-
-**No Docker:**
-```powershell
-docker compose exec gestor node resetar-senha.js <usuario> "<nova senha>"
-```
-
-**No Windows Nativo (NSSM):**
-```powershell
-cd C:\gestor\server
-node resetar-senha.js <usuario> "<nova senha>"
-```
-
-Funciona mesmo para o único administrador, e não exige saber a senha antiga.
-
-Se **nenhuma conta de administrador existir mais** (situação que o app tenta
-impedir: não deixa rebaixar nem excluir o último admin), a saída é restaurar um
-backup anterior — ver abaixo.
-
----
-
-## Atualizar versão do painel
-
-Procedimento seguro para subir uma versão nova do código no servidor de produção:
-
-### No Windows Nativo (com NSSM)
+#### Como atualizar o código no servidor Windows Nativo
 ```powershell
 # 1. Backup preventivo do banco atual
 Copy-Item "C:\gestor\server\data\gestao.db" "C:\gestor\server\data\gestao-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss').db"
 
-# 2. Parar o serviço do Node para liberar os arquivos
+# 2. Parar o serviço Node
 nssm stop GestorApp
 
-# 3. Copiar os novos arquivos do projeto para C:\gestor\
-# ATENÇÃO: NUNCA sobrescreva:
-#   - C:\gestor\server\data\ (dados, banco e pacotes)
-#   - C:\gestor\server\.env (segredos e configurações de rede)
-#   - C:\gestor\proxy\Caddyfile (configuração do HTTPS)
+# 3. Atualizar os arquivos de código em C:\gestor\
+# NUNCA sobrescreva: C:\gestor\server\data\, C:\gestor\server\.env ou C:\gestor\proxy\Caddyfile
 
-# 4. Atualizar dependências (se houver pacotes novos)
+# 4. Atualizar dependências e reiniciar
 cd C:\gestor
 npm.cmd run install:all
-
-# 5. Iniciar o serviço novamente
 nssm start GestorApp
 ```
-*(O banco de dados aplica as migrações automaticamente no arranque do `GestorApp`).*
 
-### No Docker
-Basta executar na pasta `web/`:
-```powershell
-.\deploy.ps1
-# ou dê dois cliques em deploy.bat
-```
-*(O script faz backup do banco para `..\backups-deploy`, roda `docker compose up -d --build` e aguarda o container ficar `healthy`).*
+### 1.2 Azure App Service (Instância Web)
+
+Compatível com Node.js 22 LTS (Linux ou Windows), deixando a terminação TLS para o balanceador da Azure:
+
+- **App Settings obrigatórias:**
+  - `SESSION_SECURE=true` e `TRUST_PROXY=true` *(o servidor aceita `X-Forwarded-Proto` e `X-ARR-SSL`)*;
+  - **`HOST=` vazio** *(não defina `127.0.0.1`, pois o roteador da Azure encaminha fora do loopback)*;
+  - `SESSION_SECRET` e `AGENT_API_TOKEN` aleatórios fortes;
+  - `DB_PATH=/home/data/gestao.db` *(Linux)* ou `D:\home\data\gestao.db` *(Windows)* para manter o banco fora de `wwwroot` (sem `DB_PATH`, o `server.js` já grava em `$HOME/data/gestao.db` quando detecta `WEBSITE_SITE_NAME`).
+- **Instância única obrigatória:** mantenha **`Scale Out = 1`** (SQLite não suporta múltiplas instâncias concorrentes sobre o mesmo arquivo).
+- **Segurança no Portal:** ative **HTTPS Only**, **TLS mínimo 1.2**, desative **FTP**, aponte o **Health Check** para `/api/auth/status`, restrinja IPs em **Access Restrictions** (ou **Microsoft Entra ID**) e habilite **App Service Backup**.
+
+### 1.3 Máquina Virtual na Azure (VM)
+
+- Use a mesma receita **NSSM + Caddy** acima (`HOST=127.0.0.1`) com SQLite sobre o **Managed Disk SSD** criptografado da VM e **Azure Backup** habilitado.
+- No **Network Security Group (NSG)**, libere publicamente apenas a porta `443` (restrita à VPN/IPs da equipe) e mantenha a porta `3000` bloqueada externamente.
+- Com domínio DNS público válido, remova `tls internal`, `default_sni` e `auto_https disable_redirects` do `Caddyfile` (e libere a porta `80`) para emissão automática via **Let's Encrypt**.
 
 ---
 
-## Um agente parou de atualizar
+## 2. Runbook por sintoma
 
-**Sintoma:** um cliente ficou para trás, ou a aba **Distribuição** mostra o
-agente como *offline* (sem contato há 24h+) ou com *erro*.
+| Sintoma | Seção |
+|---|---|
+| "O painel não abre" / erro de conexão / faixa vermelha "Sem conexão com o servidor" | [Servidor fora do ar](#servidor-fora-do-ar) |
+| "Ninguém consegue entrar" (login volta para a tela de login) | [Ninguém consegue entrar](#ninguém-consegue-entrar) |
+| "Esqueci minha senha" | [Recuperar acesso](#recuperar-acesso-de-uma-conta) |
+| "Sumiu ou foi apagado um registro importante" | [Restaurar backup](#restaurar-um-backup) |
+| "A página abre em branco" ou sem estilos | [Página em branco ou sem estilo](#página-em-branco-ou-sem-estilo) |
+| "Está lento" ou erro de limite na planilha | [Lentidão](#lentidão) |
+| Disco enchendo no servidor | [Espaço em disco](#espaço-em-disco) |
+| Preciso trocar a chave dos agentes | [Rotacionar token dos agentes](#rotacionar-o-token-dos-agentes) |
+| Agente marcado offline/erro *(quando Atualizador ativo)* | [Agente parou de atualizar](#um-agente-parou-de-atualizar) |
 
-Com o webhook do Discord configurado (Administração → Integrações), o próprio app avisa no canal quando um
-agente entra nesse estado — e avisa de novo quando volta. O aviso sai **na
-transição**, não a cada ciclo, para não virar ruído.
-
-Investigue nesta ordem — do mais provável para o menos:
-
-0. **O Atualizador está ligado?** Desde 22/09/2026 ele está **desativado de
-   propósito** em Administração → Integrações (ver a seção 3.4 de
-   [DOCUMENTACAO_CONSOLIDADA.md](DOCUMENTACAO_CONSOLIDADA.md#34-estado-atual-pré-piloto)).
-   Desativado, a API dos agentes responde 403 a tudo, e a aba Distribuição
-   nem aparece. Nenhum cliente atualiza e nenhum alerta sai. Se for esse
-   o caso, não há nada quebrado para investigar.
-
-1. **Abra o detalhe do agente** (aba Distribuição → clique na linha). O último
-   retorno diz em que fase ele parou e com qual mensagem. Metade dos casos
-   termina aqui.
-
-2. **O serviço está rodando na máquina do cliente?** No servidor dele:
+### Servidor fora do ar
+1. **No Windows Nativo:** confira `Get-Service GestorApp, GestorProxy` ou `nssm status GestorApp`. Se cair na subida, configure logs no NSSM:
    ```powershell
-   Get-Service -Name "Agente Atualizador ERP"
+   nssm set GestorApp AppStdout "C:\gestor\server\log_sucesso.log"
+   nssm set GestorApp AppStderr "C:\gestor\server\log_erro.log"
+   nssm restart GestorApp
+   Get-Content "C:\gestor\server\log_erro.log" -Tail 50
    ```
+   - `Cannot find module 'C:\gestor\server.js'`: ajuste `AppParameters` para `C:\gestor\server\server.js` e `AppDirectory` para `C:\gestor\server`.
+   - Porta `443` ocupada (`bind: address already in use`): confira com `Get-NetTCPConnection -LocalPort 443` se o IIS ou outro processo usa a porta.
+   - `O servidor NÃO foi iniciado: SESSION_SECRET...` ou `SESSION_SECURE...`: corrija `server/.env`.
+   - `SQLITE_BUSY`: garanta que apenas uma instância esteja abrindo o mesmo `gestao.db`.
+2. **Erro 502 no Caddy:** confira em `C:\gestor\proxy\Caddyfile` se `reverse_proxy` aponta para `127.0.0.1:3000`.
+3. **No Azure App Service (403/502):** confira se `HOST` está **vazio**, `SESSION_SECURE=true`, `TRUST_PROXY=true` e `Scale Out = 1`.
+4. **Nome DNS não resolve:** confira DNS interno ou `hosts` na máquina do usuário (evite domínios `.local`).
 
-3. **O agente consegue alcançar o painel?** Da máquina do cliente:
-   ```powershell
-   Invoke-WebRequest "<API_URL do atualizador.ini>/update/status/<CNPJ do cliente>" -Headers @{ "x-agent-token" = "<token>" }
-   ```
-   - **401** → o `API_TOKEN` do `atualizador.ini` não bate com o
-     `AGENT_API_TOKEN` do servidor. Ver [rotação de token](#rotacionar-o-token-dos-agentes).
-   - **sem resposta** → rede/firewall, ou `API_URL` apontando para um endereço
-     que o cliente não enxerga.
+### Ninguém consegue entrar
+Quase sempre o cookie `Secure` não está sendo aceito ou assinado:
+1. Acesso por `http://` ou direto na porta `3000` sem HTTPS (recusado com 403 em produção).
+2. **`SESSION_SECRET` alterado ou resetado para o exemplo** — todas as sessões antigas são invalidadas corretamente; se alguém copiou o `.env.example` sobre o `.env` em produção, gere imediatamente um novo segredo forte e reinicie.
 
-4. **O endereço para os agentes está certo?** (Administração → Integrações →
-   "Endereço deste servidor para os agentes".) Esta é a armadilha clássica: se
-   estiver `https://localhost`, o link de download que o agente recebe
-   aponta para **ele mesmo**, e o download falha sempre. Tem que ser o endereço
-   pelo qual *os outros* enxergam o servidor. Se o IP veio de DHCP e mudou, é
-   isto. Atenção: o link vai gravado no pacote no momento do upload -- pacote
-   enviado com o endereço errado precisa ser enviado de novo.
-
-5. **O agente está pausado?** Existe uma chave geral por cliente no painel. Um
-   agente pausado fica vivo e respondendo, mas não inicia ciclo nenhum — e é
-   fácil esquecer que alguém pausou.
-
-6. **Nada disso?** Os logs do agente estão no Visualizador de Eventos do Windows
-   da máquina do cliente, em *Logs do Windows → Aplicativo*, origem
-   `Agente Atualizador ERP`.
-
-> Se o cliente tem sistemas **com script**, leia
-> [`RISCOS-CONHECIDOS.md`](../../atualizador/RISCOS-CONHECIDOS.md) antes de
-> mexer. Uma intervenção no meio da Fase 3 pode deixar o banco dele em
-> shutdown.
-
----
-
-## Restaurar um backup
-
-Um `gestao.db` é copiado para `server/data/backups/` **toda vez que o servidor
-sobe**, e as cópias mais recentes ficam guardadas (10 por padrão; o número é uma
-regra da equipe, em Administração → Backups e recuperação).
-
-Pelo painel (**Administração → Backups**), como administrador:
-
-1. **Baixe o banco atual primeiro.** Restaurar substitui o que existe hoje; se
-   o problema for outro, você vai querer o estado anterior de volta.
-2. Escolha o backup pela data e clique em restaurar.
-3. Digite `RESTAURAR` em caixa alta e a senha da sua conta de administrador.
-4. **Todas as sessões são invalidadas** — todo mundo volta para a tela de login.
-   Isso é intencional: sessões criadas depois do backup apontariam para dados
-   que não existem mais.
-
-Avise a equipe antes. Tudo que foi registrado entre o backup e agora **se
-perde**.
-
----
-
-## Rotacionar o token dos agentes
-
-O `AGENT_API_TOKEN` é **um só, compartilhado por todos os agentes**. Rotacionar
-não é uma operação isolada no servidor:
-
-1. Gere o novo valor:
-   ```powershell
-   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-   ```
-2. Atualize o `API_TOKEN` no `atualizador.ini` de **todos** os agentes
-   instalados e reinicie cada serviço.
-3. **Só então** troque o `AGENT_API_TOKEN` no `.env` do servidor e reinicie.
-   (A chave não é editável pelo navegador: a tela Administração → Integrações
-   só mostra se ela está configurada e como termina, para conferir que a
-   troca pegou.)
-
-Fazendo na ordem inversa, todos os agentes passam a receber 401 até você
-terminar — e do ponto de vista do painel isso é **silencioso**: os agentes
-simplesmente param de se comunicar, como se estivessem offline.
-
----
-
-## Página em branco ou sem estilo
-
-**Sintoma:** o painel carrega branco, ou aparece sem formatação.
-
-1. **Abra o console do navegador** (F12 → Console). A mensagem quase sempre
-   nomeia o arquivo que não carregou.
-
-2. **`Failed to load module script: expected a JavaScript module script but the
-   server responded with a MIME type of text/html`** — um arquivo `.js`
-   referenciado não existe no caminho pedido. Desde a correção de set/2026 o
-   servidor responde **404 de verdade** nesse caso, em vez de devolver o
-   `index.html`, então o console aponta o caminho certo. Confira se o arquivo
-   está onde o import diz.
-
-3. **Só o estilo sumiu:** `/css/theme.css` ou `/css/components.css` deu 404.
-
----
-
-## Lentidão
-
-O banco é SQLite com driver **síncrono**, então uma consulta lenta trava o
-processo inteiro ([ADR-0002](DOCUMENTACAO_CONSOLIDADA.md#adr-0002)). Com o
-volume atual isso é teórico, mas se acontecer:
-
-1. **Confira o tamanho do banco** em **Administração → Diagnóstico**.
-2. **Alguém pediu uma página gigante?** O `pageSize` tem teto de 200 no
-   servidor, então não é isso. Importação e exportação de planilha travam o
-   processo enquanto rodam, mas têm limite (5.000 e 10.000 linhas — no limite,
-   ~3 s e ~2 s na máquina de produção; ver `server/src/config/limitesPlanilha.js`).
-   "A planilha tem mais de 5.000 linhas" e "A exportação teria N linhas" são
-   essa proteção funcionando: divida o arquivo, ou filtre por período. Antes
-   de subir um limite, rode `node server/ferramentas/medir-planilhas.js`.
-3. **O arquivo `-wal` cresceu muito?** Acontece quando o banco fica muito tempo
-   sem fechar direito. `docker compose restart gestor` faz o *checkpoint*.
-
----
-
-## Espaço em disco
-
-Duas coisas crescem sozinhas (o log sai em `docker compose logs`, que o
-Docker guarda com o container):
-
-| Pasta | O que é | Pode apagar? |
-|---|---|---|
-| `server/data/backups/` | cópias do banco na subida | as mais recentes (10 por padrão) são mantidas automaticamente; as antigas já saem sozinhas |
-| `server/data/packages/` | pacotes de versão servidos aos agentes | **cuidado**: um pacote apagado quebra o download de quem ainda não atualizou |
-
-O painel de **Saúde** mostra o total e o tamanho dos pacotes. (Esse número ficou
-zerado por um bug até set/2026 — se você lembra dele sempre mostrando zero, era
-isso, e está corrigido.)
-
----
-
-## Verificar se está tudo são
+### Recuperar acesso de uma conta
+Não há envio de e-mail para recuperação. Quem tem acesso ao host do servidor (ou ao arquivo `gestao.db`) redefine a senha direto no banco:
 
 ```powershell
-cd web
-npm run check     # verificação estática de tipos
-npm test          # servidor e front-end
+cd C:\gestor\server
+node resetar-senha.js <usuario> "<nova senha com 8+ chars>"
+```
+Funciona inclusive para o único administrador, sem exigir a senha antiga. Se nenhuma conta administradora restar, restaure o backup anterior.
+
+### Restaurar um backup
+Em **Administração → Backups e recuperação** (somente `admin`):
+1. Clique antes em **Baixar o banco de agora** como cópia de segurança.
+2. Selecione o backup pela data, clique em restaurar, digite `RESTAURAR` em maiúsculas e informe sua senha atual.
+3. Todas as sessões ativas serão encerradas após a restauração para manter consistência com o banco restaurado. Avise a equipe antes: registros feitos após a cópia restaurada serão perdidos.
+
+### Página em branco ou sem estilo
+Abra o DevTools do navegador (`F12 → Console` e `Rede`):
+- Erro `Failed to load module script ... MIME type`: um `.js` importado não existe no caminho esperado (o servidor responde `404` explícito, facilitando localizar o import incorreto).
+- `404` em `/css/*.css` ou proxy devolvendo erro: confira serviço do Node e diretório `client/`.
+
+### Lentidão
+SQLite é síncrono ([ADR-0002](ARQUITETURA.md#adr-0002)). Consultas comuns levam menos de 1 ms; os pontos que seguram o processo são planilhas grandes e arquivo `-wal` acumulado:
+- Importação (teto 5.000 linhas) e exportação `.xlsx` (teto 10.000 linhas) possuem limites intencionais em [`limitesPlanilha.js`](../server/src/config/limitesPlanilha.js). Divida a planilha ou filtre por período; antes de alterar os tetos, meça com `node server/ferramentas/medir-planilhas.js`.
+- Se o `-wal` crescer muito (monitorado em **Administração → Diagnóstico**), reinicie o serviço `GestorApp` para forçar checkpoint limpo.
+
+### Espaço em disco
+- `server/data/backups/`: retenção automática gerenciada pelo painel (padrão 10 cópias recentes); arquivos excedentes são removidos automaticamente.
+- `server/data/packages/`: pacotes do Atualizador Automático — não remova pacotes publicados manualmente se agentes ainda dependem deles.
+
+### Rotacionar o token dos agentes
+`AGENT_API_TOKEN` é único para todos os agentes C#. Para trocar sem derrubar agentes em silêncio:
+1. Gere o novo token aleatório via `crypto.randomBytes(32).toString('hex')`.
+2. Atualize o `API_TOKEN` no `atualizador.ini` de **todos** os agentes e reinicie-os (ou coordene a janela de atualização).
+3. Troque `AGENT_API_TOKEN` no `server/.env` e reinicie o servidor (`GestorApp`). A tela *Administração → Integrações* mostra se a chave está configurada e seus últimos dígitos.
+
+### Um agente parou de atualizar
+*(Aplicável apenas se o módulo Atualizador Automático estiver ligado em **Administração → Integrações**.)*
+1. Verifique em *Administração → Integrações* se o Atualizador não está desligado intencionalmente.
+2. Na aba *Distribuição*, clique na linha do cliente para ver a última fase e a mensagem de erro.
+3. Na máquina do cliente, confira o serviço `Agente Atualizador ERP` (`Get-Service -Name "Agente Atualizador ERP"`), conectividade HTTPS contra `PUBLIC_URL`, instalação do `caddy-raiz.crt` (se certificado privado), eventual pausa no painel e logs no Visualizador de Eventos do Windows.
+
+---
+
+## 3. Conferência rápida de saúde
+
+No servidor de desenvolvimento/homologação:
+```powershell
+npm run check
+npm test
 ```
 
-E, pelo navegador, **Administração → Diagnóstico**: integridade do banco,
-último backup, situação de cada agente, uso de memória e tempo no ar.
-
-`statusGeral` só fica `saudavel` quando a integridade do banco está `ok` **e**
-nenhum agente está em erro. Qualquer outra coisa vira `atencao` — que é um
-convite a olhar, não necessariamente um incidente.
+Em produção, abra **Administração → Diagnóstico**: confere integridade SQLite (`PRAGMA integrity_check`), tamanho do banco e do `-wal`, sessões ativas, retenção e saúde dos backups, modo de transporte (HTTPS/proxy) e uso de memória do processo. Use **Copiar para o suporte** ao reportar incidentes.

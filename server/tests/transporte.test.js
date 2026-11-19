@@ -8,8 +8,8 @@
  *
  * O "proxy" aqui é o próprio teste mandando X-Forwarded-Proto, como o Caddy
  * faz. Que ninguém além do proxy alcance a porta do Node (e possa forjar o
- * cabeçalho) é garantia do docker-compose.yml, não do código -- fora do
- * alcance destes testes.
+ * cabeçalho) é garantia de infraestrutura (HOST=127.0.0.1 + firewall/NSG), não
+ * do código -- fora do alcance destes testes.
  */
 const test = require("node:test");
 const assert = require("node:assert/strict");

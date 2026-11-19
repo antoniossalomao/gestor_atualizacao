@@ -25,5 +25,5 @@ labels: bug
 
 ## O que já foi olhado
 
-<!-- Console do navegador (F12), `docker compose logs gestor`, painel de Saúde.
+<!-- Console do navegador (F12), logs do serviço (`GestorApp` ou App Service) e tela Administração › Diagnóstico.
      Se ainda não olhou, tudo bem -- deixe em branco. -->

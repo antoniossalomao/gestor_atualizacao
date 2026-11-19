@@ -32,7 +32,7 @@ jobs:
           cache: npm
           # Os dois package-lock.json: o da raiz tem so a ferramenta de
           # verificacao de tipos (devDependency), o de server/ tem o que o app
-          # realmente usa. O front-end nao tem nenhum (ADR-0001).
+          # realmente usa. O front-end nao tem nenhum (docs/ARQUITETURA.md#adr-0001).
           cache-dependency-path: |
             package-lock.json
             server/package-lock.json
@@ -49,19 +49,19 @@ jobs:
         working-directory: server
         run: npm test
 
-      # Verificacao estatica de tipos sobre client/js/domain e client/js/utils
-      # -- as camadas que, por desenho, nao tocam no DOM (ADR-0005). Nao compila
-      # nada (noEmit): le o JavaScript que ja existe e as anotacoes JSDoc que ele
-      # ja tinha, e falha se houver inconsistencia real. Ver client/tsconfig.json
-      # para o porque de nao rodar no projeto inteiro.
+      # Verificacao estatica de tipos sobre client/js/domain, utils e templates
+      # -- as camadas que, por desenho, nao tocam no DOM (docs/ARQUITETURA.md#adr-0005).
+      # Nao compila nada (noEmit): le o JavaScript que ja existe e as anotacoes JSDoc
+      # que ele ja tinha, e falha se houver inconsistencia real. Ver
+      # client/tsconfig.json para o porque de nao rodar no projeto inteiro.
       - name: Instalar as ferramentas de verificação
         run: npm ci
 
       - name: Verificação de tipos (camadas sem DOM)
         run: npm run check
 
-      # O front-end nao tem dependencia nenhuma (ver ADR-0001: sem framework,
-      # sem build), entao nao ha o que instalar -- so rodar.
+      # O front-end nao tem dependencia nenhuma (ver docs/ARQUITETURA.md#adr-0001:
+      # sem framework, sem build), entao nao ha o que instalar -- so rodar.
       - name: Testes do front-end
         working-directory: client
         run: npm test
@@ -116,25 +116,3 @@ jobs:
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
-
-  # Constrói a imagem Docker e varre o sistema e as bibliotecas dela com o
-  # Trivy. HIGH/CRITICAL com correção disponível reprova o CI: o deploy (que
-  # depende do CI verde) não acontece com vulnerabilidade conhecida.
-  varredura-da-imagem:
-    runs-on: ubuntu-24.04
-    needs: [testes, auditoria]
-    steps:
-      - name: Baixar o código do repositório
-        uses: actions/checkout@v4
-
-      - name: Construir a imagem
-        run: docker build -t gestor-de-atualizacoes:ci .
-
-      - name: Varredura de vulnerabilidades (Trivy)
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2 # v0.28.0
-        with:
-          image-ref: gestor-de-atualizacoes:ci
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-          vuln-type: os,library

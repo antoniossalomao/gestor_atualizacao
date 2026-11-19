@@ -79,10 +79,9 @@ const LIMITE_UPLOAD_MB = { arquivo: 15, pacote: 500 };
 // minutos sobra para o uso real (um admin baixa ou restaura poucas vezes).
 const LIMITE_ROTAS_DE_BACKUP = { maxPedidos: 20, janelaMs: 15 * 60 * 1000 };
 
-// Versão do painel, lida do package.json do servidor (que o Dockerfile copia
-// para a imagem). Até 30/09/2026 havia três números diferentes: "2.1.0" fixo
-// no Diagnóstico, "Versão 2.0" escrito na aba Sobre e "1.0.0" no
-// package.json. Agora é um só -- para mudar, mude o package.json.
+// Versão do painel, lida do package.json do servidor. Até 30/09/2026 havia
+// três números diferentes: "2.1.0" fixo no Diagnóstico, "Versão 2.0" escrito na
+// aba Sobre e "1.0.0" no package.json. Agora é um só -- para mudar, mude o package.json.
 const VERSAO_PAINEL = require("../../package.json").version;
 
 module.exports = {

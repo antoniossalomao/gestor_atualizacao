@@ -18,10 +18,10 @@
  */
 
 /**
- * Pedidos que continuam valendo por HTTP. Só o healthcheck do Docker, que
- * roda DENTRO do container e bate direto no Node (ver Dockerfile). A rota é
- * aberta e, sem cookie -- que o navegador não manda por HTTP com "Secure" --,
- * não devolve nada além de "precisa configurar?" e "Atualizador ligado?".
+ * Pedidos que continuam valendo por HTTP (ex.: healthcheck local ou interno).
+ * A rota é aberta e, sem cookie -- que o navegador não manda por HTTP com
+ * "Secure" --, não devolve nada além de "precisa configurar?" e
+ * "Atualizador ligado?".
  */
 const LIBERADOS_EM_HTTP = new Set(["GET /api/auth/status", "HEAD /api/auth/status"]);
 

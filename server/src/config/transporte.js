@@ -1,7 +1,7 @@
 /**
  * Decide como o servidor conversa com o navegador: atrás do proxy que termina
- * o HTTPS (o Caddy do docker-compose.yml), ou em HTTP puro só para a própria
- * máquina (ADR-0010).
+ * o HTTPS (Caddy em proxy/Caddyfile ou balanceador da Azure), ou em HTTP puro
+ * só para a própria máquina (docs/ARQUITETURA.md#adr-0010).
  *
  * Somente HTTPS na rede (decisão de 29/09/2026, ao preparar o painel para
  * sair do PC de quem o usa): HTTP puro continua existindo, mas escutando só
@@ -21,10 +21,10 @@
  *   continuava mandando cookie por HTTP.
  *
  * As duas viram recusa de subida, com o motivo em português, no mesmo
- * espírito de segredoSessao.js. No Docker as duas vêm fixas do
- * docker-compose.yml; isto protege quem mexer nelas. Função pura (não lê
- * process.env nem encerra o processo) para ser testável -- quem decide o que
- * fazer é o server.js.
+ * espírito de segredoSessao.js; em produção elas vêm no server/.env ou App
+ * Settings, e validar no boot protege contra falhas silenciosas. Função pura
+ * (não lê process.env nem encerra o processo) para ser testável -- quem decide
+ * o que fazer é o server.js.
  */
 
 /** Onde o HTTP puro escuta: só a própria máquina alcança. */
@@ -49,8 +49,8 @@ function lerBooleano(valor, nome) {
  *   problemas: string[],
  * }}
  *   `problemas` não vazio = não subir. `host` indefinido = todas as
- *   interfaces, que é o que o Node precisa dentro do container para o proxy
- *   alcançá-lo -- a porta dele não é publicada (ver docker-compose.yml).
+ *   interfaces, útil quando o proxy externo (ex.: Azure App Service) conecta
+ *   fora do loopback. Atrás do Caddy local, defina HOST=127.0.0.1.
  */
 function lerTransporte(env) {
   const problemas = [];

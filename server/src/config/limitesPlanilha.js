@@ -10,8 +10,7 @@
  * a importação e a exportação montam o arquivo na memória do processo.
  *
  * Números de 29/09/2026 (server/ferramentas/medir-planilhas.js, i5-2410M com
- * 8 GB -- a máquina que roda o Docker de produção), depois das otimizações
- * da P05:
+ * 8 GB -- hardware de referência da implantação original):
  *
  *   importar 5.000 linhas:  2,2 s, pico de 86 MB
  *   importar 20.000 linhas: 9,4 s, pico de 245 MB

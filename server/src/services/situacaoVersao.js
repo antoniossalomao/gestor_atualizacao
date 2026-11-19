@@ -7,7 +7,7 @@ const { lerData } = require("./validacao");
  * dias (o que não diz nada sobre versão), e as outras duas comparavam o
  * texto da versão com `===`.
  *
- * Quatro decisões, tomadas com a equipe (ver docs/DOCUMENTACAO_CONSOLIDADA.md#adr-0008 e #adr-0013):
+ * Quatro decisões, tomadas com a equipe (ver docs/ARQUITETURA.md#adr-0008 e #adr-0013):
  *
  *  1. **Compara como data, não como texto.** Versão aqui é uma data
  *     (dd/mm/aaaa). Com `===`, quem recebeu uma versão MAIS NOVA que a
