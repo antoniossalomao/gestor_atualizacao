@@ -772,9 +772,25 @@ function pintar() {
     if (valor == null) raiz.removeAttribute(nome);
     else raiz.setAttribute(nome, valor);
   }
+  atualizarFavicon(raiz);
+}
+
+/** Mantém o favicon da aba na mesma cor de destaque da barra lateral. */
+function atualizarFavicon(raiz) {
+  if (typeof document === "undefined" || typeof getComputedStyle !== "function") return;
+  const link = document.querySelector?.('link[rel="icon"][type="image/svg+xml"]');
+  if (!link) return;
+  const estilos = getComputedStyle(raiz);
+  const fundo = estilos.getPropertyValue("--cor-accent").trim() || "#eae8e4";
+  const traco = estilos.getPropertyValue("--cor-sobre-accent").trim() || "#111315";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="${fundo}"/><g transform="translate(3 3) scale(.8125)" fill="none" stroke="${traco}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5.7 12.2A11 11 0 0 1 25 9.7"/><path d="M20.8 9 25 9.7 25.8 5.5"/><path d="M26.3 19.8A11 11 0 0 1 7 22.3"/><path d="M11.2 23 7 22.3 6.2 26.5"/><path d="M17.3 9.8 12.6 16.6h3.5l-1.4 5.6 4.7-6.8h-3.5z" fill="${traco}" stroke-width="1.1"/></g></svg>`;
+  link.href = `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
 /** Aplica o que estava salvo. Chamado no arranque, junto com o tema. */
 export function iniciarAparencia() {
   pintar();
+  if (typeof document !== "undefined") {
+    document.addEventListener("tema:mudou", () => atualizarFavicon(document.documentElement));
+  }
 }

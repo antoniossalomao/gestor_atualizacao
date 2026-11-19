@@ -2,7 +2,7 @@ import { html, confiavel } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
 import { formatarBytes, formatarDataHora, tempoRelativo } from "../utils/data.js";
 import { iniciais, rotuloPapel, descricaoPapel } from "../domain/pessoa.js";
-import { formatarTempoAtivo, papelNormalizado } from "../domain/administracao.js";
+import { formatarTempoAtivo, papelNormalizado, descreverChaveAgentes, descreverTransporte } from "../domain/administracao.js";
 
 /**
  * Marcação da tela Administração. As abas antigas eram cinco modais, cada um
@@ -231,28 +231,51 @@ export function linhaBackup(b) {
 
 /**
  * O topo do Diagnóstico: a frase que resume, a lista do que precisa de
- * atenção (cada item leva à aba onde se resolve) e a hora da conferência --
- * sem ela, "Conferir de novo" não dava sinal de ter feito alguma coisa.
+ * atenção (cada item leva à aba onde se resolve), o resumo do que foi
+ * conferido e a hora da conferência -- sem ela, "Conferir de novo" não dava
+ * sinal de ter feito alguma coisa.
  * @param {ReturnType<typeof import("../domain/administracao.js").situacaoDiagnostico>} situacao
  * @param {Date} conferidoEm
+ * @param {{verificacoes?: ReturnType<typeof import("../domain/administracao.js").verificacoesDiagnostico>, verificacaoMs?: number|null}} [opcoes]
  */
-export function resumoDiagnostico(situacao, conferidoEm) {
+export function resumoDiagnostico(situacao, conferidoEm, { verificacoes = [], verificacaoMs = null } = {}) {
   const hora = new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(conferidoEm);
   const ABAS = { backups: "Backups", integracoes: "Integrações" };
+  const subtitulo =
+    situacao.pendencias.length === 0
+      ? "Nenhuma pendência operacional encontrada na última verificação."
+      : situacao.tom === "perigo"
+        ? "Há itens críticos que exigem atenção imediata."
+        : "Revise os pontos destacados abaixo para manter o ambiente protegido.";
   return html`
     <section class="admin-diagnostico is-${situacao.tom}" role="status">
       <div class="admin-diagnostico__cabeca">
         <span class="admin-diagnostico__icone" aria-hidden="true">${iconeHtml(situacao.tom === "ok" ? "check" : "alerta")}</span>
-        <strong>${situacao.titulo}</strong>
-        <span class="admin-diagnostico__hora">Conferido às ${hora}</span>
+        <div class="admin-diagnostico__titulos">
+          <strong>${situacao.titulo}</strong>
+          <span class="admin-diagnostico__sub">${subtitulo}</span>
+        </div>
+        <span class="admin-diagnostico__hora">Conferido às ${hora}${Number.isFinite(verificacaoMs) ? ` · ${verificacaoMs} ms` : ""}</span>
       </div>
       ${
         situacao.pendencias.length > 0 &&
-        html`<ul class="admin-diagnostico__lista">
+        html`<ul class="admin-diagnostico__lista" role="list">
           ${situacao.pendencias.map(
             (p) => html`<li class="is-${p.tom}">
               <span>${p.texto}</span>
               <button type="button" class="btn btn--small btn--ghost" data-ir-aba="${p.aba}">Abrir ${ABAS[p.aba] || p.aba} ${iconeHtml("seta")}</button>
+            </li>`
+          )}
+        </ul>`
+      }
+      ${
+        verificacoes.length > 0 &&
+        html`<ul class="admin-diagnostico__checks" role="list">
+          ${verificacoes.map(
+            (v) => html`<li class="admin-diagnostico__check is-${v.tom}">
+              <span class="admin-diagnostico__ponto" aria-hidden="true"></span>
+              <span class="admin-diagnostico__check-rotulo">${v.rotulo}</span>
+              <strong class="admin-diagnostico__check-valor">${v.detalhe}</strong>
             </li>`
           )}
         </ul>`
@@ -294,68 +317,174 @@ export function avisoChave(chave) {
 }
 
 /**
- * Os quatro blocos da Saúde. Com o Atualizador desligado, o bloco de agentes
- * diz isso em vez de mostrar "0 agentes, sem incidentes" -- que parecia uma
- * boa notícia e era só a ausência do recurso.
+ * Os quatro blocos da Saúde em grade de 2 colunas. Com o Atualizador desligado,
+ * o bloco de integrações e agentes diz isso em vez de mostrar "0 agentes, sem
+ * incidentes" -- que parecia uma boa notícia e era só a ausência do recurso.
  * @param {any} dados resposta de /api/saude
- * @param {{atualizadorHabilitado: boolean}} opcoes
+ * @param {{atualizadorHabilitado: boolean, chaveAgentes?: {situacao: "ausente"|"exemplo"|"configurada", final?: string}|null}} opcoes
  */
-export function blocosSaude(dados, { atualizadorHabilitado }) {
-  const bancoOk = dados.banco?.integridade === "ok";
+export function blocosSaude(dados, { atualizadorHabilitado, chaveAgentes = null }) {
+  const banco = dados.banco || {};
+  const srv = dados.servidor || {};
+  const bk = dados.backups || {};
   const agentes = dados.agentes || {};
+  const integracoes = dados.integracoes || {};
+
+  const bancoOk = banco.integridade === "ok";
+  const tamanhoBanco = banco.walBytes > 0
+    ? `${formatarBytes(banco.tamanhoBytes)} · WAL ${formatarBytes(banco.walBytes)}`
+    : formatarBytes(banco.tamanhoBytes);
+  const reg = banco.registros;
+  const numero = new Intl.NumberFormat("pt-BR");
+  const volume = reg
+    ? html`<div class="admin-saude__volume">
+        <span class="admin-saude__subtitulo">Volume da base</span>
+        <ul class="admin-saude__contadores" role="list">
+          ${[
+            ["Clientes", reg.clientes],
+            ["Atualizações", reg.atualizacoes],
+            ["Agendamentos", reg.agendamentosAtivos],
+            ["Campanhas", reg.campanhasAtivas],
+            ["Contas", reg.usuarios],
+          ].map(([rotulo, qtd]) => html`<li><strong>${numero.format(Number(qtd || 0))}</strong><span>${rotulo}</span></li>`)}
+        </ul>
+      </div>`
+    : null;
+
+  /** @type {Array<[string, unknown]>} */
+  const linhasBanco = [
+    ["Arquivo", html`<span class="admin-saude__mono">${banco.caminho ?? "—"}</span>`],
+    ["Tamanho", tamanhoBanco],
+    ...(banco.sessoesBytes > 0 ? [/** @type {[string, unknown]} */ (["Sessões em disco", formatarBytes(banco.sessoesBytes)])] : []),
+    ["Modo de gravação", String(banco.journalMode || "—").toUpperCase()],
+    ...(banco.versaoEsquema != null ? [/** @type {[string, unknown]} */ (["Versão do esquema", `v${banco.versaoEsquema}`])] : []),
+    ...(Number.isFinite(banco.verificacaoMs) ? [/** @type {[string, unknown]} */ (["Verificação", `${bancoOk ? "OK" : "Falha"} (${banco.verificacaoMs} ms)`])] : []),
+  ];
+
+  const memoriaTexto = srv.memoriaRssMB != null
+    ? `${srv.memoriaRssMB} MB no processo (heap ${srv.memoriaHeapUsadaMB ?? "?"} MB)`
+    : `${srv.memoriaHeapUsadaMB ?? "?"} MB de ${srv.memoriaHeapTotalMB ?? "?"} MB`;
+  /** @type {Array<[string, unknown]>} */
+  const linhasServidor = [
+    ["Node", `${srv.node ?? "?"} · ${srv.plataforma ?? "?"}`],
+    ["No ar há", formatarTempoAtivo(srv.uptimeSegundos)],
+    ...(srv.iniciadoEm ? [/** @type {[string, unknown]} */ (["Iniciado em", formatarDataHora(srv.iniciadoEm)])] : []),
+    ["Memória", memoriaTexto],
+    ...(srv.transporte ? [/** @type {[string, unknown]} */ (["Conexão", descreverTransporte(srv.transporte).texto])] : []),
+    ...(srv.sessoesAtivas != null
+      ? [/** @type {[string, unknown]} */ ([
+          "Sessões abertas",
+          srv.sessoesAtivas === 0 ? "Nenhuma" : srv.sessoesAtivas === 1 ? "1 sessão ativa" : `${srv.sessoesAtivas} sessões ativas`,
+        ])]
+      : []),
+  ];
+
+  const totalBackups = bk.total ?? 0;
+  const corrompidos = bk.corrompidos ?? 0;
+  const retencao = bk.retencao ?? null;
+  /** @type {[string, string]} */
+  const seloBackups = totalBackups === 0
+    ? ["Nenhuma cópia", "warning"]
+    : corrompidos > 0
+      ? [corrompidos === 1 ? "1 corrompida" : `${corrompidos} corrompidas`, "danger"]
+      : retencao
+        ? [`${totalBackups} de ${retencao}`, "success"]
+        : [`${totalBackups} ${totalBackups === 1 ? "cópia" : "cópias"}`, "muted"];
+  /** @type {Array<[string, unknown]>} */
+  const linhasBackups = [
+    ["Última cópia", bk.ultimo ? formatarDataHora(bk.ultimo) : "Nenhuma ainda"],
+    ...(bk.ultimo ? [/** @type {[string, unknown]} */ (["Feita", tempoRelativo(bk.ultimo)])] : []),
+    ...(totalBackups > 0 && bk.ultimoIntegro !== undefined
+      ? [/** @type {[string, unknown]} */ ([
+          "Integridade",
+          bk.ultimoIntegro === true
+            ? html`<span class="badge badge--success">Íntegra</span>`
+            : bk.ultimoIntegro === false
+              ? html`<span class="badge badge--danger">Corrompida</span>`
+              : html`<span class="badge badge--muted">Não verificada</span>`,
+        ])]
+      : []),
+    ...(bk.tamanhoTotalBytes > 0 ? [/** @type {[string, unknown]} */ (["Espaço em disco", formatarBytes(bk.tamanhoTotalBytes)])] : []),
+  ];
+  const medidorRetencao = retencao
+    ? html`<div class="admin-saude__medidor">
+        <div class="admin-saude__medidor-topo">
+          <span>Retenção configurada</span>
+          <strong>${totalBackups} de ${retencao} ${retencao === 1 ? "cópia" : "cópias"}</strong>
+        </div>
+        <progress class="admin-saude__progresso${totalBackups === 0 || corrompidos > 0 ? " is-alerta" : ""}"
+                  value="${Math.min(totalBackups, retencao)}" max="${retencao}"
+                  aria-label="Retenção de backups: ${totalBackups} de ${retencao} cópias"></progress>
+      </div>`
+    : null;
+
+  const discord = integracoes.discordConfigurado;
+  /** @type {Array<[string, unknown]>} */
+  const linhasIntegracoes = [
+    ...(discord !== null && discord !== undefined
+      ? [/** @type {[string, unknown]} */ (["Alertas no Discord", discord ? "Configurado" : "Não configurado"])]
+      : []),
+    ["Atualizador automático", atualizadorHabilitado ? "Ligado" : "Desligado"],
+    ...(atualizadorHabilitado
+      ? [
+          /** @type {[string, unknown]} */ (["Agentes", `${agentes.total ?? 0} (${agentes.ok ?? 0} em dia · ${agentes.offline ?? 0} sem contato)`]),
+          ...(chaveAgentes ? [/** @type {[string, unknown]} */ (["Chave dos agentes", descreverChaveAgentes(chaveAgentes).texto])] : []),
+        ]
+      : []),
+    ["Pacotes em disco", pacotes(dados.pacotes)],
+  ];
+  /** @type {[string, string]} */
+  const seloIntegracoes = !atualizadorHabilitado
+    ? ["Desligado", "muted"]
+    : agentes.erro > 0
+      ? [`${agentes.erro} com erro`, "danger"]
+      : agentes.offline > 0
+        ? [`${agentes.offline} sem contato`, "warning"]
+        : ["Sem falhas reportadas", "success"];
+
   return html`
-    <div class="admin-saude">
-      ${blocoSaude({
-        icone: "tabela",
-        titulo: "Banco de dados",
-        selo: bancoOk ? ["Íntegro", "success"] : ["Falha de integridade", "danger"],
-        linhas: [
-          ["Arquivo", dados.banco?.caminho],
-          ["Tamanho", formatarBytes(dados.banco?.tamanhoBytes)],
-          ["Modo de gravação", String(dados.banco?.journalMode || "—").toUpperCase()],
-        ],
-      })}
-      ${blocoSaude({
-        icone: "painel",
-        titulo: "Servidor",
-        selo: [`v${dados.servidor?.versao ?? "?"}`, "muted"],
-        linhas: [
-          ["Node", `${dados.servidor?.node ?? "?"} · ${dados.servidor?.plataforma ?? "?"}`],
-          ["No ar há", formatarTempoAtivo(dados.servidor?.uptimeSegundos)],
-          ["Memória", `${dados.servidor?.memoriaHeapUsadaMB ?? "?"} MB de ${dados.servidor?.memoriaHeapTotalMB ?? "?"} MB`],
-        ],
-      })}
-      ${blocoSaude({
-        icone: "backups",
-        titulo: "Backups",
-        selo: dados.backups?.total ? [`${dados.backups.total} ${dados.backups.total === 1 ? "cópia" : "cópias"}`, "muted"] : ["Nenhuma cópia", "warning"],
-        linhas: [
-          ["Última cópia", dados.backups?.ultimo ? formatarDataHora(dados.backups.ultimo) : "Nenhuma ainda"],
-          ...(dados.backups?.ultimo ? [/** @type {[string, unknown]} */ (["Feita", tempoRelativo(dados.backups.ultimo)])] : []),
-        ],
-      })}
-      ${
-        atualizadorHabilitado
-          ? blocoSaude({
-              icone: "distribuicao",
-              titulo: "Agentes e pacotes",
-              selo: agentes.erro > 0
-                ? [`${agentes.erro} com erro`, "danger"]
-                : agentes.offline > 0
-                  ? [`${agentes.offline} sem contato`, "warning"]
-                  : ["Sem falhas reportadas", "success"],
-              linhas: [
-                ["Agentes", `${agentes.total ?? 0} (${agentes.ok ?? 0} em dia · ${agentes.offline ?? 0} sem contato)`],
-                ["Pacotes em disco", pacotes(dados.pacotes)],
-              ],
-            })
-          : blocoSaude({
-              icone: "distribuicao",
-              titulo: "Agentes e pacotes",
-              selo: ["Desligado", "muted"],
-              linhas: [["Pacotes em disco", pacotes(dados.pacotes)]],
-            })
-      }
+    <div class="admin-saude-wrap">
+      <div class="admin-saude">
+        ${blocoSaude({
+          icone: "tabela",
+          titulo: "Banco de dados",
+          selo: bancoOk ? ["Íntegro", "success"] : ["Falha de integridade", "danger"],
+          linhas: linhasBanco,
+          complemento: volume,
+          rodape: html`
+            <a class="btn btn--small btn--ghost" href="/api/backups/atual/download" download>${iconeHtml("download")} Baixar banco</a>
+            <button type="button" class="btn btn--small btn--ghost" data-ir-aba="dados">Abrir Dados ${iconeHtml("seta")}</button>`,
+        })}
+        ${blocoSaude({
+          icone: "painel",
+          titulo: "Servidor",
+          selo: [`v${srv.versao ?? "?"}`, "muted"],
+          linhas: linhasServidor,
+          rodape: html`
+            <button type="button" class="btn btn--small btn--ghost" data-ir-aba="pessoas">Pessoas e sessões ${iconeHtml("seta")}</button>
+            <button type="button" class="btn btn--small btn--ghost" data-ir-aba="auditoria">Ver Auditoria ${iconeHtml("seta")}</button>`,
+        })}
+        ${blocoSaude({
+          icone: "backups",
+          titulo: "Backups",
+          selo: seloBackups,
+          linhas: linhasBackups,
+          complemento: medidorRetencao,
+          rodape: html`
+            <button type="button" class="btn btn--small" data-action="fazer-copia">${iconeHtml("backups")} Fazer cópia agora</button>
+            <button type="button" class="btn btn--small btn--ghost" data-ir-aba="backups">Gerenciar backups ${iconeHtml("seta")}</button>`,
+        })}
+        ${blocoSaude({
+          icone: "distribuicao",
+          titulo: "Integrações e agentes",
+          selo: seloIntegracoes,
+          linhas: linhasIntegracoes,
+          complemento: !atualizadorHabilitado
+            ? html`<p class="admin-saude__nota">O atualizador automático está desativado. Os alertas no Discord e as demais rotinas do painel funcionam normalmente.</p>`
+            : null,
+          rodape: html`<button type="button" class="btn btn--small btn--ghost" data-ir-aba="integracoes">Abrir Integrações ${iconeHtml("seta")}</button>`,
+        })}
+      </div>
     </div>`;
 }
 
@@ -370,18 +499,20 @@ function pacotes(p) {
 }
 
 /**
- * @param {{icone: Parameters<typeof iconeHtml>[0], titulo: string, selo: [string, string], linhas: Array<[string, unknown]>}} b
+ * @param {{icone: Parameters<typeof iconeHtml>[0], titulo: string, selo: [string, string], linhas: Array<[string, unknown]>, complemento?: unknown, rodape?: unknown}} b
  */
-function blocoSaude({ icone, titulo, selo, linhas }) {
+function blocoSaude({ icone, titulo, selo, linhas, complemento = null, rodape = null }) {
   return html`
     <section class="admin-saude__bloco">
       <header>
-        <span class="admin-saude__icone">${iconeHtml(icone)}</span>
+        <span class="admin-saude__icone" aria-hidden="true">${iconeHtml(icone)}</span>
         <h3>${titulo}</h3>
         <span class="badge badge--${selo[1]}">${selo[0]}</span>
       </header>
       <dl>
         ${linhas.map(([rotulo, valor]) => html`<div><dt>${rotulo}</dt><dd>${valor ?? "—"}</dd></div>`)}
       </dl>
+      ${complemento}
+      ${rodape && html`<footer class="admin-saude__rodape">${rodape}</footer>`}
     </section>`;
 }

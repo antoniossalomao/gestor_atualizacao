@@ -7,6 +7,14 @@
 
 :root {
   color-scheme: dark;
+  /* Redução global de 10% no zoom da interface inteira. As variáveis de
+     viewport compensam o fato de o CSS `zoom` padronizado escalar `vh`/`vw`/`dvh`,
+     evitando faixas vazias no rodapé ou modais menores em telas estreitas. */
+  --zoom-app: 0.9;
+  zoom: var(--zoom-app);
+  --vh-cheia: calc(100vh / var(--zoom-app));
+  --dvh-cheia: calc(100dvh / var(--zoom-app));
+  --vw-cheia: calc(100vw / var(--zoom-app));
 
   /* ==========================================================================
      COR -- tema escuro (padrao matte)
@@ -39,11 +47,11 @@
   --cor-accent: var(--realce-escuro, #eae8e4);
   --cor-accent-forte: var(--realce-escuro-forte, #f5f4f1);
   --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 12%, transparent);
-  --cor-verde: #34d399;
-  --cor-verde-fraco: rgba(52, 211, 153, 0.12);
-  --cor-vermelho: #f87171;
-  --cor-vermelho-forte: #ef4444;
-  --cor-vermelho-fraco: rgba(248, 113, 113, 0.12);
+  --cor-verde: #6eb895;
+  --cor-verde-fraco: rgba(110, 184, 149, 0.12);
+  --cor-vermelho: #d48282;
+  --cor-vermelho-forte: #c46b6b;
+  --cor-vermelho-fraco: rgba(212, 130, 130, 0.12);
   --cor-amarelo: #d1bc8c;
   --cor-amarelo-fraco: rgba(209, 188, 140, 0.12);
   --cor-sobre-accent: #111315;
@@ -57,20 +65,20 @@
   --vidro-desfoque: blur(8px);
 
   /* -- tokens semanticos de 4 camadas (WCAG AA) -- */
-  --status-ok-bg: rgba(52, 211, 153, 0.10);
-  --status-ok-borda: rgba(52, 211, 153, 0.25);
-  --status-ok-solido: #34d399;
-  --status-ok-texto: #a7f3d0;
+  --status-ok-bg: rgba(110, 184, 149, 0.10);
+  --status-ok-borda: rgba(110, 184, 149, 0.25);
+  --status-ok-solido: #6eb895;
+  --status-ok-texto: #a7d8bf;
 
   --status-alerta-bg: rgba(209, 188, 140, 0.10);
   --status-alerta-borda: rgba(209, 188, 140, 0.25);
   --status-alerta-solido: #d1bc8c;
   --status-alerta-texto: #d1bc8c;
 
-  --status-erro-bg: rgba(248, 113, 113, 0.10);
-  --status-erro-borda: rgba(248, 113, 113, 0.25);
-  --status-erro-solido: #f87171;
-  --status-erro-texto: #fca5a5;
+  --status-erro-bg: rgba(212, 130, 130, 0.10);
+  --status-erro-borda: rgba(212, 130, 130, 0.25);
+  --status-erro-solido: #d48282;
+  --status-erro-texto: #e3a8a8;
 
   --status-info-bg: rgba(220, 208, 188, 0.10);
   --status-info-borda: rgba(220, 208, 188, 0.24);
@@ -79,8 +87,8 @@
 
   --zebra-a: #15181c;
   --zebra-b: #191c20;
-  --severidade-alta: #ef6f6f;
-  --severidade-boa: #34d399;
+  --severidade-alta: #d48282;
+  --severidade-boa: #6eb895;
 
   --card-gradiente: var(--cor-superficie);
   --card-borda-hover: #4a525d;
@@ -263,9 +271,9 @@
   flex-direction: column-reverse;
 }
 
-:root { --altura-tabela: 60vh; }
-:root[data-altura="media"] { --altura-tabela: 45vh; }
-:root[data-altura="cheia"] { --altura-tabela: 82vh; }
+:root { --altura-tabela: calc(60vh / var(--zoom-app)); }
+:root[data-altura="media"] { --altura-tabela: calc(45vh / var(--zoom-app)); }
+:root[data-altura="cheia"] { --altura-tabela: calc(82vh / var(--zoom-app)); }
 
 /* ==========================================================================
    TEMA CLARO (Fundo claro #f4f5f6 mantendo barra lateral escura #111315)
@@ -298,11 +306,11 @@
   --cor-accent: var(--realce-claro, #272725);
   --cor-accent-forte: var(--realce-claro-forte, #161615);
   --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 9%, transparent);
-  --cor-verde: #157f4a;
-  --cor-verde-fraco: rgba(21, 127, 74, 0.12);
-  --cor-vermelho: #c62f38;
-  --cor-vermelho-forte: #a51f28;
-  --cor-vermelho-fraco: rgba(198, 47, 56, 0.1);
+  --cor-verde: #3b8763;
+  --cor-verde-fraco: rgba(59, 135, 99, 0.12);
+  --cor-vermelho: #b85458;
+  --cor-vermelho-forte: #9e4145;
+  --cor-vermelho-fraco: rgba(184, 84, 88, 0.10);
   --cor-amarelo: #a78339;
   --cor-amarelo-fraco: rgba(167, 131, 57, 0.12);
   --cor-sobre-accent: #ffffff;
@@ -311,7 +319,7 @@
 
   --status-ok-bg: #ecfdf5;
   --status-ok-borda: #a7f3d0;
-  --status-ok-solido: #157f4a;
+  --status-ok-solido: #3b8763;
   --status-ok-texto: #065f46;
 
   --status-alerta-bg: #fffbeb;
@@ -321,7 +329,7 @@
 
   --status-erro-bg: #fef2f2;
   --status-erro-borda: #fecaca;
-  --status-erro-solido: #c62f38;
+  --status-erro-solido: #b85458;
   --status-erro-texto: #991b1b;
 
   --status-info-bg: #f4f4f2;
@@ -331,8 +339,8 @@
 
   --zebra-a: #ffffff;
   --zebra-b: #f7f8fa;
-  --severidade-alta: #e05252;
-  --severidade-boa: #2f9e63;
+  --severidade-alta: #cf7275;
+  --severidade-boa: #58a37e;
 
   --card-gradiente: var(--cor-superficie);
   --card-borda-hover: #c6ccd4;
@@ -378,11 +386,11 @@
     --cor-accent: var(--realce-claro, #272725);
     --cor-accent-forte: var(--realce-claro-forte, #161615);
     --cor-accent-fraco: color-mix(in srgb, var(--cor-accent) 9%, transparent);
-    --cor-verde: #157f4a;
-    --cor-verde-fraco: rgba(21, 127, 74, 0.12);
-    --cor-vermelho: #c62f38;
-    --cor-vermelho-forte: #a51f28;
-    --cor-vermelho-fraco: rgba(198, 47, 56, 0.1);
+    --cor-verde: #3b8763;
+    --cor-verde-fraco: rgba(59, 135, 99, 0.12);
+    --cor-vermelho: #b85458;
+    --cor-vermelho-forte: #9e4145;
+    --cor-vermelho-fraco: rgba(184, 84, 88, 0.10);
     --cor-amarelo: #a78339;
     --cor-amarelo-fraco: rgba(167, 131, 57, 0.12);
     --cor-sobre-accent: #ffffff;
@@ -391,7 +399,7 @@
 
     --status-ok-bg: #ecfdf5;
     --status-ok-borda: #a7f3d0;
-    --status-ok-solido: #157f4a;
+    --status-ok-solido: #3b8763;
     --status-ok-texto: #065f46;
 
     --status-alerta-bg: #fffbeb;
@@ -401,7 +409,7 @@
 
     --status-erro-bg: #fef2f2;
     --status-erro-borda: #fecaca;
-    --status-erro-solido: #c62f38;
+    --status-erro-solido: #b85458;
     --status-erro-texto: #991b1b;
 
     --status-info-bg: #f4f4f2;
@@ -411,8 +419,8 @@
 
     --zebra-a: #ffffff;
     --zebra-b: #f7f8fa;
-    --severidade-alta: #e05252;
-    --severidade-boa: #2f9e63;
+    --severidade-alta: #cf7275;
+    --severidade-boa: #58a37e;
 
     --card-gradiente: var(--cor-superficie);
     --card-borda-hover: #c6ccd4;
@@ -616,4 +624,11 @@ a {
   animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
+}
+
+@media print {
+  :root {
+    --zoom-app: 1;
+    zoom: 1;
+  }
 }

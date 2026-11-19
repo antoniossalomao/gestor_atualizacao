@@ -15,6 +15,15 @@ Para o agente C#, o equivalente é
 
 ### Novembro de 2026
 
+- **Redução global de 10% no zoom da interface (`--zoom-app: 0.9`) (19/11/2026):**
+  - Aplicado `zoom: var(--zoom-app)` (`0.9`) no `:root` de `theme.css` (resetado para `1` em `@media print`), preservando tanto o zoom nativo do navegador quanto a preferência *Tamanho da fonte* (`--escala`).
+  - Compensadas as medidas baseadas em viewport (`--vh-cheia`, `--dvh-cheia`, `--vw-cheia` e `--altura-tabela`) em `theme.css`, `components.css` e `layout.css`, além da conversão de coordenadas visuais para pré-zoom via `fatorZoom()` (`elemento.js`) em `alturaDisponivel.js`, `CampoComSugestoes.js`, `botaoOcupado.js` e `TelaComAbas.js`.
+
+- **Melhoria da tela Administração › Diagnóstico (19/11/2026):**
+  - *Layout e hierarquia visual:* os blocos de saúde deixaram de se espremer em 4 colunas estreitas e passaram para grade de 2 colunas com container query (`@container saude`), dando altura proporcional para o índice lateral *Nesta página*, removendo as regras conflitantes que neutralizavam o destaque verde do cartão saudável e tratavam só os 3 primeiros blocos (`:nth-child(-n+3)`), e exibindo chips de verificações rápidas (*Integridade SQLite*, *Gravação WAL*, *Backups*, *Conexão*) no resumo do topo.
+  - *Métricas reais em `/api/saude`:* `BancoDeDados.versaoEsquema()`, `BancoDeDados.contarRegistros()` e `ArmazemDeSessaoSqlite.contarAtivas()` alimentam `SaudeService` com duração da verificação, tamanho do `-wal` e `sessions.sqlite`, versão do esquema, volume da base, RSS do processo, horário de início, sessões ativas, modo de transporte (HTTPS/proxy/local), retenção/espaço/integridade dos backups e status booleano do Discord — sem expor caminhos absolutos nem segredos.
+  - *Ações diretas:* botão *Fazer cópia agora* no bloco *Backups*, download do banco e atalhos para *Dados*, *Pessoas e sessões*, *Auditoria*, *Backups* e *Integrações*; bloco de *Integrações e agentes* contextualizado enquanto o Atualizador Automático está desligado.
+
 - **Adaptação para Azure App Service (Instância Web) (17/11/2026):**
   - *IP e cabeçalhos do balanceador Azure:* criada função `extrairIpCliente` em `LimitadorDeLogin.js` para remover a porta TCP anexada em `X-Forwarded-For` (`IPv4:porta` / `[IPv6]:porta`), aplicada também no `keyGenerator` (`ipKeyGenerator`) dos limitadores `express-rate-limit` em `routes/index.js` (evitando `ERR_ERL_INVALID_IP_ADDRESS`). `Servidor.js` normaliza `X-ARR-SSL` do Azure App Service Windows para `X-Forwarded-Proto: https` quando `trustProxy` está ativo.
   - *Runtime e persistência no App Service:* `server/server.js` passa a aceitar named pipes (`\\.\pipe\...`) em `PORT` (Windows/iisnode) e assume `$HOME/data/gestao.db` (fora de `wwwroot`) por padrão quando `WEBSITE_SITE_NAME` está definido sem `DB_PATH` explícito; `BancoDeDados.js` passa a aplicar `PRAGMA busy_timeout = 5000`.

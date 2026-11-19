@@ -59,7 +59,7 @@ const INDICE_BUSCA = [
   { aba: "backups", id: "backupsManter", titulo: "Política de retenção de backups", ajuda: "Quantidade de cópias automáticas mantidas no disco.", caminho: "Backups e recuperação", icone: "backups", seletor: '[data-role="retencao"]', busca: "backup retencao copias manter" },
   { aba: "backups", id: "fazer-copia", titulo: "Cópias armazenadas e restauração", ajuda: "Gerar cópia agora, baixar ou restaurar ponto anterior do banco.", caminho: "Backups e recuperação", icone: "backups", seletor: '[data-role="conteudo"]', busca: "backup copia restaurar baixar agora" },
   { aba: "auditoria", id: "auditoria-lista", titulo: "Registro de auditoria", ajuda: "Histórico completo de alterações, exclusões e ações administrativas.", caminho: "Auditoria", icone: "historico", seletor: '.admin__conteudo', busca: "auditoria historico log alteracoes" },
-  { aba: "diagnostico", id: "saude-geral", titulo: "Diagnóstico do servidor e integridade", ajuda: "Situação geral, arquivo do banco SQLite, memória Node e agentes.", caminho: "Diagnóstico", icone: "saude", seletor: '[data-role="situacao"]', busca: "saude diagnostico sqlite banco memoria uptime agente" },
+  { aba: "diagnostico", id: "saude-geral", titulo: "Diagnóstico do servidor e integridade", ajuda: "Situação geral, arquivo do banco SQLite, memória Node e agentes.", caminho: "Diagnóstico", icone: "saude", seletor: '[data-role="situacao"]', busca: "saude diagnostico sqlite banco memoria uptime agente backup sessoes transporte esquema volume integracoes" },
 ];
 
 

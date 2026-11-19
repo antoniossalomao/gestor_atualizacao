@@ -1,5 +1,6 @@
 import { normalizarBusca } from "../utils/busca.js";
 import { filtrarSugestoes, destacarTrecho } from "../utils/sugestoes.js";
+import { fatorZoom } from "./elemento.js";
 
 export { filtrarSugestoes, destacarTrecho };
 
@@ -182,24 +183,26 @@ export class CampoComSugestoes {
       }
     }
 
+    const z = fatorZoom(this.list);
     const alturaNatural = Math.min(ALTURA_MAX_LISTA, this.list.scrollHeight || ALTURA_MAX_LISTA);
-    const espacoAbaixo = Math.max(0, window.innerHeight - rect.bottom - MARGEM_VIEWPORT);
-    const espacoAcima = Math.max(0, rect.top - MARGEM_VIEWPORT);
+    const espacoAbaixo = Math.max(0, (window.innerHeight - rect.bottom) / z - MARGEM_VIEWPORT);
+    const espacoAcima = Math.max(0, rect.top / z - MARGEM_VIEWPORT);
     const virarAcima = espacoAbaixo < Math.min(alturaNatural, 140) && espacoAcima > espacoAbaixo;
     this.list.classList.toggle("is-flipped", virarAcima);
 
     if (this._usaPopover && this.list.matches(":popover-open")) {
       const maxH = Math.max(84, Math.min(ALTURA_MAX_LISTA, virarAcima ? espacoAcima : espacoAbaixo));
-      const left = Math.max(MARGEM_VIEWPORT, Math.min(rect.left, window.innerWidth - rect.width - MARGEM_VIEWPORT));
+      const largura = rect.width / z;
+      const left = Math.max(MARGEM_VIEWPORT, Math.min(rect.left / z, window.innerWidth / z - largura - MARGEM_VIEWPORT));
       this.list.style.left = `${left}px`;
-      this.list.style.width = `${rect.width}px`;
+      this.list.style.width = `${largura}px`;
       this.list.style.maxHeight = `${maxH}px`;
       if (virarAcima) {
         this.list.style.top = "auto";
-        this.list.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+        this.list.style.bottom = `${(window.innerHeight - rect.top) / z + 4}px`;
       } else {
         this.list.style.bottom = "auto";
-        this.list.style.top = `${rect.bottom + 4}px`;
+        this.list.style.top = `${rect.bottom / z + 4}px`;
       }
     }
   }

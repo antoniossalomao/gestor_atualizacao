@@ -29,6 +29,7 @@ class ArmazemDeSessaoSqlite extends session.Store {
   /** @param {{filePath: string}} options caminho do arquivo sessions.sqlite */
   constructor({ filePath }) {
     super();
+    this.filePath = filePath;
     this.conn = new Sqlite3(filePath);
     // WAL: leitores e um escritor trabalham ao mesmo tempo, sem travar a fila
     // de sessões. busy_timeout: em vez de falhar na hora com SQLITE_BUSY,
@@ -130,6 +131,19 @@ class ArmazemDeSessaoSqlite extends session.Store {
       .prepare("SELECT sid, dados, expira_em FROM sessoes WHERE json_extract(dados, '$.user.id') = ? AND expira_em >= ?")
       .all(userId, Date.now())
       .map((row) => ({ sid: row.sid, dados: JSON.parse(row.dados), expiraEm: row.expira_em }));
+  }
+
+  /**
+   * Quantas sessões ainda não expiraram -- usado no Diagnóstico para dar uma
+   * noção de uso em tempo real sem expor usuários ou tokens.
+   */
+  contarAtivas() {
+    try {
+      const row = this.conn.prepare("SELECT COUNT(*) AS total FROM sessoes WHERE expira_em >= ?").get(Date.now());
+      return Number(row?.total || 0);
+    } catch {
+      return 0;
+    }
   }
 
   /** Invalida todas as sessões ativas (usado após restauração do banco de dados). */

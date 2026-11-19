@@ -10,8 +10,10 @@ const path = require("node:path");
 const os = require("node:os");
 
 const { BancoDeDados } = require("../src/database/BancoDeDados");
+const { ArmazemDeSessaoSqlite } = require("../src/database/ArmazemDeSessaoSqlite");
 const { HistoricoService } = require("../src/services/HistoricoService");
 const { VersaoService } = require("../src/services/VersaoService");
+const { ConfiguracaoSistemaService } = require("../src/services/ConfiguracaoSistemaService");
 const { SaudeService } = require("../src/services/SaudeService");
 
 function criarAmbiente() {
@@ -95,7 +97,77 @@ test("BancoDeDados - as perguntas de saúde ficam dentro de database/", async (t
     await t.test("modoDeGravacao é WAL: é o que o backup e o checkpoint pressupõem", () => {
       assert.equal(env.db.modoDeGravacao(), "wal");
     });
+    await t.test("versaoEsquema e contarRegistros refletem o banco aberto", () => {
+      assert.equal(env.db.versaoEsquema(), 7);
+      const sisId = env.db.conn.prepare("SELECT id FROM sistemas LIMIT 1").get().id;
+      env.db.conn.prepare("INSERT INTO clientes (nome) VALUES (?)").run("Mercado Teste");
+      env.db.conn.prepare("INSERT INTO atualizacoes (cliente, data) VALUES (?, ?)").run("Mercado Teste", "19/11/2026");
+      env.db.conn.prepare("INSERT INTO agendamentos (tarefa, status, arquivado_em) VALUES (?, ?, ?)").run("Ativa", "A Fazer", null);
+      env.db.conn.prepare("INSERT INTO agendamentos (tarefa, status, arquivado_em) VALUES (?, ?, ?)").run("Arquivada", "Concluído", "2026-10-01T00:00:00Z");
+      env.db.conn.prepare("INSERT INTO campanhas (titulo, sistema_id, versao_alvo, criada_em, encerrada_em) VALUES (?, ?, ?, ?, ?)").run("Camp Ativa", sisId, "1.0", "2026-11-01T00:00:00Z", null);
+      env.db.conn.prepare("INSERT INTO campanhas (titulo, sistema_id, versao_alvo, criada_em, encerrada_em) VALUES (?, ?, ?, ?, ?)").run("Camp Encerrada", sisId, "1.0", "2026-10-01T00:00:00Z", "2026-10-15T00:00:00Z");
+      env.db.conn.prepare("INSERT INTO usuarios (nome, usuario, senha_hash, criado_em, role) VALUES (?, ?, ?, ?, ?)").run("Admin", "admin", "hash", "2026-11-01T00:00:00Z", "admin");
+
+      assert.deepEqual(env.db.contarRegistros(), {
+        clientes: 1,
+        atualizacoes: 1,
+        agendamentosAtivos: 1,
+        campanhasAtivas: 1,
+        usuarios: 1,
+      });
+    });
   } finally {
+    env.cleanup();
+  }
+});
+
+test("SaudeService - métricas detalhadas sem vazar segredos", () => {
+  const env = criarAmbiente();
+  const store = new ArmazemDeSessaoSqlite({ filePath: path.join(env.tmpDir, "sessions.sqlite") });
+  const cfg = new ConfiguracaoSistemaService(env.db, new HistoricoService(env.db));
+  const webhookSecreto = "https://discord.com/api/webhooks/123456/segredo-muito-sensivel";
+  env.db.configuracoesSistema.gravarVarias([
+    ["discord_webhook_url", webhookSecreto],
+    ["atualizador_habilitado", "false"],
+    ["backups_manter", "5"],
+  ]);
+
+  try {
+    store.set("sessao-valida", { user: { id: 1 }, cookie: { maxAge: 60000 } }, () => {});
+    store.conn.prepare("INSERT INTO sessoes (sid, dados, expira_em) VALUES (?, ?, ?)").run("sessao-expirada", "{}", Date.now() - 1000);
+
+    const saude = new SaudeService({
+      db: env.db,
+      backups: {
+        list: () => [
+          { arquivo: "gestao_2.db", data: "2026-11-19T10:00:00.000Z", integro: true, tamanhoBytes: 2048 },
+          { arquivo: "gestao_1.db", data: "2026-11-18T10:00:00.000Z", integro: false, tamanhoBytes: 1024 },
+        ],
+      },
+      versoes: env.versoes,
+      configuracaoSistema: cfg,
+      transporte: { https: true, proxy: true, host: "127.0.0.1" },
+    });
+    saude.definirArmazemDeSessao(store);
+
+    const diag = saude.obterDiagnostico();
+    assert.equal(typeof diag.banco.verificacaoMs, "number");
+    assert.equal(diag.banco.versaoEsquema, 7);
+    assert.equal(typeof diag.banco.walBytes, "number");
+    assert.ok(diag.banco.sessoesBytes > 0);
+    assert.equal(diag.servidor.sessoesAtivas, 1);
+    assert.equal(typeof diag.servidor.memoriaRssMB, "number");
+    assert.match(diag.servidor.iniciadoEm, /^\d{4}-\d{2}-\d{2}T/);
+    assert.deepEqual(diag.servidor.transporte, { https: true, proxy: true, soLocal: true });
+    assert.equal(diag.backups.retencao, 5);
+    assert.equal(diag.backups.tamanhoTotalBytes, 3072);
+    assert.equal(diag.backups.ultimoIntegro, true);
+    assert.equal(diag.backups.corrompidos, 1);
+    assert.deepEqual(diag.integracoes, { discordConfigurado: true, atualizadorHabilitado: false });
+    assert.ok(!JSON.stringify(diag).includes(webhookSecreto), "webhook nunca deve aparecer na resposta de /saude");
+    assert.ok(!JSON.stringify(diag).includes(env.tmpDir), "caminho absoluto no disco nunca deve vazar");
+  } finally {
+    store.close();
     env.cleanup();
   }
 });

@@ -24,7 +24,7 @@ import { formatarMes, primeiroDiaDoMes, tendenciaMensal, barrasPorSistema, varia
 import { blocoDeNumero, deltaTendencia, corpoSituacao } from "../js/templates/resumo.js";
 import { listaNotificacoes, itemNotificacao } from "../js/templates/notificacoes.js";
 import { alteracoesRegras, descreverChaveAgentes, formatarTempoAtivo, papelNormalizado } from "../js/domain/administracao.js";
-import { linhaUsuario, linhaBackup, blocosSaude, linhaRegraNumero } from "../js/templates/administracao.js";
+import { linhaUsuario, linhaBackup, blocosSaude, resumoDiagnostico, linhaRegraNumero } from "../js/templates/administracao.js";
 import { cartaoPerfil, linhaSessao, listaSessoes, previaTabela, listaAtalhos, resultadosBusca } from "../js/templates/configuracoes.js";
 import { cabecalhoSecao, tituloCartao } from "../js/templates/secao.js";
 import { descreverAparelho } from "../js/domain/aparelho.js";
@@ -647,6 +647,56 @@ test("Administração - saúde do servidor", async (t) => {
 
   await t.test("sem backup nenhum é aviso, não neutro", () => {
     assert.match(texto(blocosSaude(dados, { atualizadorHabilitado: false })), /badge--warning">Nenhuma cópia/);
+  });
+
+  await t.test("mostra volume da base, barra de retenção, RSS, Discord e atalhos", () => {
+    const completo = {
+      ...dados,
+      banco: {
+        ...dados.banco,
+        walBytes: 1024,
+        sessoesBytes: 2048,
+        verificacaoMs: 5,
+        versaoEsquema: 7,
+        registros: { clientes: 140, atualizacoes: 1200, agendamentosAtivos: 4, campanhasAtivas: 2, usuarios: 6 },
+      },
+      servidor: {
+        ...dados.servidor,
+        memoriaRssMB: 78,
+        iniciadoEm: "2026-10-01T11:00:00.000Z",
+        sessoesAtivas: 3,
+        transporte: { https: true, proxy: true, soLocal: true },
+      },
+      backups: { total: 2, ultimo: "2026-10-01T11:30:00.000Z", ultimoIntegro: true, corrompidos: 0, tamanhoTotalBytes: 8192, retencao: 5 },
+      integracoes: { discordConfigurado: true, atualizadorHabilitado: false },
+    };
+    const html = texto(blocosSaude(completo, { atualizadorHabilitado: false }));
+    assert.match(html, /Volume da base/);
+    assert.match(html, /140<\/strong><span>Clientes/);
+    assert.match(html, /<progress[^>]*value="2"[^>]*max="5"/);
+    assert.match(html, /78 MB no processo/);
+    assert.match(html, /HTTPS via proxy/);
+    assert.match(html, /3 sessões ativas/);
+    assert.match(html, /data-action="fazer-copia"/);
+    assert.match(html, /data-ir-aba="backups"/);
+    assert.match(html, /Configurado/);
+  });
+
+  await t.test("resumoDiagnostico exibe verificações e escapa texto malicioso", () => {
+    const html = texto(
+      resumoDiagnostico(
+        { tom: "alerta", titulo: "1 ponto precisa de atenção.", pendencias: [{ texto: MALICIOSO, tom: "alerta", aba: "backups" }] },
+        AGORA,
+        {
+          verificacaoMs: 3,
+          verificacoes: [{ chave: "integridade", rotulo: "Integridade SQLite", detalhe: "OK · 3 ms", tom: "ok" }],
+        }
+      )
+    );
+    semInjecao(html);
+    assert.match(html, /admin-diagnostico__checks/);
+    assert.match(html, /Integridade SQLite/);
+    assert.match(html, /· 3 ms/);
   });
 });
 

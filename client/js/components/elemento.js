@@ -22,3 +22,18 @@ export function el(tag, props = {}, children = []) {
   for (const child of children) node.append(child);
   return node;
 }
+
+/**
+ * Fator efetivo de CSS `zoom` aplicado ao elemento (ex.: 0.9 quando `:root`
+ * define `zoom: 0.9`). `getBoundingClientRect()` e `window.innerWidth`/`innerHeight`
+ * devolvem pixels visuais (já multiplicados pelo zoom), enquanto estilos inline
+ * (`left`, `top`, `width`, `--altura-disponivel`) esperam coordenadas pré-zoom.
+ * @param {Element} [node]
+ */
+export function fatorZoom(node = document.documentElement) {
+  if (node && typeof /** @type {any} */ (node).currentCSSZoom === "number" && /** @type {any} */ (node).currentCSSZoom > 0) {
+    return /** @type {any} */ (node).currentCSSZoom;
+  }
+  const z = parseFloat(getComputedStyle(document.documentElement).zoom);
+  return Number.isFinite(z) && z > 0 ? z : 1;
+}

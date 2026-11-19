@@ -114,7 +114,17 @@ class Servidor {
       // Recebe "configuracaoSistema" para não rodar nenhuma checagem
       // (nem gerar alarme falso) enquanto o Atualizador estiver desativado.
       alertaAgentes: new AlertaAgenteService(this.db, versoes, notifications, configuracaoSistema, eventos),
-      saude: new SaudeService({ db: this.db, backups, versoes }),
+      saude: new SaudeService({
+        db: this.db,
+        backups,
+        versoes,
+        configuracaoSistema,
+        transporte: {
+          https: Boolean(this.config.sessionSecure),
+          proxy: Boolean(this.config.trustProxy),
+          host: this.config.host || null,
+        },
+      }),
     };
   }
 
@@ -266,6 +276,7 @@ class Servidor {
     // usuário após a troca de senha -- mesmo padrão de injeção pós-construção
     // usado por BackupService acima (o store só existe aqui, depois de _montarServicos).
     this.services.auth.definirArmazemDeSessao(this.sessionStore);
+    this.services.saude.definirArmazemDeSessao(this.sessionStore);
     this.app.use(
       session({
         store: this.sessionStore,

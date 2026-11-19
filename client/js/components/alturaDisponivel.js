@@ -1,3 +1,5 @@
+import { fatorZoom } from "./elemento.js";
+
 /**
  * Mantém em `--altura-disponivel` (no próprio elemento) a altura que sobra
  * para ele entre o ponto onde começa e o fim da janela, descontado o que
@@ -32,12 +34,13 @@ export function ocuparAlturaDisponivel(el, { minimo = 280 } = {}) {
     if (el.offsetParent === null) return;
     const view = el.closest(".view");
     const main = el.closest(".app-main");
+    const z = fatorZoom(el);
     const caixa = el.getBoundingClientRect();
     const depois =
-      (view ? view.getBoundingClientRect().bottom - caixa.bottom : 0) +
+      (view ? (view.getBoundingClientRect().bottom - caixa.bottom) / z : 0) +
       (main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0);
-    const topo = caixa.top + window.scrollY;
-    const altura = Math.max(minimo, Math.floor(window.innerHeight - topo - depois));
+    const topo = (caixa.top + window.scrollY) / z;
+    const altura = Math.max(minimo, Math.floor(window.innerHeight / z - topo - depois));
     if (altura === ultima) return;
     ultima = altura;
     el.style.setProperty("--altura-disponivel", `${altura}px`);

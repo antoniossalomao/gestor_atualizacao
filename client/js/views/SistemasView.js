@@ -17,12 +17,13 @@ import { filtrarClientesDoSistema } from "../domain/filtrosSistemas.js";
  * escrito por extenso -- de propósito, sem exceção para este arquivo.
  */
 const CHAVE_ANTIGA_DATA = ["atend", "imentoAntesDe"].join("");
+const SISTEMA_PADRAO = "B_Vendas";
 
 export class SistemasView extends View {
   constructor(container, api, ctx) {
     super(container, api, ctx);
     const salvo = prefs.get("sistemas:filtros", {});
-    this.sistema = salvo.sistema || "";
+    this.sistema = salvo.sistema || SISTEMA_PADRAO;
     // "Sem informação" saiu do filtro em 30/09/2026 (nunca atualizado passou
     // a ser desatualizado): uma escolha salva com ele não casaria com opção
     // nenhuma, e a lista abriria vazia sem motivo aparente.
@@ -121,6 +122,7 @@ export class SistemasView extends View {
         icone: "sistemas",
       }),
     });
+    this.table.definirOrdem("ultima", true);
 
     this.sistemaFilter = this.container.querySelector('[data-role="sistema-filter"]');
     this.situacaoFilter = this.container.querySelector('[data-role="situacao-filter"]');
@@ -190,6 +192,10 @@ export class SistemasView extends View {
     });
   }
 
+  aoEntrar() {
+    this.table?.definirOrdem("ultima", true);
+  }
+
   aplicarParams({ sistema } = {}) {
     if (!sistema) return;
     this.sistema = sistema;
@@ -205,7 +211,9 @@ export class SistemasView extends View {
       (versoes) => {
         this.versoes = versoes;
         this.sistemaFilter.innerHTML = this.versoes.map((s) => `<option value="${escaparHtml(s.nome)}">${escaparHtml(s.nome)}</option>`).join("");
-        if (this.versoes.some((s) => s.nome === this.sistema)) this.sistemaFilter.value = this.sistema;
+        const selecionado = this.versoes.find((s) => s.nome === this.sistema)
+          || this.versoes.find((s) => s.nome.toLowerCase() === SISTEMA_PADRAO.toLowerCase());
+        if (selecionado) this.sistemaFilter.value = selecionado.nome;
         this.sistema = this.sistemaFilter.value;
         this._salvarFiltros();
         this._mostrarReferencia();

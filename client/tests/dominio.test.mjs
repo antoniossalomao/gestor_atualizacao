@@ -474,9 +474,50 @@ test("Administração - situação do Diagnóstico e contagem de papéis", async
     assert.equal(r.tom, "ok");
   });
 
+  await t.test("cópia corrompida entra como pendência de alerta", () => {
+    const r = situacaoDiagnostico({ ...saudavel, backups: { total: 2, ultimo: "2026-09-30T12:00:00Z", corrompidos: 1 } }, { atualizadorHabilitado: false, agora: AGORA });
+    assert.equal(r.tom, "alerta");
+    assert.match(r.pendencias[0].texto, /falhou na verificação de integridade/);
+  });
+
   await t.test("papéis contados, e conta antiga \"user\" conta como operador", () => {
     assert.deepEqual(contarPapeis([{ role: "admin" }, { role: "user" }, { role: "operador" }, { role: "consulta" }]), { admin: 1, operador: 2, consulta: 1 });
     assert.deepEqual(contarPapeis([]), { admin: 0, operador: 0, consulta: 0 });
+  });
+});
+
+test("Administração - verificações e modo de transporte do Diagnóstico", async (t) => {
+  const { verificacoesDiagnostico, descreverTransporte } = await import("../js/domain/administracao.js");
+  const AGORA = Date.parse("2026-10-01T12:00:00Z");
+  const base = {
+    banco: { integridade: "ok", verificacaoMs: 4, journalMode: "wal" },
+    backups: { total: 2, retencao: 5, ultimo: "2026-10-01T10:00:00Z", ultimoIntegro: true, corrompidos: 0 },
+    servidor: { transporte: { https: true, proxy: true, soLocal: true } },
+    agentes: { ok: 3, offline: 0, erro: 0 },
+  };
+
+  await t.test("descreverTransporte distingue HTTPS, local e HTTP sem proxy", () => {
+    assert.equal(descreverTransporte({ https: true, proxy: true }).texto, "HTTPS via proxy");
+    assert.equal(descreverTransporte({ https: false, soLocal: true }).texto, "HTTP local (127.0.0.1)");
+    assert.equal(descreverTransporte({ https: false, soLocal: false }).texto, "HTTP sem proxy");
+  });
+
+  await t.test("lista verificações com selos objetivos quando tudo está saudável", () => {
+    const itens = verificacoesDiagnostico(base, { atualizadorHabilitado: false, agora: AGORA });
+    const porChave = Object.fromEntries(itens.map((x) => [x.chave, x]));
+    assert.equal(porChave.integridade.tom, "ok");
+    assert.equal(porChave.integridade.detalhe, "OK · 4 ms");
+    assert.equal(porChave.journal.tom, "ok");
+    assert.equal(porChave.backups.detalhe, "2 de 5 · íntegra");
+    assert.equal(porChave.transporte.tom, "ok");
+    assert.equal(porChave.agentes, undefined);
+  });
+
+  await t.test("com Atualizador ligado, inclui verificação de agentes", () => {
+    const itens = verificacoesDiagnostico(base, { atualizadorHabilitado: true, chaveAgentes: { situacao: "configurada" }, agora: AGORA });
+    const agentes = itens.find((x) => x.chave === "agentes");
+    assert.equal(agentes.tom, "ok");
+    assert.equal(agentes.detalhe, "3 em dia");
   });
 });
 
@@ -532,6 +573,28 @@ test("Administração - diagnóstico em texto para o suporte", async (t) => {
     const off = textoDiagnostico(dados, situacaoDiagnostico(dados, { atualizadorHabilitado: false }), { atualizadorHabilitado: false, conferidoEm: new Date() });
     assert.match(off, /Atualizador: desligado/);
     assert.doesNotMatch(off, /Agentes:/);
+  });
+
+  await t.test("inclui RSS, acesso, sessões, esquema, volume da base e Discord quando presentes", () => {
+    const completo = textoDiagnostico(
+      {
+        ...dados,
+        banco: { ...dados.banco, versaoEsquema: 7, registros: { clientes: 12, atualizacoes: 30, agendamentosAtivos: 2, campanhasAtivas: 1, usuarios: 3 } },
+        servidor: { ...dados.servidor, memoriaRssMB: 84, sessoesAtivas: 2, transporte: { https: false, soLocal: true } },
+        backups: { total: 1, ultimo: "2026-10-01T12:00:00Z", retencao: 5, tamanhoTotalBytes: 4096 },
+        integracoes: { discordConfigurado: false, atualizadorHabilitado: false },
+      },
+      situacaoDiagnostico(dados, { atualizadorHabilitado: false }),
+      { atualizadorHabilitado: false, conferidoEm: new Date("2026-10-01T15:00:00Z") }
+    );
+    assert.match(completo, /84 MB no processo/);
+    assert.match(completo, /Acesso: HTTP local \(127\.0\.0\.1\)/);
+    assert.match(completo, /Sessões abertas: 2/);
+    assert.match(completo, /esquema v7/);
+    assert.match(completo, /Base: 12 clientes · 30 atualizações/);
+    assert.match(completo, /retenção 5/);
+    assert.match(completo, /Discord: não configurado/);
+    assert.doesNotMatch(completo, /AGENT_API_TOKEN|terminando em/);
   });
 });
 

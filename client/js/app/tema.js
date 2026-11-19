@@ -30,16 +30,40 @@ export const temaApp = {
     return window.matchMedia("(prefers-color-scheme: light)").matches ? "claro" : "escuro";
   },
 
-  aplicar(modo = this.atual()) {
-    duradouras.set(CHAVE, modo);
+  aplicar(modo = this.atual(), { animar = true } = {}) {
     const raiz = document.documentElement;
-    if (modo === "sistema") raiz.removeAttribute("data-tema");
-    else raiz.setAttribute("data-tema", modo);
-    // Faz o navegador pintar os controles nativos (barra de rolagem, campos
-    // de data, menus de <select>) no esquema certo. Sem isto, o calendário do
-    // input de data abre escuro sobre um app claro.
-    raiz.style.colorScheme = this.efetivo() === "claro" ? "light" : "dark";
-    document.dispatchEvent(new CustomEvent("tema:mudou", { detail: { modo, efetivo: this.efetivo() } }));
+    const efetivoAntes = raiz.style.colorScheme === "light" ? "claro" : raiz.style.colorScheme === "dark" ? "escuro" : null;
+    duradouras.set(CHAVE, modo);
+    const efetivoDepois = this.efetivo();
+
+    const executar = () => {
+      if (modo === "sistema") raiz.removeAttribute("data-tema");
+      else raiz.setAttribute("data-tema", modo);
+      // Faz o navegador pintar os controles nativos (barra de rolagem, campos
+      // de data, menus de <select>) no esquema certo. Sem isto, o calendário do
+      // input de data abre escuro sobre um app claro.
+      raiz.style.colorScheme = efetivoDepois === "claro" ? "light" : "dark";
+      document.dispatchEvent(new CustomEvent("tema:mudou", { detail: { modo, efetivo: efetivoDepois } }));
+    };
+
+    const movimentoReduzido =
+      raiz.getAttribute("data-movimento") === "reduzido" ||
+      (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+    if (
+      animar &&
+      efetivoAntes &&
+      efetivoAntes !== efetivoDepois &&
+      !movimentoReduzido &&
+      typeof document.startViewTransition === "function"
+    ) {
+      raiz.classList.add("is-theme-transitioning");
+      const transicao = document.startViewTransition(executar);
+      transicao.finished.finally(() => raiz.classList.remove("is-theme-transitioning")).catch(() => {});
+      return modo;
+    }
+
+    executar();
     return modo;
   },
 
@@ -60,7 +84,7 @@ export const temaApp = {
  * trocam sozinhos ao anoitecer).
  */
 export function iniciarTema() {
-  temaApp.aplicar();
+  temaApp.aplicar(undefined, { animar: false });
   window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => {
     if (temaApp.atual() === "sistema") temaApp.aplicar("sistema");
   });

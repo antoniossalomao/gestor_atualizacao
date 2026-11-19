@@ -5,7 +5,7 @@ import { iconeHtml } from "../../utils/icones.js";
 import { marcarOcupado } from "../../components/botaoOcupado.js";
 import { cabecalhoSecao } from "../../templates/secao.js";
 import { blocosSaude, resumoDiagnostico } from "../../templates/administracao.js";
-import { situacaoDiagnostico, textoDiagnostico } from "../../domain/administracao.js";
+import { situacaoDiagnostico, textoDiagnostico, verificacoesDiagnostico } from "../../domain/administracao.js";
 import { copiarParaAreaDeTransferencia } from "../../components/areaDeTransferencia.js";
 import { mensagem } from "./FormularioRegras.js";
 
@@ -39,10 +39,18 @@ export class SaudeAdmin extends View {
       else avisoRapido.erro("O navegador não deixou copiar. Selecione os blocos e copie à mão.");
     });
 
-    // Cada pendência leva à aba onde ela se resolve.
-    this.situacao.addEventListener("click", (e) => {
-      const alvo = /** @type {HTMLElement} */ (e.target).closest("[data-ir-aba]");
-      if (alvo instanceof HTMLElement) this.navigate("administracao", { aba: alvo.dataset.irAba });
+    // Cada pendência e atalho dos cartões leva à aba onde se resolve ou aciona uma cópia imediata.
+    this.container.addEventListener("click", (e) => {
+      const target = /** @type {HTMLElement} */ (e.target);
+      const alvo = target.closest("[data-ir-aba]");
+      if (alvo instanceof HTMLElement) {
+        this.navigate("administracao", { aba: alvo.dataset.irAba });
+        return;
+      }
+      const copia = target.closest('[data-action="fazer-copia"]');
+      if (copia instanceof HTMLButtonElement) {
+        this._fazerCopia(copia);
+      }
     });
     const botao = this.container.querySelector('[data-action="atualizar"]');
     botao.addEventListener("click", async () => {
@@ -53,6 +61,25 @@ export class SaudeAdmin extends View {
         liberar();
       }
     });
+  }
+
+  /** Gera uma cópia de segurança direto do Diagnóstico e revalida os indicadores na hora. */
+  async _fazerCopia(botao) {
+    const liberar = marcarOcupado(botao);
+    try {
+      const copia = await this.api.post("/backups");
+      if (copia.integro === false) {
+        avisoRapido.erro(`Cópia ${copia.label || copia.arquivo} feita, mas falhou na verificação de integridade.`);
+      } else {
+        avisoRapido.sucesso(`Cópia ${copia.label || copia.arquivo} feita e conferida.`);
+      }
+      document.dispatchEvent(new CustomEvent("administracao:conferir"));
+      await this.refresh();
+    } catch (err) {
+      avisoRapido.erro(mensagem(err));
+    } finally {
+      liberar();
+    }
   }
 
   async refresh() {
@@ -76,14 +103,19 @@ export class SaudeAdmin extends View {
       avisoRapido.erro(mensagem(err));
       return;
     }
-    const situacao = situacaoDiagnostico(dados, {
+    const opcoesDiag = {
       atualizadorHabilitado: this.atualizadorHabilitado,
       chaveAgentes: completa?.chaveAgentes ?? null,
-    });
+    };
+    const situacao = situacaoDiagnostico(dados, opcoesDiag);
+    const verificacoes = verificacoesDiagnostico(dados, opcoesDiag);
     const conferidoEm = new Date();
     this.conferidoEm = conferidoEm;
     this.container.querySelector('[data-role="erro-atualizacao"]').hidden = true;
-    this.situacao.innerHTML = resumoDiagnostico(situacao, conferidoEm).toString();
+    this.situacao.innerHTML = resumoDiagnostico(situacao, conferidoEm, {
+      verificacoes,
+      verificacaoMs: dados.banco?.verificacaoMs ?? null,
+    }).toString();
     // O texto é do MESMO momento da tela, e não montado no clique: o que se
     // manda ao suporte é o que a pessoa está vendo.
     this.texto = textoDiagnostico(dados, situacao, {
@@ -92,6 +124,6 @@ export class SaudeAdmin extends View {
       navegador: navigator.userAgent,
     });
     this.botaoCopiar.disabled = false;
-    this.blocos.innerHTML = blocosSaude(dados, { atualizadorHabilitado: this.atualizadorHabilitado });
+    this.blocos.innerHTML = blocosSaude(dados, opcoesDiag).toString();
   }
 }

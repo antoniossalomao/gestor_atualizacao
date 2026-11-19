@@ -104,9 +104,20 @@ export function situacaoDiagnostico(dados, { atualizadorHabilitado, chaveAgentes
     pendencias.push({ texto: "O banco de dados falhou na verificação de integridade.", tom: "perigo", aba: "backups" });
   }
   const totalCopias = dados?.backups?.total ?? 0;
+  const corrompidos = dados?.backups?.corrompidos ?? 0;
   if (totalCopias === 0) {
     pendencias.push({ texto: "Nenhuma cópia de segurança ainda.", tom: "alerta", aba: "backups" });
   } else {
+    if (corrompidos > 0) {
+      pendencias.push({
+        texto:
+          corrompidos === 1
+            ? "1 cópia de segurança falhou na verificação de integridade."
+            : `${corrompidos} cópias de segurança falharam na verificação de integridade.`,
+        tom: "alerta",
+        aba: "backups",
+      });
+    }
     const ultima = Date.parse(dados?.backups?.ultimo ?? "");
     const dias = Number.isFinite(ultima) ? Math.floor((agora - ultima) / 86400000) : null;
     if (dias !== null && dias >= DIAS_BACKUP_ANTIGO) {
@@ -169,6 +180,104 @@ export function sistemasSemReferencia(catalogo) {
 }
 
 /**
+ * Resume o modo de acesso HTTP/HTTPS retornado por /api/saude.
+ * @param {{https?: boolean, proxy?: boolean, soLocal?: boolean}|null|undefined} transporte
+ * @returns {{texto: string, selo: [string, string]}}
+ */
+export function descreverTransporte(transporte) {
+  if (transporte?.https) return { texto: "HTTPS via proxy", selo: ["HTTPS", "success"] };
+  if (transporte?.soLocal) return { texto: "HTTP local (127.0.0.1)", selo: ["Local", "muted"] };
+  return { texto: "HTTP sem proxy", selo: ["HTTP", "warning"] };
+}
+
+/**
+ * Lista objetiva das verificações feitas pelo Diagnóstico -- mostra ao
+ * administrador o que realmente foi conferido quando o topo diz "Tudo em ordem.".
+ * @param {any} dados resposta de /api/saude
+ * @param {{atualizadorHabilitado: boolean, chaveAgentes?: {situacao: string}|null, agora?: number}} opcoes
+ * @returns {Array<{chave: string, rotulo: string, detalhe: string, tom: "ok"|"alerta"|"perigo"|"neutro"}>}
+ */
+export function verificacoesDiagnostico(dados, { atualizadorHabilitado, chaveAgentes = null, agora = Date.now() }) {
+  /** @type {Array<{chave: string, rotulo: string, detalhe: string, tom: "ok"|"alerta"|"perigo"|"neutro"}>} */
+  const itens = [];
+
+  const bancoOk = dados?.banco?.integridade === "ok";
+  const ms = dados?.banco?.verificacaoMs;
+  itens.push({
+    chave: "integridade",
+    rotulo: "Integridade SQLite",
+    detalhe: bancoOk ? (Number.isFinite(ms) ? `OK · ${ms} ms` : "OK") : "Falha detectada",
+    tom: bancoOk ? "ok" : "perigo",
+  });
+
+  const journal = String(dados?.banco?.journalMode || "").toLowerCase();
+  itens.push({
+    chave: "journal",
+    rotulo: journal === "wal" ? "Gravação WAL" : "Modo de gravação",
+    detalhe: journal === "wal" ? "Ativo" : journal ? journal.toUpperCase() : "Desconhecido",
+    tom: journal === "wal" ? "ok" : "alerta",
+  });
+
+  const totalBackups = dados?.backups?.total ?? 0;
+  const corrompidos = dados?.backups?.corrompidos ?? 0;
+  const retencao = dados?.backups?.retencao;
+  const ultimoIntegro = dados?.backups?.ultimoIntegro;
+  const ultimaMs = Date.parse(dados?.backups?.ultimo ?? "");
+  const diasBackup = Number.isFinite(ultimaMs) ? Math.floor((agora - ultimaMs) / 86400000) : null;
+  if (totalBackups === 0) {
+    itens.push({ chave: "backups", rotulo: "Backups", detalhe: "Nenhuma cópia", tom: "alerta" });
+  } else if (corrompidos > 0) {
+    itens.push({
+      chave: "backups",
+      rotulo: "Backups",
+      detalhe: corrompidos === 1 ? "1 corrompida" : `${corrompidos} corrompidas`,
+      tom: "alerta",
+    });
+  } else if (diasBackup !== null && diasBackup >= DIAS_BACKUP_ANTIGO) {
+    itens.push({ chave: "backups", rotulo: "Backups", detalhe: `Última há ${diasBackup} dias`, tom: "alerta" });
+  } else {
+    const contagem = retencao
+      ? `${totalBackups} de ${retencao}`
+      : `${totalBackups} ${totalBackups === 1 ? "cópia" : "cópias"}`;
+    itens.push({
+      chave: "backups",
+      rotulo: "Backups",
+      detalhe: ultimoIntegro === true ? `${contagem} · íntegra` : contagem,
+      tom: "ok",
+    });
+  }
+
+  if (dados?.servidor?.transporte) {
+    const t = dados.servidor.transporte;
+    itens.push({
+      chave: "transporte",
+      rotulo: "Conexão",
+      detalhe: descreverTransporte(t).texto,
+      tom: t.https ? "ok" : t.soLocal ? "neutro" : "alerta",
+    });
+  }
+
+  if (atualizadorHabilitado) {
+    const erro = dados?.agentes?.erro ?? 0;
+    const offline = dados?.agentes?.offline ?? 0;
+    const ok = dados?.agentes?.ok ?? 0;
+    if (chaveAgentes?.situacao === "exemplo") {
+      itens.push({ chave: "agentes", rotulo: "Agentes", detalhe: "Chave de exemplo", tom: "perigo" });
+    } else if (chaveAgentes?.situacao === "ausente") {
+      itens.push({ chave: "agentes", rotulo: "Agentes", detalhe: "Chave ausente", tom: "alerta" });
+    } else if (erro > 0) {
+      itens.push({ chave: "agentes", rotulo: "Agentes", detalhe: erro === 1 ? "1 com erro" : `${erro} com erro`, tom: "alerta" });
+    } else if (offline > 0) {
+      itens.push({ chave: "agentes", rotulo: "Agentes", detalhe: `${offline} sem contato`, tom: "alerta" });
+    } else {
+      itens.push({ chave: "agentes", rotulo: "Agentes", detalhe: `${ok} em dia`, tom: "ok" });
+    }
+  }
+
+  return itens;
+}
+
+/**
  * O Diagnóstico em texto puro, para colar numa conversa com o suporte. Antes
  * a ajuda pedia "anote a tela, o que você fez e a hora", e o administrador
  * copiava número por número dos blocos -- ou mandava um print que não dava
@@ -182,22 +291,46 @@ export function sistemasSemReferencia(catalogo) {
  */
 export function textoDiagnostico(dados, situacao, { atualizadorHabilitado, conferidoEm, navegador = "" }) {
   const agentes = dados?.agentes || {};
+  const srv = dados?.servidor || {};
+  const memoria = srv.memoriaRssMB != null
+    ? `${srv.memoriaRssMB} MB no processo (heap ${srv.memoriaHeapUsadaMB ?? "?"} MB de ${srv.memoriaHeapTotalMB ?? "?"} MB)`
+    : `${srv.memoriaHeapUsadaMB ?? "?"} MB de ${srv.memoriaHeapTotalMB ?? "?"} MB`;
+  const esquema = dados?.banco?.versaoEsquema != null ? ` · esquema v${dados.banco.versaoEsquema}` : "";
+  const totalCopias = dados?.backups?.total ?? 0;
+  const retencaoTexto = dados?.backups?.retencao ? ` · retenção ${dados.backups.retencao}` : "";
+  const tamanhoBackups = dados?.backups?.tamanhoTotalBytes ? ` · ${formatarBytes(dados.backups.tamanhoTotalBytes)}` : "";
+
   const linhas = [
     `Diagnóstico do Gestor de Atualizações — ${formatarDataHora(conferidoEm.toISOString())}`,
     "",
     `Situação: ${situacao.titulo}`,
     ...situacao.pendencias.map((p) => `  - ${p.texto}`),
     "",
-    `Servidor: v${dados?.servidor?.versao ?? "?"} · Node ${dados?.servidor?.node ?? "?"} · ${dados?.servidor?.plataforma ?? "?"}`,
-    `No ar há: ${formatarTempoAtivo(dados?.servidor?.uptimeSegundos)}`,
-    `Memória: ${dados?.servidor?.memoriaHeapUsadaMB ?? "?"} MB de ${dados?.servidor?.memoriaHeapTotalMB ?? "?"} MB`,
-    `Banco: ${dados?.banco?.caminho ?? "?"} · ${formatarBytes(dados?.banco?.tamanhoBytes)} · integridade ${dados?.banco?.integridade ?? "?"} · ${String(dados?.banco?.journalMode ?? "?").toUpperCase()}`,
-    `Backups: ${dados?.backups?.total ?? 0} · último ${dados?.backups?.ultimo ? formatarDataHora(dados.backups.ultimo) : "nenhum"}`,
+    `Servidor: v${srv.versao ?? "?"} · Node ${srv.node ?? "?"} · ${srv.plataforma ?? "?"}`,
+    `No ar há: ${formatarTempoAtivo(srv.uptimeSegundos)}`,
+    `Memória: ${memoria}`,
+  ];
+  if (srv.transporte) linhas.push(`Acesso: ${descreverTransporte(srv.transporte).texto}`);
+  if (srv.sessoesAtivas != null) linhas.push(`Sessões abertas: ${srv.sessoesAtivas}`);
+  linhas.push(
+    `Banco: ${dados?.banco?.caminho ?? "?"} · ${formatarBytes(dados?.banco?.tamanhoBytes)} · integridade ${dados?.banco?.integridade ?? "?"} · ${String(dados?.banco?.journalMode ?? "?").toUpperCase()}${esquema}`
+  );
+  if (dados?.banco?.registros) {
+    const r = dados.banco.registros;
+    linhas.push(
+      `Base: ${r.clientes ?? 0} clientes · ${r.atualizacoes ?? 0} atualizações · ${r.agendamentosAtivos ?? 0} agendamentos ativos · ${r.campanhasAtivas ?? 0} campanhas ativas · ${r.usuarios ?? 0} contas`
+    );
+  }
+  linhas.push(
+    `Backups: ${totalCopias} · último ${dados?.backups?.ultimo ? formatarDataHora(dados.backups.ultimo) : "nenhum"}${retencaoTexto}${tamanhoBackups}`,
     atualizadorHabilitado
       ? `Agentes: ${agentes.total ?? 0} (${agentes.ok ?? 0} em dia · ${agentes.offline ?? 0} sem contato · ${agentes.erro ?? 0} com erro)`
       : "Atualizador: desligado",
-    `Pacotes em disco: ${dados?.pacotes?.total ? `${dados.pacotes.total} (${formatarBytes(dados.pacotes.tamanhoBytes)})` : "nenhum"}`,
-  ];
+    `Pacotes em disco: ${dados?.pacotes?.total ? `${dados.pacotes.total} (${formatarBytes(dados.pacotes.tamanhoBytes)})` : "nenhum"}`
+  );
+  if (dados?.integracoes?.discordConfigurado !== null && dados?.integracoes?.discordConfigurado !== undefined) {
+    linhas.push(`Discord: ${dados.integracoes.discordConfigurado ? "configurado" : "não configurado"}`);
+  }
   if (navegador) linhas.push(`Navegador: ${navegador}`);
   return linhas.join("\n");
 }

@@ -2,6 +2,7 @@ import { prefs } from "../app/preferencias.js";
 import { html } from "../utils/html.js";
 import { iconeHtml } from "../utils/icones.js";
 import { IndicePagina } from "./IndicePagina.js";
+import { fatorZoom } from "./elemento.js";
 
 /**
  * Uma tela dividida em abas sublinhadas -- a Administração e as
@@ -158,7 +159,7 @@ export class TelaComAbas {
   _trazerParaVista(botao) {
     const aba = botao.getBoundingClientRect();
     const fileira = this.nav.getBoundingClientRect();
-    if (aba.left < fileira.left || aba.right > fileira.right) this.nav.scrollLeft += aba.left - fileira.left - 16;
+    if (aba.left < fileira.left || aba.right > fileira.right) this.nav.scrollLeft += (aba.left - fileira.left) / fatorZoom(this.nav) - 16;
   }
 
   /** A instância montada numa aba, ou `undefined` se ela ainda não foi aberta. */

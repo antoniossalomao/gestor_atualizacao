@@ -1,3 +1,5 @@
+import { fatorZoom } from "./elemento.js";
+
 /**
  * Protege um botão contra clique duplo E dá o retorno visual de que algo está
  * acontecendo.
@@ -22,7 +24,7 @@ export function marcarOcupado(button) {
   const conteudoOriginal = button.innerHTML;
   const larguraOriginal = button.style.width;
 
-  button.style.width = `${button.getBoundingClientRect().width}px`;
+  button.style.width = `${button.getBoundingClientRect().width / fatorZoom(button)}px`;
   button.dataset.ocupado = "1";
   button.disabled = true;
   button.setAttribute("aria-busy", "true");

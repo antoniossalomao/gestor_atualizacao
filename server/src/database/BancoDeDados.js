@@ -624,6 +624,29 @@ class BancoDeDados {
     return this.conn.pragma("journal_mode")[0]?.journal_mode || "wal";
   }
 
+  /** Versão atual do esquema registrada em `PRAGMA user_version`. */
+  versaoEsquema() {
+    return Number(this.conn.pragma("user_version", { simple: true }) || 0);
+  }
+
+  /**
+   * Contagem de registros das tabelas principais para o Diagnóstico.
+   * Campanha ativa é `encerrada_em IS NULL` (a tabela não tem coluna `status`);
+   * agendamento ativo é o não arquivado (`arquivado_em IS NULL`).
+   */
+  contarRegistros() {
+    return this.conn
+      .prepare(
+        `SELECT
+          (SELECT COUNT(*) FROM clientes) AS clientes,
+          (SELECT COUNT(*) FROM atualizacoes) AS atualizacoes,
+          (SELECT COUNT(*) FROM agendamentos WHERE arquivado_em IS NULL) AS agendamentosAtivos,
+          (SELECT COUNT(*) FROM campanhas WHERE encerrada_em IS NULL) AS campanhasAtivas,
+          (SELECT COUNT(*) FROM usuarios) AS usuarios`
+      )
+      .get();
+  }
+
   /**
    * Copia gestao.db para a pasta "backups" (ao lado dele). Qualquer falha
    * aqui (disco cheio, sem permissao) e ignorada silenciosamente: um

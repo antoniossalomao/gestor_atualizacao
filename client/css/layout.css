@@ -507,6 +507,10 @@
   color: var(--cor-texto-fraco);
 }
 
+.stat-tiles .stat-tile__delta.is-baixa {
+  color: color-mix(in srgb, var(--cor-vermelho) 45%, var(--cor-texto-fraco));
+}
+
 @media (hover: none) {
   .stat-tiles .stat-tile__arrow,
   .stat-tiles .stat-tile__affordance {
@@ -586,7 +590,7 @@
 
 .auth-screen {
   background: var(--cor-fundo);
-  min-height: 100vh;
+  min-height: var(--vh-cheia);
   position: relative;
 }
 
@@ -1585,8 +1589,8 @@
   letter-spacing: 0;
 }
 
-.app-sidebar__group-title {
-  padding: 20px 10px 6px;
+.app-sidebar__nav .app-sidebar__group-title {
+  padding: 16px 10px 6px;
   text-transform: none;
   letter-spacing: 0;
   font-size: calc(11.5px * var(--escala));
@@ -1599,11 +1603,17 @@
 }
 
 .app-sidebar__nav {
-  gap: 2px;
+  gap: 4px;
+}
+
+.app-sidebar__group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .tab-button {
-  min-height: 34px;
+  min-height: 36px;
   border-radius: 6px;
   font-weight: 500;
   transition: background-color var(--dur-rapida) var(--curva-padrao),
@@ -2073,8 +2083,8 @@
 
 /* Subgrid / Gaveta de listas do Resumo (sem scroll duplo, com filtro instantaneo) */
 .drawer-panel:has(.gaveta-lista) {
-  width: min(780px, 94vw);
-  max-height: min(86vh, 760px);
+  width: min(780px, calc(94vw / var(--zoom-app)));
+  max-height: min(calc(86vh / var(--zoom-app)), 760px);
 }
 
 .drawer-body:has(> .gaveta-lista) {
@@ -2158,7 +2168,7 @@
 
 .gaveta-lista__tabela .table-wrap {
   flex: 1;
-  max-height: calc(86vh - 140px);
+  max-height: calc(86vh / var(--zoom-app) - 140px);
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -2331,6 +2341,44 @@
 .line-chart__ponto--fim {
   stroke: color-mix(in srgb, var(--cor-accent) 32%, var(--cor-superficie));
   stroke-width: 3;
+}
+
+/* No modo claro, --cor-accent (#272725) em 16% cria um degradê cinza pesado e
+   pontos pretos duros sobre o fundo branco; suaviza linha, área e marcadores. */
+:root[data-tema="claro"] .line-chart__area-topo {
+  stop-opacity: 0.07;
+}
+:root[data-tema="claro"] .line-chart__linha {
+  stroke: color-mix(in srgb, var(--cor-accent) 76%, var(--cor-texto-fraco));
+}
+:root[data-tema="claro"] .line-chart__ponto {
+  fill: var(--cor-superficie);
+  stroke: color-mix(in srgb, var(--cor-accent) 76%, var(--cor-texto-fraco));
+  stroke-width: 1.75;
+}
+:root[data-tema="claro"] .line-chart__ponto--fim {
+  fill: color-mix(in srgb, var(--cor-accent) 82%, var(--cor-texto-fraco));
+  stroke: color-mix(in srgb, var(--cor-accent) 18%, var(--cor-superficie));
+  stroke-width: 4;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-tema]) .line-chart__area-topo {
+    stop-opacity: 0.07;
+  }
+  :root:not([data-tema]) .line-chart__linha {
+    stroke: color-mix(in srgb, var(--cor-accent) 76%, var(--cor-texto-fraco));
+  }
+  :root:not([data-tema]) .line-chart__ponto {
+    fill: var(--cor-superficie);
+    stroke: color-mix(in srgb, var(--cor-accent) 76%, var(--cor-texto-fraco));
+    stroke-width: 1.75;
+  }
+  :root:not([data-tema]) .line-chart__ponto--fim {
+    fill: color-mix(in srgb, var(--cor-accent) 82%, var(--cor-texto-fraco));
+    stroke: color-mix(in srgb, var(--cor-accent) 18%, var(--cor-superficie));
+    stroke-width: 4;
+  }
 }
 
 :root[data-movimento="reduzido"] .bar-chart__fill {
@@ -2741,5 +2789,20 @@ details > summary + * {
 :root[data-movimento="reduzido"] .situacao__sistema-barra,
 :root[data-movimento="reduzido"] .gaveta-lista__proporcao-barra {
   animation: none !important;
+}
+
+/* Troca de tema via View Transitions: desliga transições individuais de cada
+   elemento durante o snapshot (evita engasgos e cores trocando em ritmos
+   diferentes) e faz um cross-fade único acelerado por GPU. */
+html.is-theme-transitioning *,
+html.is-theme-transitioning *::before,
+html.is-theme-transitioning *::after {
+  transition: none !important;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
 }
 

@@ -192,15 +192,6 @@ export class ResumoView extends View {
 
     const semAtualizacaoTile = this.container.querySelector('[data-stat="semAtualizacao"]');
     semAtualizacaoTile.classList.toggle("is-alert", resumo.semAtualizacao.length > 0);
-    // Suaviza o destaque sem quebrar contratos de classe nem seletores de teste:
-    // aplica borda e background semântico sutil (estilo Stripe/Linear warning) sem mancha vermelha pura.
-    if (resumo.semAtualizacao.length > 0) {
-      semAtualizacaoTile.style.borderColor = "color-mix(in srgb, var(--cor-vermelho, #e5484d) 35%, var(--cor-borda, transparent))";
-      semAtualizacaoTile.style.background = "color-mix(in srgb, var(--cor-vermelho, #e5484d) 4%, var(--cor-superficie))";
-    } else {
-      semAtualizacaoTile.style.borderColor = "";
-      semAtualizacaoTile.style.background = "";
-    }
 
     this.resumo = resumo;
     if (resumo.atividadeClientes) {
@@ -278,13 +269,14 @@ export class ResumoView extends View {
       titulo: `${grupo?.rotulo || "Clientes"} — ${plural(clientes.length, "cliente")}`,
       ajuda: grupo?.descricao || "Tempo desde a última atualização registrada.",
       colunas: [
-        { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
-        { key: "cidade", label: "Cidade", render: (row) => this._celulaSecundaria(row.cidade || "—") },
-        { key: "ultima", label: "Última atualização", type: "date", render: (row) => this._celulaMono(row.ultima || "Nunca") },
+        { key: "nome", label: "Cliente", largura: "44%", render: (row) => this._link("cliente", row.nome) },
+        { key: "cidade", label: "Cidade", largura: "22%", render: (row) => this._celulaSecundaria(row.cidade || "—") },
+        { key: "ultima", label: "Última atualização", type: "date", largura: "19%", render: (row) => this._celulaMono(row.ultima || "Nunca") },
         {
           key: "dias",
           label: "Tempo",
           type: "numeric",
+          largura: "15%",
           render: (row) => this._badgeDias(row.dias != null ? `${row.dias} ${row.dias === 1 ? "dia" : "dias"}` : "Nunca", tomBadge),
         },
       ],
@@ -302,9 +294,9 @@ export class ResumoView extends View {
       titulo: `${grupo.rotulo} — ${plural(clientes.length, "cliente")}`,
       ajuda: grupo.descricao,
       colunas: [
-        { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
-        { key: "cidade", label: "Cidade", render: (row) => this._celulaSecundaria(row.cidade || "—") },
-        { key: "sistemas", label: { desatualizado: "Sistemas atrasados", aguardando: "Sistemas aguardando" }[chave] || "Sistemas" },
+        { key: "nome", label: "Cliente", largura: "42%", render: (row) => this._link("cliente", row.nome) },
+        { key: "cidade", label: "Cidade", largura: "24%", render: (row) => this._celulaSecundaria(row.cidade || "—") },
+        { key: "sistemas", label: { desatualizado: "Sistemas atrasados", aguardando: "Sistemas aguardando" }[chave] || "Sistemas", largura: "34%" },
       ],
       linhas: clientes.map((c) => ({ nome: c.nome, cidade: c.cidade, sistemas: descreverSistemasQueExplicam(c.explicam) })),
       chave: (row) => row.nome,
@@ -318,14 +310,15 @@ export class ResumoView extends View {
       titulo: `${rotuloSemAtualizacao(this.resumo?.desatualizadoDias)} — ${plural(clientes.length, "cliente")}`,
       ajuda: "Tempo desde a última atualização registrada. Clique num cliente para abrir a ficha completa.",
       colunas: [
-        { key: "nome", label: "Cliente", render: (row) => this._link("cliente", row.nome) },
-        { key: "cidade", label: "Cidade", render: (row) => this._celulaSecundaria(row.cidade || "—") },
-        { key: "ultima", label: "Última atualização", type: "date", render: (row) => this._celulaMono(row.ultima || "Nunca") },
+        { key: "nome", label: "Cliente", largura: "44%", render: (row) => this._link("cliente", row.nome) },
+        { key: "cidade", label: "Cidade", largura: "22%", render: (row) => this._celulaSecundaria(row.cidade || "—") },
+        { key: "ultima", label: "Última atualização", type: "date", largura: "19%", render: (row) => this._celulaMono(row.ultima || "Nunca") },
         // Clientes sem registro anterior ou com data inválida mostram "Nunca"
         {
           key: "dias",
           label: "Tempo",
           type: "numeric",
+          largura: "15%",
           render: (row) => {
             const nunca = row.dias == null || row.dias >= Number.MAX_SAFE_INTEGER || !row.ultima || row.ultima === "Nunca";
             return this._badgeDias(nunca ? "Nunca" : `${row.dias} dias`, nunca ? "badge--muted" : "badge--danger");
