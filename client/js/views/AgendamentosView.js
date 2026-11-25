@@ -13,6 +13,7 @@ import { iconeHtml } from "../utils/icones.js";
 import { marcarOcupado } from "../components/botaoOcupado.js";
 import { prefs } from "../app/preferencias.js";
 import { Gaveta } from "../components/Gaveta.js";
+import { conectarPopover } from "../components/popover.js";
 import { STATUS_CONCLUIDO } from "../domain/agendamento.js";
 import { colunasKanban } from "../templates/agendamentos.js";
 
@@ -135,18 +136,24 @@ export class AgendamentosView extends View {
           </div>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
+          <button type="button" class="btn btn--toolbar-icon" data-action="toggle-filtros" popovertarget="age-filtros-painel" aria-label="Filtros rápidos" title="Filtros rápidos" aria-expanded="false" aria-controls="age-filtros-painel">${iconeHtml("filtro")}</button>
           <button type="button" class="btn btn--accent btn--small" data-action="novo-agendamento">+ Novo Agendamento</button>
         </div>
 
-        <!-- Filtros rápidos discretos -->
-        <div class="filtros-rapidos" data-role="filtros-rapidos" aria-label="Filtros rápidos">
-          <button type="button" class="filtro-rapido" data-filtro-rapido="minhas">Minhas tarefas</button>
-          <button type="button" class="filtro-rapido" data-filtro-rapido="hoje">Hoje</button>
-          <button type="button" class="filtro-rapido" data-filtro-rapido="atrasadas">Atrasadas</button>
-          <button type="button" class="filtro-rapido" data-filtro-rapido="arquivadas">Arquivadas</button>
+        <!-- Gavetinha flutuante de filtros rápidos -->
+        <div class="filtros-popover" id="age-filtros-painel" popover="auto" aria-label="Filtros rápidos">
+          <div class="filtros-popover__header">
+            <span class="filtros-popover__title">Filtros rápidos</span>
+            <button type="button" class="btn btn--small btn--ghost" data-action="limpar-rapidos-popover">Limpar</button>
+          </div>
+          <div class="filtros-rapidos" data-role="filtros-rapidos" aria-label="Filtros rápidos">
+            <button type="button" class="filtro-rapido" data-filtro-rapido="minhas">Minhas tarefas</button>
+            <button type="button" class="filtro-rapido" data-filtro-rapido="hoje">Hoje</button>
+            <button type="button" class="filtro-rapido" data-filtro-rapido="atrasadas">Atrasadas</button>
+            <button type="button" class="filtro-rapido" data-filtro-rapido="arquivadas">Arquivadas</button>
+          </div>
         </div>
 
-        <p class="text-muted bulk-hint" data-role="aviso-arquivadas" hidden></p>
         <div class="kanban-board" data-role="kanban"></div>
       </div>
     `;
@@ -171,7 +178,6 @@ export class AgendamentosView extends View {
     this.statusFilter = this.container.querySelector('[data-role="status-filter"]');
     this.prioridadeFilter = this.container.querySelector('[data-role="prioridade-filter"]');
     this.botaoLimparFiltros = this.container.querySelector('[data-action="limpar-filtros"]');
-    this.avisoArquivadas = this.container.querySelector('[data-role="aviso-arquivadas"]');
     this.searchInput.value = this.busca;
     this.statusFilter.value = this.status;
     if (this.prioridadeFilter) this.prioridadeFilter.value = this.prioridade;
@@ -212,6 +218,12 @@ export class AgendamentosView extends View {
     // saiba qual campo ajustar. "Minhas tarefas" usa o nome do usuário logado;
     // "Hoje" / "Atrasadas" filtram pela data da tarefa. "Arquivadas" é um
     // alias do status especial que já existia no select.
+    this.btnFiltros = this.container.querySelector('[data-action="toggle-filtros"]');
+    this.painelFiltros = this.container.querySelector("#age-filtros-painel");
+    conectarPopover(this.btnFiltros, this.painelFiltros);
+    this.painelFiltros?.querySelector('[data-action="limpar-rapidos-popover"]')?.addEventListener("click", () => {
+      this._limparFiltros();
+    });
     this.filtrosRapidosEl = this.container.querySelector('[data-role="filtros-rapidos"]');
     this.filtrosRapidosEl?.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-filtro-rapido]");
@@ -310,6 +322,13 @@ export class AgendamentosView extends View {
     else if (this.busca && this.user?.nome && this.busca === this.user.nome) ativoTipo = "minhas";
     for (const btn of btns) {
       btn.classList.toggle("is-active", btn.dataset.filtroRapido === ativoTipo);
+    }
+    if (this.btnFiltros) {
+      const ativo = Boolean(ativoTipo);
+      this.btnFiltros.dataset.active = String(ativo);
+      const label = ativo ? "Filtros rápidos (1 ativo)" : "Filtros rápidos";
+      this.btnFiltros.setAttribute("aria-label", label);
+      this.btnFiltros.title = label;
     }
   }
 
@@ -595,36 +614,18 @@ export class AgendamentosView extends View {
       itens: rows.filter((r) => r.status === st),
     }));
 
-    if (rows.length === 0) {
+    if (rows.length === 0 && this._temFiltro()) {
       const wrap = document.createElement("div");
       wrap.style.gridColumn = "1 / -1";
       wrap.style.padding = "var(--sp-6) 0";
-
-      if (this._temFiltro()) {
-        wrap.appendChild(
-          estadoVazio({
-            titulo: "Nenhuma tarefa com esse filtro",
-            descricao: "Tente outro termo ou limpe os filtros para ver o quadro completo.",
-            icone: "busca",
-            acao: { label: "Limpar filtros", onClick: () => this._limparFiltros() },
-          })
-        );
-      } else {
-        wrap.appendChild(
-          estadoVazio({
-            titulo: "Nenhuma tarefa agendada",
-            descricao: "Crie a primeira tarefa para organizar o fluxo da equipe.",
-            icone: "agendamentos",
-            acao: {
-              label: "+ Novo Agendamento",
-              onClick: () => {
-                this.limparFormulario();
-                this.drawer.abrir({ foco: this.fields.tarefa });
-              },
-            },
-          })
-        );
-      }
+      wrap.appendChild(
+        estadoVazio({
+          titulo: "Nenhuma tarefa com esse filtro",
+          descricao: "Tente outro termo ou limpe os filtros para ver o quadro completo.",
+          icone: "busca",
+          acao: { label: "Limpar filtros", onClick: () => this._limparFiltros() },
+        })
+      );
       this.kanban.replaceChildren(wrap);
       return;
     }
@@ -705,19 +706,9 @@ export class AgendamentosView extends View {
     await this._moverCard(row.id, proximo);
   }
 
-  _pintarArquivadas({ arquivadas = 0, arquivarDias = 0 } = {}) {
+  _pintarArquivadas({ arquivadas = 0 } = {}) {
     const opcao = this.statusFilter?.querySelector(`option[value="${FILTRO_ARQUIVADAS}"]`);
     if (opcao) opcao.textContent = arquivadas > 0 ? `${FILTRO_ARQUIVADAS} (${arquivadas})` : FILTRO_ARQUIVADAS;
-
-    const vendo = this.status === FILTRO_ARQUIVADAS;
-    if (this.avisoArquivadas) {
-      this.avisoArquivadas.hidden = !vendo;
-      if (vendo) {
-        this.avisoArquivadas.textContent =
-          `Tarefas concluídas há mais de ${plural(arquivarDias, "dia")} saem da lista ativa. ` +
-          `Clique em "Reabrir" em qualquer cartão para trazê-lo de volta como "${OPCOES_STATUS[0]}".`;
-      }
-    }
   }
 
   _temFiltro() {

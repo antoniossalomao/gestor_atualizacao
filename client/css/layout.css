@@ -1843,7 +1843,7 @@
 
 .kanban-card__client {
   flex: 1 1 auto;
-  min-width: 150px;
+  min-width: 0;
 }
 
 /* Pass 2: Fix curved C-bracket accents on logs while preserving subtle priority strips */
