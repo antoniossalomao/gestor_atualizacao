@@ -218,7 +218,6 @@ const PADROES = {
   realce: "creme",
   escalaTexto: "padrao",
   movimento: "normal",
-  fundoTela: "grade",
   contraste: "normal",
   transparencia: "normal",
   fonte: "inter",
@@ -280,7 +279,6 @@ const VALIDOS = {
   realce: PALETAS_REALCE_IDS,
   escalaTexto: ESCALAS.map((e) => e.valor),
   movimento: ["normal", "reduzido"],
-  fundoTela: ["grade", "liso"],
   contraste: CONTRASTES.map((c) => c.valor),
   transparencia: TRANSPARENCIAS.map((t) => t.valor),
   densidade: DENSIDADES.map((d) => d.valor),
@@ -346,7 +344,6 @@ export const PERFIS = [
       linhasPorPagina: 100,
       escalaTexto: "pequeno",
       sidebarRecolhida: true,
-      fundoTela: "liso",
       posicaoAvisos: "topo",
       largura: "total",
     },
@@ -372,7 +369,6 @@ export const PERFIS = [
       escalaTexto: "maior",
       movimento: "reduzido",
       transparencia: "reduzida",
-      fundoTela: "liso",
       densidade: "confortavel",
       foco: "reforcado",
       duracaoAvisos: "longa",
@@ -422,11 +418,6 @@ export const aparencia = {
   /** "normal" (segue só o sistema) ou "reduzido" (corta as animações aqui). */
   movimento() {
     return duradouras.get("movimento", "normal") === "reduzido" ? "reduzido" : "normal";
-  },
-
-  /** "grade" (padrão, com a textura e o halo) ou "liso". */
-  fundoTela() {
-    return duradouras.get("fundoTela", "grade") === "liso" ? "liso" : "grade";
   },
 
   /** "normal" ou "alto" -- reforço de bordas e texto por cima do tema atual. */
@@ -675,7 +666,7 @@ export const aparencia = {
 
   aplicar(mudancas = {}) {
     const { densidade, linhasPorPagina, altura, ritmoPainel, abaInicial } = mudancas;
-    const { realce, escalaTexto, movimento, fundoTela, posicaoAvisos, lembrarFiltros } = mudancas;
+    const { realce, escalaTexto, movimento, posicaoAvisos, lembrarFiltros } = mudancas;
     const { contraste, transparencia, zebra } = mudancas;
 
     // As preferências mais novas usam o MESMO nome no painel e no
@@ -696,7 +687,6 @@ export const aparencia = {
     if (realce) duradouras.set("realce", realce);
     if (escalaTexto) duradouras.set("escalaTexto", escalaTexto);
     if (movimento) duradouras.set("movimento", movimento);
-    if (fundoTela) duradouras.set("fundoTela", fundoTela);
     if (contraste) duradouras.set("contraste", contraste);
     if (transparencia) duradouras.set("transparencia", transparencia);
     if (zebra) duradouras.set("zebra", zebra);
@@ -758,7 +748,6 @@ function pintar() {
     "data-realce": aparencia.realce() === PADROES.realce ? null : aparencia.realce(),
     "data-escala": aparencia.escalaTexto() === PADROES.escalaTexto ? null : aparencia.escalaTexto(),
     "data-movimento": aparencia.movimento() === "normal" ? null : "reduzido",
-    "data-fundo": aparencia.fundoTela() === "grade" ? null : "liso",
     "data-contraste": aparencia.contraste() === "normal" ? null : "alto",
     "data-transparencia": aparencia.transparencia() === "normal" ? null : "reduzida",
     "data-zebra": aparencia.zebra() === "sim" ? null : "nao",

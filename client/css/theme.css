@@ -261,10 +261,6 @@
 :root[data-escala="grande"] { --escala: 1.09; }
 :root[data-escala="maior"] { --escala: 1.18; }
 
-:root[data-fundo="liso"] body {
-  background-image: none;
-}
-
 :root[data-avisos="topo"] #toast-stack {
   top: var(--sp-5);
   bottom: auto;

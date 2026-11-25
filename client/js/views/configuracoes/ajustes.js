@@ -568,7 +568,7 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar,
         },
         {
           titulo: "Personalização avançada",
-          descricao: "Família de fonte, textura de fundo e dimensões úteis da tela.",
+          descricao: "Família de fonte e dimensões úteis da tela.",
           itens: [
             {
               id: "fonte",
@@ -579,19 +579,6 @@ export function definirAbas({ abasDoMenu, atualizadorHabilitado, definirSidebar,
               opcoes: FONTES,
               atual: () => aparencia.fonte(),
               aoEscolher: (valor) => aparencia.aplicar({ fonte: valor }),
-            },
-            {
-              id: "fundo",
-              titulo: "Textura de fundo",
-              ajuda: "Grade sutil no plano de fundo ou visual liso.",
-              chaves: ["fundoTela"],
-              busca: "fundo grade textura brilho halo liso plano",
-              opcoes: [
-                { valor: "grade", rotulo: "Com grade" },
-                { valor: "liso", rotulo: "Liso" },
-              ],
-              atual: () => aparencia.fundoTela(),
-              aoEscolher: (valor) => aparencia.aplicar({ fundoTela: valor }),
             },
             {
               id: "largura",

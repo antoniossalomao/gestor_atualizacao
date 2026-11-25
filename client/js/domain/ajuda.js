@@ -31,11 +31,11 @@ export const COMO_USAR_TELAS = {
   versoes:
     "Envio e publicação dos pacotes que o Atualizador distribui aos clientes.",
   sistemas:
-    "Clientes de um sistema com a última atualização e a situação de cada um. Filtre pela situação, busque por cliente ou cidade, ou use Filtros para ver só quem teve a última atualização antes de uma data. Em \"Versões oficiais\" fica a data e a versão de referência de cada sistema.",
+    "Clientes de um sistema com a última atualização e a situação de cada um (abre em B_Vendas ordenado pela última atualização). Filtre pela situação, busque por cliente ou cidade (com ou sem acento), ou use Filtros para ver só quem teve a última atualização antes de uma data. Em \"Versões oficiais\" fica a data e a versão de referência de cada sistema.",
   campanhas:
     "Metas de versão: escolha um sistema e uma versão e acompanhe quantos clientes já a receberam. A campanha pode valer para todos os clientes do sistema, para uma cidade ou só para clientes escolhidos.",
   administracao:
-    "Só para administradores: contas e papéis, regras da equipe (prazos, arquivamento, classificação dos sistemas), importação de dados, integrações, backups, auditoria e diagnóstico do servidor, com navegação vertical e busca rápida.",
+    "Só para administradores: contas e papéis, regras da equipe (prazos, arquivamento, classificação dos sistemas), importação de dados, integrações, backups, auditoria e diagnóstico completo do servidor, com navegação vertical e busca rápida.",
   configuracoes:
     "As suas preferências: conta e senha, rotina, notificações, tema e realce (padrão Off-white), regras da equipe e ajuda. Valem só para você, em qualquer computador em que você entrar.",
 };
@@ -46,6 +46,26 @@ export const COMO_USAR_TELAS = {
  * CHANGELOG.md do repositório. Mantenha curto: uns seis itens.
  */
 export const NOVIDADES = [
+  {
+    data: "25/11/2026",
+    titulo: "Filtros em gaveta flutuante, seletores refinados e Versões oficiais em modal",
+    texto: "Os filtros de Atualizações, Sistemas e Agendamentos agora abrem em gaveta flutuante a partir de botões em ícone, os seletores seguem o tema do painel, Versões oficiais abre em card centralizado e o Kanban de Agendamentos permanece visível mesmo vazio, com Arquivadas em grade.",
+  },
+  {
+    data: "19/11/2026",
+    titulo: "Diagnóstico do servidor detalhado e cópia rápida",
+    texto: "Administração › Diagnóstico ganhou grade responsiva com verificações rápidas no topo, métricas de integridade e WAL do banco, sessões ativas, memória, modo de transporte e retenção dos backups, além de botão \"Fazer cópia agora\".",
+  },
+  {
+    data: "19/11/2026",
+    titulo: "Interface mais compacta, favicon dinâmico e padrão em Sistemas",
+    texto: "O painel passou a abrir em escala de 90% para mostrar mais dados na tela (preservando Tamanho da fonte e impressão em 100%), com troca de tema suavizada, ícone da aba acompanhando a cor de destaque e Sistemas abrindo em B_Vendas ordenado pela última atualização.",
+  },
+  {
+    data: "17/11/2026",
+    titulo: "Busca sem acento, autocomplete ajustado e segurança reforçada",
+    texto: "A busca e as sugestões de clientes passaram a ignorar acentos sem sobrepor campos. No servidor, entraram novas travas de login e troca de senha, proteção reforçada por papel em acessos remotos e backups, além de compatibilidade com Azure App Service.",
+  },
   {
     data: "16/11/2026",
     titulo: "Resumo em 60 dias, pendências por sistema e filtro na gaveta",
@@ -65,26 +85,6 @@ export const NOVIDADES = [
     data: "16/11/2026",
     titulo: "Realce Off-white e paginação alinhada no rodapé",
     texto: "Nova paleta padrão Off-white em alto contraste nos temas claro e escuro, além da barra de paginação integrada no rodapé das listas de Atualizações e Clientes sem sobrepor linhas.",
-  },
-  {
-    data: "13/11/2026",
-    titulo: "Gráficos refinados, Kanban limpo e seletor de arquivo em português",
-    texto: "Curva suave no gráfico de tendência mensal, barras proporcionais no Resumo, coluna Sistemas ampliada em Clientes, Kanban sem caixas aninhadas extras e controle de arquivo traduzido em Versões.",
-  },
-  {
-    data: "13/11/2026",
-    titulo: "Menu escuro fixo, KPIs interativos e destaques no Kanban",
-    texto: "Barra lateral escura fixa em toda a aplicação, alternância de tema pelo menu da conta, cartões de KPI clicáveis no Resumo e indicações discretas de urgência, prioridade e prazo nos Agendamentos.",
-  },
-  {
-    data: "26/10/2026",
-    titulo: "Edição manual da versão na grade de atualizações",
-    texto: "A versão instalada agora pode ser informada ou editada diretamente no formulário, com opção de definir versões específicas por sistema ou manter o preenchimento automático oficial.",
-  },
-  {
-    data: "30/09/2026",
-    titulo: "Prazo após versão oficial e sistemas ligados ao B_Vendas",
-    texto: "Uma versão oficial nova abre prazo configurável de \"Aguardando atualização\" antes de contar atraso; sistemas dependentes acompanham a data da última atualização do B_Vendas.",
   },
 ];
 
