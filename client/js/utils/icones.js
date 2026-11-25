@@ -95,6 +95,10 @@ const PATHS = {
   campanhas: '<path d="M5 17.5V3M5 3.5h9.5l-2 3.5 2 3.5H5" stroke-linecap="round" stroke-linejoin="round"/>',
   restaurar: '<path d="M4.2 9.5a5.9 5.9 0 1 0 1.9-4.1M4 3.6v3h3" stroke-linecap="round" stroke-linejoin="round"/>',
   menu: '<path d="M3.5 5.5h13M3.5 10h13M3.5 14.5h13" stroke-linecap="round"/>',
+  filtro: '<path d="M3 5.5h14M5.8 10h8.4M8.5 14.5h3" stroke-linecap="round"/>',
+  mais: '<circle cx="4.5" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="10" r="1.2" fill="currentColor" stroke="none"/>',
+  relatorio: '<path d="M5 3h6.5L15 6.5V16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke-linejoin="round"/><path d="M11.5 3v3.5H15M7 10.5h6M7 13.5h4" stroke-linecap="round"/>',
+  lixeira: '<path d="M4.5 5.8h11M8 5.8V4.2a.7.7 0 0 1 .7-.7h2.6a.7.7 0 0 1 .7.7v1.6M6 5.8l.6 9.8a1 1 0 0 0 1 .9h4.8a1 1 0 0 0 1-.9l.6-9.8" stroke-linecap="round" stroke-linejoin="round"/>',
 };
 
 /** @param {keyof typeof PATHS} name @returns {string} markup do `<svg>` pronto pra inserir via innerHTML */

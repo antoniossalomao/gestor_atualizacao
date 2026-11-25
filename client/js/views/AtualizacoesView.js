@@ -20,6 +20,7 @@ import { baixarBlob } from "../components/arquivos.js";
 import { prefs } from "../app/preferencias.js";
 import { aparencia } from "../app/aparencia.js";
 import { Gaveta } from "../components/Gaveta.js";
+import { conectarPopover } from "../components/popover.js";
 import { montarPresets, intervaloPreset } from "../components/presetsDeData.js";
 import { chipsFiltroAtualizacoes, chipsHtml } from "../templates/filtros.js";
 
@@ -100,42 +101,51 @@ export class AtualizacoesView extends View {
           </div>
           <div class="toolbar-spacer"></div>
           <span class="result-count" data-role="count" aria-live="polite"></span>
-          <!-- Botão que abre/fecha o painel de filtros de data -->
-          <button type="button" class="btn btn--ghost btn--small" data-action="toggle-filtros" aria-expanded="false" aria-controls="atu-filtros-painel">Filtros</button>
+          <!-- Botão ícone que abre/fecha a gavetinha de filtros de data -->
+          <button type="button" class="btn btn--toolbar-icon" data-action="toggle-filtros" popovertarget="atu-filtros-painel" aria-label="Filtros" title="Filtros" aria-expanded="false" aria-controls="atu-filtros-painel">${iconeHtml("filtro")}</button>
           <!-- Dropdown de relatórios -->
           <div class="menu-acoes" data-role="menu-relatorios">
-            <button type="button" class="btn btn--ghost btn--small" data-action="toggle-relatorios" aria-haspopup="menu" aria-expanded="false">Relatórios ▾</button>
-            <div class="menu-acoes__lista" role="menu" hidden>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio-periodo">${iconeHtml("copiar")} Relatório do período</button>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="relatorio" disabled>${iconeHtml("copiar")} Relatório do cliente</button>
+            <button type="button" class="btn btn--toolbar-icon" data-action="toggle-relatorios" popovertarget="atu-menu-relatorios" aria-label="Relatórios" title="Relatórios" aria-expanded="false">${iconeHtml("relatorio")}</button>
+            <div class="menu-acoes__lista" id="atu-menu-relatorios" popover="auto">
+              <button type="button" class="menu-acoes__item" data-action="relatorio-periodo">${iconeHtml("copiar")} Relatório do período</button>
+              <button type="button" class="menu-acoes__item" data-action="relatorio" disabled>${iconeHtml("copiar")} Relatório do cliente</button>
             </div>
           </div>
           <!-- Mais ações: exportar e importar -->
           <div class="menu-acoes" data-role="menu-acoes">
-            <button type="button" class="btn btn--ghost btn--small" data-action="toggle-mais-acoes" aria-haspopup="menu" aria-expanded="false">Mais ações ▾</button>
-            <div class="menu-acoes__lista" role="menu" hidden>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="export">${iconeHtml("download")} Exportar resultado (.xlsx)</button>
-              <button type="button" class="menu-acoes__item" role="menuitem" data-action="import">${iconeHtml("upload")} Importar planilha…</button>
+            <button type="button" class="btn btn--toolbar-icon" data-action="toggle-mais-acoes" popovertarget="atu-menu-acoes" aria-label="Mais ações" title="Mais ações" aria-expanded="false">${iconeHtml("mais")}</button>
+            <div class="menu-acoes__lista" id="atu-menu-acoes" popover="auto">
+              <button type="button" class="menu-acoes__item" data-action="export">${iconeHtml("download")} Exportar resultado (.xlsx)</button>
+              <button type="button" class="menu-acoes__item" data-action="import">${iconeHtml("upload")} Importar planilha…</button>
             </div>
           </div>
-          <!-- Excluir: aparece só quando há seleção; lote oculta este -->
-          <button type="button" class="btn btn--small btn--danger" data-action="delete" disabled>${iconeHtml("alerta")} Excluir</button>
+          <!-- Excluir: aparece ativo só quando há seleção; lote oculta este -->
+          <button type="button" class="btn btn--toolbar-icon btn--danger" data-action="delete" aria-label="Excluir selecionado" title="Excluir selecionado" disabled>${iconeHtml("lixeira")}</button>
           <button type="button" class="btn btn--accent btn--small" data-action="nova-atualizacao">+ Nova Atualização</button>
         </div>
 
-        <!-- Painel de filtros de data (recolhível) -->
-        <div class="filtros-painel" id="atu-filtros-painel" hidden>
-          <div class="field field--periodo">
-            <label class="field__label" for="atu-desde">De</label>
-            <input type="text" class="input" id="atu-desde" data-role="desde"
-                   placeholder="dd/mm/aaaa" inputmode="numeric" />
+        <!-- Gavetinha flutuante de filtros de data -->
+        <div class="filtros-popover" id="atu-filtros-painel" popover="auto" aria-label="Filtros de período">
+          <div class="filtros-popover__header">
+            <span class="filtros-popover__title">Período</span>
+            <button type="button" class="btn btn--small btn--ghost" data-action="limpar-periodo-popover">Limpar</button>
           </div>
-          <div class="field field--periodo">
-            <label class="field__label" for="atu-ate">Até</label>
-            <input type="text" class="input" id="atu-ate" data-role="ate"
-                   placeholder="dd/mm/aaaa" inputmode="numeric" />
+          <div class="filtros-popover__grid">
+            <div class="field field--periodo">
+              <label class="field__label" for="atu-desde">De</label>
+              <input type="text" class="input" id="atu-desde" data-role="desde"
+                     placeholder="dd/mm/aaaa" inputmode="numeric" />
+            </div>
+            <div class="field field--periodo">
+              <label class="field__label" for="atu-ate">Até</label>
+              <input type="text" class="input" id="atu-ate" data-role="ate"
+                     placeholder="dd/mm/aaaa" inputmode="numeric" />
+            </div>
           </div>
-          <div class="date-presets" data-role="date-presets" role="group" aria-label="Filtro rápido de período"></div>
+          <div class="field">
+            <span class="field__label">Atalhos</span>
+            <div class="date-presets" data-role="date-presets" role="group" aria-label="Filtro rápido de período"></div>
+          </div>
         </div>
 
         <div data-role="filter-chips" class="filter-chips" hidden></div>
@@ -278,10 +288,14 @@ export class AtualizacoesView extends View {
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
 
-    // -- painel de filtros recolhível --
+    // -- gavetinha de filtros (popover) --
     this.painelFiltros = this.container.querySelector("#atu-filtros-painel");
     this.btnFiltros = this.container.querySelector('[data-action="toggle-filtros"]');
-    this.btnFiltros.addEventListener("click", () => this._togglePainelFiltros());
+    this._popoverFiltros = conectarPopover(this.btnFiltros, this.painelFiltros);
+    this.painelFiltros.querySelector('[data-action="limpar-periodo-popover"]').addEventListener("click", () => {
+      this.pintarPreset("");
+      this._aplicarPeriodo("", "");
+    });
 
     // -- período (agora dentro do painel recolhível) --
     this.desdeInput = this.container.querySelector('[data-role="desde"]');
@@ -320,11 +334,9 @@ export class AtualizacoesView extends View {
       this._aplicarPeriodo(intervalo.desde, intervalo.ate);
     });
     if (this.presetInicial) {
-      // Abre o painel automaticamente se houver preset inicial para que o
-      // usuário veja o filtro que acabou de ser aplicado.
       this.pintarPreset(this.presetInicial);
-      this._abrirPainelFiltros();
     }
+    this._atualizarBotaoFiltros();
 
     this.table.container.addEventListener("click", (e) => {
       const botao = e.target.closest("[data-row-action]");
@@ -408,68 +420,36 @@ export class AtualizacoesView extends View {
    * @param {(acao: string, fechar: () => void) => void} onAcao
    */
   _configurarMenuDropdown(menuEl, onAcao) {
-    const btnToggle = menuEl.querySelector("[aria-haspopup]");
-    const lista = menuEl.querySelector('[role="menu"]');
+    const btnToggle = menuEl.querySelector("[popovertarget]");
+    const lista = menuEl.querySelector(".menu-acoes__lista");
+    const { fechar } = conectarPopover(btnToggle, lista);
 
-    const abrir = () => {
-      lista.hidden = false;
-      btnToggle.setAttribute("aria-expanded", "true");
-    };
-    const fechar = () => {
-      lista.hidden = true;
-      btnToggle.setAttribute("aria-expanded", "false");
-      btnToggle.focus();
-    };
-
-    btnToggle.addEventListener("click", () => lista.hidden ? abrir() : fechar());
-
-    // Fechar ao clicar fora (registrado via this.on para limpeza automática)
-    this.on(document, "click", (e) => {
-      if (!lista.hidden && !menuEl.contains(e.target)) fechar();
-    });
-
-    // Ações dos itens do menu
     lista.addEventListener("click", (e) => {
       const item = e.target.closest("[data-action]");
       if (!item || item.disabled) return;
-      const acao = item.dataset.action;
-      onAcao(acao, fechar);
-    });
-
-    // Escape fecha o menu (stopPropagation para não acionar o Escape global)
-    lista.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { e.stopPropagation(); fechar(); }
+      onAcao(item.dataset.action, fechar);
     });
   }
 
-  /** Abre o painel de filtros de data. */
+  /** Abre a gavetinha de filtros de data. */
   _abrirPainelFiltros() {
-    this.painelFiltros.hidden = false;
-    this.btnFiltros.setAttribute("aria-expanded", "true");
-    this._atualizarBotaoFiltros();
+    this._popoverFiltros?.abrir();
   }
 
-  /** Fecha o painel de filtros de data (NÃO limpa os filtros). */
+  /** Fecha a gavetinha de filtros de data (NÃO limpa os filtros). */
   _fecharPainelFiltros() {
-    this.painelFiltros.hidden = true;
-    this.btnFiltros.setAttribute("aria-expanded", "false");
-    this._atualizarBotaoFiltros();
-  }
-
-  /** Alterna o painel de filtros de data. */
-  _togglePainelFiltros() {
-    if (this.painelFiltros.hidden) this._abrirPainelFiltros();
-    else this._fecharPainelFiltros();
+    this._popoverFiltros?.fechar();
   }
 
   /**
-   * Atualiza o rótulo do botão "Filtros" com a contagem de filtros de data
-   * ativos (ex: "Filtros (1)" quando há período). Não conta busca e
-   * responsável, que ficam sempre visíveis na toolbar.
+   * Atualiza o indicador do botão de filtros quando há período ativo.
    */
   _atualizarBotaoFiltros() {
-    const n = (this.desde || this.ate) ? 1 : 0;
-    this.btnFiltros.textContent = n > 0 ? `Filtros (${n})` : "Filtros";
+    const ativo = Boolean(this.desde || this.ate);
+    this.btnFiltros.dataset.active = String(ativo);
+    const label = ativo ? "Filtros (período ativo)" : "Filtros";
+    this.btnFiltros.setAttribute("aria-label", label);
+    this.btnFiltros.title = label;
   }
 
 

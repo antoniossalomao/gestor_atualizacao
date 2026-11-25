@@ -5,9 +5,11 @@ import { formatarDataHora, dataBRValida, mascaraDataBR } from "../utils/data.js"
 import { ErroApi } from "../api/ApiPainel.js";
 import { Modal } from "../components/Modal.js";
 import { estadoVazio } from "../components/estadoVazio.js";
-import { escaparHtml, plural } from "../utils/html.js";
+import { escaparHtml, html, plural } from "../utils/html.js";
 import { prefs } from "../app/preferencias.js";
 import { filtrarClientesDoSistema } from "../domain/filtrosSistemas.js";
+import { iconeHtml, iconeSvg } from "../utils/icones.js";
+import { conectarPopover } from "../components/popover.js";
 
 /** Consulta por sistema; a referência oficial só pode ser editada no painel próprio. */
 /*
@@ -56,33 +58,21 @@ export class SistemasView extends View {
           <div class="toolbar__clear">
             <button type="button" class="btn btn--small btn--ghost" data-action="limpar-filtros" hidden>Limpar filtros</button>
           </div>
+          <span class="result-count" data-role="count" aria-live="polite"></span>
           <div class="toolbar-spacer"></div>
-          <button type="button" class="btn btn--ghost btn--small" data-action="filtros" aria-expanded="false" aria-controls="sis-filtros">Filtros</button>
-          <button type="button" class="btn btn--ghost btn--small" data-action="oficiais" aria-expanded="false" aria-controls="sis-oficiais">Versões oficiais</button>
+          <button type="button" class="btn btn--toolbar-icon" data-action="filtros" popovertarget="sis-filtros" aria-label="Filtros" title="Filtros" aria-expanded="false" aria-controls="sis-filtros">${iconeSvg("filtro")}</button>
+          <button type="button" class="btn btn--subtle btn--small" data-action="oficiais">${iconeSvg("versoes")} Versões oficiais</button>
         </div>
-        <!-- Mesmo painel recolhível de Atualizações (A10). A dica que ficava
-             embaixo do campo empurrava o "Limpar data" para fora da linha e
-             repetia o que o rótulo já diz; data inválida fica marcada no
-             próprio campo, como nos filtros de período de Atualizações. -->
-        <div id="sis-filtros" class="filtros-painel" hidden>
+        <div id="sis-filtros" class="filtros-popover" popover="auto" aria-label="Filtros de data">
+          <div class="filtros-popover__header">
+            <span class="filtros-popover__title">Data de corte</span>
+            <button type="button" class="btn btn--small btn--ghost" data-action="limpar-data">Limpar</button>
+          </div>
           <div class="field field--data">
             <label class="field__label" for="sis-antes">Última atualização antes de</label>
             <input class="input" id="sis-antes" data-role="atualizacao-antes" placeholder="dd/mm/aaaa" inputmode="numeric" />
           </div>
-          <button type="button" class="btn btn--small btn--ghost" data-action="limpar-data">Limpar data</button>
         </div>
-        <div class="sistemas-resumo">
-          <p class="sistemas-referencia" data-role="referencia"></p>
-          <span class="result-count" data-role="count" aria-live="polite"></span>
-        </div>
-        <section id="sis-oficiais" class="sistemas-oficiais" aria-label="Versões oficiais" hidden>
-          <div class="sistemas-oficiais__cabecalho">
-            <div><h2>Versões oficiais</h2><p id="sis-oficiais-ajuda">Novas atualizações recebem a referência vigente; as versões recebidas anteriormente permanecem. Use dd/mm/aaaa ou deixe o campo vazio para limpar a referência.</p></div>
-            <button type="button" class="btn" data-action="fechar-oficiais">Fechar</button>
-          </div>
-          <p class="sistemas-oficiais__retorno" data-role="oficiais-retorno" role="status" aria-live="polite"></p>
-          <div data-role="oficiais-lista"></div>
-        </section>
         <div class="sistemas-tabela" data-role="table"></div>
       </div>`;
 
@@ -133,16 +123,12 @@ export class SistemasView extends View {
     this.situacaoFilter.value = this.situacao;
     this.buscaInput.value = this.busca;
     this.dataInput.value = this.atualizacaoAntesDe;
-    if (this.atualizacaoAntesDe) {
-      this.container.querySelector("#sis-filtros").hidden = false;
-      this.botaoFiltros.setAttribute("aria-expanded", "true");
-    }
+    conectarPopover(this.botaoFiltros, this.container.querySelector("#sis-filtros"));
     this._mostrarFiltrosAtivos();
 
     this.sistemaFilter.addEventListener("change", () => {
       this.sistema = this.sistemaFilter.value;
       this._salvarFiltros();
-      this._mostrarReferencia();
       this._recarregarLista();
     });
     this.situacaoFilter.addEventListener("change", () => {
@@ -174,22 +160,7 @@ export class SistemasView extends View {
       this.dataInput.focus();
     });
     this.botaoLimparFiltros.addEventListener("click", () => this._limparFiltros());
-    this.container.querySelector('[data-action="filtros"]').addEventListener("click", () => this._alternar("filtros"));
-    this.container.querySelector('[data-action="oficiais"]').addEventListener("click", () => this._alternar("oficiais"));
-    this.container.querySelector('[data-action="fechar-oficiais"]').addEventListener("click", () => this._fecharOficiais());
-    this.container.querySelector('[data-role="oficiais-lista"]').addEventListener("click", (e) => this._acaoOficial(e));
-    this.container.querySelector('[data-role="oficiais-lista"]').addEventListener("keydown", (e) => {
-      if (e.target && e.target.matches('[data-role="edicao"]')) {
-        const linha = e.target.closest("[data-index]");
-        if (e.key === "Enter") {
-          e.preventDefault();
-          linha?.querySelector('[data-action="salvar"]')?.click();
-        } else if (e.key === "Escape") {
-          e.preventDefault();
-          linha?.querySelector('[data-action="cancelar"]')?.click();
-        }
-      }
-    });
+    this.container.querySelector('[data-action="oficiais"]').addEventListener("click", () => this._abrirOficiais());
   }
 
   aoEntrar() {
@@ -216,47 +187,77 @@ export class SistemasView extends View {
         if (selecionado) this.sistemaFilter.value = selecionado.nome;
         this.sistema = this.sistemaFilter.value;
         this._salvarFiltros();
-        this._mostrarReferencia();
         this._desenharOficiais();
       }
     );
     await this._recarregarLista();
   }
 
-  _mostrarReferencia() {
-    const oficial = this.versoes.find((s) => s.nome === this.sistema)?.data;
-    this.container.querySelector('[data-role="referencia"]').textContent = this.sistema
-      ? `Versão oficial de ${this.sistema}: ${oficial || "não cadastrada"}`
-      : "Nenhum sistema atualizável cadastrado.";
-  }
-
-  _alternar(tipo) {
-    const botao = this.container.querySelector(`[data-action="${tipo}"]`);
-    const painel = this.container.querySelector(`#sis-${tipo}`);
-    painel.hidden = !painel.hidden;
-    botao.setAttribute("aria-expanded", String(!painel.hidden));
-    if (tipo === "oficiais" && !painel.hidden) this._desenharOficiais();
-    if (!painel.hidden) painel.querySelector("input, button")?.focus();
-  }
-
-  _fecharOficiais() {
-    this.container.querySelector("#sis-oficiais").hidden = true;
-    this.container.querySelector('[data-action="oficiais"]').setAttribute("aria-expanded", "false");
-    this._desenharOficiais(); // descarta qualquer edição sem gravar
-    this.container.querySelector('[data-action="oficiais"]').focus();
+  _abrirOficiais() {
+    if (this._oficiaisModal) return;
+    const { box, close } = Modal.abrirCaixa({
+      largura: 640,
+      classe: "sistemas-oficiais-modal",
+      onClose: () => {
+        this._oficiaisModal = null;
+      },
+    });
+    const tituloId = `sis-oficiais-titulo-${Math.random().toString(36).slice(2, 8)}`;
+    box.setAttribute("aria-labelledby", tituloId);
+    box.innerHTML = html`
+      <div class="sistemas-oficiais__cabecalho">
+        <div>
+          <h3 id="${tituloId}">Versões oficiais</h3>
+          <p id="sis-oficiais-ajuda">Novas atualizações recebem a referência vigente; as versões recebidas anteriormente permanecem. Use dd/mm/aaaa ou deixe o campo vazio para limpar a referência.</p>
+        </div>
+        <button type="button" class="btn btn--icon btn--ghost" data-action="fechar-oficiais" aria-label="Fechar" title="Fechar (Esc)">${iconeHtml("fechar")}</button>
+      </div>
+      <p class="sistemas-oficiais__retorno" data-role="oficiais-retorno" role="status" aria-live="polite"></p>
+      <div class="sistemas-oficiais__lista" data-role="oficiais-lista"></div>
+    `;
+    this._oficiaisModal = { box, close };
+    box.querySelector('[data-action="fechar-oficiais"]').addEventListener("click", () => close());
+    const lista = box.querySelector('[data-role="oficiais-lista"]');
+    lista.addEventListener("click", (e) => this._acaoOficial(e));
+    lista.addEventListener("input", (e) => {
+      if (e.target && e.target.matches('[data-role="edicao"]')) {
+        e.target.value = mascaraDataBR(e.target.value);
+      }
+    });
+    lista.addEventListener("keydown", (e) => {
+      if (e.target && e.target.matches('[data-role="edicao"]')) {
+        const linha = e.target.closest("[data-index]");
+        if (e.key === "Enter") {
+          e.preventDefault();
+          linha?.querySelector('[data-action="salvar"]')?.click();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          linha?.querySelector('[data-action="cancelar"]')?.click();
+        }
+      }
+    });
+    this._desenharOficiais();
+    box.querySelector('[data-action="editar"], [data-action="fechar-oficiais"]')?.focus();
   }
 
   _desenharOficiais() {
-    const lista = this.container.querySelector('[data-role="oficiais-lista"]');
+    const lista = this._oficiaisModal?.box?.querySelector('[data-role="oficiais-lista"]');
+    if (!lista) return;
     lista.innerHTML = this.versoes.map((s, i) => `
       <div class="sistemas-oficiais__row" data-index="${i}">
-        <div><strong>${escaparHtml(s.nome)}</strong><span data-role="valor">${escaparHtml(s.data || "Sem referência")}</span>
-          <small>${s.alteradaEm ? `Alterada por ${escaparHtml(s.autor || "não informado")} em ${escaparHtml(formatarDataHora(s.alteradaEm))}` : "Autor e data não registrados"}</small></div>
+        <div class="sistemas-oficiais__info">
+          <div class="sistemas-oficiais__titulo">
+            <strong>${escaparHtml(s.nome)}</strong>
+            <span class="badge ${s.data ? "badge--info" : "badge--muted"}" data-role="valor">${escaparHtml(s.data || "Sem referência")}</span>
+          </div>
+          <small>${s.alteradaEm ? `Alterada por ${escaparHtml(s.autor || "não informado")} em ${escaparHtml(formatarDataHora(s.alteradaEm))}` : "Autor e data não registrados"}</small>
+        </div>
         <div class="sistemas-oficiais__acoes">
           <input class="input" data-role="edicao" aria-label="Versão oficial de ${escaparHtml(s.nome)}" aria-describedby="sis-oficiais-ajuda sis-oficial-erro-${i}" placeholder="dd/mm/aaaa" inputmode="numeric" hidden />
-          <button type="button" class="btn" data-action="editar" ${this.user?.role === "consulta" ? "hidden" : ""}>Editar</button>
-          <button type="button" class="btn btn--accent" data-action="salvar" hidden>Salvar</button>
-          <button type="button" class="btn" data-action="cancelar" hidden>Cancelar</button>
+          <button type="button" class="btn btn--small" data-action="editar" ${this.user?.role === "consulta" ? "hidden" : ""}>${iconeSvg("editar")} Editar</button>
+          <button type="button" class="btn btn--small btn--accent" data-action="salvar" hidden>Salvar</button>
+          <button type="button" class="btn btn--small btn--ghost" data-action="cancelar" hidden>Cancelar</button>
         </div>
         <p class="sistemas-oficiais__erro" id="sis-oficial-erro-${i}" hidden>Informe uma data válida no formato dd/mm/aaaa.</p>
       </div>`).join("");
@@ -264,6 +265,8 @@ export class SistemasView extends View {
   }
 
   async _acaoOficial(e) {
+    const box = this._oficiaisModal?.box;
+    if (!box) return;
     const botao = e.target.closest("button[data-action]");
     const linha = botao?.closest("[data-index]");
     if (!linha) return;
@@ -287,7 +290,7 @@ export class SistemasView extends View {
     }
     campo.setAttribute("aria-invalid", "false");
     linha.querySelector(".sistemas-oficiais__erro").hidden = true;
-    const retorno = this.container.querySelector('[data-role="oficiais-retorno"]');
+    const retorno = box.querySelector('[data-role="oficiais-retorno"]');
     retorno.textContent = `Salvando referência de ${sistema.nome}…`;
     botao.disabled = true;
     try {
@@ -295,7 +298,7 @@ export class SistemasView extends View {
       this.cache?.invalidar();
       await this.refresh();
       retorno.textContent = data ? `Referência de ${sistema.nome} salva: ${data}.` : `Referência de ${sistema.nome} removida.`;
-      this.container.querySelector(`[data-index="${linha.dataset.index}"] [data-action="editar"]`)?.focus();
+      box.querySelector(`[data-index="${linha.dataset.index}"] [data-action="editar"]`)?.focus();
     } catch (err) {
       retorno.textContent = "";
       if (err.status === 409) {
@@ -349,7 +352,11 @@ export class SistemasView extends View {
    * há um escolhido.
    */
   _mostrarFiltrosAtivos() {
-    this.botaoFiltros.textContent = this.atualizacaoAntesDe ? "Filtros (1)" : "Filtros";
+    const ativo = Boolean(this.atualizacaoAntesDe);
+    this.botaoFiltros.dataset.active = String(ativo);
+    const label = ativo ? "Filtros (data de corte ativa)" : "Filtros";
+    this.botaoFiltros.setAttribute("aria-label", label);
+    this.botaoFiltros.title = label;
     this.botaoLimparFiltros.hidden = !(this.atualizacaoAntesDe || this.busca || this.situacao !== "Todos");
   }
 
@@ -373,6 +380,7 @@ export class SistemasView extends View {
   }
 
   destroy() {
+    this._oficiaisModal?.close?.();
     this.versoes = [];
     this.rows = [];
     this.table?.destroy?.();
