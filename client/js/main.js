@@ -2,6 +2,7 @@ import { ApiPainel } from "./api/ApiPainel.js";
 import { App } from "./app/App.js";
 import { iniciarTema } from "./app/tema.js";
 import { iniciarAparencia } from "./app/aparencia.js";
+import { iniciarSeletores } from "./components/Seletor.js";
 import { html } from "./utils/html.js";
 
 // Ponto de entrada do front-end: aplica o tema salvo, cria o cliente de API e
@@ -14,6 +15,7 @@ iniciarTema();
 // no <html> que o CSS lê, e aplicá-lo depois faria as linhas nascerem numa
 // altura e pularem para outra.
 iniciarAparencia();
+iniciarSeletores();
 
 const api = new ApiPainel();
 const app = new App(document.getElementById("app"), api);
