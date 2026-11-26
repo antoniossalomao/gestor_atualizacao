@@ -6,6 +6,10 @@ Diário cronológico das mudanças e decisões relevantes do painel web. Não ve
 
 ### Novembro de 2026
 
+- **Atualização de *Sobre e ajuda* e script de deploy Windows (19/11/2026):**
+  - Atualizada a aba *Configurações › Sobre e ajuda* (`client/js/domain/ajuda.js`) com as novidades de novembro (Diagnóstico detalhado, zoom padrão de 90%, busca sem acento e melhorias de segurança) e descrições revisadas de *Sistemas* e *Administração*.
+  - Adicionado `scripts/deploy-windows.ps1` para execução direta de dentro da pasta do servidor sem parâmetros: fecha `GestorApp`, baixa o código novo do GitHub em `%TEMP%` (ou usa `-Origem`), atualiza somente o código sem mexer em `server/.env`, `proxy/` nem `server/data/` (confere hashes SHA-256 antes e depois) e reabre o serviço validando saúde.
+
 - **Limpeza do repositório, CI e consolidação da documentação (19/11/2026):**
   - Removidos restos obsoletos de Docker (`scripts/build-css.js`, `.env.example` da raiz e job `varredura-da-imagem` no `.github/workflows/ci.yml`), lockfile vazio em `client/package-lock.json`, relatórios antigos (`CLEANUP_REPORT.md`, `relatorio.md`, `PLANEJAMENTO_POLIMENTO_VISUAL.md`) e duplicações em `codeql.yml`.
   - Documentação consolidada em cinco documentos enxutos e sincronizados com o código atual: `README.md`, `docs/ARQUITETURA.md`, `docs/OPERACAO.md`, `CHANGELOG.md` e `CLAUDE.md`.

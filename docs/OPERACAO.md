@@ -70,19 +70,35 @@ Arquitetura: **Node.js** escuta localmente em `127.0.0.1:3000` (`GestorApp`) e o
    *(No Firefox, importe o mesmo `.crt` em Privacidade e Segurança → Certificados. Feche e reabra o navegador).*
 
 #### Como atualizar o código no servidor Windows Nativo
+
+De dentro da pasta do servidor (`C:\gestor`), rode no **PowerShell como Administrador**:
+
 ```powershell
-# 1. Backup preventivo do banco atual
-Copy-Item "C:\gestor\server\data\gestao.db" "C:\gestor\server\data\gestao-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss').db"
-
-# 2. Parar o serviço Node
-nssm stop GestorApp
-
-# 3. Atualizar os arquivos de código em C:\gestor\
-# NUNCA sobrescreva: C:\gestor\server\data\, C:\gestor\server\.env ou C:\gestor\proxy\Caddyfile
-
-# 4. Atualizar dependências e reiniciar
 cd C:\gestor
-npm.cmd run install:all
+powershell -ExecutionPolicy Bypass -File .\scripts\deploy-windows.ps1
+```
+
+O script detecta a pasta atual automaticamente, baixa a versão mais nova da `main` em `%TEMP%` (via `git` ou ZIP do GitHub), fecha o `GestorApp`, atualiza **somente o código**, atualiza dependências se `server\package-lock.json` tiver mudado e abre o `GestorApp` novamente validando `http://127.0.0.1:<PORT>/api/auth/status`. **Nunca** mexe em `server\.env`, `proxy\Caddyfile` (`GestorProxy`) nem `server\data\` (confere hashes SHA-256 antes e depois).
+
+Opções úteis:
+```powershell
+# Simular antes sem fechar o serviço nem alterar arquivos
+powershell -ExecutionPolicy Bypass -File .\scripts\deploy-windows.ps1 -Simular
+
+# Atualizar offline a partir de uma pasta local ou arquivo .zip
+powershell -ExecutionPolicy Bypass -File .\scripts\deploy-windows.ps1 -Origem "C:\temp\gestor-novo.zip"
+
+# Gravar cópia extra do banco antes da troca (salva FORA de C:\gestor, em C:\gestor-backups-deploy\)
+powershell -ExecutionPolicy Bypass -File .\scripts\deploy-windows.ps1 -BackupBanco
+```
+
+Como alternativa manual (sem o script):
+```powershell
+# Opcional: baixe o banco antes pelo painel (Administração -> Backups -> Baixar o banco de agora)
+nssm stop GestorApp
+# Copie apenas o código novo para C:\gestor\ (NUNCA toque em server\data\, server\.env ou proxy\Caddyfile)
+cd C:\gestor\server
+npm.cmd ci --omit=dev
 nssm start GestorApp
 ```
 

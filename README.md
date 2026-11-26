@@ -59,6 +59,7 @@ client/                     Front-end HTML/CSS/JS puro (ES Modules, sem dependê
   tests/                    Testes de domínio, segurança HTML/CSS, vocabulário e módulos
 
 proxy/Caddyfile             Configuração do proxy reverso HTTPS (Caddy)
+scripts/deploy-windows.ps1  Atualização segura de código no servidor Windows (NSSM)
 docs/
   ARQUITETURA.md            Desenvolvimento, segurança, dependências e ADRs (0001–0014)
   OPERACAO.md               Implantação (Windows/NSSM, Azure App Service/VM) e runbook
